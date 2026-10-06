@@ -168,6 +168,7 @@ pub enum InterfaceId {
     SVGTitleElement,
     SVGUseElement,
     SVGViewElement,
+    ShadowRoot,
     Text,
     XMLDocument,
     XMLHttpRequest,
@@ -204,8 +205,8 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 179;
-    pub const ALL: [InterfaceId; 179] = [
+    pub const COUNT: usize = 180;
+    pub const ALL: [InterfaceId; 180] = [
         InterfaceId::AbortController,
         InterfaceId::CSSStyleDeclaration,
         InterfaceId::CSSStyleProperties,
@@ -352,6 +353,7 @@ impl InterfaceId {
         InterfaceId::SVGTitleElement,
         InterfaceId::SVGUseElement,
         InterfaceId::SVGViewElement,
+        InterfaceId::ShadowRoot,
         InterfaceId::Text,
         InterfaceId::XMLDocument,
         InterfaceId::XMLHttpRequest,
@@ -535,6 +537,7 @@ impl InterfaceId {
             InterfaceId::SVGTitleElement => "SVGTitleElement",
             InterfaceId::SVGUseElement => "SVGUseElement",
             InterfaceId::SVGViewElement => "SVGViewElement",
+            InterfaceId::ShadowRoot => "ShadowRoot",
             InterfaceId::Text => "Text",
             InterfaceId::XMLDocument => "XMLDocument",
             InterfaceId::XMLHttpRequest => "XMLHttpRequest",
@@ -719,6 +722,7 @@ impl InterfaceId {
             "SVGTitleElement" => InterfaceId::SVGTitleElement,
             "SVGUseElement" => InterfaceId::SVGUseElement,
             "SVGViewElement" => InterfaceId::SVGViewElement,
+            "ShadowRoot" => InterfaceId::ShadowRoot,
             "Text" => InterfaceId::Text,
             "XMLDocument" => InterfaceId::XMLDocument,
             "XMLHttpRequest" => InterfaceId::XMLHttpRequest,
@@ -904,6 +908,7 @@ impl InterfaceId {
             InterfaceId::SVGTitleElement => Some(InterfaceId::SVGElement),
             InterfaceId::SVGUseElement => Some(InterfaceId::SVGGraphicsElement),
             InterfaceId::SVGViewElement => Some(InterfaceId::SVGElement),
+            InterfaceId::ShadowRoot => Some(InterfaceId::DocumentFragment),
             InterfaceId::Text => Some(InterfaceId::CharacterData),
             InterfaceId::XMLDocument => Some(InterfaceId::Document),
             InterfaceId::XMLHttpRequest => Some(InterfaceId::XMLHttpRequestEventTarget),
@@ -1631,6 +1636,52 @@ impl ScrollRestoration {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ShadowRootMode {
+    Open,
+    Closed,
+}
+
+impl ShadowRootMode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ShadowRootMode::Open => "open",
+            ShadowRootMode::Closed => "closed",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "open" => ShadowRootMode::Open,
+            "closed" => ShadowRootMode::Closed,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum SlotAssignmentMode {
+    Manual,
+    Named,
+}
+
+impl SlotAssignmentMode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            SlotAssignmentMode::Manual => "manual",
+            SlotAssignmentMode::Named => "named",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "manual" => SlotAssignmentMode::Manual,
+            "named" => SlotAssignmentMode::Named,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum XMLHttpRequestResponseType {
     Empty,
     Arraybuffer,
@@ -1879,6 +1930,16 @@ pub struct ScrollToOptions {
     pub behavior: ScrollBehavior,
     pub left: Option<f64>,
     pub top: Option<f64>,
+}
+
+#[derive(Clone, Debug)]
+pub struct ShadowRootInit {
+    pub mode: ShadowRootMode,
+    pub delegates_focus: bool,
+    pub serializable: bool,
+    pub slot_assignment: SlotAssignmentMode,
+    pub clonable: bool,
+    pub custom_element_registry: Option<ObjectId>,
 }
 
 #[derive(Clone, Debug)]
@@ -3304,6 +3365,8 @@ pub trait ElementImpl {
         attr: ObjectId,
     ) -> Fallible<Option<ObjectId>>;
     fn remove_attribute_node(cx: &mut Cx<'_>, this: NodeId, attr: ObjectId) -> Fallible<ObjectId>;
+    fn attach_shadow(cx: &mut Cx<'_>, this: NodeId, init: ShadowRootInit) -> Fallible<NodeId>;
+    fn shadow_root(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
     fn closest(cx: &mut Cx<'_>, this: NodeId, selectors: String) -> Fallible<Option<NodeId>>;
     fn matches(cx: &mut Cx<'_>, this: NodeId, selectors: String) -> Fallible<bool>;
     fn webkit_matches_selector(cx: &mut Cx<'_>, this: NodeId, selectors: String) -> Fallible<bool>;
@@ -3403,6 +3466,17 @@ pub trait SVGElementImpl {
     fn class_name(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
     fn owner_svg_element(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
     fn viewport_element(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
+}
+
+pub trait ShadowRootImpl {
+    fn mode(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ShadowRootMode>;
+    fn delegates_focus(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool>;
+    fn serializable(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool>;
+    fn slot_assignment(cx: &mut Cx<'_>, this: NodeId) -> Fallible<SlotAssignmentMode>;
+    fn clonable(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool>;
+    fn host(cx: &mut Cx<'_>, this: NodeId) -> Fallible<NodeId>;
+    fn inner_html(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_inner_html(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
 }
 
 pub trait TextImpl {

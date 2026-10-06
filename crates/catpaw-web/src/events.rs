@@ -4,6 +4,7 @@
 use std::cell::Cell;
 use std::rc::Rc;
 
+use catpaw_dom::{FragmentKind, NodeKind};
 use catpaw_js::{Callback, EventTargetRef, Exception, Fallible, ObjectId, Value};
 
 use crate::generated::{self as web, InterfaceId};
@@ -392,25 +393,51 @@ pub fn has_listeners(page: &PageState, target: EventTargetRef, type_: &str) -> b
         .is_some_and(|list| list.iter().any(|l| &*l.type_ == type_))
 }
 
-/// The targets an event dispatched at `target` visits, innermost first.
-fn event_path(page: &PageState, target: EventTargetRef, type_: &str) -> Vec<EventTargetRef> {
+/// The targets an event dispatched at `target` visits, innermost first,
+/// each with the target as it is seen from there: from outside a shadow
+/// tree, the tree's host stands for what is inside it.
+fn event_path(
+    page: &PageState,
+    target: EventTargetRef,
+    type_: &str,
+    composed: bool,
+) -> Vec<(EventTargetRef, EventTargetRef)> {
     let EventTargetRef::Node(node) = target else {
-        return vec![target];
+        return vec![(target, target)];
     };
     let dom = page.dom.borrow();
     if !dom.contains(node) {
-        return vec![target];
+        return vec![(target, target)];
     }
-    let mut path = vec![target];
-    let mut root = node;
-    for ancestor in dom.ancestors(node) {
-        path.push(EventTargetRef::Node(ancestor));
-        root = ancestor;
-    }
-    // The window is the parent of its document for events, except for
-    // `load`.
-    if root == dom.document() && type_ != "load" {
-        path.push(EventTargetRef::Window);
+    let own_root = dom.root_of(node);
+    let mut seen = target;
+    let mut path = vec![(target, seen)];
+    let mut at = node;
+    loop {
+        if let Some(parent) = dom.parent(at) {
+            at = parent;
+            path.push((EventTargetRef::Node(at), seen));
+            continue;
+        }
+        match dom.kind(at) {
+            NodeKind::DocumentFragment(FragmentKind::ShadowRoot { host, .. }) => {
+                // An event that is not composed stays in the tree it was
+                // dispatched in.
+                if !composed && at == own_root {
+                    break;
+                }
+                at = *host;
+                seen = EventTargetRef::Node(at);
+                path.push((EventTargetRef::Node(at), seen));
+            }
+            // The window is the parent of its document for events, except
+            // for `load`.
+            NodeKind::Document(_) if at == dom.document() && type_ != "load" => {
+                path.push((EventTargetRef::Window, seen));
+                break;
+            }
+            _ => break,
+        }
     }
     path
 }
@@ -512,37 +539,56 @@ fn invoke(
 
 /// Dispatches `event` at `target`. Returns `false` if it was canceled.
 pub fn dispatch(cx: &mut Cx<'_>, target: EventTargetRef, event: ObjectId) -> bool {
-    let Ok((type_, bubbles)) = cx.page.with::<Event, _>(event, |e| {
+    let Ok((type_, bubbles, composed)) = cx.page.with::<Event, _>(event, |e| {
         e.dispatching = true;
         e.target = Some(target);
-        (e.type_.clone(), e.bubbles)
+        (e.type_.clone(), e.bubbles, e.composed)
     }) else {
         return true;
     };
-    let path = event_path(cx.page, target, &type_);
-    let _ = cx.page.with::<Event, _>(event, |e| e.path = path.clone());
+    let path = event_path(cx.page, target, &type_, composed);
+    let _ = cx
+        .page
+        .with::<Event, _>(event, |e| e.path = path.iter().map(|(t, _)| *t).collect());
     cx.pin(event);
+    // A target inside a shadow tree is not told of afterwards.
+    let in_shadow = match target {
+        EventTargetRef::Node(node) => {
+            let dom = cx.dom();
+            matches!(
+                dom.kind(dom.root_of(node)),
+                NodeKind::DocumentFragment(FragmentKind::ShadowRoot { .. })
+            )
+        }
+        _ => false,
+    };
 
     // Capture: outermost to innermost. The target itself only runs its
-    // capturing listeners here.
-    for (i, &current) in path.iter().enumerate().rev() {
-        let phase = if i == 0 {
+    // capturing listeners here. At each step the target is the one seen
+    // from there.
+    for &(current, seen) in path.iter().rev() {
+        let phase = if seen == current {
             PHASE_AT_TARGET
         } else {
             PHASE_CAPTURING
         };
+        let _ = cx.page.with::<Event, _>(event, |e| e.target = Some(seen));
         invoke(cx, current, event, &type_, phase, true);
     }
     // Bubble: innermost to outermost.
-    for (i, &current) in path.iter().enumerate() {
-        if i > 0 && !bubbles {
-            break;
+    for (i, &(current, seen)) in path.iter().enumerate() {
+        let at_target = seen == current;
+        // An event that does not bubble still reaches the targets it is
+        // retargeted to.
+        if i > 0 && !bubbles && !at_target {
+            continue;
         }
-        let phase = if i == 0 {
+        let phase = if at_target {
             PHASE_AT_TARGET
         } else {
             PHASE_BUBBLING
         };
+        let _ = cx.page.with::<Event, _>(event, |e| e.target = Some(seen));
         invoke(cx, current, event, &type_, phase, false);
     }
 
@@ -552,6 +598,9 @@ pub fn dispatch(cx: &mut Cx<'_>, target: EventTargetRef, event: ObjectId) -> boo
             e.phase = PHASE_NONE;
             e.current_target = None;
             e.path.clear();
+            if in_shadow {
+                e.target = None;
+            }
             e.dispatching = false;
             e.stop_propagation = false;
             e.stop_immediate = false;

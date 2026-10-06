@@ -58,6 +58,8 @@ pub struct ElementData {
     pub custom_element_state: CustomElementState,
     /// The `is` value of a customized built-in element.
     pub is_value: Option<String>,
+    /// The shadow root attached to the element, if any.
+    pub shadow_root: Option<NodeId>,
 }
 
 /// What became of an element as a custom element. The states are the DOM
@@ -86,6 +88,7 @@ impl ElementData {
             form_owner: None,
             custom_element_state: CustomElementState::Undefined,
             is_value: None,
+            shadow_root: None,
         }
     }
 
@@ -191,7 +194,13 @@ pub enum FragmentKind {
     /// The contents of a `<template>` element.
     TemplateContents { host: NodeId },
     /// A shadow root attached to `host`.
-    ShadowRoot { host: NodeId, open: bool },
+    ShadowRoot {
+        host: NodeId,
+        open: bool,
+        delegates_focus: bool,
+        clonable: bool,
+        serializable: bool,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -473,6 +482,7 @@ impl Dom {
                 NodeKind::Element(el) => {
                     node.owner = document;
                     stack.extend(el.template_contents);
+                    stack.extend(el.shadow_root);
                 }
                 _ => node.owner = document,
             }
@@ -499,7 +509,10 @@ impl Dom {
     /// Whether `id` is in a document tree: that of the arena's own document
     /// or of another one. See [`Dom::is_connected`] for the former alone.
     pub fn in_document_tree(&self, id: NodeId) -> bool {
-        matches!(self.nodes[self.root_of(id)].kind, NodeKind::Document(_))
+        matches!(
+            self.nodes[self.shadow_including_root(id)].kind,
+            NodeKind::Document(_)
+        )
     }
 
     pub fn create_element(&mut self, name: QualName, attrs: Vec<Attr>) -> NodeId {
@@ -605,9 +618,39 @@ impl Dom {
         cur
     }
 
-    /// True if the Document is an inclusive ancestor of `id`.
+    /// The root of the tree containing `id`, crossing from a shadow root to
+    /// its host: the shadow-including root.
+    pub fn shadow_including_root(&self, id: NodeId) -> NodeId {
+        let mut root = self.root_of(id);
+        while let NodeKind::DocumentFragment(FragmentKind::ShadowRoot { host, .. }) =
+            &self.nodes[root].kind
+        {
+            root = self.root_of(*host);
+        }
+        root
+    }
+
+    /// True if `id` is in the Document, shadow trees included.
     pub fn is_connected(&self, id: NodeId) -> bool {
-        self.root_of(id) == self.document
+        self.shadow_including_root(id) == self.document
+    }
+
+    /// `id` and its descendants in tree order, with the shadow trees of the
+    /// elements among them visited after their hosts.
+    pub fn shadow_including_descendants(&self, id: NodeId) -> Vec<NodeId> {
+        let mut out = Vec::new();
+        let mut stack = vec![id];
+        while let Some(n) = stack.pop() {
+            out.push(n);
+            if let NodeKind::Element(el) = &self.nodes[n].kind
+                && let Some(shadow) = el.shadow_root
+            {
+                stack.push(shadow);
+            }
+            let children: Vec<NodeId> = self.children(n).collect();
+            stack.extend(children.into_iter().rev());
+        }
+        out
     }
 
     /// The next node in pre-order after `id` within the subtree rooted at `root`.
@@ -747,10 +790,9 @@ impl Dom {
                     stack.push(child);
                     c = self.nodes.get(child).and_then(|x| x.next_sibling);
                 }
-                if let NodeKind::Element(el) = node.kind
-                    && let Some(t) = el.template_contents
-                {
-                    stack.push(t);
+                if let NodeKind::Element(el) = node.kind {
+                    stack.extend(el.template_contents);
+                    stack.extend(el.shadow_root);
                 }
             }
         }

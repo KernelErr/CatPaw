@@ -122,6 +122,11 @@ members = ["parseFromString"]
 [interfaces.DocumentType]
 members = ["name", "publicId", "systemId"]
 
+# Shadow trees without slots: `<slot>` elements do not assign anything, and
+# styles are not scoped.
+[interfaces.ShadowRoot]
+members = ["mode", "delegatesFocus", "serializable", "slotAssignment", "clonable", "host", "innerHTML"]
+
 [interfaces.NodeIterator]
 members = [
   "root", "referenceNode", "pointerBeforeReferenceNode", "whatToShow", "filter", "nextNode",
@@ -162,7 +167,7 @@ members = [
   "getBoundingClientRect", "scrollIntoView", "scrollTop", "scrollLeft", "scrollWidth",
   "scrollHeight", "clientTop", "clientLeft", "clientWidth", "clientHeight", "attributes",
   "getAttributeNode", "getAttributeNodeNS", "setAttributeNode", "setAttributeNodeNS",
-  "removeAttributeNode",
+  "removeAttributeNode", "attachShadow", "shadowRoot",
 ]
 
 [interfaces.CharacterData]

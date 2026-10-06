@@ -272,6 +272,34 @@ impl IntoJs for web::ScrollRestoration {
     }
 }
 
+impl FromJs for web::ShadowRootMode {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::ShadowRootMode::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid ShadowRootMode")))
+    }
+}
+
+impl IntoJs for web::ShadowRootMode {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
+impl FromJs for web::SlotAssignmentMode {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::SlotAssignmentMode::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid SlotAssignmentMode")))
+    }
+}
+
+impl IntoJs for web::SlotAssignmentMode {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
 impl FromJs for web::XMLHttpRequestResponseType {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let s = rt::string_from_js(v, ctx)?;
@@ -1304,6 +1332,66 @@ impl IntoJs for web::ScrollToOptions {
         rt::set_member(&obj, "behavior", self.behavior, ctx)?;
         rt::set_member(&obj, "left", self.left, ctx)?;
         rt::set_member(&obj, "top", self.top, ctx)?;
+        Ok(obj.into())
+    }
+}
+
+impl FromJs for web::ShadowRootInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "ShadowRootInit")?;
+        Ok(Self {
+            mode: match rt::dictionary_member(&obj, "mode", ctx)? {
+                Some(m) => <web::ShadowRootMode as FromJs>::from_js((&m), ctx)?,
+                None => return Err(rt::type_error("ShadowRootInit.mode is required")),
+            },
+            delegates_focus: match rt::dictionary_member(&obj, "delegatesFocus", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            serializable: match rt::dictionary_member(&obj, "serializable", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            slot_assignment: match rt::dictionary_member(&obj, "slotAssignment", ctx)? {
+                Some(m) => <web::SlotAssignmentMode as FromJs>::from_js((&m), ctx)?,
+                None => web::SlotAssignmentMode::Named,
+            },
+            clonable: match rt::dictionary_member(&obj, "clonable", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            custom_element_registry: match rt::dictionary_member(
+                &obj,
+                "customElementRegistry",
+                ctx,
+            )? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(rt::object_from_js((&m), I::CustomElementRegistry, ctx)?)
+                    }
+                }
+                None => None,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::ShadowRootInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "mode", self.mode, ctx)?;
+        rt::set_member(&obj, "delegatesFocus", self.delegates_focus, ctx)?;
+        rt::set_member(&obj, "serializable", self.serializable, ctx)?;
+        rt::set_member(&obj, "slotAssignment", self.slot_assignment, ctx)?;
+        rt::set_member(&obj, "clonable", self.clonable, ctx)?;
+        rt::set_member(
+            &obj,
+            "customElementRegistry",
+            self.custom_element_registry,
+            ctx,
+        )?;
         Ok(obj.into())
     }
 }
@@ -17935,6 +18023,16 @@ pub mod element {
         Ok(v)
     }
 
+    fn get_shadow_root(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Element, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ElementImpl>::shadow_root(cx, this));
+        rt::ret(r, ctx)
+    }
+
     fn get_inner_html(
         this_js: &JsValue,
         _args: &[JsValue],
@@ -18427,6 +18525,21 @@ pub mod element {
         rt::ret(r, ctx)
     }
 
+    fn op_attach_shadow(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Element, ctx)?;
+        rt::require_args(args, 1, "Element.attachShadow")?;
+        let a0 = <web::ShadowRootInit as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ElementImpl>::attach_shadow(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn op_closest(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Element, ctx)?;
@@ -18813,6 +18926,11 @@ pub mod element {
                 setter: None,
             },
             rt::AttrDef {
+                name: "shadowRoot",
+                getter: get_shadow_root,
+                setter: None,
+            },
+            rt::AttrDef {
                 name: "innerHTML",
                 getter: get_inner_html,
                 setter: Some(set_inner_html),
@@ -18942,6 +19060,11 @@ pub mod element {
             rt::OpDef {
                 name: "removeAttributeNode",
                 func: op_remove_attribute_node,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "attachShadow",
+                func: op_attach_shadow,
                 length: 1,
             },
             rt::OpDef {
@@ -35153,6 +35276,192 @@ pub mod svg_view_element {
     };
 }
 
+pub mod shadow_root {
+    use super::*;
+
+    fn get_mode(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::ShadowRoot, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ShadowRootImpl>::mode(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_delegates_focus(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::ShadowRoot, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ShadowRootImpl>::delegates_focus(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_serializable(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::ShadowRoot, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ShadowRootImpl>::serializable(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_slot_assignment(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::ShadowRoot, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ShadowRootImpl>::slot_assignment(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_clonable(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::ShadowRoot, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ShadowRootImpl>::clonable(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_host(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::ShadowRoot, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ShadowRootImpl>::host(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_onslotchange(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::ShadowRoot, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "slotchange")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onslotchange(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::ShadowRoot, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "slotchange", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_inner_html(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::ShadowRoot, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ShadowRootImpl>::inner_html(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn set_inner_html(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_inner_html_body(this_js, args, ctx))
+    }
+
+    fn set_inner_html_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::ShadowRoot, ctx)?;
+        let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ShadowRootImpl>::set_inner_html(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_active_element(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::ShadowRoot, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DocumentOrShadowRootImpl>::active_element(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::ShadowRoot,
+        name: "ShadowRoot",
+        parent: Some(I::DocumentFragment),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "mode",
+                getter: get_mode,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "delegatesFocus",
+                getter: get_delegates_focus,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "serializable",
+                getter: get_serializable,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "slotAssignment",
+                getter: get_slot_assignment,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "clonable",
+                getter: get_clonable,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "host",
+                getter: get_host,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "onslotchange",
+                getter: get_onslotchange,
+                setter: Some(set_onslotchange),
+            },
+            rt::AttrDef {
+                name: "innerHTML",
+                getter: get_inner_html,
+                setter: Some(set_inner_html),
+            },
+            rt::AttrDef {
+                name: "activeElement",
+                getter: get_active_element,
+                setter: None,
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod text {
     use super::*;
 
@@ -39820,6 +40129,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &svg_title_element::DEF,
     &svg_use_element::DEF,
     &svg_view_element::DEF,
+    &shadow_root::DEF,
     &text::DEF,
     &xml_document::DEF,
     &xml_http_request::DEF,

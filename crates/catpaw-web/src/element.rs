@@ -3,7 +3,7 @@
 //! that have state of their own.
 
 use catpaw_dom::{
-    Attr, Dom, ElementData, LocalName, Namespace, NodeId, NodeKind, Prefix, QualName,
+    Attr, Dom, ElementData, FragmentKind, LocalName, Namespace, NodeId, NodeKind, Prefix, QualName,
     parse_fragment_into, to_html,
 };
 use catpaw_js::{EventTargetRef, Exception, Fallible, ObjectId, PromiseRef, Value};
@@ -211,6 +211,12 @@ fn inner_target(dom: &Dom, el: NodeId) -> NodeId {
     dom.element(el)
         .and_then(|e| e.template_contents)
         .unwrap_or(el)
+}
+
+/// Parses `markup` as `context`'s content, for a tree that is not the
+/// element's own children (a shadow tree).
+pub(crate) fn parse_fragment_for(cx: &Cx<'_>, markup: &str, context: NodeId) -> NodeId {
+    parse_fragment(cx, markup, context)
 }
 
 fn parse_fragment(cx: &Cx<'_>, markup: &str, context: NodeId) -> NodeId {
@@ -724,6 +730,23 @@ impl web::ElementImpl for Web {
         with_element(cx, this, |el| {
             find_attr_ns(el, &namespace, &local_name).map(|a| a.value.clone())
         })
+    }
+
+    fn attach_shadow(cx: &mut Cx<'_>, this: NodeId, init: web::ShadowRootInit) -> Fallible<NodeId> {
+        crate::shadow::attach(cx, this, init)
+    }
+
+    fn shadow_root(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>> {
+        node::check(cx, this)?;
+        let dom = cx.dom();
+        let Some(shadow) = dom.element(this).and_then(|e| e.shadow_root) else {
+            return Ok(None);
+        };
+        let open = matches!(
+            dom.kind(shadow),
+            NodeKind::DocumentFragment(FragmentKind::ShadowRoot { open: true, .. })
+        );
+        Ok(open.then_some(shadow))
     }
 
     fn attributes(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId> {
@@ -1658,6 +1681,7 @@ pub fn interface_for_node(dom: &Dom, id: NodeId) -> InterfaceId {
         NodeKind::Text(_) => InterfaceId::Text,
         NodeKind::Comment(_) => InterfaceId::Comment,
         NodeKind::ProcessingInstruction { .. } => InterfaceId::CharacterData,
+        NodeKind::DocumentFragment(FragmentKind::ShadowRoot { .. }) => InterfaceId::ShadowRoot,
         NodeKind::DocumentFragment(_) => InterfaceId::DocumentFragment,
         NodeKind::Element(el) => {
             if &*el.name.ns == crate::svg::SVG_NS {

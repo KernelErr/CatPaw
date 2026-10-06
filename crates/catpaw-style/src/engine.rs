@@ -343,7 +343,7 @@ impl StyleEngine {
     /// attribute-derived data Stylo reads during matching.
     pub fn ensure_slots(&mut self, dom: &Dom) {
         let document = dom.document();
-        for id in dom.descendants(document) {
+        for id in dom.shadow_including_descendants(document) {
             let NodeKind::Element(el) = dom.kind(id) else {
                 continue;
             };

@@ -681,10 +681,15 @@ impl web::NodeImpl for Web {
     fn get_root_node(
         cx: &mut Cx<'_>,
         this: NodeId,
-        _options: web::GetRootNodeOptions,
+        options: web::GetRootNodeOptions,
     ) -> Fallible<NodeId> {
         check(cx, this)?;
-        Ok(cx.dom().root_of(this))
+        let dom = cx.dom();
+        Ok(if options.composed {
+            dom.shadow_including_root(this)
+        } else {
+            dom.root_of(this)
+        })
     }
 
     fn parent_node(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>> {
