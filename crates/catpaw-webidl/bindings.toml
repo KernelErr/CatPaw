@@ -229,7 +229,8 @@ members = [
   "window", "self", "document", "location", "history", "navigator", "frames", "top", "parent",
   "closed", "focus", "blur", "alert", "confirm", "prompt", "innerWidth", "innerHeight",
   "scrollX", "scrollY", "pageXOffset", "pageYOffset", "scroll", "scrollTo", "scrollBy",
-  "devicePixelRatio", "event",
+  "devicePixelRatio", "event", "matchMedia", "screen", "outerWidth", "outerHeight", "screenX",
+  "screenY", "screenLeft", "screenTop",
 ]
 
 [mixins.WindowOrWorkerGlobalScope]
@@ -252,6 +253,12 @@ members = [
   "href", "origin", "protocol", "host", "hostname", "port", "pathname", "search", "hash",
   "assign", "replace", "reload",
 ]
+
+[interfaces.MediaQueryList]
+members = ["media", "matches", "addListener", "removeListener"]
+
+[interfaces.Screen]
+members = ["availWidth", "availHeight", "width", "height", "colorDepth", "pixelDepth"]
 
 [interfaces.History]
 members = [

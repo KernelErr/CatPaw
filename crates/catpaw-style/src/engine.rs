@@ -86,7 +86,7 @@ impl RegisteredSpeculativePainters for NoPainters {
     }
 }
 
-fn set_prefs() {
+pub(crate) fn set_prefs() {
     static ONCE: Once = Once::new();
     ONCE.call_once(|| {
         style_config::set_pref!("layout.grid.enabled", true);
@@ -101,7 +101,7 @@ fn set_prefs() {
     });
 }
 
-fn make_device(options: &StyleOptions) -> Device {
+pub(crate) fn make_device(options: &StyleOptions) -> Device {
     let viewport_size = euclid::Size2D::new(options.viewport_width, options.viewport_height);
     let device_size = euclid::Size2D::new(options.viewport_width, options.viewport_height)
         * options.device_pixel_ratio;

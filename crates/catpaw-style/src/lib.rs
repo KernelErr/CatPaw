@@ -12,12 +12,14 @@
 
 pub mod engine;
 pub mod inline;
+pub mod media;
 pub mod node;
 pub mod query;
 pub mod table;
 
 pub use engine::{StyleEngine, StyleOptions};
 pub use inline::InlineStyle;
+pub use media::MediaQueryList;
 pub use node::{CatNode, with_style_context};
 pub use query::Selectors;
 pub use table::{StyleSlot, StyleTable};

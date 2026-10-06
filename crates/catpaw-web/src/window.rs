@@ -122,6 +122,39 @@ impl web::WindowImpl for Web {
         Ok(cx.page.current_event.get())
     }
 
+    fn match_media(cx: &mut Cx<'_>, query: String) -> Fallible<ObjectId> {
+        Ok(crate::media::match_media(cx.page, &query))
+    }
+
+    fn screen(cx: &mut Cx<'_>) -> Fallible<ObjectId> {
+        Ok(cx.page.alloc(crate::media::ScreenObject))
+    }
+
+    // The window is the viewport: no browser chrome, placed at the origin.
+    fn screen_x(_cx: &mut Cx<'_>) -> Fallible<i32> {
+        Ok(0)
+    }
+
+    fn screen_left(_cx: &mut Cx<'_>) -> Fallible<i32> {
+        Ok(0)
+    }
+
+    fn screen_y(_cx: &mut Cx<'_>) -> Fallible<i32> {
+        Ok(0)
+    }
+
+    fn screen_top(_cx: &mut Cx<'_>) -> Fallible<i32> {
+        Ok(0)
+    }
+
+    fn outer_width(cx: &mut Cx<'_>) -> Fallible<i32> {
+        Ok(cx.page.config.viewport_width as i32)
+    }
+
+    fn outer_height(cx: &mut Cx<'_>) -> Fallible<i32> {
+        Ok(cx.page.config.viewport_height as i32)
+    }
+
     fn window(_cx: &mut Cx<'_>) -> Fallible<WindowRef> {
         Ok(WindowRef)
     }

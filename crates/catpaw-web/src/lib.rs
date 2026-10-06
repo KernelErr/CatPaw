@@ -26,6 +26,7 @@ mod fetch;
 pub mod generated;
 mod history;
 pub mod html_names;
+mod media;
 pub mod net;
 mod node;
 pub mod page;

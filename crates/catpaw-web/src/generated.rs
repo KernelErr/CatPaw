@@ -35,6 +35,7 @@ pub enum InterfaceId {
     Headers,
     History,
     Location,
+    MediaQueryList,
     Navigator,
     Node,
     NodeList,
@@ -44,6 +45,7 @@ pub enum InterfaceId {
     PromiseRejectionEvent,
     Request,
     Response,
+    Screen,
     Storage,
     TextDecoder,
     TextEncoder,
@@ -102,8 +104,8 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 77;
-    pub const ALL: [InterfaceId; 77] = [
+    pub const COUNT: usize = 79;
+    pub const ALL: [InterfaceId; 79] = [
         InterfaceId::AbortController,
         InterfaceId::CSSStyleDeclaration,
         InterfaceId::CSSStyleProperties,
@@ -117,6 +119,7 @@ impl InterfaceId {
         InterfaceId::Headers,
         InterfaceId::History,
         InterfaceId::Location,
+        InterfaceId::MediaQueryList,
         InterfaceId::Navigator,
         InterfaceId::Node,
         InterfaceId::NodeList,
@@ -126,6 +129,7 @@ impl InterfaceId {
         InterfaceId::PromiseRejectionEvent,
         InterfaceId::Request,
         InterfaceId::Response,
+        InterfaceId::Screen,
         InterfaceId::Storage,
         InterfaceId::TextDecoder,
         InterfaceId::TextEncoder,
@@ -198,6 +202,7 @@ impl InterfaceId {
             InterfaceId::Headers => "Headers",
             InterfaceId::History => "History",
             InterfaceId::Location => "Location",
+            InterfaceId::MediaQueryList => "MediaQueryList",
             InterfaceId::Navigator => "Navigator",
             InterfaceId::Node => "Node",
             InterfaceId::NodeList => "NodeList",
@@ -207,6 +212,7 @@ impl InterfaceId {
             InterfaceId::PromiseRejectionEvent => "PromiseRejectionEvent",
             InterfaceId::Request => "Request",
             InterfaceId::Response => "Response",
+            InterfaceId::Screen => "Screen",
             InterfaceId::Storage => "Storage",
             InterfaceId::TextDecoder => "TextDecoder",
             InterfaceId::TextEncoder => "TextEncoder",
@@ -280,6 +286,7 @@ impl InterfaceId {
             "Headers" => InterfaceId::Headers,
             "History" => InterfaceId::History,
             "Location" => InterfaceId::Location,
+            "MediaQueryList" => InterfaceId::MediaQueryList,
             "Navigator" => InterfaceId::Navigator,
             "Node" => InterfaceId::Node,
             "NodeList" => InterfaceId::NodeList,
@@ -289,6 +296,7 @@ impl InterfaceId {
             "PromiseRejectionEvent" => InterfaceId::PromiseRejectionEvent,
             "Request" => InterfaceId::Request,
             "Response" => InterfaceId::Response,
+            "Screen" => InterfaceId::Screen,
             "Storage" => InterfaceId::Storage,
             "TextDecoder" => InterfaceId::TextDecoder,
             "TextEncoder" => InterfaceId::TextEncoder,
@@ -363,6 +371,7 @@ impl InterfaceId {
             InterfaceId::Headers => None,
             InterfaceId::History => None,
             InterfaceId::Location => None,
+            InterfaceId::MediaQueryList => Some(InterfaceId::EventTarget),
             InterfaceId::Navigator => None,
             InterfaceId::Node => Some(InterfaceId::EventTarget),
             InterfaceId::NodeList => None,
@@ -372,6 +381,7 @@ impl InterfaceId {
             InterfaceId::PromiseRejectionEvent => Some(InterfaceId::Event),
             InterfaceId::Request => None,
             InterfaceId::Response => None,
+            InterfaceId::Screen => None,
             InterfaceId::Storage => None,
             InterfaceId::TextDecoder => None,
             InterfaceId::TextEncoder => None,
@@ -1588,6 +1598,14 @@ pub trait LocationImpl {
     fn reload(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
 }
 
+pub trait MediaQueryListImpl {
+    fn media(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn matches(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn add_listener(cx: &mut Cx<'_>, this: ObjectId, callback: Option<Callback>) -> Fallible<()>;
+    fn remove_listener(cx: &mut Cx<'_>, this: ObjectId, callback: Option<Callback>)
+    -> Fallible<()>;
+}
+
 pub trait NodeImpl {
     fn node_type(cx: &mut Cx<'_>, this: NodeId) -> Fallible<u16>;
     fn node_name(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
@@ -1716,6 +1734,15 @@ pub trait ResponseImpl {
     ) -> Fallible<ObjectId>;
 }
 
+pub trait ScreenImpl {
+    fn avail_width(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<i32>;
+    fn avail_height(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<i32>;
+    fn width(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<i32>;
+    fn height(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<i32>;
+    fn color_depth(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn pixel_depth(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+}
+
 pub trait StorageImpl {
     fn length(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
     fn key(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<String>>;
@@ -1796,6 +1823,8 @@ pub trait URLSearchParamsImpl {
 }
 
 pub trait WindowImpl {
+    fn match_media(cx: &mut Cx<'_>, query: String) -> Fallible<ObjectId>;
+    fn screen(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
     fn inner_width(cx: &mut Cx<'_>) -> Fallible<i32>;
     fn inner_height(cx: &mut Cx<'_>) -> Fallible<i32>;
     fn scroll_x(cx: &mut Cx<'_>) -> Fallible<f64>;
@@ -1808,6 +1837,12 @@ pub trait WindowImpl {
     fn scroll_to_overload2(cx: &mut Cx<'_>, x: f64, y: f64) -> Fallible<PromiseRef>;
     fn scroll_by(cx: &mut Cx<'_>, options: ScrollToOptions) -> Fallible<PromiseRef>;
     fn scroll_by_overload2(cx: &mut Cx<'_>, x: f64, y: f64) -> Fallible<PromiseRef>;
+    fn screen_x(cx: &mut Cx<'_>) -> Fallible<i32>;
+    fn screen_left(cx: &mut Cx<'_>) -> Fallible<i32>;
+    fn screen_y(cx: &mut Cx<'_>) -> Fallible<i32>;
+    fn screen_top(cx: &mut Cx<'_>) -> Fallible<i32>;
+    fn outer_width(cx: &mut Cx<'_>) -> Fallible<i32>;
+    fn outer_height(cx: &mut Cx<'_>) -> Fallible<i32>;
     fn device_pixel_ratio(cx: &mut Cx<'_>) -> Fallible<f64>;
     fn event(cx: &mut Cx<'_>) -> Fallible<Option<ObjectId>>;
     fn window(cx: &mut Cx<'_>) -> Fallible<WindowRef>;

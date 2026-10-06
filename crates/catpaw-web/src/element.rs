@@ -1167,10 +1167,23 @@ impl web::DOMTokenListImpl for Web {
         Ok(true)
     }
 
-    fn supports(_cx: &mut Cx<'_>, _this: ObjectId, _token: String) -> Fallible<bool> {
-        Err(Exception::type_error(
-            "This token list has no supported tokens",
-        ))
+    fn supports(cx: &mut Cx<'_>, this: ObjectId, token: String) -> Fallible<bool> {
+        let (el, attr) = token_list(cx, this)?;
+        let dom = cx.dom();
+        let local = dom
+            .element(el)
+            .filter(|e| e.is_html())
+            .map(|e| e.name.local.to_string())
+            .unwrap_or_default();
+        match (attr.as_str(), local.as_str()) {
+            // The link types this browser acts on. Pages use this to decide
+            // whether to polyfill preloading; nothing is preloaded here.
+            ("rel", "link") => Ok(token.eq_ignore_ascii_case("stylesheet")),
+            ("rel", "a" | "area" | "form") | ("sandbox", "iframe") => Ok(false),
+            _ => Err(Exception::type_error(
+                "This token list has no supported tokens",
+            )),
+        }
     }
 
     fn value(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String> {

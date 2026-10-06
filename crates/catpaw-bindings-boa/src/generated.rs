@@ -3242,6 +3242,131 @@ pub mod location {
     };
 }
 
+pub mod media_query_list {
+    use super::*;
+
+    fn get_media(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MediaQueryList, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MediaQueryListImpl>::media(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_matches(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MediaQueryList, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MediaQueryListImpl>::matches(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_onchange(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MediaQueryList, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "change")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onchange(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MediaQueryList, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "change", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn op_add_listener(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::MediaQueryList, ctx)?;
+        rt::require_args(args, 1, "MediaQueryList.addListener")?;
+        let a0 = if rt::arg(args, 0).is_null_or_undefined() {
+            None
+        } else {
+            Some(rt::callback_from_js(
+                rt::arg(args, 0),
+                CallbackKind::Interface,
+                ctx,
+            )?)
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MediaQueryListImpl>::add_listener(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_remove_listener(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::MediaQueryList, ctx)?;
+        rt::require_args(args, 1, "MediaQueryList.removeListener")?;
+        let a0 = if rt::arg(args, 0).is_null_or_undefined() {
+            None
+        } else {
+            Some(rt::callback_from_js(
+                rt::arg(args, 0),
+                CallbackKind::Interface,
+                ctx,
+            )?)
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MediaQueryListImpl>::remove_listener(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::MediaQueryList,
+        name: "MediaQueryList",
+        parent: Some(I::EventTarget),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "media",
+                getter: get_media,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "matches",
+                getter: get_matches,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "onchange",
+                getter: get_onchange,
+                setter: Some(set_onchange),
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "addListener",
+                func: op_add_listener,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "removeListener",
+                func: op_remove_listener,
+                length: 1,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod navigator {
     use super::*;
 
@@ -4825,6 +4950,109 @@ pub mod response {
     };
 }
 
+pub mod screen {
+    use super::*;
+
+    fn get_avail_width(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Screen, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ScreenImpl>::avail_width(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_avail_height(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Screen, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ScreenImpl>::avail_height(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_width(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Screen, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ScreenImpl>::width(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_height(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Screen, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ScreenImpl>::height(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_color_depth(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Screen, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ScreenImpl>::color_depth(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_pixel_depth(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Screen, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ScreenImpl>::pixel_depth(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::Screen,
+        name: "Screen",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "availWidth",
+                getter: get_avail_width,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "availHeight",
+                getter: get_avail_height,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "width",
+                getter: get_width,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "height",
+                getter: get_height,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "colorDepth",
+                getter: get_color_depth,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "pixelDepth",
+                getter: get_pixel_depth,
+                setter: None,
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod storage {
     use super::*;
 
@@ -5642,6 +5870,22 @@ pub mod url_search_params {
 pub mod window {
     use super::*;
 
+    fn get_screen(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "screen", ctx) {
+            return Ok(v);
+        }
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WindowImpl>::screen(cx));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "screen", &v, ctx);
+        Ok(v)
+    }
+
+    fn set_screen(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::replace_property(this_js, "screen", rt::arg(args, 0), ctx)?;
+        Ok(JsValue::undefined())
+    }
+
     fn get_inner_width(
         this_js: &JsValue,
         _args: &[JsValue],
@@ -5737,6 +5981,100 @@ pub mod window {
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
         rt::replace_property(this_js, "pageYOffset", rt::arg(args, 0), ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_screen_x(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WindowImpl>::screen_x(cx));
+        rt::ret(r, ctx)
+    }
+
+    fn set_screen_x(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::replace_property(this_js, "screenX", rt::arg(args, 0), ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_screen_left(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WindowImpl>::screen_left(cx));
+        rt::ret(r, ctx)
+    }
+
+    fn set_screen_left(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::replace_property(this_js, "screenLeft", rt::arg(args, 0), ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_screen_y(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WindowImpl>::screen_y(cx));
+        rt::ret(r, ctx)
+    }
+
+    fn set_screen_y(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::replace_property(this_js, "screenY", rt::arg(args, 0), ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_screen_top(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WindowImpl>::screen_top(cx));
+        rt::ret(r, ctx)
+    }
+
+    fn set_screen_top(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::replace_property(this_js, "screenTop", rt::arg(args, 0), ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_outer_width(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WindowImpl>::outer_width(cx));
+        rt::ret(r, ctx)
+    }
+
+    fn set_outer_width(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::replace_property(this_js, "outerWidth", rt::arg(args, 0), ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_outer_height(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WindowImpl>::outer_height(cx));
+        rt::ret(r, ctx)
+    }
+
+    fn set_outer_height(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::replace_property(this_js, "outerHeight", rt::arg(args, 0), ctx)?;
         Ok(JsValue::undefined())
     }
 
@@ -8008,6 +8346,15 @@ pub mod window {
         rt::ret(r, ctx)
     }
 
+    fn op_match_media(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::this_window(this_js, ctx)?;
+        rt::require_args(args, 1, "Window.matchMedia")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WindowImpl>::match_media(cx, a0));
+        rt::ret(r, ctx)
+    }
+
     fn op_scroll(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         rt::this_window(this_js, ctx)?;
@@ -8336,6 +8683,11 @@ pub mod window {
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
+                name: "screen",
+                getter: get_screen,
+                setter: Some(set_screen),
+            },
+            rt::AttrDef {
                 name: "innerWidth",
                 getter: get_inner_width,
                 setter: Some(set_inner_width),
@@ -8364,6 +8716,36 @@ pub mod window {
                 name: "pageYOffset",
                 getter: get_page_y_offset,
                 setter: Some(set_page_y_offset),
+            },
+            rt::AttrDef {
+                name: "screenX",
+                getter: get_screen_x,
+                setter: Some(set_screen_x),
+            },
+            rt::AttrDef {
+                name: "screenLeft",
+                getter: get_screen_left,
+                setter: Some(set_screen_left),
+            },
+            rt::AttrDef {
+                name: "screenY",
+                getter: get_screen_y,
+                setter: Some(set_screen_y),
+            },
+            rt::AttrDef {
+                name: "screenTop",
+                getter: get_screen_top,
+                setter: Some(set_screen_top),
+            },
+            rt::AttrDef {
+                name: "outerWidth",
+                getter: get_outer_width,
+                setter: Some(set_outer_width),
+            },
+            rt::AttrDef {
+                name: "outerHeight",
+                getter: get_outer_height,
+                setter: Some(set_outer_height),
             },
             rt::AttrDef {
                 name: "devicePixelRatio",
@@ -8922,6 +9304,11 @@ pub mod window {
             },
         ],
         ops: &[
+            rt::OpDef {
+                name: "matchMedia",
+                func: op_match_media,
+                length: 1,
+            },
             rt::OpDef {
                 name: "scroll",
                 func: op_scroll,
@@ -23869,6 +24256,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &headers::DEF,
     &history::DEF,
     &location::DEF,
+    &media_query_list::DEF,
     &navigator::DEF,
     &node::DEF,
     &node_list::DEF,
@@ -23878,6 +24266,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &promise_rejection_event::DEF,
     &request::DEF,
     &response::DEF,
+    &screen::DEF,
     &storage::DEF,
     &text_decoder::DEF,
     &text_encoder::DEF,
