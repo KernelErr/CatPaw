@@ -12,6 +12,7 @@ pub mod serialize;
 
 pub use arena::{
     Attr, DoctypeData, DocumentData, Dom, ElementData, FragmentKind, Node, NodeId, NodeKind,
+    TreeChange,
 };
 pub use html::{
     HtmlParseOptions, HtmlStream, ParseResult, WriteQueue, parse_fragment_into, parse_html,

@@ -19,6 +19,7 @@ use crate::element::child_text_content;
 use crate::event_loop::queue_task;
 use crate::events;
 use crate::generated::DocumentReadyState;
+use crate::mutation_observer;
 use crate::net::{self, NetRequest, NetResult, RequestKind};
 use crate::page::{ConsoleLevel, Cx};
 
@@ -431,7 +432,7 @@ fn run_parser_script(cx: &mut Cx<'_>, el: NodeId) {
 }
 
 fn pump(cx: &mut Cx<'_>, stream: &HtmlStream) {
-    while let Some(script) = stream.pump() {
+    while let Some(script) = mutation_observer::during_parsing(cx.page, || stream.pump()) {
         run_parser_script(cx, script);
         if cx.page.navigation.borrow().is_some() {
             return;
@@ -535,7 +536,7 @@ pub fn load_document(cx: &mut Cx<'_>, html: &str) {
     *cx.page.scripts.parser.borrow_mut() = Some(stream.clone());
     stream.push(html);
     pump(cx, &stream);
-    stream.finish();
+    mutation_observer::during_parsing(cx.page, || stream.finish());
     *cx.page.scripts.parser.borrow_mut() = None;
     if cx.page.navigation.borrow().is_some() {
         return;
@@ -550,14 +551,8 @@ pub(crate) fn document_open(cx: &mut Cx<'_>) {
     if cx.page.scripts.parser.borrow().is_some() {
         return;
     }
-    {
-        let mut dom = cx.dom_mut();
-        let document = dom.document();
-        let children: Vec<NodeId> = dom.children(document).collect();
-        for child in children {
-            dom.detach(child);
-        }
-    }
+    let document = cx.document();
+    crate::node::replace_all(cx, None, document);
     let stream = new_stream(cx);
     *cx.page.scripts.parser.borrow_mut() = Some(stream);
     cx.page.scripts.script_created_parser.set(true);
@@ -572,7 +567,7 @@ pub(crate) fn document_close(cx: &mut Cx<'_>) {
     let stream = cx.page.scripts.parser.borrow_mut().take();
     cx.page.scripts.script_created_parser.set(false);
     if let Some(stream) = stream {
-        stream.finish();
+        mutation_observer::during_parsing(cx.page, || stream.finish());
         finish_parsing(cx);
     }
 }
@@ -596,7 +591,9 @@ pub(crate) fn document_write(cx: &mut Cx<'_>, text: &str) {
         return;
     };
     let queue = WriteQueue::new(text);
-    while let Some(script) = stream.pump_write(&queue) {
+    while let Some(script) =
+        mutation_observer::during_parsing(cx.page, || stream.pump_write(&queue))
+    {
         run_parser_script(cx, script);
     }
 }

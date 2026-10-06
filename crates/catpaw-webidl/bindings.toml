@@ -56,6 +56,16 @@ members = ["state", "hasUAVisualTransition"]
 constructor = true
 members = ["lengthComputable", "loaded", "total"]
 
+[interfaces.MutationObserver]
+constructor = true
+members = ["observe", "disconnect", "takeRecords"]
+
+[interfaces.MutationRecord]
+members = [
+  "type", "target", "addedNodes", "removedNodes", "previousSibling", "nextSibling",
+  "attributeName", "attributeNamespace", "oldValue",
+]
+
 # ----------------------------------------------------------------- DOM: nodes
 
 [interfaces.Node]

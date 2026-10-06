@@ -27,6 +27,7 @@ pub mod generated;
 mod history;
 pub mod html_names;
 mod media;
+pub mod mutation_observer;
 pub mod net;
 mod node;
 pub mod page;
@@ -40,8 +41,8 @@ mod xhr;
 pub use element::interface_for_node;
 pub use generated::InterfaceId;
 pub use page::{
-    ConsoleLevel, ConsoleMessage, Cx, DialogRecord, NavigationRequest, PageConfig, PageState,
-    PlatformObject,
+    ConsoleLevel, ConsoleMessage, Cx, DialogRecord, NativeMicrotask, NavigationRequest, PageConfig,
+    PageState, PlatformObject,
 };
 
 /// The type every generated `XImpl` trait is implemented on.

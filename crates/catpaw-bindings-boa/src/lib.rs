@@ -20,6 +20,7 @@ use std::rc::Rc;
 use boa_engine::builtins::promise::{OperationType, Promise};
 use boa_engine::context::HostHooks;
 use boa_engine::context::time::{Clock, JsInstant};
+use boa_engine::job::PromiseJob;
 use boa_engine::{Context, JsObject, JsValue, Source, js_string};
 use catpaw_js::Value;
 use catpaw_js_boa::{Jobs, inspect};
@@ -92,6 +93,14 @@ impl BoaPage {
         limits.set_recursion_limit(RECURSION_LIMIT);
         limits.set_stack_size_limit(STACK_SIZE_LIMIT);
 
+        // Microtasks the page queues itself run in order with script's.
+        let queue = jobs.clone();
+        page.set_microtask_queue(move |task| {
+            queue.enqueue_microtask(PromiseJob::new(move |ctx| {
+                rt::with_cx(ctx, task);
+                Ok(JsValue::undefined())
+            }));
+        });
         let runtime = Runtime::new(page, jobs);
         runtime.attach(&mut context);
         rt::install(&mut context, &runtime)

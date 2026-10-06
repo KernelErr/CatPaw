@@ -10,7 +10,7 @@ use catpaw_style::Selectors;
 use crate::collections::{self, ListSource};
 use crate::generated::{self as web, NodeOrString};
 use crate::page::Cx;
-use crate::{Web, scripting};
+use crate::{Web, mutation_observer, scripting};
 
 pub const ELEMENT_NODE: u16 = 1;
 pub const TEXT_NODE: u16 = 3;
@@ -98,12 +98,13 @@ pub(crate) fn char_data(dom: &Dom, id: NodeId) -> Option<&str> {
 
 pub(crate) fn set_char_data(cx: &Cx<'_>, id: NodeId, value: String) -> Fallible<()> {
     let mut dom = cx.dom_mut();
-    match dom.get_mut(id).map(|n| &mut n.kind) {
-        Some(NodeKind::Text(s) | NodeKind::Comment(s)) => *s = value,
-        Some(NodeKind::ProcessingInstruction { data, .. }) => *data = value,
+    let old = match dom.get_mut(id).map(|n| &mut n.kind) {
+        Some(NodeKind::Text(s) | NodeKind::Comment(s)) => std::mem::replace(s, value),
+        Some(NodeKind::ProcessingInstruction { data, .. }) => std::mem::replace(data, value),
         _ => return Err(stale()),
-    }
+    };
     drop(dom);
+    crate::mutation_observer::queue_character_data(cx.page, id, &old);
     scripting::character_data_changed(cx, id);
     Ok(())
 }
@@ -247,22 +248,59 @@ fn ensure_validity(
 
 // ---- mutation -------------------------------------------------------------
 
-/// Inserts `node` into `parent` before `child`, without validity checks.
-/// A fragment is replaced by its children.
-pub(crate) fn insert(cx: &mut Cx<'_>, node: NodeId, parent: NodeId, child: Option<NodeId>) {
-    let inserted: Vec<NodeId> = {
+/// The nodes inserting `node` puts in the tree: a fragment stands for its
+/// children.
+fn nodes_of(dom: &Dom, node: NodeId) -> Vec<NodeId> {
+    if matches!(dom.kind(node), NodeKind::DocumentFragment(_)) {
+        dom.children(node).collect()
+    } else {
+        vec![node]
+    }
+}
+
+/// <https://dom.spec.whatwg.org/#concept-node-insert>, without the validity
+/// checks: inserts `node` into `parent` before `child`. With
+/// `suppress_observers` the caller reports the insertion to mutation
+/// observers itself.
+pub(crate) fn insert(
+    cx: &mut Cx<'_>,
+    node: NodeId,
+    parent: NodeId,
+    child: Option<NodeId>,
+    suppress_observers: bool,
+) {
+    let (is_fragment, nodes) = {
+        let dom = cx.dom();
+        let is_fragment = matches!(dom.kind(node), NodeKind::DocumentFragment(_));
+        (is_fragment, nodes_of(&dom, node))
+    };
+    if nodes.is_empty() {
+        return;
+    }
+    if is_fragment {
+        for &n in &nodes {
+            remove(cx, n, true);
+        }
+        mutation_observer::queue_child_list(cx.page, node, &[], &nodes, None, None);
+    } else {
+        // The node leaves the tree it was in.
+        remove(cx, node, false);
+    }
+    let previous = {
         let mut dom = cx.dom_mut();
-        let nodes: Vec<NodeId> = if matches!(dom.kind(node), NodeKind::DocumentFragment(_)) {
-            dom.children(node).collect()
-        } else {
-            vec![node]
+        let previous = match child {
+            Some(child) => dom.prev_sibling(child),
+            None => dom.last_child(parent),
         };
         for &n in &nodes {
             dom.insert_before(parent, n, child);
         }
-        nodes
+        previous
     };
-    scripting::nodes_inserted(cx, parent, &inserted);
+    if !suppress_observers {
+        mutation_observer::queue_child_list(cx.page, parent, &nodes, &[], previous, child);
+    }
+    scripting::nodes_inserted(cx, parent, &nodes);
 }
 
 /// <https://dom.spec.whatwg.org/#concept-node-pre-insert>
@@ -281,7 +319,7 @@ pub(crate) fn pre_insert(
             child
         }
     };
-    insert(cx, node, parent, reference);
+    insert(cx, node, parent, reference, false);
     Ok(node)
 }
 
@@ -289,11 +327,28 @@ pub(crate) fn append(cx: &mut Cx<'_>, node: NodeId, parent: NodeId) -> Fallible<
     pre_insert(cx, node, parent, None)
 }
 
-/// Removes `node` from its parent, keeping it (and its subtree) alive.
-pub(crate) fn remove(cx: &mut Cx<'_>, node: NodeId) {
-    let mut dom = cx.dom_mut();
-    if dom.contains(node) {
+/// <https://dom.spec.whatwg.org/#concept-node-remove>: removes `node` from
+/// its parent, if it has one, keeping it (and its subtree) alive. With
+/// `suppress_observers` the caller reports the removal to mutation
+/// observers itself.
+pub(crate) fn remove(cx: &mut Cx<'_>, node: NodeId, suppress_observers: bool) {
+    let (parent, previous, next) = {
+        let mut dom = cx.dom_mut();
+        if !dom.contains(node) {
+            return;
+        }
+        let Some(parent) = dom.parent(node) else {
+            return;
+        };
+        let siblings = (dom.prev_sibling(node), dom.next_sibling(node));
         dom.detach(node);
+        (parent, siblings.0, siblings.1)
+    };
+    if mutation_observer::active(cx.page) {
+        mutation_observer::node_removed(cx.page, node, parent);
+        if !suppress_observers {
+            mutation_observer::queue_child_list(cx.page, parent, &[], &[node], previous, next);
+        }
     }
 }
 
@@ -304,33 +359,45 @@ pub(crate) fn replace(
     node: NodeId,
     parent: NodeId,
 ) -> Fallible<NodeId> {
-    let reference = {
+    let (reference, previous, nodes) = {
         let dom = cx.dom();
         ensure_validity(&dom, node, parent, Some(child), true)?;
+        // `node` itself is on its way out of where it is.
         let next = dom.next_sibling(child);
-        if next == Some(node) {
+        let reference = if next == Some(node) {
             dom.next_sibling(node)
         } else {
             next
-        }
+        };
+        let previous = dom.prev_sibling(child);
+        let previous = if previous == Some(node) {
+            dom.prev_sibling(node)
+        } else {
+            previous
+        };
+        (reference, previous, nodes_of(&dom, node))
     };
-    remove(cx, child);
-    insert(cx, node, parent, reference);
+    remove(cx, child, true);
+    insert(cx, node, parent, reference, true);
+    mutation_observer::queue_child_list(cx.page, parent, &nodes, &[child], previous, reference);
     Ok(child)
 }
 
 /// <https://dom.spec.whatwg.org/#concept-node-replace-all>
 pub(crate) fn replace_all(cx: &mut Cx<'_>, node: Option<NodeId>, parent: NodeId) {
-    {
-        let mut dom = cx.dom_mut();
-        let children: Vec<NodeId> = dom.children(parent).collect();
-        for c in children {
-            dom.detach(c);
-        }
+    let (removed, added) = {
+        let dom = cx.dom();
+        let removed: Vec<NodeId> = dom.children(parent).collect();
+        let added = node.map(|n| nodes_of(&dom, n)).unwrap_or_default();
+        (removed, added)
+    };
+    for &child in &removed {
+        remove(cx, child, true);
     }
     if let Some(node) = node {
-        insert(cx, node, parent, None);
+        insert(cx, node, parent, None, true);
     }
+    mutation_observer::queue_child_list(cx.page, parent, &added, &removed, None, None);
 }
 
 /// <https://dom.spec.whatwg.org/#string-replace-all>
@@ -341,26 +408,29 @@ pub(crate) fn string_replace_all(cx: &mut Cx<'_>, text: &str, parent: NodeId) {
 
 /// <https://dom.spec.whatwg.org/#converting-nodes-into-a-node>
 pub(crate) fn convert_nodes(cx: &mut Cx<'_>, nodes: Vec<NodeOrString>) -> Fallible<NodeId> {
-    let mut dom = cx.dom_mut();
-    let mut ids = Vec::with_capacity(nodes.len());
-    for n in nodes {
-        ids.push(match n {
-            NodeOrString::Node(id) => {
-                if !dom.contains(id) {
-                    return Err(stale());
+    let (ids, fragment) = {
+        let mut dom = cx.dom_mut();
+        let mut ids = Vec::with_capacity(nodes.len());
+        for n in nodes {
+            ids.push(match n {
+                NodeOrString::Node(id) => {
+                    if !dom.contains(id) {
+                        return Err(stale());
+                    }
+                    id
                 }
-                id
-            }
-            NodeOrString::String(s) => dom.create_text(s),
-        });
-    }
-    if ids.len() == 1 {
-        return Ok(ids[0]);
-    }
-    let fragment = dom.create_fragment(FragmentKind::Plain);
+                NodeOrString::String(s) => dom.create_text(s),
+            });
+        }
+        if ids.len() == 1 {
+            return Ok(ids[0]);
+        }
+        (ids, dom.create_fragment(FragmentKind::Plain))
+    };
     for id in ids {
-        // Moving a node into the fragment detaches it from its old parent.
-        dom.append_child(fragment, id);
+        // Moving a node into the fragment takes it from its old parent.
+        remove(cx, id, false);
+        cx.dom_mut().append_child(fragment, id);
     }
     Ok(fragment)
 }
@@ -653,30 +723,43 @@ impl web::NodeImpl for Web {
 
     fn normalize(cx: &mut Cx<'_>, this: NodeId) -> Fallible<()> {
         check(cx, this)?;
-        let mut dom = cx.dom_mut();
-        let texts: Vec<NodeId> = dom
-            .descendants(this)
-            .filter(|&n| dom.node(n).is_text())
-            .collect();
+        let texts: Vec<NodeId> = {
+            let dom = cx.dom();
+            dom.descendants(this)
+                .filter(|&n| dom.node(n).is_text())
+                .collect()
+        };
         for text in texts {
-            // Already merged into a previous sibling.
-            if !dom.contains(text) || dom.parent(text).is_none() {
-                continue;
-            }
-            let mut data = dom.node(text).as_text().unwrap_or_default().to_string();
+            // What follows `text`: its data and the text nodes to merge.
+            let (data, merged) = {
+                let dom = cx.dom();
+                // Already merged into a previous sibling.
+                if dom.parent(text).is_none() {
+                    continue;
+                }
+                let mut data = dom.node(text).as_text().unwrap_or_default().to_string();
+                if data.is_empty() {
+                    (data, Vec::new())
+                } else {
+                    let merged: Vec<NodeId> = following_siblings(&dom, text)
+                        .take_while(|&n| dom.node(n).is_text())
+                        .collect();
+                    for &n in &merged {
+                        data.push_str(dom.node(n).as_text().unwrap_or_default());
+                    }
+                    (data, merged)
+                }
+            };
             if data.is_empty() {
-                dom.remove_subtree(text);
+                remove(cx, text, false);
                 continue;
             }
-            while let Some(next) = dom.next_sibling(text) {
-                let Some(more) = dom.node(next).as_text() else {
-                    break;
-                };
-                data.push_str(more);
-                dom.remove_subtree(next);
+            if merged.is_empty() {
+                continue;
             }
-            if let NodeKind::Text(s) = &mut dom.node_mut(text).kind {
-                *s = data;
+            set_char_data(cx, text, data)?;
+            for n in merged {
+                remove(cx, n, false);
             }
         }
         Ok(())
@@ -763,7 +846,7 @@ impl web::NodeImpl for Web {
                 "The node to be removed is not a child of this node",
             ));
         }
-        remove(cx, child);
+        remove(cx, child, false);
         Ok(child)
     }
 }
@@ -875,7 +958,7 @@ impl web::ChildNodeImpl for Web {
     }
 
     fn remove(cx: &mut Cx<'_>, this: NodeId) -> Fallible<()> {
-        remove(cx, this);
+        remove(cx, this, false);
         Ok(())
     }
 }
@@ -981,15 +1064,14 @@ impl web::TextImpl for Web {
         }
         let tail = substring_utf16(&data, offset, length - offset)?;
         let head = substring_utf16(&data, 0, offset)?;
-        let new = {
-            let mut dom = cx.dom_mut();
-            let new = dom.create_text(tail);
-            if let Some(parent) = dom.parent(this) {
-                let next = dom.next_sibling(this);
-                dom.insert_before(parent, new, next);
-            }
-            new
+        let new = cx.dom_mut().create_text(tail);
+        let position = {
+            let dom = cx.dom();
+            dom.parent(this).map(|p| (p, dom.next_sibling(this)))
         };
+        if let Some((parent, next)) = position {
+            insert(cx, new, parent, next, false);
+        }
         set_char_data(cx, this, head)?;
         Ok(new)
     }

@@ -36,6 +36,8 @@ pub enum InterfaceId {
     History,
     Location,
     MediaQueryList,
+    MutationObserver,
+    MutationRecord,
     Navigator,
     Node,
     NodeList,
@@ -104,8 +106,8 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 79;
-    pub const ALL: [InterfaceId; 79] = [
+    pub const COUNT: usize = 81;
+    pub const ALL: [InterfaceId; 81] = [
         InterfaceId::AbortController,
         InterfaceId::CSSStyleDeclaration,
         InterfaceId::CSSStyleProperties,
@@ -120,6 +122,8 @@ impl InterfaceId {
         InterfaceId::History,
         InterfaceId::Location,
         InterfaceId::MediaQueryList,
+        InterfaceId::MutationObserver,
+        InterfaceId::MutationRecord,
         InterfaceId::Navigator,
         InterfaceId::Node,
         InterfaceId::NodeList,
@@ -203,6 +207,8 @@ impl InterfaceId {
             InterfaceId::History => "History",
             InterfaceId::Location => "Location",
             InterfaceId::MediaQueryList => "MediaQueryList",
+            InterfaceId::MutationObserver => "MutationObserver",
+            InterfaceId::MutationRecord => "MutationRecord",
             InterfaceId::Navigator => "Navigator",
             InterfaceId::Node => "Node",
             InterfaceId::NodeList => "NodeList",
@@ -287,6 +293,8 @@ impl InterfaceId {
             "History" => InterfaceId::History,
             "Location" => InterfaceId::Location,
             "MediaQueryList" => InterfaceId::MediaQueryList,
+            "MutationObserver" => InterfaceId::MutationObserver,
+            "MutationRecord" => InterfaceId::MutationRecord,
             "Navigator" => InterfaceId::Navigator,
             "Node" => InterfaceId::Node,
             "NodeList" => InterfaceId::NodeList,
@@ -372,6 +380,8 @@ impl InterfaceId {
             InterfaceId::History => None,
             InterfaceId::Location => None,
             InterfaceId::MediaQueryList => Some(InterfaceId::EventTarget),
+            InterfaceId::MutationObserver => None,
+            InterfaceId::MutationRecord => None,
             InterfaceId::Navigator => None,
             InterfaceId::Node => Some(InterfaceId::EventTarget),
             InterfaceId::NodeList => None,
@@ -1081,6 +1091,17 @@ pub struct ImportNodeOptions {
 }
 
 #[derive(Clone, Debug)]
+pub struct MutationObserverInit {
+    pub child_list: bool,
+    pub attributes: Option<bool>,
+    pub character_data: Option<bool>,
+    pub subtree: bool,
+    pub attribute_old_value: Option<bool>,
+    pub character_data_old_value: Option<bool>,
+    pub attribute_filter: Option<Vec<String>>,
+}
+
+#[derive(Clone, Debug)]
 pub struct PopStateEventInit {
     pub bubbles: bool,
     pub cancelable: bool,
@@ -1604,6 +1625,30 @@ pub trait MediaQueryListImpl {
     fn add_listener(cx: &mut Cx<'_>, this: ObjectId, callback: Option<Callback>) -> Fallible<()>;
     fn remove_listener(cx: &mut Cx<'_>, this: ObjectId, callback: Option<Callback>)
     -> Fallible<()>;
+}
+
+pub trait MutationObserverImpl {
+    fn observe(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        target: NodeId,
+        options: MutationObserverInit,
+    ) -> Fallible<()>;
+    fn disconnect(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn take_records(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<ObjectId>>;
+    fn constructor(cx: &mut Cx<'_>, callback: Callback) -> Fallible<ObjectId>;
+}
+
+pub trait MutationRecordImpl {
+    fn type_(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn target(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<NodeId>;
+    fn added_nodes(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn removed_nodes(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn previous_sibling(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
+    fn next_sibling(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
+    fn attribute_name(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<String>>;
+    fn attribute_namespace(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<String>>;
+    fn old_value(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<String>>;
 }
 
 pub trait NodeImpl {

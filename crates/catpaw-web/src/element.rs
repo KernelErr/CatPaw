@@ -41,7 +41,15 @@ pub(crate) fn get_attr(cx: &Cx<'_>, el: NodeId, local: &str) -> Option<String> {
 }
 
 /// Runs the hooks that depend on an attribute's value after it changed.
-fn attribute_changed(cx: &mut Cx<'_>, el: NodeId, local: &str) {
+/// `old` is the value it had, if it existed.
+fn attribute_changed(
+    cx: &mut Cx<'_>,
+    el: NodeId,
+    local: &str,
+    namespace: Option<&str>,
+    old: Option<String>,
+) {
+    crate::mutation_observer::queue_attribute(cx.page, el, local, namespace, old.as_deref());
     if local.starts_with("on") {
         events::content_handler_changed(cx.page, el, local);
     }
@@ -52,7 +60,7 @@ fn attribute_changed(cx: &mut Cx<'_>, el: NodeId, local: &str) {
 
 /// Sets the null-namespace attribute `local`.
 pub(crate) fn set_attr(cx: &mut Cx<'_>, el: NodeId, local: &str, value: String) -> Fallible<()> {
-    {
+    let old = {
         let mut dom = cx.dom_mut();
         let data = dom.element_mut(el).ok_or_else(stale)?;
         match data
@@ -60,11 +68,14 @@ pub(crate) fn set_attr(cx: &mut Cx<'_>, el: NodeId, local: &str, value: String) 
             .iter_mut()
             .find(|a| a.name.ns.is_empty() && &*a.name.local == local)
         {
-            Some(existing) => existing.value = value,
-            None => data.attrs.push(Attr::html(local, value)),
+            Some(existing) => Some(std::mem::replace(&mut existing.value, value)),
+            None => {
+                data.attrs.push(Attr::html(local, value));
+                None
+            }
         }
-    }
-    attribute_changed(cx, el, local);
+    };
+    attribute_changed(cx, el, local, None, old);
     Ok(())
 }
 
@@ -72,10 +83,9 @@ pub(crate) fn remove_attr(cx: &mut Cx<'_>, el: NodeId, local: &str) {
     let removed = cx
         .dom_mut()
         .element_mut(el)
-        .and_then(|data| data.remove_attr(local))
-        .is_some();
-    if removed {
-        attribute_changed(cx, el, local);
+        .and_then(|data| data.remove_attr(local));
+    if let Some(removed) = removed {
+        attribute_changed(cx, el, local, None, Some(removed.value));
     }
 }
 
@@ -701,22 +711,24 @@ impl web::ElementImpl for Web {
         if !is_valid_attribute_name(&qualified_name) {
             return Err(invalid_name(&qualified_name));
         }
-        let local = {
+        let (local, namespace, old) = {
             let mut dom = cx.dom_mut();
             let el = dom.element_mut(this).ok_or_else(stale)?;
             let name = lookup_name(el, &qualified_name);
             match el.attrs.iter_mut().find(|a| attr_qualified_name(a) == name) {
                 Some(existing) => {
-                    existing.value = value;
-                    existing.name.local.to_string()
+                    let old = std::mem::replace(&mut existing.value, value);
+                    let namespace =
+                        (!existing.name.ns.is_empty()).then(|| existing.name.ns.to_string());
+                    (existing.name.local.to_string(), namespace, Some(old))
                 }
                 None => {
                     el.attrs.push(Attr::html(&name, value));
-                    name
+                    (name, None, None)
                 }
             }
         };
-        attribute_changed(cx, this, &local);
+        attribute_changed(cx, this, &local, namespace.as_deref(), old);
         Ok(())
     }
 
@@ -729,7 +741,8 @@ impl web::ElementImpl for Web {
     ) -> Fallible<()> {
         let name = validate_and_extract(namespace, &qualified_name, false)?;
         let local = name.local.to_string();
-        {
+        let namespace = (!name.ns.is_empty()).then(|| name.ns.to_string());
+        let old = {
             let mut dom = cx.dom_mut();
             let el = dom.element_mut(this).ok_or_else(stale)?;
             match el
@@ -737,11 +750,14 @@ impl web::ElementImpl for Web {
                 .iter_mut()
                 .find(|a| a.name.ns == name.ns && a.name.local == name.local)
             {
-                Some(existing) => existing.value = value,
-                None => el.attrs.push(Attr::new(name, value)),
+                Some(existing) => Some(std::mem::replace(&mut existing.value, value)),
+                None => {
+                    el.attrs.push(Attr::new(name, value));
+                    None
+                }
             }
-        }
-        attribute_changed(cx, this, &local);
+        };
+        attribute_changed(cx, this, &local, namespace.as_deref(), old);
         Ok(())
     }
 
@@ -753,10 +769,17 @@ impl web::ElementImpl for Web {
             el.attrs
                 .iter()
                 .position(|a| attr_qualified_name(a) == name)
-                .map(|i| el.attrs.remove(i).name.local.to_string())
+                .map(|i| el.attrs.remove(i))
         };
-        if let Some(local) = removed {
-            attribute_changed(cx, this, &local);
+        if let Some(removed) = removed {
+            let namespace = (!removed.name.ns.is_empty()).then(|| removed.name.ns.to_string());
+            attribute_changed(
+                cx,
+                this,
+                &removed.name.local,
+                namespace.as_deref(),
+                Some(removed.value),
+            );
         }
         Ok(())
     }
@@ -775,10 +798,10 @@ impl web::ElementImpl for Web {
                 .iter()
                 .position(|a| *a.name.ns == ns && *a.name.local == local_name)
                 .map(|i| el.attrs.remove(i))
-                .is_some()
         };
-        if removed {
-            attribute_changed(cx, this, &local_name);
+        if let Some(removed) = removed {
+            let namespace = (!ns.is_empty()).then_some(ns.as_str());
+            attribute_changed(cx, this, &local_name, namespace, Some(removed.value));
         }
         Ok(())
     }

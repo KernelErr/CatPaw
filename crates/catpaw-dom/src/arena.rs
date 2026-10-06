@@ -247,12 +247,32 @@ impl Node {
     }
 }
 
+/// A change to the tree structure, as logged for mutation observers. The
+/// siblings are those next to `node` at the time of the change.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TreeChange {
+    Inserted {
+        parent: NodeId,
+        node: NodeId,
+        prev: Option<NodeId>,
+        next: Option<NodeId>,
+    },
+    Removed {
+        parent: NodeId,
+        node: NodeId,
+        prev: Option<NodeId>,
+        next: Option<NodeId>,
+    },
+}
+
 /// The arena. See the module documentation.
 #[derive(Debug)]
 pub struct Dom {
     nodes: SlotMap<NodeId, Node>,
     document: NodeId,
     version: u64,
+    /// The tree changes since the log was last taken, while logging is on.
+    changes: Option<Vec<TreeChange>>,
 }
 
 impl Default for Dom {
@@ -270,6 +290,7 @@ impl Dom {
             nodes,
             document,
             version: 0,
+            changes: None,
         }
     }
 
@@ -289,6 +310,24 @@ impl Dom {
     /// such as live collections, compare it to know when to recompute.
     pub fn version(&self) -> u64 {
         self.version
+    }
+
+    /// Turns the log of tree changes on or off. Turning it off discards
+    /// what was logged.
+    pub fn log_changes(&mut self, on: bool) {
+        match (on, &self.changes) {
+            (true, None) => self.changes = Some(Vec::new()),
+            (false, Some(_)) => self.changes = None,
+            _ => {}
+        }
+    }
+
+    /// The tree changes logged since the last call.
+    pub fn take_changes(&mut self) -> Vec<TreeChange> {
+        self.changes
+            .as_mut()
+            .map(std::mem::take)
+            .unwrap_or_default()
     }
 
     /// Number of live nodes in the arena (including detached ones).
@@ -532,6 +571,14 @@ impl Dom {
                     None => self.nodes[parent].first_child = Some(child),
                 }
                 self.nodes[parent].last_child = Some(child);
+                if let Some(log) = &mut self.changes {
+                    log.push(TreeChange::Inserted {
+                        parent,
+                        node: child,
+                        prev,
+                        next: None,
+                    });
+                }
             }
             Some(reference) => {
                 let prev = self.nodes[reference].prev_sibling;
@@ -545,6 +592,14 @@ impl Dom {
                 match prev {
                     Some(p) => self.nodes[p].next_sibling = Some(child),
                     None => self.nodes[parent].first_child = Some(child),
+                }
+                if let Some(log) = &mut self.changes {
+                    log.push(TreeChange::Inserted {
+                        parent,
+                        node: child,
+                        prev,
+                        next: Some(reference),
+                    });
                 }
             }
         }
@@ -561,6 +616,14 @@ impl Dom {
             return;
         };
         self.version += 1;
+        if let Some(log) = &mut self.changes {
+            log.push(TreeChange::Removed {
+                parent,
+                node: id,
+                prev,
+                next,
+            });
+        }
         match prev {
             Some(p) => self.nodes[p].next_sibling = next,
             None => self.nodes[parent].first_child = next,

@@ -10,7 +10,7 @@ agent 真正需要的东西——带稳定引用的紧凑语义快照、精确�
 > 状态：**pre-alpha**。里程碑 M0（"抓取与阅读"）已完成，M1（基于 Boa 的 JavaScript）进行中。
 >
 > M1 当前进展（通过 `catpaw fetch --js` 使用）：经典脚本（内联、外链、`defer`、`async`、
-> 脚本动态插入、`document.write`）与模块脚本（静态与动态 import、import map）在 Boa 上与解析器交错执行；核心 DOM、事件、定时器、`URL`、
+> 脚本动态插入、`document.write`）与模块脚本（静态与动态 import、import map）在 Boa 上与解析器交错执行；核心 DOM、事件、`MutationObserver`、定时器、`URL`、
 > history、内联样式、`fetch`/`XMLHttpRequest`（执行 CORS 检查）、storage、编码与 console 等 API 的绑定
 > 由 Web IDL 生成；事件循环支持虚拟时间。尚未支持：布局、流（Streams），以及大部分 HTML 元素接口。
 >

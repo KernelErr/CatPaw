@@ -543,6 +543,67 @@ impl IntoJs for web::ImportNodeOptions {
     }
 }
 
+impl FromJs for web::MutationObserverInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "MutationObserverInit")?;
+        Ok(Self {
+            child_list: match rt::dictionary_member(&obj, "childList", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            attributes: match rt::dictionary_member(&obj, "attributes", ctx)? {
+                Some(m) => Some((&m).to_boolean()),
+                None => None,
+            },
+            character_data: match rt::dictionary_member(&obj, "characterData", ctx)? {
+                Some(m) => Some((&m).to_boolean()),
+                None => None,
+            },
+            subtree: match rt::dictionary_member(&obj, "subtree", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            attribute_old_value: match rt::dictionary_member(&obj, "attributeOldValue", ctx)? {
+                Some(m) => Some((&m).to_boolean()),
+                None => None,
+            },
+            character_data_old_value: match rt::dictionary_member(
+                &obj,
+                "characterDataOldValue",
+                ctx,
+            )? {
+                Some(m) => Some((&m).to_boolean()),
+                None => None,
+            },
+            attribute_filter: match rt::dictionary_member(&obj, "attributeFilter", ctx)? {
+                Some(m) => Some(rt::sequence_from_js((&m), ctx, |v, ctx| {
+                    Ok(rt::string_from_js(v, ctx)?)
+                })?),
+                None => None,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::MutationObserverInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "childList", self.child_list, ctx)?;
+        rt::set_member(&obj, "attributes", self.attributes, ctx)?;
+        rt::set_member(&obj, "characterData", self.character_data, ctx)?;
+        rt::set_member(&obj, "subtree", self.subtree, ctx)?;
+        rt::set_member(&obj, "attributeOldValue", self.attribute_old_value, ctx)?;
+        rt::set_member(
+            &obj,
+            "characterDataOldValue",
+            self.character_data_old_value,
+            ctx,
+        )?;
+        rt::set_member(&obj, "attributeFilter", self.attribute_filter, ctx)?;
+        Ok(obj.into())
+    }
+}
+
 impl FromJs for web::PopStateEventInit {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let obj = rt::dictionary_object(v, "PopStateEventInit")?;
@@ -3359,6 +3420,260 @@ pub mod media_query_list {
                 length: 1,
             },
         ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod mutation_observer {
+    use super::*;
+
+    fn op_observe(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::MutationObserver, ctx)?;
+        rt::require_args(args, 1, "MutationObserver.observe")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let a1 = <web::MutationObserverInit as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MutationObserverImpl>::observe(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_disconnect(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::MutationObserver, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MutationObserverImpl>::disconnect(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_take_records(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::MutationObserver, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MutationObserverImpl>::take_records(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "MutationObserver")?;
+        rt::require_args(args, 1, "MutationObserver constructor")?;
+        let a0 = rt::callback_from_js(rt::arg(args, 0), CallbackKind::Function, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MutationObserverImpl>::constructor(cx, a0)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::MutationObserver, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::MutationObserver,
+        name: "MutationObserver",
+        parent: None,
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[],
+        ops: &[
+            rt::OpDef {
+                name: "observe",
+                func: op_observe,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "disconnect",
+                func: op_disconnect,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "takeRecords",
+                func: op_take_records,
+                length: 0,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod mutation_record {
+    use super::*;
+
+    fn get_type(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MutationRecord, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MutationRecordImpl>::type_(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_target(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "target", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_object(this_js, I::MutationRecord, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MutationRecordImpl>::target(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "target", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_added_nodes(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "addedNodes", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_object(this_js, I::MutationRecord, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MutationRecordImpl>::added_nodes(cx, this)
+        });
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "addedNodes", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_removed_nodes(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "removedNodes", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_object(this_js, I::MutationRecord, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MutationRecordImpl>::removed_nodes(cx, this)
+        });
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "removedNodes", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_previous_sibling(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MutationRecord, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MutationRecordImpl>::previous_sibling(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_next_sibling(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MutationRecord, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MutationRecordImpl>::next_sibling(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_attribute_name(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MutationRecord, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MutationRecordImpl>::attribute_name(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_attribute_namespace(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MutationRecord, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MutationRecordImpl>::attribute_namespace(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_old_value(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MutationRecord, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MutationRecordImpl>::old_value(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::MutationRecord,
+        name: "MutationRecord",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "type",
+                getter: get_type,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "target",
+                getter: get_target,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "addedNodes",
+                getter: get_added_nodes,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "removedNodes",
+                getter: get_removed_nodes,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "previousSibling",
+                getter: get_previous_sibling,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "nextSibling",
+                getter: get_next_sibling,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "attributeName",
+                getter: get_attribute_name,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "attributeNamespace",
+                getter: get_attribute_namespace,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "oldValue",
+                getter: get_old_value,
+                setter: None,
+            },
+        ],
+        ops: &[],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -24257,6 +24572,8 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &history::DEF,
     &location::DEF,
     &media_query_list::DEF,
+    &mutation_observer::DEF,
+    &mutation_record::DEF,
     &navigator::DEF,
     &node::DEF,
     &node_list::DEF,

@@ -192,6 +192,12 @@ pub struct Singletons {
 /// Receives console messages as they are logged.
 type ConsoleSink = Box<dyn Fn(&ConsoleMessage)>;
 
+/// A microtask implemented by the page rather than by script.
+pub type NativeMicrotask = Box<dyn FnOnce(&mut Cx<'_>)>;
+
+/// Puts a native microtask on the script engine's job queue.
+type MicrotaskQueue = Rc<dyn Fn(NativeMicrotask)>;
+
 struct ObjectEntry {
     object: Box<dyn PlatformObject>,
     /// Number of reasons Rust has to keep the object (and its script
@@ -238,6 +244,8 @@ pub struct PageState {
     pub navigation: RefCell<Option<NavigationRequest>>,
     /// The session history of this document (same-document entries).
     pub(crate) history: RefCell<crate::history::HistoryState>,
+    pub(crate) mutation: crate::mutation_observer::Observers,
+    microtask_queue: RefCell<Option<MicrotaskQueue>>,
     /// An uncaught exception is being reported (reports do not nest).
     pub(crate) reporting_error: Cell<bool>,
     /// Uncaught exceptions, as reported to the console.
@@ -293,6 +301,8 @@ impl PageState {
             dialogs: RefCell::new(Vec::new()),
             navigation: RefCell::new(None),
             history: RefCell::new(crate::history::HistoryState::new(url.clone())),
+            mutation: Default::default(),
+            microtask_queue: RefCell::new(None),
             reporting_error: Cell::new(false),
             errors: RefCell::new(Vec::new()),
             stub_calls: RefCell::new(IndexMap::new()),
@@ -311,6 +321,21 @@ impl PageState {
     /// Calls `sink` for every console message as it is logged.
     pub fn set_console_sink(&self, sink: impl Fn(&ConsoleMessage) + 'static) {
         *self.console_sink.borrow_mut() = Some(Box::new(sink));
+    }
+
+    /// Sets how native microtasks reach the script engine's job queue.
+    pub fn set_microtask_queue(&self, queue: impl Fn(NativeMicrotask) + 'static) {
+        *self.microtask_queue.borrow_mut() = Some(Rc::new(queue));
+    }
+
+    /// Queues `task` as a microtask, in order with those script queues.
+    /// Without a script engine there is no such queue and the task is
+    /// dropped.
+    pub(crate) fn queue_microtask(&self, task: impl FnOnce(&mut Cx<'_>) + 'static) {
+        let queue = self.microtask_queue.borrow().clone();
+        if let Some(queue) = queue {
+            queue(Box::new(task));
+        }
     }
 
     pub fn document(&self) -> NodeId {

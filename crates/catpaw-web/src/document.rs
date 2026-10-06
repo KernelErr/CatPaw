@@ -168,7 +168,7 @@ impl web::DocumentImpl for Web {
         if matches!(cx.dom().kind(node), NodeKind::Document(_)) {
             return Err(Exception::not_supported("A document cannot be adopted"));
         }
-        node::remove(cx, node);
+        node::remove(cx, node, false);
         Ok(node)
     }
 
