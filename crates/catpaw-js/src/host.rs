@@ -22,6 +22,11 @@ pub trait ScriptHost {
     /// stack traces.
     fn eval_script(&mut self, source: &str, url: &str, line: u32) -> Fallible<Value>;
 
+    /// Evaluates a module script: parses `source` as the module at `url`,
+    /// loads its imports and evaluates the graph. An error in loading,
+    /// linking or evaluation comes back as `Err`.
+    fn eval_module(&mut self, source: &str, url: &str) -> Fallible<()>;
+
     /// Compiles `body` as the body of a function with the given parameter
     /// names (used for `onclick="..."` content attributes and string timer
     /// handlers).

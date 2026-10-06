@@ -6,6 +6,7 @@ use std::rc::Rc;
 
 use boa_engine::builtins::promise::PromiseState;
 use boa_engine::job::PromiseJob;
+use boa_engine::module::Module;
 use boa_engine::object::builtins::JsPromise;
 use boa_engine::{Context, JsError, JsString, JsValue, Source, js_string};
 use catpaw_js::{
@@ -14,6 +15,7 @@ use catpaw_js::{
 use catpaw_js_boa::inspect;
 use catpaw_web::ConsoleLevel;
 
+use crate::modules::PageModuleLoader;
 use crate::rt::{self, IntoJs, Runtime};
 
 pub struct BoaHost<'a> {
@@ -144,6 +146,44 @@ impl ScriptHost for BoaHost<'_> {
             .ctx
             .eval(Source::from_bytes(source).with_path(Path::new(url)));
         let out = self.finish(result);
+        self.leave();
+        out
+    }
+
+    fn eval_module(&mut self, source: &str, url: &str) -> Fallible<()> {
+        self.enter();
+        let parsed = Module::parse(
+            Source::from_bytes(source).with_path(Path::new(url)),
+            None,
+            self.ctx,
+        );
+        let out = match parsed {
+            Ok(module) => {
+                if let Some(loader) = self.ctx.downcast_module_loader::<PageModuleLoader>() {
+                    loader.register(url, module.clone());
+                }
+                let promise = module.load_link_evaluate(self.ctx);
+                // Loading, linking and evaluation all advance through jobs.
+                let nested = self.rt.in_checkpoint.replace(true);
+                self.rt.jobs.checkpoint(self.ctx);
+                self.rt.in_checkpoint.set(nested);
+                match promise.state() {
+                    PromiseState::Rejected(reason) => {
+                        // Reported by the caller, not as an unhandled rejection.
+                        let promise: boa_engine::JsObject = promise.into();
+                        self.rt
+                            .rejections
+                            .borrow_mut()
+                            .retain(|p| !boa_engine::JsObject::equals(p, &promise));
+                        Err(Exception::Thrown(rt::root(reason)))
+                    }
+                    // Still pending means top-level await on something the
+                    // event loop has yet to deliver.
+                    PromiseState::Fulfilled(_) | PromiseState::Pending => Ok(()),
+                }
+            }
+            Err(e) => Err(rt::exception_from_js(e, self.ctx)),
+        };
         self.leave();
         out
     }

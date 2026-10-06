@@ -14,10 +14,11 @@ isolated contexts.
 > (JavaScript via Boa) is in progress. See the roadmap below.
 >
 > M1 so far, behind `catpaw fetch --js`: classic scripts (inline, external,
-> `defer`, `async`, script-inserted, `document.write`) run interleaved with
-> the parser on Boa, against bindings generated from Web IDL for the core DOM,
+> `defer`, `async`, script-inserted, `document.write`) and module scripts
+> (static and dynamic imports, import maps) run interleaved with the parser
+> on Boa, against bindings generated from Web IDL for the core DOM,
 > events, timers, `URL`, storage, encoding and console APIs, on an event loop
-> with virtual time. Not there yet: module scripts, `fetch`/XHR, layout,
+> with virtual time. Not there yet: `fetch`/XHR, layout,
 > and much of the HTML element API surface.
 >
 > What works without JavaScript: HTTP/1.1 and HTTP/2 over rustls,

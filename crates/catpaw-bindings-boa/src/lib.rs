@@ -12,6 +12,7 @@
 
 pub mod generated;
 mod host;
+mod modules;
 pub mod rt;
 
 use std::rc::Rc;
@@ -84,6 +85,7 @@ impl BoaPage {
             .job_executor(jobs.clone())
             .clock(Rc::new(PageClock(page.clock.clone())))
             .host_hooks(Rc::new(Hooks))
+            .module_loader(Rc::new(modules::PageModuleLoader::new(page.clone())))
             .build()
             .map_err(|e| format!("failed to create a script context: {e}"))?;
         let limits = context.runtime_limits_mut();

@@ -39,7 +39,9 @@ pub struct ScriptState {
     load_blockers: Cell<u32>,
     /// Parsing has ended; `load` fires once nothing blocks it.
     load_pending: Cell<bool>,
-    warned_about_modules: Cell<bool>,
+    /// The page's import map: specifier (or specifier prefix ending in `/`)
+    /// to address.
+    import_map: RefCell<Vec<(String, String)>>,
 }
 
 impl ScriptState {
@@ -49,16 +51,26 @@ impl ScriptState {
     }
 }
 
+/// Where the source of a script waiting for the end of parsing comes from.
+enum Pending {
+    /// An external script being fetched.
+    Fetch(Rc<RefCell<Option<NetResult>>>),
+    /// An inline module script (inline classic scripts never wait).
+    Inline(String),
+}
+
 struct Deferred {
     element: NodeId,
     url: Url,
-    result: Rc<RefCell<Option<NetResult>>>,
+    module: bool,
+    pending: Pending,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum ScriptKind {
     Classic,
     Module,
+    ImportMap,
     /// A data block: not executed.
     Data,
 }
@@ -93,9 +105,97 @@ fn classify(type_attr: Option<&str>, language_attr: Option<&str>) -> ScriptKind 
         ScriptKind::Classic
     } else if ty == "module" {
         ScriptKind::Module
+    } else if ty == "importmap" {
+        ScriptKind::ImportMap
     } else {
         ScriptKind::Data
     }
+}
+
+/// Whether a specifier is "URL-like": resolved against the importing
+/// module rather than looked up by name.
+fn is_relative_specifier(specifier: &str) -> bool {
+    specifier.starts_with('/') || specifier.starts_with("./") || specifier.starts_with("../")
+}
+
+/// Registers the `imports` of an import map (scopes and integrity are not
+/// supported). Later maps add to earlier ones without overriding them.
+fn register_import_map(cx: &mut Cx<'_>, json: &str) {
+    let parsed: serde_json::Value = match serde_json::from_str(json) {
+        Ok(value) => value,
+        Err(e) => {
+            cx.page.log(
+                ConsoleLevel::Error,
+                format!("Failed to parse the import map: {e}"),
+            );
+            return;
+        }
+    };
+    let Some(imports) = parsed.get("imports").and_then(|i| i.as_object()) else {
+        return;
+    };
+    let base = cx.page.base_url();
+    let mut map = cx.page.scripts.import_map.borrow_mut();
+    for (key, address) in imports {
+        let Some(address) = address.as_str() else {
+            continue;
+        };
+        let key = if is_relative_specifier(key) {
+            match base.join(key) {
+                Ok(url) => url.to_string(),
+                Err(_) => continue,
+            }
+        } else {
+            key.clone()
+        };
+        let address = if is_relative_specifier(address) {
+            base.join(address).map(|u| u.to_string()).ok()
+        } else {
+            Url::parse(address).map(|u| u.to_string()).ok()
+        };
+        if let Some(address) = address
+            && !map.iter().any(|(k, _)| *k == key)
+        {
+            map.push((key, address));
+        }
+    }
+}
+
+/// Resolves a module specifier imported from the module at `base`
+/// (<https://html.spec.whatwg.org/multipage/#resolve-a-module-specifier>).
+pub fn resolve_module_specifier(
+    page: &crate::page::PageState,
+    specifier: &str,
+    base: &Url,
+) -> Option<Url> {
+    let as_url = if is_relative_specifier(specifier) {
+        base.join(specifier).ok()
+    } else {
+        Url::parse(specifier).ok()
+    };
+    let normalized = as_url
+        .as_ref()
+        .map(Url::to_string)
+        .unwrap_or_else(|| specifier.to_string());
+
+    let map = page.scripts.import_map.borrow();
+    if let Some((_, address)) = map.iter().find(|(key, _)| *key == normalized) {
+        return Url::parse(address).ok();
+    }
+    // The longest matching prefix entry (`"lib/": "https://cdn.example/lib/"`).
+    let prefix = map
+        .iter()
+        .filter(|(key, address)| {
+            key.ends_with('/') && address.ends_with('/') && normalized.starts_with(key.as_str())
+        })
+        .max_by_key(|(key, _)| key.len());
+    if let Some((key, address)) = prefix {
+        return Url::parse(address)
+            .ok()?
+            .join(&normalized[key.len()..])
+            .ok();
+    }
+    as_url
 }
 
 /// Decodes a fetched script: the BOM wins, then the Content-Type charset,
@@ -147,6 +247,21 @@ fn execute(cx: &mut Cx<'_>, el: NodeId, source: &str, url: &str, parser_inserted
     }
 }
 
+/// Runs a module script. Returns whether it loaded and evaluated.
+fn execute_module(cx: &mut Cx<'_>, source: &str, url: &str) -> bool {
+    // `document.currentScript` is null while a module runs.
+    let previous = cx.page.document_state.borrow_mut().current_script.take();
+    let result = cx.script.eval_module(source, url);
+    cx.page.document_state.borrow_mut().current_script = previous;
+    match result {
+        Ok(()) => true,
+        Err(e) => {
+            cx.report_exception(&e);
+            false
+        }
+    }
+}
+
 /// Runs the body of a fetched script, or fires `error` if the fetch failed.
 fn execute_fetched(
     cx: &mut Cx<'_>,
@@ -154,8 +269,19 @@ fn execute_fetched(
     url: &Url,
     result: NetResult,
     parser_inserted: bool,
+    module: bool,
 ) {
     match result {
+        Ok(response) if response.is_success() && module => {
+            // Module scripts are always UTF-8.
+            let source = String::from_utf8_lossy(&response.body);
+            let source = source.strip_prefix('\u{FEFF}').unwrap_or(&source);
+            if execute_module(cx, source, response.url.as_str()) {
+                fire_simple(cx, el, "load");
+            } else {
+                fire_simple(cx, el, "error");
+            }
+        }
         Ok(response) if response.is_success() => {
             let source = decode_script(&response.body, response.header("content-type"));
             execute(cx, el, &source, response.url.as_str(), parser_inserted);
@@ -202,13 +328,16 @@ fn prepare(cx: &mut Cx<'_>, el: NodeId, parser_inserted: bool) {
         let src = data.attr("src").map(str::to_string);
         let kind = classify(data.attr("type"), data.attr("language"));
         let flags = (data.has_attr("async"), data.has_attr("defer"));
+        let nomodule = data.has_attr("nomodule");
         if src.is_none() && child_text_content(&dom, el).is_empty() {
             return;
         }
         if !dom.is_connected(el) {
             return;
         }
-        if kind == ScriptKind::Data {
+        // Data blocks never run, and neither do the fallbacks meant for
+        // browsers without module support.
+        if kind == ScriptKind::Data || (kind == ScriptKind::Classic && nomodule) {
             return;
         }
         if let Some(data) = dom.element_mut(el) {
@@ -216,21 +345,36 @@ fn prepare(cx: &mut Cx<'_>, el: NodeId, parser_inserted: bool) {
         }
         (src, kind, flags.0, flags.1)
     };
+    let module = kind == ScriptKind::Module;
 
-    if kind == ScriptKind::Module {
-        if !cx.page.scripts.warned_about_modules.replace(true) {
-            cx.page.log(
-                ConsoleLevel::Warn,
-                "Module scripts are not supported yet and were skipped",
-            );
+    if kind == ScriptKind::ImportMap {
+        if src.is_none() {
+            let json = child_text_content(&cx.dom(), el);
+            register_import_map(cx, &json);
         }
         return;
     }
 
     let Some(src) = src else {
         let source = child_text_content(&cx.dom(), el);
-        let url = cx.page.url.borrow().to_string();
-        execute(cx, el, &source, &url, parser_inserted);
+        let url = cx.page.url.borrow().clone();
+        if !module {
+            execute(cx, el, &source, url.as_str(), parser_inserted);
+        } else if parser_inserted && !is_async {
+            // Module scripts are deferred, inline ones included.
+            cx.page.scripts.deferred.borrow_mut().push(Deferred {
+                element: el,
+                url,
+                module: true,
+                pending: Pending::Inline(source),
+            });
+        } else {
+            block_load(cx);
+            queue_task(cx.page, "module script", move |cx| {
+                execute_module(cx, &source, url.as_str());
+                unblock_load(cx);
+            });
+        }
         return;
     };
 
@@ -246,17 +390,17 @@ fn prepare(cx: &mut Cx<'_>, el: NodeId, parser_inserted: bool) {
     let mut request = NetRequest::get(url.clone(), RequestKind::Script);
     request.referrer = Some(cx.page.url.borrow().clone());
 
-    if parser_inserted && !is_async && !is_defer {
+    if parser_inserted && !module && !is_async && !is_defer {
         // Parser-blocking: nothing else happens until it has run.
         let result = match cx.page.net() {
             Some(net) => net.fetch_blocking(request),
             None => Err("no network available".to_string()),
         };
-        execute_fetched(cx, el, &url, result, true);
+        execute_fetched(cx, el, &url, result, true, false);
         return;
     }
 
-    if parser_inserted && is_defer && !is_async {
+    if parser_inserted && !is_async && (module || is_defer) {
         // Fetched while parsing continues; run in order when it ends.
         let result = Rc::new(RefCell::new(None));
         let slot = result.clone();
@@ -269,7 +413,8 @@ fn prepare(cx: &mut Cx<'_>, el: NodeId, parser_inserted: bool) {
         cx.page.scripts.deferred.borrow_mut().push(Deferred {
             element: el,
             url,
-            result,
+            module,
+            pending: Pending::Fetch(result),
         });
         return;
     }
@@ -278,12 +423,13 @@ fn prepare(cx: &mut Cx<'_>, el: NodeId, parser_inserted: bool) {
     block_load(cx);
     let callback_url = url.clone();
     let started = net::start_request(cx.page, request, move |cx, outcome| {
-        execute_fetched(cx, el, &callback_url, outcome, false);
+        execute_fetched(cx, el, &callback_url, outcome, false, module);
         unblock_load(cx);
     });
     if started.is_none() {
         queue_task(cx.page, "script error", move |cx| {
-            execute_fetched(cx, el, &url, Err("no network available".to_string()), false);
+            let failure = Err("no network available".to_string());
+            execute_fetched(cx, el, &url, failure, false, module);
             unblock_load(cx);
         });
     }
@@ -335,17 +481,32 @@ fn finish_parsing(cx: &mut Cx<'_>) {
 
     let deferred = std::mem::take(&mut *cx.page.scripts.deferred.borrow_mut());
     for script in deferred {
-        // Wait for this script's fetch; other fetches complete meanwhile.
-        while script.result.borrow().is_none() && net::inflight(cx.page) > 0 {
-            net::deliver(cx, Some(Duration::from_millis(50)));
+        match script.pending {
+            Pending::Inline(source) => {
+                cx.checkpoint();
+                execute_module(cx, &source, script.url.as_str());
+            }
+            Pending::Fetch(slot) => {
+                // Wait for this script's fetch; other fetches complete
+                // meanwhile.
+                while slot.borrow().is_none() && net::inflight(cx.page) > 0 {
+                    net::deliver(cx, Some(Duration::from_millis(50)));
+                }
+                let result = slot
+                    .borrow_mut()
+                    .take()
+                    .unwrap_or_else(|| Err("the request was abandoned".to_string()));
+                cx.checkpoint();
+                execute_fetched(
+                    cx,
+                    script.element,
+                    &script.url,
+                    result,
+                    false,
+                    script.module,
+                );
+            }
         }
-        let result = script
-            .result
-            .borrow_mut()
-            .take()
-            .unwrap_or_else(|| Err("the request was abandoned".to_string()));
-        cx.checkpoint();
-        execute_fetched(cx, script.element, &script.url, result, false);
         if cx.page.navigation.borrow().is_some() {
             return;
         }
