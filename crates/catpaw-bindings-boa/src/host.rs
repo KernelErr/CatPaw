@@ -157,6 +157,53 @@ impl ScriptHost for BoaHost<'_> {
         rt::rooted(&a.root).strict_equals(&rt::rooted(&b.root))
     }
 
+    fn is_constructor(&mut self, callback: &Callback) -> bool {
+        rt::rooted(&callback.root)
+            .as_object()
+            .is_some_and(|object| object.is_constructor())
+    }
+
+    fn construct(&mut self, callback: &Callback, args: &[Value]) -> Fallible<Value> {
+        let target = rt::rooted(&callback.root);
+        let Some(constructor) = target.as_object().filter(|o| o.is_constructor()) else {
+            return Err(Exception::type_error("The value is not a constructor"));
+        };
+        let args_js: Vec<JsValue> = args.iter().map(|a| self.js_value(a)).collect();
+        self.enter();
+        let result = constructor
+            .construct(&args_js, None, self.ctx)
+            .map(JsValue::from);
+        let out = self.finish(result);
+        self.leave();
+        out
+    }
+
+    fn get_property(&mut self, object: &Value, name: &str) -> Fallible<Value> {
+        let target = self.js_value(object);
+        let Some(object) = target.as_object() else {
+            return Ok(Value::Undefined);
+        };
+        self.enter();
+        let result = object.get(JsString::from(name), self.ctx);
+        let out = self.finish(result);
+        self.leave();
+        out
+    }
+
+    fn as_callback(&mut self, value: &Value) -> Option<Callback> {
+        let target = self.js_value(value);
+        target.is_callable().then(|| Callback {
+            root: rt::root(target),
+            kind: CallbackKind::Function,
+        })
+    }
+
+    fn to_string_sequence(&mut self, value: &Value) -> Fallible<Vec<String>> {
+        let target = self.js_value(value);
+        let result = rt::sequence_from_js(&target, self.ctx, |v, ctx| rt::string_from_js(v, ctx));
+        result.map_err(|e| rt::exception_from_js(e, self.ctx))
+    }
+
     fn eval_script(&mut self, source: &str, url: &str, _line: u32) -> Fallible<Value> {
         self.enter();
         let result = self

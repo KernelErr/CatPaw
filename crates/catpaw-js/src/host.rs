@@ -18,6 +18,22 @@ pub trait ScriptHost {
     /// Whether two callbacks are the same script object.
     fn same_callback(&mut self, a: &Callback, b: &Callback) -> bool;
 
+    /// Whether `callback` can be constructed with `new`.
+    fn is_constructor(&mut self, callback: &Callback) -> bool;
+
+    /// Constructs an object: `new callback(...args)`.
+    fn construct(&mut self, callback: &Callback, args: &[Value]) -> Fallible<Value>;
+
+    /// Reads a property of a script object (`object[name]`). Non-objects
+    /// read as `undefined`.
+    fn get_property(&mut self, object: &Value, name: &str) -> Fallible<Value>;
+
+    /// The value as a callback, if it is callable.
+    fn as_callback(&mut self, value: &Value) -> Option<Callback>;
+
+    /// WebIDL `sequence<DOMString>` conversion.
+    fn to_string_sequence(&mut self, value: &Value) -> Fallible<Vec<String>>;
+
     /// Evaluates a classic script. `url` and `line` label the source in
     /// stack traces.
     fn eval_script(&mut self, source: &str, url: &str, line: u32) -> Fallible<Value>;

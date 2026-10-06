@@ -310,11 +310,18 @@ pub(crate) fn insert(
             None => dom.last_child(parent),
         };
         let document = dom.owner_document(parent);
+        let mut adopted = Vec::new();
         for &n in &nodes {
             dom.insert_before(parent, n, child);
-            if dom.owner_document(n) != document {
+            let old = dom.owner_document(n);
+            if old != document {
                 dom.adopt_subtree(n, document);
+                adopted.push((n, old));
             }
+        }
+        drop(dom);
+        for (n, old) in adopted {
+            crate::custom_elements::subtree_adopted(cx.page, n, old, document);
         }
         previous
     };
@@ -355,6 +362,9 @@ pub(crate) fn append(cx: &mut Cx<'_>, node: NodeId, parent: NodeId) -> Fallible<
 pub(crate) fn remove(cx: &mut Cx<'_>, node: NodeId, suppress_observers: bool) {
     if cx.dom().contains(node) && cx.dom().parent(node).is_some() {
         crate::traversal::before_removal(cx.page, node);
+        if cx.dom().is_connected(node) {
+            crate::custom_elements::subtree_removed(cx.page, node);
+        }
     }
     let (parent, previous, next) = {
         let mut dom = cx.dom_mut();
@@ -480,7 +490,10 @@ pub(crate) fn clone_node(cx: &Cx<'_>, node: NodeId, deep: bool) -> Fallible<Node
         return Err(stale());
     }
     if deep {
-        return Ok(dom.clone_subtree(node));
+        let copy = dom.clone_subtree(node);
+        drop(dom);
+        crate::custom_elements::subtree_created(cx.page, copy);
+        return Ok(copy);
     }
     if let NodeKind::Document(data) = dom.kind(node) {
         let data = data.clone();
@@ -508,6 +521,8 @@ pub(crate) fn clone_node(cx: &Cx<'_>, node: NodeId, deep: bool) -> Fallible<Node
     // A clone belongs to the document of its original.
     let document = dom.owner_document(node);
     dom.adopt_subtree(new, document);
+    drop(dom);
+    crate::custom_elements::subtree_created(cx.page, new);
     Ok(new)
 }
 

@@ -26,6 +26,7 @@ pub enum InterfaceId {
     CSSStyleDeclaration,
     CSSStyleProperties,
     Crypto,
+    CustomElementRegistry,
     DOMImplementation,
     DOMParser,
     DOMRectReadOnly,
@@ -195,12 +196,13 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 170;
-    pub const ALL: [InterfaceId; 170] = [
+    pub const COUNT: usize = 171;
+    pub const ALL: [InterfaceId; 171] = [
         InterfaceId::AbortController,
         InterfaceId::CSSStyleDeclaration,
         InterfaceId::CSSStyleProperties,
         InterfaceId::Crypto,
+        InterfaceId::CustomElementRegistry,
         InterfaceId::DOMImplementation,
         InterfaceId::DOMParser,
         InterfaceId::DOMRectReadOnly,
@@ -375,6 +377,7 @@ impl InterfaceId {
             InterfaceId::CSSStyleDeclaration => "CSSStyleDeclaration",
             InterfaceId::CSSStyleProperties => "CSSStyleProperties",
             InterfaceId::Crypto => "Crypto",
+            InterfaceId::CustomElementRegistry => "CustomElementRegistry",
             InterfaceId::DOMImplementation => "DOMImplementation",
             InterfaceId::DOMParser => "DOMParser",
             InterfaceId::DOMRectReadOnly => "DOMRectReadOnly",
@@ -550,6 +553,7 @@ impl InterfaceId {
             "CSSStyleDeclaration" => InterfaceId::CSSStyleDeclaration,
             "CSSStyleProperties" => InterfaceId::CSSStyleProperties,
             "Crypto" => InterfaceId::Crypto,
+            "CustomElementRegistry" => InterfaceId::CustomElementRegistry,
             "DOMImplementation" => InterfaceId::DOMImplementation,
             "DOMParser" => InterfaceId::DOMParser,
             "DOMRectReadOnly" => InterfaceId::DOMRectReadOnly,
@@ -726,6 +730,7 @@ impl InterfaceId {
             InterfaceId::CSSStyleDeclaration => None,
             InterfaceId::CSSStyleProperties => Some(InterfaceId::CSSStyleDeclaration),
             InterfaceId::Crypto => None,
+            InterfaceId::CustomElementRegistry => None,
             InterfaceId::DOMImplementation => None,
             InterfaceId::DOMParser => None,
             InterfaceId::DOMRectReadOnly => None,
@@ -1618,7 +1623,13 @@ pub struct CustomEventInit {
 
 #[derive(Clone, Debug)]
 pub struct ElementCreationOptions {
+    pub custom_element_registry: Option<ObjectId>,
     pub is: Option<String>,
+}
+
+#[derive(Clone, Debug)]
+pub struct ElementDefinitionOptions {
+    pub extends: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -1667,6 +1678,7 @@ pub struct HashChangeEventInit {
 
 #[derive(Clone, Debug)]
 pub struct ImportNodeOptions {
+    pub custom_element_registry: Option<ObjectId>,
     pub self_only: bool,
 }
 
@@ -2112,6 +2124,19 @@ pub trait CSSStylePropertiesImpl {
 
 pub trait CryptoImpl {
     fn random_uuid(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+}
+
+pub trait CustomElementRegistryImpl {
+    fn define(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        name: String,
+        constructor: Callback,
+        options: ElementDefinitionOptions,
+    ) -> Fallible<()>;
+    fn get(cx: &mut Cx<'_>, this: ObjectId, name: String) -> Fallible<Option<Callback>>;
+    fn when_defined(cx: &mut Cx<'_>, this: ObjectId, name: String) -> Fallible<PromiseRef>;
+    fn upgrade(cx: &mut Cx<'_>, this: ObjectId, root: NodeId) -> Fallible<()>;
 }
 
 pub trait DOMImplementationImpl {
@@ -2789,6 +2814,7 @@ pub trait WindowImpl {
     fn document(cx: &mut Cx<'_>) -> Fallible<NodeId>;
     fn location(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
     fn history(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
+    fn custom_elements(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
     fn closed(cx: &mut Cx<'_>) -> Fallible<bool>;
     fn focus(cx: &mut Cx<'_>) -> Fallible<()>;
     fn blur(cx: &mut Cx<'_>) -> Fallible<()>;

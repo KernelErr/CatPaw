@@ -105,6 +105,8 @@ pub struct PAttr {
     pub undefined_when_absent: bool,
     /// The interface or mixin whose trait declares this member.
     pub owner: String,
+    /// `[CEReactions]`: custom element reactions run when the setter returns.
+    pub ce_reactions: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -123,6 +125,9 @@ pub struct POverload {
     pub rust: String,
     pub args: Vec<PArg>,
     pub ret: Type,
+    /// Declared as returning `(T or undefined)`: an absent value is
+    /// `undefined` rather than `null`.
+    pub undefined_when_absent: bool,
 }
 
 impl POverload {
@@ -149,6 +154,9 @@ pub struct POp {
     pub is_static: bool,
     pub stub: bool,
     pub owner: String,
+    /// `[CEReactions]`: custom element reactions run when the operation
+    /// returns.
+    pub ce_reactions: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -184,6 +192,9 @@ pub struct PInterface {
     pub kind: InterfaceKind,
     pub global: bool,
     pub constructor: Option<Vec<POverload>>,
+    /// `[HTMLConstructor]`: the constructor serves custom element classes
+    /// that extend the interface.
+    pub html_constructor: bool,
     pub consts: Vec<(String, ConstValue)>,
     pub attrs: Vec<PAttr>,
     pub ops: Vec<POp>,
@@ -490,6 +501,8 @@ impl<'a> Planner<'a> {
     }
 
     fn overload(&mut self, rust: String, args: &[Argument], ret: &Type) -> Option<POverload> {
+        let undefined_when_absent = matches!(ret, Type::Union(ms)
+            if ms.iter().any(|m| matches!(m, Type::Named(n) if n == "undefined")));
         let ret = self.prune(&self.idl.resolve(ret))?;
         self.note(&ret);
         let mut out = Vec::new();
@@ -506,6 +519,7 @@ impl<'a> Planner<'a> {
             rust,
             args: out,
             ret,
+            undefined_when_absent,
         })
     }
 
@@ -645,6 +659,7 @@ impl<'a> Planner<'a> {
                         undefined_when_absent: matches!(&a.ty, Type::Union(ms)
                             if ms.iter().any(|m| matches!(m, Type::Named(n) if n == "undefined"))),
                         owner: owner.to_string(),
+                        ce_reactions: a.ext.has("CEReactions"),
                     });
                 }
                 Member::Operation(o) => {
@@ -689,6 +704,7 @@ impl<'a> Planner<'a> {
                             is_static: o.is_static,
                             stub: is_stub && !is_native,
                             owner: owner.to_string(),
+                            ce_reactions: o.ext.has("CEReactions"),
                         }),
                     }
                 }
@@ -770,6 +786,7 @@ impl<'a> Planner<'a> {
                     name: mixin.clone(),
                     parent: None,
                     handle,
+                    html_constructor: false,
                     kind: InterfaceKind::Mixin,
                     global: false,
                     constructor: None,
@@ -978,10 +995,14 @@ impl<'a> Planner<'a> {
                 stringifier = Some(Stringifier::Attribute(o.name.clone()));
             }
 
+            let html_constructor = def.members.iter().any(
+                |m| matches!(m, Member::Constructor { ext, .. } if ext.has("HTMLConstructor")),
+            );
             plan.interfaces.push(PInterface {
                 name: name.clone(),
                 parent: self.planned_parent(name),
                 handle,
+                html_constructor,
                 kind: InterfaceKind::Interface,
                 global: def.ext.has("Global"),
                 constructor,
@@ -1002,6 +1023,7 @@ impl<'a> Planner<'a> {
                 name: name.clone(),
                 parent: None,
                 handle: Handle::Window,
+                html_constructor: false,
                 kind: InterfaceKind::Namespace,
                 global: false,
                 constructor: None,

@@ -50,6 +50,24 @@ fn attribute_changed(
     old: Option<String>,
 ) {
     crate::mutation_observer::queue_attribute(cx.page, el, local, namespace, old.as_deref());
+    let new = {
+        let dom = cx.dom();
+        let ns = namespace.unwrap_or_default();
+        dom.element(el).and_then(|e| {
+            e.attrs
+                .iter()
+                .find(|a| &*a.name.local == local && &*a.name.ns == ns)
+                .map(|a| a.value.to_string())
+        })
+    };
+    crate::custom_elements::attribute_changed(
+        cx.page,
+        el,
+        local,
+        namespace,
+        old.as_deref(),
+        new.as_deref(),
+    );
     if local.starts_with("on") {
         events::content_handler_changed(cx.page, el, local);
     }
@@ -196,7 +214,9 @@ fn inner_target(dom: &Dom, el: NodeId) -> NodeId {
 }
 
 fn parse_fragment(cx: &Cx<'_>, markup: &str, context: NodeId) -> NodeId {
-    parse_fragment_into(&cx.page.dom, markup, context, true)
+    let fragment = parse_fragment_into(&cx.page.dom, markup, context, true);
+    crate::custom_elements::subtree_created(cx.page, fragment);
+    fragment
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -1647,6 +1667,9 @@ pub fn interface_for_node(dom: &Dom, id: NodeId) -> InterfaceId {
                 return InterfaceId::Element;
             }
             let local = &*el.name.local;
+            if let Some(iface) = crate::custom_elements::interface_of_failed(dom, id) {
+                return iface;
+            }
             if let Some(iface) = InterfaceId::for_html_tag(local) {
                 iface
             } else if crate::html_names::is_known_html_element(local) || local.contains('-') {

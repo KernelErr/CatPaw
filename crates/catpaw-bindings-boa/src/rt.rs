@@ -1288,6 +1288,81 @@ pub fn wrap_constructed_object(
     Ok(wrapper.into())
 }
 
+/// Runs a `[CEReactions]` member: custom element reactions enqueued while
+/// it runs are invoked once it returns.
+pub fn with_ce_reactions(
+    ctx: &mut Context,
+    f: impl FnOnce(&mut Context) -> JsResult<JsValue>,
+) -> JsResult<JsValue> {
+    with_cx(ctx, |cx| {
+        catpaw_web::custom_elements::push_reactions(cx.page)
+    });
+    let result = f(ctx);
+    with_cx(ctx, catpaw_web::custom_elements::pop_reactions);
+    result
+}
+
+/// <https://html.spec.whatwg.org/multipage/dom.html#html-element-constructors>:
+/// the constructor of an HTML element interface, which serves the custom
+/// element classes that extend it (`super()` ends up here).
+pub fn html_constructor(new_target: &JsValue, iface: I, ctx: &mut Context) -> JsResult<JsValue> {
+    let illegal = || type_error("Illegal constructor");
+    let Some(target) = new_target.as_object() else {
+        return Err(illegal());
+    };
+    let rt = runtime(ctx);
+    // The interface itself cannot be constructed.
+    let own = rt
+        .proto(iface)
+        .and_then(|proto| proto.get(js_string!("constructor"), ctx).ok())
+        .and_then(|c| c.as_object());
+    if own.is_some_and(|own| JsObject::equals(&own, &target)) {
+        return Err(illegal());
+    }
+    let definition = catpaw_web::custom_elements::constructors(&rt.page)
+        .into_iter()
+        .find(|(_, constructor)| {
+            rooted(&constructor.root)
+                .as_object()
+                .is_some_and(|c| JsObject::equals(&c, &target))
+        })
+        .map(|(index, _)| index);
+    let Some(index) = definition else {
+        return Err(illegal());
+    };
+    // An autonomous custom element extends HTMLElement; a customized
+    // built-in extends the interface of the element it customizes.
+    let expected = catpaw_web::custom_elements::with_definition(&rt.page, index, |d| {
+        if d.is_autonomous() {
+            I::HTMLElement
+        } else {
+            I::for_html_tag(d.local_name()).unwrap_or(I::HTMLElement)
+        }
+    });
+    if expected != Some(iface) {
+        return Err(illegal());
+    }
+    let proto = prototype_from_new_target(new_target, ctx)?.or_else(|| rt.proto(iface));
+
+    let claimed = catpaw_web::custom_elements::claim_construction(&rt.page, index)
+        .map_err(|e| exception_to_js(e, ctx))?;
+    let element = match claimed {
+        Some(element) => element,
+        None => {
+            let document = rt.page.document();
+            with_cx(ctx, |cx| {
+                catpaw_web::custom_elements::create_for_constructor(cx, index, document)
+            })
+            .ok_or_else(illegal)?
+        }
+    };
+    let wrapper = rt.wrap_node(element, ctx);
+    if let Some(object) = wrapper.as_object() {
+        object.set_prototype(proto);
+    }
+    Ok(wrapper)
+}
+
 pub fn wrap_constructed_node(
     id: NodeId,
     new_target: &JsValue,

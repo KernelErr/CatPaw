@@ -446,11 +446,14 @@ fn parse<R>(page: &PageState, run: impl FnOnce() -> R) -> R {
         dom.log_changes(false);
         changes
     };
+    let mut inserted = Vec::new();
     for change in &changes {
         if let TreeChange::Inserted { node, .. } = *change {
             stylesheets::link_changed(page, node, true);
+            inserted.push(node);
         }
     }
+    crate::custom_elements::parser_inserted(page, &inserted);
     mutation_observer::parser_changed(page, &changes);
     result
 }
@@ -647,6 +650,7 @@ pub(crate) fn nodes_inserted(cx: &mut Cx<'_>, parent: NodeId, inserted: &[NodeId
         }
         (scripts, links)
     };
+    crate::custom_elements::nodes_inserted(cx.page, inserted);
     for link in links {
         stylesheets::link_changed(cx.page, link, false);
     }

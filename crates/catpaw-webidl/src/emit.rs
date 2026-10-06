@@ -769,7 +769,15 @@ impl<'a> Emitter<'a> {
             o.rust,
             Self::call_args(o)
         );
-        w!(out, "rt::ret(r, ctx)");
+        if o.undefined_when_absent {
+            w!(
+                out,
+                "let v = rt::ret(r, ctx)?;
+Ok(if v.is_null() {{ JsValue::undefined() }} else {{ v }})"
+            );
+        } else {
+            w!(out, "rt::ret(r, ctx)");
+        }
         out
     }
 
@@ -782,6 +790,15 @@ impl<'a> Emitter<'a> {
         };
         let fn_name = format!("{prefix}{}", snake(&op.name).trim_end_matches('_'));
         let label = format!("{}.{}", iface.name, op.name);
+        let fn_name = if op.ce_reactions && !op.stub {
+            w!(
+                out,
+                "fn {fn_name}(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {{\nrt::with_ce_reactions(ctx, |ctx| {fn_name}_body(this_js, args, ctx))\n}}\n"
+            );
+            format!("{fn_name}_body")
+        } else {
+            fn_name
+        };
         w!(
             out,
             "fn {fn_name}(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {{"
@@ -972,9 +989,18 @@ impl<'a> Emitter<'a> {
         if !has_setter {
             return;
         }
+        let setter = if a.ce_reactions && a.kind != AttrKind::Stub {
+            w!(
+                out,
+                "fn set_{base}(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {{\nrt::with_ce_reactions(ctx, |ctx| set_{base}_body(this_js, args, ctx))\n}}\n"
+            );
+            format!("set_{base}_body")
+        } else {
+            format!("set_{base}")
+        };
         w!(
             out,
-            "fn set_{base}(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {{"
+            "fn {setter}(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {{"
         );
         if a.readonly {
             if let Some(target) = &a.put_forwards {
@@ -1091,6 +1117,14 @@ impl<'a> Emitter<'a> {
     }
 
     fn emit_constructor(&self, out: &mut String, iface: &PInterface) {
+        if iface.html_constructor {
+            w!(
+                out,
+                "fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {{\nrt::html_constructor(new_target, I::{}, ctx)\n}}\n",
+                iface.name
+            );
+            return;
+        }
         let Some(overloads) = &iface.constructor else {
             return;
         };
@@ -1377,6 +1411,12 @@ impl<'a> Emitter<'a> {
                 "    constructor: Some(ctor),\n    constructor_length: {},",
                 o.iter().map(POverload::min_args).min().unwrap_or(0)
             ),
+            None if iface.html_constructor => {
+                w!(
+                    out,
+                    "    constructor: Some(ctor),\n    constructor_length: 0,"
+                );
+            }
             None => w!(out, "    constructor: None,\n    constructor_length: 0,"),
         }
         w!(out, "    attrs: &[{}],", attrs.join(", "));

@@ -130,6 +130,14 @@ impl web::WindowImpl for Web {
         Ok(crate::style::computed_style(cx, elt, pseudo_elt.as_deref()))
     }
 
+    fn custom_elements(cx: &mut Cx<'_>) -> Fallible<ObjectId> {
+        Ok(singleton(
+            cx,
+            |s| &mut s.custom_elements,
+            |page| page.alloc(crate::custom_elements::RegistryObject),
+        ))
+    }
+
     fn match_media(cx: &mut Cx<'_>, query: String) -> Fallible<ObjectId> {
         Ok(crate::media::match_media(cx.page, &query))
     }

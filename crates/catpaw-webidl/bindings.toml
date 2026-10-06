@@ -347,8 +347,11 @@ members = [
   "closed", "focus", "blur", "alert", "confirm", "prompt", "innerWidth", "innerHeight",
   "scrollX", "scrollY", "pageXOffset", "pageYOffset", "scroll", "scrollTo", "scrollBy",
   "devicePixelRatio", "event", "matchMedia", "screen", "outerWidth", "outerHeight", "screenX",
-  "screenY", "screenLeft", "screenTop", "getComputedStyle",
+  "screenY", "screenLeft", "screenTop", "getComputedStyle", "customElements",
 ]
+
+[interfaces.CustomElementRegistry]
+members = ["define", "get", "whenDefined", "upgrade"]
 
 [mixins.WindowOrWorkerGlobalScope]
 members = [

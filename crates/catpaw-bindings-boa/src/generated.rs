@@ -346,6 +346,20 @@ impl FromJs for web::ElementCreationOptions {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let obj = rt::dictionary_object(v, "ElementCreationOptions")?;
         Ok(Self {
+            custom_element_registry: match rt::dictionary_member(
+                &obj,
+                "customElementRegistry",
+                ctx,
+            )? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(rt::object_from_js((&m), I::CustomElementRegistry, ctx)?)
+                    }
+                }
+                None => None,
+            },
             is: match rt::dictionary_member(&obj, "is", ctx)? {
                 Some(m) => Some(rt::string_from_js((&m), ctx)?),
                 None => None,
@@ -357,7 +371,33 @@ impl FromJs for web::ElementCreationOptions {
 impl IntoJs for web::ElementCreationOptions {
     fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
         let obj = rt::new_plain_object(ctx);
+        rt::set_member(
+            &obj,
+            "customElementRegistry",
+            self.custom_element_registry,
+            ctx,
+        )?;
         rt::set_member(&obj, "is", self.is, ctx)?;
+        Ok(obj.into())
+    }
+}
+
+impl FromJs for web::ElementDefinitionOptions {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "ElementDefinitionOptions")?;
+        Ok(Self {
+            extends: match rt::dictionary_member(&obj, "extends", ctx)? {
+                Some(m) => Some(rt::string_from_js((&m), ctx)?),
+                None => None,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::ElementDefinitionOptions {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "extends", self.extends, ctx)?;
         Ok(obj.into())
     }
 }
@@ -556,6 +596,14 @@ impl FromJs for web::ImportNodeOptions {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let obj = rt::dictionary_object(v, "ImportNodeOptions")?;
         Ok(Self {
+            custom_element_registry: match rt::dictionary_member(
+                &obj,
+                "customElementRegistry",
+                ctx,
+            )? {
+                Some(m) => Some(rt::object_from_js((&m), I::CustomElementRegistry, ctx)?),
+                None => None,
+            },
             self_only: match rt::dictionary_member(&obj, "selfOnly", ctx)? {
                 Some(m) => (&m).to_boolean(),
                 None => false,
@@ -567,6 +615,12 @@ impl FromJs for web::ImportNodeOptions {
 impl IntoJs for web::ImportNodeOptions {
     fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
         let obj = rt::new_plain_object(ctx);
+        rt::set_member(
+            &obj,
+            "customElementRegistry",
+            self.custom_element_registry,
+            ctx,
+        )?;
         rt::set_member(&obj, "selfOnly", self.self_only, ctx)?;
         Ok(obj.into())
     }
@@ -1740,6 +1794,14 @@ pub mod css_style_declaration {
     }
 
     fn set_css_text(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_css_text_body(this_js, args, ctx))
+    }
+
+    fn set_css_text_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_object(this_js, I::CSSStyleDeclaration, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -1803,6 +1865,14 @@ pub mod css_style_declaration {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_set_property_body(this_js, args, ctx))
+    }
+
+    fn op_set_property_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_object(this_js, I::CSSStyleDeclaration, ctx)?;
         rt::require_args(args, 2, "CSSStyleDeclaration.setProperty")?;
@@ -1820,6 +1890,14 @@ pub mod css_style_declaration {
     }
 
     fn op_remove_property(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_remove_property_body(this_js, args, ctx))
+    }
+
+    fn op_remove_property_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -1930,6 +2008,14 @@ pub mod css_style_properties {
     }
 
     fn set_css_float(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_css_float_body(this_js, args, ctx))
+    }
+
+    fn set_css_float_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_object(this_js, I::CSSStyleProperties, ctx)?;
         let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -2043,6 +2129,110 @@ pub mod crypto {
             func: op_random_uuid,
             length: 0,
         }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod custom_element_registry {
+    use super::*;
+
+    fn op_define(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_define_body(this_js, args, ctx))
+    }
+
+    fn op_define_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CustomElementRegistry, ctx)?;
+        rt::require_args(args, 2, "CustomElementRegistry.define")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::callback_from_js(rt::arg(args, 1), CallbackKind::Function, ctx)?;
+        let a2 = <web::ElementDefinitionOptions as FromJs>::from_js(rt::arg(args, 2), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CustomElementRegistryImpl>::define(cx, this, a0, a1, a2)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_get(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CustomElementRegistry, ctx)?;
+        rt::require_args(args, 1, "CustomElementRegistry.get")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CustomElementRegistryImpl>::get(cx, this, a0)
+        });
+        let v = rt::ret(r, ctx)?;
+        Ok(if v.is_null() { JsValue::undefined() } else { v })
+    }
+
+    fn op_when_defined(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CustomElementRegistry, ctx)?;
+        rt::require_args(args, 1, "CustomElementRegistry.whenDefined")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CustomElementRegistryImpl>::when_defined(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_upgrade(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_upgrade_body(this_js, args, ctx))
+    }
+
+    fn op_upgrade_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CustomElementRegistry, ctx)?;
+        rt::require_args(args, 1, "CustomElementRegistry.upgrade")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CustomElementRegistryImpl>::upgrade(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::CustomElementRegistry,
+        name: "CustomElementRegistry",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[
+            rt::OpDef {
+                name: "define",
+                func: op_define,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "get",
+                func: op_get,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "whenDefined",
+                func: op_when_defined,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "upgrade",
+                func: op_upgrade,
+                length: 1,
+            },
+        ],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -2422,6 +2612,10 @@ pub mod dom_token_list {
     }
 
     fn set_value(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_value_body(this_js, args, ctx))
+    }
+
+    fn set_value_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_object(this_js, I::DOMTokenList, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -2452,6 +2646,10 @@ pub mod dom_token_list {
     }
 
     fn op_add(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_add_body(this_js, args, ctx))
+    }
+
+    fn op_add_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_object(this_js, I::DOMTokenList, ctx)?;
         let a0 = args
@@ -2464,6 +2662,10 @@ pub mod dom_token_list {
     }
 
     fn op_remove(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_remove_body(this_js, args, ctx))
+    }
+
+    fn op_remove_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_object(this_js, I::DOMTokenList, ctx)?;
         let a0 = args
@@ -2478,6 +2680,10 @@ pub mod dom_token_list {
     }
 
     fn op_toggle(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_toggle_body(this_js, args, ctx))
+    }
+
+    fn op_toggle_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_object(this_js, I::DOMTokenList, ctx)?;
         rt::require_args(args, 1, "DOMTokenList.toggle")?;
@@ -2494,6 +2700,14 @@ pub mod dom_token_list {
     }
 
     fn op_replace(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_replace_body(this_js, args, ctx))
+    }
+
+    fn op_replace_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_object(this_js, I::DOMTokenList, ctx)?;
         rt::require_args(args, 2, "DOMTokenList.replace")?;
@@ -4519,6 +4733,14 @@ pub mod named_node_map {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_set_named_item_body(this_js, args, ctx))
+    }
+
+    fn op_set_named_item_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_object(this_js, I::NamedNodeMap, ctx)?;
         rt::require_args(args, 1, "NamedNodeMap.setNamedItem")?;
@@ -4530,6 +4752,14 @@ pub mod named_node_map {
     }
 
     fn op_set_named_item_ns(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_set_named_item_ns_body(this_js, args, ctx))
+    }
+
+    fn op_set_named_item_ns_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -4549,6 +4779,14 @@ pub mod named_node_map {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_remove_named_item_body(this_js, args, ctx))
+    }
+
+    fn op_remove_named_item_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_object(this_js, I::NamedNodeMap, ctx)?;
         rt::require_args(args, 1, "NamedNodeMap.removeNamedItem")?;
@@ -4560,6 +4798,14 @@ pub mod named_node_map {
     }
 
     fn op_remove_named_item_ns(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_remove_named_item_ns_body(this_js, args, ctx))
+    }
+
+    fn op_remove_named_item_ns_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -5043,6 +5289,14 @@ pub mod node {
     }
 
     fn set_node_value(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_node_value_body(this_js, args, ctx))
+    }
+
+    fn set_node_value_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::Node, ctx)?;
         let a0 = if rt::arg(args, 0).is_null_or_undefined() {
             None
@@ -5067,6 +5321,14 @@ pub mod node {
     }
 
     fn set_text_content(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_text_content_body(this_js, args, ctx))
+    }
+
+    fn set_text_content_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -5110,6 +5372,14 @@ pub mod node {
     }
 
     fn op_normalize(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_normalize_body(this_js, args, ctx))
+    }
+
+    fn op_normalize_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Node, ctx)?;
         let r = rt::with_cx(ctx, |cx| <Web as web::NodeImpl>::normalize(cx, this));
@@ -5117,6 +5387,14 @@ pub mod node {
     }
 
     fn op_clone_node(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_clone_node_body(this_js, args, ctx))
+    }
+
+    fn op_clone_node_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Node, ctx)?;
         let a0 = if args.len() > 0 && !args[0].is_undefined() {
@@ -5197,6 +5475,14 @@ pub mod node {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_insert_before_body(this_js, args, ctx))
+    }
+
+    fn op_insert_before_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Node, ctx)?;
         rt::require_args(args, 2, "Node.insertBefore")?;
@@ -5217,6 +5503,14 @@ pub mod node {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_append_child_body(this_js, args, ctx))
+    }
+
+    fn op_append_child_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Node, ctx)?;
         rt::require_args(args, 1, "Node.appendChild")?;
@@ -5226,6 +5520,14 @@ pub mod node {
     }
 
     fn op_replace_child(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_replace_child_body(this_js, args, ctx))
+    }
+
+    fn op_replace_child_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -5242,6 +5544,14 @@ pub mod node {
     }
 
     fn op_remove_child(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_remove_child_body(this_js, args, ctx))
+    }
+
+    fn op_remove_child_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -8443,6 +8753,16 @@ pub mod window {
         rt::ret(r, ctx)
     }
 
+    fn get_custom_elements(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WindowImpl>::custom_elements(cx));
+        rt::ret(r, ctx)
+    }
+
     fn get_closed(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         rt::this_window(this_js, ctx)?;
         let r = rt::with_cx(ctx, |cx| <Web as web::WindowImpl>::closed(cx));
@@ -11114,6 +11434,11 @@ pub mod window {
                 setter: None,
             },
             rt::AttrDef {
+                name: "customElements",
+                getter: get_custom_elements,
+                setter: None,
+            },
+            rt::AttrDef {
                 name: "closed",
                 getter: get_closed,
                 setter: None,
@@ -12147,6 +12472,10 @@ pub mod attr {
     }
 
     fn set_value(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_value_body(this_js, args, ctx))
+    }
+
+    fn set_value_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_object(this_js, I::Attr, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| <Web as web::AttrImpl>::set_value(cx, this, a0));
@@ -12470,6 +12799,10 @@ pub mod character_data {
     }
 
     fn op_before(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_before_body(this_js, args, ctx))
+    }
+
+    fn op_before_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::CharacterData, ctx)?;
         let a0 = args
@@ -12482,6 +12815,10 @@ pub mod character_data {
     }
 
     fn op_after(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_after_body(this_js, args, ctx))
+    }
+
+    fn op_after_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::CharacterData, ctx)?;
         let a0 = args
@@ -12494,6 +12831,14 @@ pub mod character_data {
     }
 
     fn op_replace_with(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_replace_with_body(this_js, args, ctx))
+    }
+
+    fn op_replace_with_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -12512,6 +12857,10 @@ pub mod character_data {
     }
 
     fn op_remove(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_remove_body(this_js, args, ctx))
+    }
+
+    fn op_remove_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::CharacterData, ctx)?;
         let r = rt::with_cx(ctx, |cx| <Web as web::ChildNodeImpl>::remove(cx, this));
@@ -12988,6 +13337,10 @@ pub mod document {
     }
 
     fn set_title(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_title_body(this_js, args, ctx))
+    }
+
+    fn set_title_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::Document, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -13004,6 +13357,10 @@ pub mod document {
     }
 
     fn set_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_body_body(this_js, args, ctx))
+    }
+
+    fn set_body_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::Document, ctx)?;
         let a0 = if rt::arg(args, 0).is_null_or_undefined() {
             None
@@ -14920,6 +15277,14 @@ pub mod document {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_create_element_body(this_js, args, ctx))
+    }
+
+    fn op_create_element_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Document, ctx)?;
         rt::require_args(args, 1, "Document.createElement")?;
@@ -14938,6 +15303,14 @@ pub mod document {
     }
 
     fn op_create_element_ns(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_create_element_ns_body(this_js, args, ctx))
+    }
+
+    fn op_create_element_ns_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -15008,6 +15381,14 @@ pub mod document {
     }
 
     fn op_import_node(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_import_node_body(this_js, args, ctx))
+    }
+
+    fn op_import_node_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Document, ctx)?;
         rt::require_args(args, 1, "Document.importNode")?;
@@ -15024,6 +15405,14 @@ pub mod document {
     }
 
     fn op_adopt_node(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_adopt_node_body(this_js, args, ctx))
+    }
+
+    fn op_adopt_node_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Document, ctx)?;
         rt::require_args(args, 1, "Document.adoptNode")?;
@@ -15166,6 +15555,10 @@ pub mod document {
     }
 
     fn op_open(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_open_body(this_js, args, ctx))
+    }
+
+    fn op_open_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Document, ctx)?;
         if args.len() >= 3 && true {
@@ -15198,6 +15591,10 @@ pub mod document {
     }
 
     fn op_close(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_close_body(this_js, args, ctx))
+    }
+
+    fn op_close_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Document, ctx)?;
         let r = rt::with_cx(ctx, |cx| <Web as web::DocumentImpl>::close(cx, this));
@@ -15205,6 +15602,10 @@ pub mod document {
     }
 
     fn op_write(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_write_body(this_js, args, ctx))
+    }
+
+    fn op_write_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Document, ctx)?;
         let a0 = args
@@ -15217,6 +15618,14 @@ pub mod document {
     }
 
     fn op_writeln(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_writeln_body(this_js, args, ctx))
+    }
+
+    fn op_writeln_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Document, ctx)?;
         let a0 = args
@@ -15251,6 +15660,14 @@ pub mod document {
     }
 
     fn op_prepend(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_prepend_body(this_js, args, ctx))
+    }
+
+    fn op_prepend_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Document, ctx)?;
         let a0 = args
@@ -15265,6 +15682,10 @@ pub mod document {
     }
 
     fn op_append(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_append_body(this_js, args, ctx))
+    }
+
+    fn op_append_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Document, ctx)?;
         let a0 = args
@@ -15277,6 +15698,14 @@ pub mod document {
     }
 
     fn op_replace_children(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_replace_children_body(this_js, args, ctx))
+    }
+
+    fn op_replace_children_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -16059,6 +16488,14 @@ pub mod document_fragment {
     }
 
     fn op_prepend(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_prepend_body(this_js, args, ctx))
+    }
+
+    fn op_prepend_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::DocumentFragment, ctx)?;
         let a0 = args
@@ -16073,6 +16510,10 @@ pub mod document_fragment {
     }
 
     fn op_append(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_append_body(this_js, args, ctx))
+    }
+
+    fn op_append_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::DocumentFragment, ctx)?;
         let a0 = args
@@ -16085,6 +16526,14 @@ pub mod document_fragment {
     }
 
     fn op_replace_children(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_replace_children_body(this_js, args, ctx))
+    }
+
+    fn op_replace_children_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -16236,6 +16685,10 @@ pub mod document_type {
     }
 
     fn op_before(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_before_body(this_js, args, ctx))
+    }
+
+    fn op_before_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::DocumentType, ctx)?;
         let a0 = args
@@ -16248,6 +16701,10 @@ pub mod document_type {
     }
 
     fn op_after(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_after_body(this_js, args, ctx))
+    }
+
+    fn op_after_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::DocumentType, ctx)?;
         let a0 = args
@@ -16260,6 +16717,14 @@ pub mod document_type {
     }
 
     fn op_replace_with(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_replace_with_body(this_js, args, ctx))
+    }
+
+    fn op_replace_with_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -16278,6 +16743,10 @@ pub mod document_type {
     }
 
     fn op_remove(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_remove_body(this_js, args, ctx))
+    }
+
+    fn op_remove_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::DocumentType, ctx)?;
         let r = rt::with_cx(ctx, |cx| <Web as web::ChildNodeImpl>::remove(cx, this));
@@ -16484,6 +16953,10 @@ pub mod element {
     }
 
     fn set_id(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_id_body(this_js, args, ctx))
+    }
+
+    fn set_id_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::Element, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| <Web as web::ElementImpl>::set_id(cx, this, a0));
@@ -16502,6 +16975,14 @@ pub mod element {
     }
 
     fn set_class_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_class_name_body(this_js, args, ctx))
+    }
+
+    fn set_class_name_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::Element, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -16538,6 +17019,10 @@ pub mod element {
     }
 
     fn set_slot(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_slot_body(this_js, args, ctx))
+    }
+
+    fn set_slot_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::Element, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| <Web as web::ElementImpl>::set_slot(cx, this, a0));
@@ -16571,6 +17056,14 @@ pub mod element {
     }
 
     fn set_inner_html(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_inner_html_body(this_js, args, ctx))
+    }
+
+    fn set_inner_html_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::Element, ctx)?;
         let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -16591,6 +17084,14 @@ pub mod element {
     }
 
     fn set_outer_html(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_outer_html_body(this_js, args, ctx))
+    }
+
+    fn set_outer_html_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::Element, ctx)?;
         let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -16770,6 +17271,14 @@ pub mod element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_set_attribute_body(this_js, args, ctx))
+    }
+
+    fn op_set_attribute_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Element, ctx)?;
         rt::require_args(args, 2, "Element.setAttribute")?;
@@ -16782,6 +17291,14 @@ pub mod element {
     }
 
     fn op_set_attribute_ns(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_set_attribute_ns_body(this_js, args, ctx))
+    }
+
+    fn op_set_attribute_ns_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -16807,6 +17324,14 @@ pub mod element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_remove_attribute_body(this_js, args, ctx))
+    }
+
+    fn op_remove_attribute_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Element, ctx)?;
         rt::require_args(args, 1, "Element.removeAttribute")?;
@@ -16818,6 +17343,14 @@ pub mod element {
     }
 
     fn op_remove_attribute_ns(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_remove_attribute_ns_body(this_js, args, ctx))
+    }
+
+    fn op_remove_attribute_ns_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -16838,6 +17371,14 @@ pub mod element {
     }
 
     fn op_toggle_attribute(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_toggle_attribute_body(this_js, args, ctx))
+    }
+
+    fn op_toggle_attribute_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -16932,6 +17473,14 @@ pub mod element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_set_attribute_node_body(this_js, args, ctx))
+    }
+
+    fn op_set_attribute_node_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Element, ctx)?;
         rt::require_args(args, 1, "Element.setAttributeNode")?;
@@ -16947,6 +17496,14 @@ pub mod element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_set_attribute_node_ns_body(this_js, args, ctx))
+    }
+
+    fn op_set_attribute_node_ns_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Element, ctx)?;
         rt::require_args(args, 1, "Element.setAttributeNodeNS")?;
@@ -16958,6 +17515,14 @@ pub mod element {
     }
 
     fn op_remove_attribute_node(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_remove_attribute_node_body(this_js, args, ctx))
+    }
+
+    fn op_remove_attribute_node_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -17040,6 +17605,16 @@ pub mod element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| {
+            op_insert_adjacent_element_body(this_js, args, ctx)
+        })
+    }
+
+    fn op_insert_adjacent_element_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Element, ctx)?;
         rt::require_args(args, 2, "Element.insertAdjacentElement")?;
@@ -17072,6 +17647,14 @@ pub mod element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_insert_adjacent_html_body(this_js, args, ctx))
+    }
+
+    fn op_insert_adjacent_html_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Element, ctx)?;
         rt::require_args(args, 2, "Element.insertAdjacentHTML")?;
@@ -17084,6 +17667,14 @@ pub mod element {
     }
 
     fn op_prepend(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_prepend_body(this_js, args, ctx))
+    }
+
+    fn op_prepend_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Element, ctx)?;
         let a0 = args
@@ -17098,6 +17689,10 @@ pub mod element {
     }
 
     fn op_append(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_append_body(this_js, args, ctx))
+    }
+
+    fn op_append_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Element, ctx)?;
         let a0 = args
@@ -17110,6 +17705,14 @@ pub mod element {
     }
 
     fn op_replace_children(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_replace_children_body(this_js, args, ctx))
+    }
+
+    fn op_replace_children_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -17158,6 +17761,10 @@ pub mod element {
     }
 
     fn op_before(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_before_body(this_js, args, ctx))
+    }
+
+    fn op_before_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Element, ctx)?;
         let a0 = args
@@ -17170,6 +17777,10 @@ pub mod element {
     }
 
     fn op_after(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_after_body(this_js, args, ctx))
+    }
+
+    fn op_after_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Element, ctx)?;
         let a0 = args
@@ -17182,6 +17793,14 @@ pub mod element {
     }
 
     fn op_replace_with(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_replace_with_body(this_js, args, ctx))
+    }
+
+    fn op_replace_with_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -17200,6 +17819,10 @@ pub mod element {
     }
 
     fn op_remove(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_remove_body(this_js, args, ctx))
+    }
+
+    fn op_remove_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Element, ctx)?;
         let r = rt::with_cx(ctx, |cx| <Web as web::ChildNodeImpl>::remove(cx, this));
@@ -17683,6 +18306,10 @@ pub mod html_element {
     }
 
     fn set_title(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_title_body(this_js, args, ctx))
+    }
+
+    fn set_title_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -17699,6 +18326,10 @@ pub mod html_element {
     }
 
     fn set_lang(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_lang_body(this_js, args, ctx))
+    }
+
+    fn set_lang_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -17715,6 +18346,14 @@ pub mod html_element {
     }
 
     fn set_hidden(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_hidden_body(this_js, args, ctx))
+    }
+
+    fn set_hidden_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
         let a0 = if rt::arg(args, 0).is_null_or_undefined() {
             None
@@ -17738,6 +18377,10 @@ pub mod html_element {
     }
 
     fn set_inert(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_inert_body(this_js, args, ctx))
+    }
+
+    fn set_inert_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -17760,6 +18403,14 @@ pub mod html_element {
     }
 
     fn set_access_key(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_access_key_body(this_js, args, ctx))
+    }
+
+    fn set_access_key_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -17782,6 +18433,14 @@ pub mod html_element {
     }
 
     fn set_writing_suggestions(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_writing_suggestions_body(this_js, args, ctx))
+    }
+
+    fn set_writing_suggestions_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -17812,6 +18471,14 @@ pub mod html_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_autocapitalize_body(this_js, args, ctx))
+    }
+
+    fn set_autocapitalize_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -17834,6 +18501,14 @@ pub mod html_element {
     }
 
     fn set_inner_text(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_inner_text_body(this_js, args, ctx))
+    }
+
+    fn set_inner_text_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
         let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -17856,6 +18531,14 @@ pub mod html_element {
     }
 
     fn set_outer_text(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_outer_text_body(this_js, args, ctx))
+    }
+
+    fn set_outer_text_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
         let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -17882,6 +18565,14 @@ pub mod html_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_heading_offset_body(this_js, args, ctx))
+    }
+
+    fn set_heading_offset_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -17904,6 +18595,14 @@ pub mod html_element {
     }
 
     fn set_heading_reset(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_heading_reset_body(this_js, args, ctx))
+    }
+
+    fn set_heading_reset_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -19660,6 +20359,14 @@ pub mod html_element {
     }
 
     fn set_autofocus(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_autofocus_body(this_js, args, ctx))
+    }
+
+    fn set_autofocus_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -19678,6 +20385,14 @@ pub mod html_element {
     }
 
     fn set_tab_index(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_tab_index_body(this_js, args, ctx))
+    }
+
+    fn set_tab_index_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
         let a0 = rt::arg(args, 0).to_i32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -19713,12 +20428,16 @@ pub mod html_element {
         rt::ret(r, ctx)
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLElement,
         name: "HTMLElement",
         parent: Some(I::Element),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -20237,6 +20956,10 @@ pub mod html_embed_element {
     }
 
     fn set_src(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_src_body(this_js, args, ctx))
+    }
+
+    fn set_src_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLEmbedElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -20253,6 +20976,10 @@ pub mod html_embed_element {
     }
 
     fn set_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_type_body(this_js, args, ctx))
+    }
+
+    fn set_type_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLEmbedElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -20269,6 +20996,10 @@ pub mod html_embed_element {
     }
 
     fn set_width(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_width_body(this_js, args, ctx))
+    }
+
+    fn set_width_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLEmbedElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -20287,6 +21018,14 @@ pub mod html_embed_element {
     }
 
     fn set_height(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_height_body(this_js, args, ctx))
+    }
+
+    fn set_height_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLEmbedElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -20303,6 +21042,10 @@ pub mod html_embed_element {
     }
 
     fn set_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_align_body(this_js, args, ctx))
+    }
+
+    fn set_align_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLEmbedElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -20319,6 +21062,10 @@ pub mod html_embed_element {
     }
 
     fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_name_body(this_js, args, ctx))
+    }
+
+    fn set_name_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLEmbedElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -20328,12 +21075,16 @@ pub mod html_embed_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLEmbedElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLEmbedElement,
         name: "HTMLEmbedElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -20388,6 +21139,14 @@ pub mod html_field_set_element {
     }
 
     fn set_disabled(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_disabled_body(this_js, args, ctx))
+    }
+
+    fn set_disabled_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLFieldSetElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -20404,6 +21163,10 @@ pub mod html_field_set_element {
     }
 
     fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_name_body(this_js, args, ctx))
+    }
+
+    fn set_name_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLFieldSetElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -20413,12 +21176,16 @@ pub mod html_field_set_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLFieldSetElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLFieldSetElement,
         name: "HTMLFieldSetElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -20451,6 +21218,10 @@ pub mod html_font_element {
     }
 
     fn set_color(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_color_body(this_js, args, ctx))
+    }
+
+    fn set_color_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLFontElement, ctx)?;
         let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -20467,6 +21238,10 @@ pub mod html_font_element {
     }
 
     fn set_face(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_face_body(this_js, args, ctx))
+    }
+
+    fn set_face_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLFontElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -20483,6 +21258,10 @@ pub mod html_font_element {
     }
 
     fn set_size(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_size_body(this_js, args, ctx))
+    }
+
+    fn set_size_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLFontElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -20492,12 +21271,16 @@ pub mod html_font_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLFontElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLFontElement,
         name: "HTMLFontElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -20545,6 +21328,14 @@ pub mod html_form_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_accept_charset_body(this_js, args, ctx))
+    }
+
+    fn set_accept_charset_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLFormElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -20561,6 +21352,14 @@ pub mod html_form_element {
     }
 
     fn set_action(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_action_body(this_js, args, ctx))
+    }
+
+    fn set_action_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLFormElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -20577,6 +21376,10 @@ pub mod html_form_element {
     }
 
     fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_name_body(this_js, args, ctx))
+    }
+
+    fn set_name_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLFormElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -20603,6 +21406,14 @@ pub mod html_form_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_no_validate_body(this_js, args, ctx))
+    }
+
+    fn set_no_validate_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLFormElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -20621,6 +21432,14 @@ pub mod html_form_element {
     }
 
     fn set_target(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_target_body(this_js, args, ctx))
+    }
+
+    fn set_target_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLFormElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -20637,6 +21456,10 @@ pub mod html_form_element {
     }
 
     fn set_rel(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_rel_body(this_js, args, ctx))
+    }
+
+    fn set_rel_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLFormElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -20664,12 +21487,16 @@ pub mod html_form_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLFormElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLFormElement,
         name: "HTMLFormElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -20727,6 +21554,10 @@ pub mod html_frame_element {
     }
 
     fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_name_body(this_js, args, ctx))
+    }
+
+    fn set_name_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLFrameElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -20745,6 +21576,14 @@ pub mod html_frame_element {
     }
 
     fn set_scrolling(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_scrolling_body(this_js, args, ctx))
+    }
+
+    fn set_scrolling_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLFrameElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -20761,6 +21600,10 @@ pub mod html_frame_element {
     }
 
     fn set_src(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_src_body(this_js, args, ctx))
+    }
+
+    fn set_src_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLFrameElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -20787,6 +21630,14 @@ pub mod html_frame_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_frame_border_body(this_js, args, ctx))
+    }
+
+    fn set_frame_border_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLFrameElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -20803,6 +21654,14 @@ pub mod html_frame_element {
     }
 
     fn set_long_desc(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_long_desc_body(this_js, args, ctx))
+    }
+
+    fn set_long_desc_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLFrameElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -20821,6 +21680,14 @@ pub mod html_frame_element {
     }
 
     fn set_no_resize(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_no_resize_body(this_js, args, ctx))
+    }
+
+    fn set_no_resize_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLFrameElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -20843,6 +21710,14 @@ pub mod html_frame_element {
     }
 
     fn set_margin_height(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_margin_height_body(this_js, args, ctx))
+    }
+
+    fn set_margin_height_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -20873,6 +21748,14 @@ pub mod html_frame_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_margin_width_body(this_js, args, ctx))
+    }
+
+    fn set_margin_width_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLFrameElement, ctx)?;
         let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -20882,12 +21765,16 @@ pub mod html_frame_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLFrameElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLFrameElement,
         name: "HTMLFrameElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -20950,6 +21837,10 @@ pub mod html_frame_set_element {
     }
 
     fn set_cols(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_cols_body(this_js, args, ctx))
+    }
+
+    fn set_cols_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -20966,6 +21857,10 @@ pub mod html_frame_set_element {
     }
 
     fn set_rows(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_rows_body(this_js, args, ctx))
+    }
+
+    fn set_rows_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -21412,12 +22307,16 @@ pub mod html_frame_set_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLFrameSetElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLFrameSetElement,
         name: "HTMLFrameSetElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -21540,6 +22439,10 @@ pub mod htmlhr_element {
     }
 
     fn set_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_align_body(this_js, args, ctx))
+    }
+
+    fn set_align_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLHRElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -21556,6 +22459,10 @@ pub mod htmlhr_element {
     }
 
     fn set_color(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_color_body(this_js, args, ctx))
+    }
+
+    fn set_color_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLHRElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -21572,6 +22479,14 @@ pub mod htmlhr_element {
     }
 
     fn set_no_shade(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_no_shade_body(this_js, args, ctx))
+    }
+
+    fn set_no_shade_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLHRElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -21588,6 +22503,10 @@ pub mod htmlhr_element {
     }
 
     fn set_size(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_size_body(this_js, args, ctx))
+    }
+
+    fn set_size_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLHRElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -21604,6 +22523,10 @@ pub mod htmlhr_element {
     }
 
     fn set_width(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_width_body(this_js, args, ctx))
+    }
+
+    fn set_width_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLHRElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -21613,12 +22536,16 @@ pub mod htmlhr_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLHRElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLHRElement,
         name: "HTMLHRElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -21659,12 +22586,16 @@ pub mod htmlhr_element {
 pub mod html_head_element {
     use super::*;
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLHeadElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLHeadElement,
         name: "HTMLHeadElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[],
         ops: &[],
@@ -21686,6 +22617,10 @@ pub mod html_heading_element {
     }
 
     fn set_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_align_body(this_js, args, ctx))
+    }
+
+    fn set_align_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLHeadingElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -21695,12 +22630,16 @@ pub mod html_heading_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLHeadingElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLHeadingElement,
         name: "HTMLHeadingElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
             name: "align",
@@ -21728,6 +22667,14 @@ pub mod html_html_element {
     }
 
     fn set_version(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_version_body(this_js, args, ctx))
+    }
+
+    fn set_version_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLHtmlElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -21737,12 +22684,16 @@ pub mod html_html_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLHtmlElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLHtmlElement,
         name: "HTMLHtmlElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
             name: "version",
@@ -21768,6 +22719,10 @@ pub mod htmli_frame_element {
     }
 
     fn set_src(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_src_body(this_js, args, ctx))
+    }
+
+    fn set_src_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLIFrameElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -21784,6 +22739,10 @@ pub mod htmli_frame_element {
     }
 
     fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_name_body(this_js, args, ctx))
+    }
+
+    fn set_name_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLIFrameElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -21818,6 +22777,10 @@ pub mod htmli_frame_element {
     }
 
     fn set_allow(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_allow_body(this_js, args, ctx))
+    }
+
+    fn set_allow_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLIFrameElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -21844,6 +22807,14 @@ pub mod htmli_frame_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_allow_fullscreen_body(this_js, args, ctx))
+    }
+
+    fn set_allow_fullscreen_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLIFrameElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -21860,6 +22831,10 @@ pub mod htmli_frame_element {
     }
 
     fn set_width(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_width_body(this_js, args, ctx))
+    }
+
+    fn set_width_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLIFrameElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -21878,6 +22853,14 @@ pub mod htmli_frame_element {
     }
 
     fn set_height(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_height_body(this_js, args, ctx))
+    }
+
+    fn set_height_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLIFrameElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -21894,6 +22877,10 @@ pub mod htmli_frame_element {
     }
 
     fn set_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_align_body(this_js, args, ctx))
+    }
+
+    fn set_align_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLIFrameElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -21912,6 +22899,14 @@ pub mod htmli_frame_element {
     }
 
     fn set_scrolling(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_scrolling_body(this_js, args, ctx))
+    }
+
+    fn set_scrolling_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLIFrameElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -21938,6 +22933,14 @@ pub mod htmli_frame_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_frame_border_body(this_js, args, ctx))
+    }
+
+    fn set_frame_border_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLIFrameElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -21954,6 +22957,14 @@ pub mod htmli_frame_element {
     }
 
     fn set_long_desc(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_long_desc_body(this_js, args, ctx))
+    }
+
+    fn set_long_desc_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLIFrameElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -21976,6 +22987,14 @@ pub mod htmli_frame_element {
     }
 
     fn set_margin_height(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_margin_height_body(this_js, args, ctx))
+    }
+
+    fn set_margin_height_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -22006,6 +23025,14 @@ pub mod htmli_frame_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_margin_width_body(this_js, args, ctx))
+    }
+
+    fn set_margin_width_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLIFrameElement, ctx)?;
         let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22015,12 +23042,16 @@ pub mod htmli_frame_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLIFrameElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLIFrameElement,
         name: "HTMLIFrameElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -22108,6 +23139,10 @@ pub mod html_image_element {
     }
 
     fn set_alt(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_alt_body(this_js, args, ctx))
+    }
+
+    fn set_alt_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLImageElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22124,6 +23159,10 @@ pub mod html_image_element {
     }
 
     fn set_src(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_src_body(this_js, args, ctx))
+    }
+
+    fn set_src_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLImageElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22142,6 +23181,14 @@ pub mod html_image_element {
     }
 
     fn set_srcset(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_srcset_body(this_js, args, ctx))
+    }
+
+    fn set_srcset_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLImageElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22158,6 +23205,10 @@ pub mod html_image_element {
     }
 
     fn set_sizes(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_sizes_body(this_js, args, ctx))
+    }
+
+    fn set_sizes_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLImageElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22176,6 +23227,14 @@ pub mod html_image_element {
     }
 
     fn set_use_map(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_use_map_body(this_js, args, ctx))
+    }
+
+    fn set_use_map_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLImageElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22192,6 +23251,14 @@ pub mod html_image_element {
     }
 
     fn set_is_map(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_is_map_body(this_js, args, ctx))
+    }
+
+    fn set_is_map_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLImageElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -22210,6 +23277,14 @@ pub mod html_image_element {
     }
 
     fn set_controls(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_controls_body(this_js, args, ctx))
+    }
+
+    fn set_controls_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLImageElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -22228,6 +23303,10 @@ pub mod html_image_element {
     }
 
     fn set_width(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_width_body(this_js, args, ctx))
+    }
+
+    fn set_width_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLImageElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22246,6 +23325,14 @@ pub mod html_image_element {
     }
 
     fn set_height(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_height_body(this_js, args, ctx))
+    }
+
+    fn set_height_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLImageElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22262,6 +23349,10 @@ pub mod html_image_element {
     }
 
     fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_name_body(this_js, args, ctx))
+    }
+
+    fn set_name_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLImageElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22278,6 +23369,14 @@ pub mod html_image_element {
     }
 
     fn set_lowsrc(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_lowsrc_body(this_js, args, ctx))
+    }
+
+    fn set_lowsrc_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLImageElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22294,6 +23393,10 @@ pub mod html_image_element {
     }
 
     fn set_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_align_body(this_js, args, ctx))
+    }
+
+    fn set_align_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLImageElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22312,6 +23415,14 @@ pub mod html_image_element {
     }
 
     fn set_hspace(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_hspace_body(this_js, args, ctx))
+    }
+
+    fn set_hspace_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLImageElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22330,6 +23441,14 @@ pub mod html_image_element {
     }
 
     fn set_vspace(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_vspace_body(this_js, args, ctx))
+    }
+
+    fn set_vspace_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLImageElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22346,6 +23465,14 @@ pub mod html_image_element {
     }
 
     fn set_long_desc(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_long_desc_body(this_js, args, ctx))
+    }
+
+    fn set_long_desc_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLImageElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22364,6 +23491,14 @@ pub mod html_image_element {
     }
 
     fn set_border(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_border_body(this_js, args, ctx))
+    }
+
+    fn set_border_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLImageElement, ctx)?;
         let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22373,12 +23508,16 @@ pub mod html_image_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLImageElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLImageElement,
         name: "HTMLImageElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -22483,6 +23622,14 @@ pub mod html_input_element {
     }
 
     fn set_accept(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_accept_body(this_js, args, ctx))
+    }
+
+    fn set_accept_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22499,6 +23646,10 @@ pub mod html_input_element {
     }
 
     fn set_alpha(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_alpha_body(this_js, args, ctx))
+    }
+
+    fn set_alpha_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -22515,6 +23666,10 @@ pub mod html_input_element {
     }
 
     fn set_alt(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_alt_body(this_js, args, ctx))
+    }
+
+    fn set_alt_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22541,6 +23696,14 @@ pub mod html_input_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_autocomplete_body(this_js, args, ctx))
+    }
+
+    fn set_autocomplete_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22561,6 +23724,14 @@ pub mod html_input_element {
     }
 
     fn set_default_checked(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_default_checked_body(this_js, args, ctx))
+    }
+
+    fn set_default_checked_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -22601,6 +23772,14 @@ pub mod html_input_element {
     }
 
     fn set_dir_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_dir_name_body(this_js, args, ctx))
+    }
+
+    fn set_dir_name_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22619,6 +23798,14 @@ pub mod html_input_element {
     }
 
     fn set_disabled(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_disabled_body(this_js, args, ctx))
+    }
+
+    fn set_disabled_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -22641,6 +23828,14 @@ pub mod html_input_element {
     }
 
     fn set_form_action(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_form_action_body(this_js, args, ctx))
+    }
+
+    fn set_form_action_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -22671,6 +23866,14 @@ pub mod html_input_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_form_no_validate_body(this_js, args, ctx))
+    }
+
+    fn set_form_no_validate_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -22697,6 +23900,14 @@ pub mod html_input_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_form_target_body(this_js, args, ctx))
+    }
+
+    fn set_form_target_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22715,6 +23926,14 @@ pub mod html_input_element {
     }
 
     fn set_height(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_height_body(this_js, args, ctx))
+    }
+
+    fn set_height_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22731,6 +23950,10 @@ pub mod html_input_element {
     }
 
     fn set_max(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_max_body(this_js, args, ctx))
+    }
+
+    fn set_max_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22753,6 +23976,14 @@ pub mod html_input_element {
     }
 
     fn set_max_length(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_max_length_body(this_js, args, ctx))
+    }
+
+    fn set_max_length_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::arg(args, 0).to_i32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22769,6 +24000,10 @@ pub mod html_input_element {
     }
 
     fn set_min(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_min_body(this_js, args, ctx))
+    }
+
+    fn set_min_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22791,6 +24026,14 @@ pub mod html_input_element {
     }
 
     fn set_min_length(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_min_length_body(this_js, args, ctx))
+    }
+
+    fn set_min_length_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::arg(args, 0).to_i32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22809,6 +24052,14 @@ pub mod html_input_element {
     }
 
     fn set_multiple(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_multiple_body(this_js, args, ctx))
+    }
+
+    fn set_multiple_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -22825,6 +24076,10 @@ pub mod html_input_element {
     }
 
     fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_name_body(this_js, args, ctx))
+    }
+
+    fn set_name_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22843,6 +24098,14 @@ pub mod html_input_element {
     }
 
     fn set_pattern(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_pattern_body(this_js, args, ctx))
+    }
+
+    fn set_pattern_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22869,6 +24132,14 @@ pub mod html_input_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_placeholder_body(this_js, args, ctx))
+    }
+
+    fn set_placeholder_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22887,6 +24158,14 @@ pub mod html_input_element {
     }
 
     fn set_read_only(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_read_only_body(this_js, args, ctx))
+    }
+
+    fn set_read_only_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -22905,6 +24184,14 @@ pub mod html_input_element {
     }
 
     fn set_required(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_required_body(this_js, args, ctx))
+    }
+
+    fn set_required_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -22923,6 +24210,10 @@ pub mod html_input_element {
     }
 
     fn set_size(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_size_body(this_js, args, ctx))
+    }
+
+    fn set_size_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22939,6 +24230,10 @@ pub mod html_input_element {
     }
 
     fn set_src(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_src_body(this_js, args, ctx))
+    }
+
+    fn set_src_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22955,6 +24250,10 @@ pub mod html_input_element {
     }
 
     fn set_step(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_step_body(this_js, args, ctx))
+    }
+
+    fn set_step_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22979,6 +24278,14 @@ pub mod html_input_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_default_value_body(this_js, args, ctx))
+    }
+
+    fn set_default_value_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -22997,6 +24304,10 @@ pub mod html_input_element {
     }
 
     fn set_value(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_value_body(this_js, args, ctx))
+    }
+
+    fn set_value_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23015,6 +24326,10 @@ pub mod html_input_element {
     }
 
     fn set_width(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_width_body(this_js, args, ctx))
+    }
+
+    fn set_width_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23031,6 +24346,10 @@ pub mod html_input_element {
     }
 
     fn set_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_align_body(this_js, args, ctx))
+    }
+
+    fn set_align_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23049,6 +24368,14 @@ pub mod html_input_element {
     }
 
     fn set_use_map(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_use_map_body(this_js, args, ctx))
+    }
+
+    fn set_use_map_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23058,12 +24385,16 @@ pub mod html_input_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLInputElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLInputElement,
         name: "HTMLInputElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -23238,6 +24569,10 @@ pub mod htmlli_element {
     }
 
     fn set_value(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_value_body(this_js, args, ctx))
+    }
+
+    fn set_value_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLLIElement, ctx)?;
         let a0 = rt::arg(args, 0).to_i32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23254,6 +24589,10 @@ pub mod htmlli_element {
     }
 
     fn set_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_type_body(this_js, args, ctx))
+    }
+
+    fn set_type_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLLIElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23263,12 +24602,16 @@ pub mod htmlli_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLLIElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLLIElement,
         name: "HTMLLIElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -23301,6 +24644,14 @@ pub mod html_label_element {
     }
 
     fn set_html_for(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_html_for_body(this_js, args, ctx))
+    }
+
+    fn set_html_for_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLLabelElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23310,12 +24661,16 @@ pub mod html_label_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLLabelElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLLabelElement,
         name: "HTMLLabelElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
             name: "htmlFor",
@@ -23341,6 +24696,10 @@ pub mod html_legend_element {
     }
 
     fn set_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_align_body(this_js, args, ctx))
+    }
+
+    fn set_align_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLLegendElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23350,12 +24709,16 @@ pub mod html_legend_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLLegendElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLLegendElement,
         name: "HTMLLegendElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
             name: "align",
@@ -23381,6 +24744,10 @@ pub mod html_link_element {
     }
 
     fn set_href(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_href_body(this_js, args, ctx))
+    }
+
+    fn set_href_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLLinkElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23397,6 +24764,10 @@ pub mod html_link_element {
     }
 
     fn set_rel(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_rel_body(this_js, args, ctx))
+    }
+
+    fn set_rel_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLLinkElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23431,6 +24802,10 @@ pub mod html_link_element {
     }
 
     fn set_media(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_media_body(this_js, args, ctx))
+    }
+
+    fn set_media_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLLinkElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23449,6 +24824,14 @@ pub mod html_link_element {
     }
 
     fn set_integrity(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_integrity_body(this_js, args, ctx))
+    }
+
+    fn set_integrity_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLLinkElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23467,6 +24850,14 @@ pub mod html_link_element {
     }
 
     fn set_hreflang(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_hreflang_body(this_js, args, ctx))
+    }
+
+    fn set_hreflang_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLLinkElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23483,6 +24874,10 @@ pub mod html_link_element {
     }
 
     fn set_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_type_body(this_js, args, ctx))
+    }
+
+    fn set_type_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLLinkElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23527,6 +24922,14 @@ pub mod html_link_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_image_srcset_body(this_js, args, ctx))
+    }
+
+    fn set_image_srcset_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLLinkElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23549,6 +24952,14 @@ pub mod html_link_element {
     }
 
     fn set_image_sizes(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_image_sizes_body(this_js, args, ctx))
+    }
+
+    fn set_image_sizes_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -23589,6 +25000,14 @@ pub mod html_link_element {
     }
 
     fn set_disabled(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_disabled_body(this_js, args, ctx))
+    }
+
+    fn set_disabled_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLLinkElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -23607,6 +25026,14 @@ pub mod html_link_element {
     }
 
     fn set_charset(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_charset_body(this_js, args, ctx))
+    }
+
+    fn set_charset_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLLinkElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23623,6 +25050,10 @@ pub mod html_link_element {
     }
 
     fn set_rev(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_rev_body(this_js, args, ctx))
+    }
+
+    fn set_rev_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLLinkElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23641,6 +25072,14 @@ pub mod html_link_element {
     }
 
     fn set_target(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_target_body(this_js, args, ctx))
+    }
+
+    fn set_target_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLLinkElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23650,12 +25089,16 @@ pub mod html_link_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLLinkElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLLinkElement,
         name: "HTMLLinkElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -23753,6 +25196,10 @@ pub mod html_map_element {
     }
 
     fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_name_body(this_js, args, ctx))
+    }
+
+    fn set_name_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMapElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23762,12 +25209,16 @@ pub mod html_map_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLMapElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLMapElement,
         name: "HTMLMapElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
             name: "name",
@@ -23795,6 +25246,14 @@ pub mod html_marquee_element {
     }
 
     fn set_behavior(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_behavior_body(this_js, args, ctx))
+    }
+
+    fn set_behavior_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23813,6 +25272,14 @@ pub mod html_marquee_element {
     }
 
     fn set_bg_color(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_bg_color_body(this_js, args, ctx))
+    }
+
+    fn set_bg_color_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23831,6 +25298,14 @@ pub mod html_marquee_element {
     }
 
     fn set_direction(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_direction_body(this_js, args, ctx))
+    }
+
+    fn set_direction_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23849,6 +25324,14 @@ pub mod html_marquee_element {
     }
 
     fn set_height(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_height_body(this_js, args, ctx))
+    }
+
+    fn set_height_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23867,6 +25350,14 @@ pub mod html_marquee_element {
     }
 
     fn set_hspace(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_hspace_body(this_js, args, ctx))
+    }
+
+    fn set_hspace_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23889,6 +25380,14 @@ pub mod html_marquee_element {
     }
 
     fn set_scroll_amount(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_scroll_amount_body(this_js, args, ctx))
+    }
+
+    fn set_scroll_amount_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -23919,6 +25418,14 @@ pub mod html_marquee_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_scroll_delay_body(this_js, args, ctx))
+    }
+
+    fn set_scroll_delay_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23941,6 +25448,14 @@ pub mod html_marquee_element {
     }
 
     fn set_true_speed(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_true_speed_body(this_js, args, ctx))
+    }
+
+    fn set_true_speed_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -23959,6 +25474,14 @@ pub mod html_marquee_element {
     }
 
     fn set_vspace(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_vspace_body(this_js, args, ctx))
+    }
+
+    fn set_vspace_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23975,6 +25498,10 @@ pub mod html_marquee_element {
     }
 
     fn set_width(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_width_body(this_js, args, ctx))
+    }
+
+    fn set_width_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -23984,12 +25511,16 @@ pub mod html_marquee_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLMarqueeElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLMarqueeElement,
         name: "HTMLMarqueeElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -24062,6 +25593,10 @@ pub mod html_media_element {
     }
 
     fn set_src(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_src_body(this_js, args, ctx))
+    }
+
+    fn set_src_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24080,6 +25615,14 @@ pub mod html_media_element {
     }
 
     fn set_autoplay(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_autoplay_body(this_js, args, ctx))
+    }
+
+    fn set_autoplay_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -24096,6 +25639,10 @@ pub mod html_media_element {
     }
 
     fn set_loop(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_loop_body(this_js, args, ctx))
+    }
+
+    fn set_loop_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -24114,6 +25661,14 @@ pub mod html_media_element {
     }
 
     fn set_controls(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_controls_body(this_js, args, ctx))
+    }
+
+    fn set_controls_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -24134,6 +25689,14 @@ pub mod html_media_element {
     }
 
     fn set_default_muted(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_default_muted_body(this_js, args, ctx))
+    }
+
+    fn set_default_muted_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -24210,6 +25773,14 @@ pub mod html_menu_element {
     }
 
     fn set_compact(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_compact_body(this_js, args, ctx))
+    }
+
+    fn set_compact_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMenuElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -24219,12 +25790,16 @@ pub mod html_menu_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLMenuElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLMenuElement,
         name: "HTMLMenuElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
             name: "compact",
@@ -24250,6 +25825,10 @@ pub mod html_meta_element {
     }
 
     fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_name_body(this_js, args, ctx))
+    }
+
+    fn set_name_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMetaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24272,6 +25851,14 @@ pub mod html_meta_element {
     }
 
     fn set_http_equiv(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_http_equiv_body(this_js, args, ctx))
+    }
+
+    fn set_http_equiv_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMetaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24290,6 +25877,14 @@ pub mod html_meta_element {
     }
 
     fn set_content(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_content_body(this_js, args, ctx))
+    }
+
+    fn set_content_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMetaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24306,6 +25901,10 @@ pub mod html_meta_element {
     }
 
     fn set_media(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_media_body(this_js, args, ctx))
+    }
+
+    fn set_media_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMetaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24324,6 +25923,14 @@ pub mod html_meta_element {
     }
 
     fn set_scheme(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_scheme_body(this_js, args, ctx))
+    }
+
+    fn set_scheme_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMetaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24333,12 +25940,16 @@ pub mod html_meta_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLMetaElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLMetaElement,
         name: "HTMLMetaElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -24388,6 +25999,10 @@ pub mod html_meter_element {
     }
 
     fn set_value(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_value_body(this_js, args, ctx))
+    }
+
+    fn set_value_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMeterElement, ctx)?;
         let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24406,6 +26021,10 @@ pub mod html_meter_element {
     }
 
     fn set_min(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_min_body(this_js, args, ctx))
+    }
+
+    fn set_min_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMeterElement, ctx)?;
         let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24424,6 +26043,10 @@ pub mod html_meter_element {
     }
 
     fn set_max(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_max_body(this_js, args, ctx))
+    }
+
+    fn set_max_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMeterElement, ctx)?;
         let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24442,6 +26065,10 @@ pub mod html_meter_element {
     }
 
     fn set_low(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_low_body(this_js, args, ctx))
+    }
+
+    fn set_low_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMeterElement, ctx)?;
         let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24460,6 +26087,10 @@ pub mod html_meter_element {
     }
 
     fn set_high(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_high_body(this_js, args, ctx))
+    }
+
+    fn set_high_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMeterElement, ctx)?;
         let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24478,6 +26109,14 @@ pub mod html_meter_element {
     }
 
     fn set_optimum(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_optimum_body(this_js, args, ctx))
+    }
+
+    fn set_optimum_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMeterElement, ctx)?;
         let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24487,12 +26126,16 @@ pub mod html_meter_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLMeterElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLMeterElement,
         name: "HTMLMeterElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -24545,6 +26188,10 @@ pub mod html_mod_element {
     }
 
     fn set_cite(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_cite_body(this_js, args, ctx))
+    }
+
+    fn set_cite_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLModElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24563,6 +26210,14 @@ pub mod html_mod_element {
     }
 
     fn set_date_time(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_date_time_body(this_js, args, ctx))
+    }
+
+    fn set_date_time_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLModElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24572,12 +26227,16 @@ pub mod html_mod_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLModElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLModElement,
         name: "HTMLModElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -24612,6 +26271,14 @@ pub mod htmlo_list_element {
     }
 
     fn set_reversed(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_reversed_body(this_js, args, ctx))
+    }
+
+    fn set_reversed_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLOListElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -24630,6 +26297,10 @@ pub mod htmlo_list_element {
     }
 
     fn set_start(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_start_body(this_js, args, ctx))
+    }
+
+    fn set_start_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLOListElement, ctx)?;
         let a0 = rt::arg(args, 0).to_i32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24646,6 +26317,10 @@ pub mod htmlo_list_element {
     }
 
     fn set_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_type_body(this_js, args, ctx))
+    }
+
+    fn set_type_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLOListElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24662,6 +26337,14 @@ pub mod htmlo_list_element {
     }
 
     fn set_compact(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_compact_body(this_js, args, ctx))
+    }
+
+    fn set_compact_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLOListElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -24671,12 +26354,16 @@ pub mod htmlo_list_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLOListElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLOListElement,
         name: "HTMLOListElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -24719,6 +26406,10 @@ pub mod html_object_element {
     }
 
     fn set_data(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_data_body(this_js, args, ctx))
+    }
+
+    fn set_data_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24735,6 +26426,10 @@ pub mod html_object_element {
     }
 
     fn set_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_type_body(this_js, args, ctx))
+    }
+
+    fn set_type_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24751,6 +26446,10 @@ pub mod html_object_element {
     }
 
     fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_name_body(this_js, args, ctx))
+    }
+
+    fn set_name_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24767,6 +26466,10 @@ pub mod html_object_element {
     }
 
     fn set_width(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_width_body(this_js, args, ctx))
+    }
+
+    fn set_width_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24785,6 +26488,14 @@ pub mod html_object_element {
     }
 
     fn set_height(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_height_body(this_js, args, ctx))
+    }
+
+    fn set_height_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24801,6 +26512,10 @@ pub mod html_object_element {
     }
 
     fn set_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_align_body(this_js, args, ctx))
+    }
+
+    fn set_align_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24819,6 +26534,14 @@ pub mod html_object_element {
     }
 
     fn set_archive(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_archive_body(this_js, args, ctx))
+    }
+
+    fn set_archive_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24835,6 +26558,10 @@ pub mod html_object_element {
     }
 
     fn set_code(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_code_body(this_js, args, ctx))
+    }
+
+    fn set_code_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24851,6 +26578,14 @@ pub mod html_object_element {
     }
 
     fn set_declare(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_declare_body(this_js, args, ctx))
+    }
+
+    fn set_declare_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -24869,6 +26604,14 @@ pub mod html_object_element {
     }
 
     fn set_hspace(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_hspace_body(this_js, args, ctx))
+    }
+
+    fn set_hspace_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24887,6 +26630,14 @@ pub mod html_object_element {
     }
 
     fn set_standby(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_standby_body(this_js, args, ctx))
+    }
+
+    fn set_standby_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24905,6 +26656,14 @@ pub mod html_object_element {
     }
 
     fn set_vspace(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_vspace_body(this_js, args, ctx))
+    }
+
+    fn set_vspace_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24921,6 +26680,14 @@ pub mod html_object_element {
     }
 
     fn set_code_base(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_code_base_body(this_js, args, ctx))
+    }
+
+    fn set_code_base_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24939,6 +26706,14 @@ pub mod html_object_element {
     }
 
     fn set_code_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_code_type_body(this_js, args, ctx))
+    }
+
+    fn set_code_type_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24957,6 +26732,14 @@ pub mod html_object_element {
     }
 
     fn set_use_map(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_use_map_body(this_js, args, ctx))
+    }
+
+    fn set_use_map_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24975,6 +26758,14 @@ pub mod html_object_element {
     }
 
     fn set_border(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_border_body(this_js, args, ctx))
+    }
+
+    fn set_border_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
         let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -24984,12 +26775,16 @@ pub mod html_object_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLObjectElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLObjectElement,
         name: "HTMLObjectElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -25094,6 +26889,14 @@ pub mod html_opt_group_element {
     }
 
     fn set_disabled(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_disabled_body(this_js, args, ctx))
+    }
+
+    fn set_disabled_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLOptGroupElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -25110,6 +26913,10 @@ pub mod html_opt_group_element {
     }
 
     fn set_label(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_label_body(this_js, args, ctx))
+    }
+
+    fn set_label_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLOptGroupElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -25119,12 +26926,16 @@ pub mod html_opt_group_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLOptGroupElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLOptGroupElement,
         name: "HTMLOptGroupElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -25159,6 +26970,14 @@ pub mod html_option_element {
     }
 
     fn set_disabled(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_disabled_body(this_js, args, ctx))
+    }
+
+    fn set_disabled_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLOptionElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -25175,6 +26994,10 @@ pub mod html_option_element {
     }
 
     fn set_label(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_label_body(this_js, args, ctx))
+    }
+
+    fn set_label_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLOptionElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -25201,6 +27024,14 @@ pub mod html_option_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_default_selected_body(this_js, args, ctx))
+    }
+
+    fn set_default_selected_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLOptionElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -25217,6 +27048,10 @@ pub mod html_option_element {
     }
 
     fn set_value(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_value_body(this_js, args, ctx))
+    }
+
+    fn set_value_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLOptionElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -25226,12 +27061,16 @@ pub mod html_option_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLOptionElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLOptionElement,
         name: "HTMLOptionElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -25292,6 +27131,10 @@ pub mod html_output_element {
     }
 
     fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_name_body(this_js, args, ctx))
+    }
+
+    fn set_name_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLOutputElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -25301,12 +27144,16 @@ pub mod html_output_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLOutputElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLOutputElement,
         name: "HTMLOutputElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -25339,6 +27186,10 @@ pub mod html_paragraph_element {
     }
 
     fn set_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_align_body(this_js, args, ctx))
+    }
+
+    fn set_align_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLParagraphElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -25348,12 +27199,16 @@ pub mod html_paragraph_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLParagraphElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLParagraphElement,
         name: "HTMLParagraphElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
             name: "align",
@@ -25379,6 +27234,10 @@ pub mod html_param_element {
     }
 
     fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_name_body(this_js, args, ctx))
+    }
+
+    fn set_name_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLParamElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -25395,6 +27254,10 @@ pub mod html_param_element {
     }
 
     fn set_value(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_value_body(this_js, args, ctx))
+    }
+
+    fn set_value_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLParamElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -25411,6 +27274,10 @@ pub mod html_param_element {
     }
 
     fn set_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_type_body(this_js, args, ctx))
+    }
+
+    fn set_type_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLParamElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -25433,6 +27300,14 @@ pub mod html_param_element {
     }
 
     fn set_value_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_value_type_body(this_js, args, ctx))
+    }
+
+    fn set_value_type_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLParamElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -25442,12 +27317,16 @@ pub mod html_param_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLParamElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLParamElement,
         name: "HTMLParamElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -25483,12 +27362,16 @@ pub mod html_param_element {
 pub mod html_picture_element {
     use super::*;
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLPictureElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLPictureElement,
         name: "HTMLPictureElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[],
         ops: &[],
@@ -25512,6 +27395,10 @@ pub mod html_pre_element {
     }
 
     fn set_width(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_width_body(this_js, args, ctx))
+    }
+
+    fn set_width_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLPreElement, ctx)?;
         let a0 = rt::arg(args, 0).to_i32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -25521,12 +27408,16 @@ pub mod html_pre_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLPreElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLPreElement,
         name: "HTMLPreElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
             name: "width",
@@ -25554,6 +27445,10 @@ pub mod html_progress_element {
     }
 
     fn set_value(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_value_body(this_js, args, ctx))
+    }
+
+    fn set_value_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLProgressElement, ctx)?;
         let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -25572,6 +27467,10 @@ pub mod html_progress_element {
     }
 
     fn set_max(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_max_body(this_js, args, ctx))
+    }
+
+    fn set_max_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLProgressElement, ctx)?;
         let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -25581,12 +27480,16 @@ pub mod html_progress_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLProgressElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLProgressElement,
         name: "HTMLProgressElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -25619,6 +27522,10 @@ pub mod html_quote_element {
     }
 
     fn set_cite(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_cite_body(this_js, args, ctx))
+    }
+
+    fn set_cite_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLQuoteElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -25628,12 +27535,16 @@ pub mod html_quote_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLQuoteElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLQuoteElement,
         name: "HTMLQuoteElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
             name: "cite",
@@ -25659,6 +27570,10 @@ pub mod html_script_element {
     }
 
     fn set_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_type_body(this_js, args, ctx))
+    }
+
+    fn set_type_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLScriptElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -25675,6 +27590,10 @@ pub mod html_script_element {
     }
 
     fn set_src(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_src_body(this_js, args, ctx))
+    }
+
+    fn set_src_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLScriptElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -25693,6 +27612,14 @@ pub mod html_script_element {
     }
 
     fn set_no_module(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_no_module_body(this_js, args, ctx))
+    }
+
+    fn set_no_module_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLScriptElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -25709,6 +27636,10 @@ pub mod html_script_element {
     }
 
     fn set_defer(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_defer_body(this_js, args, ctx))
+    }
+
+    fn set_defer_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLScriptElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -25745,6 +27676,14 @@ pub mod html_script_element {
     }
 
     fn set_integrity(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_integrity_body(this_js, args, ctx))
+    }
+
+    fn set_integrity_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLScriptElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -25763,6 +27702,10 @@ pub mod html_script_element {
     }
 
     fn set_text(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_text_body(this_js, args, ctx))
+    }
+
+    fn set_text_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLScriptElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -25781,6 +27724,14 @@ pub mod html_script_element {
     }
 
     fn set_charset(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_charset_body(this_js, args, ctx))
+    }
+
+    fn set_charset_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLScriptElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -25797,6 +27748,10 @@ pub mod html_script_element {
     }
 
     fn set_event(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_event_body(this_js, args, ctx))
+    }
+
+    fn set_event_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLScriptElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -25813,6 +27768,14 @@ pub mod html_script_element {
     }
 
     fn set_html_for(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_html_for_body(this_js, args, ctx))
+    }
+
+    fn set_html_for_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLScriptElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -25822,12 +27785,16 @@ pub mod html_script_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLScriptElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLScriptElement,
         name: "HTMLScriptElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -25910,6 +27877,14 @@ pub mod html_select_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_autocomplete_body(this_js, args, ctx))
+    }
+
+    fn set_autocomplete_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLSelectElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -25928,6 +27903,14 @@ pub mod html_select_element {
     }
 
     fn set_disabled(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_disabled_body(this_js, args, ctx))
+    }
+
+    fn set_disabled_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLSelectElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -25946,6 +27929,14 @@ pub mod html_select_element {
     }
 
     fn set_multiple(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_multiple_body(this_js, args, ctx))
+    }
+
+    fn set_multiple_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLSelectElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -25962,6 +27953,10 @@ pub mod html_select_element {
     }
 
     fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_name_body(this_js, args, ctx))
+    }
+
+    fn set_name_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLSelectElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -25980,6 +27975,14 @@ pub mod html_select_element {
     }
 
     fn set_required(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_required_body(this_js, args, ctx))
+    }
+
+    fn set_required_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLSelectElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -25998,6 +28001,10 @@ pub mod html_select_element {
     }
 
     fn set_size(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_size_body(this_js, args, ctx))
+    }
+
+    fn set_size_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLSelectElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26007,12 +28014,16 @@ pub mod html_select_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLSelectElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLSelectElement,
         name: "HTMLSelectElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -26065,6 +28076,10 @@ pub mod html_slot_element {
     }
 
     fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_name_body(this_js, args, ctx))
+    }
+
+    fn set_name_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLSlotElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26074,12 +28089,16 @@ pub mod html_slot_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLSlotElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLSlotElement,
         name: "HTMLSlotElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
             name: "name",
@@ -26105,6 +28124,10 @@ pub mod html_source_element {
     }
 
     fn set_src(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_src_body(this_js, args, ctx))
+    }
+
+    fn set_src_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLSourceElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26121,6 +28144,10 @@ pub mod html_source_element {
     }
 
     fn set_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_type_body(this_js, args, ctx))
+    }
+
+    fn set_type_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLSourceElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26139,6 +28166,14 @@ pub mod html_source_element {
     }
 
     fn set_srcset(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_srcset_body(this_js, args, ctx))
+    }
+
+    fn set_srcset_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLSourceElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26155,6 +28190,10 @@ pub mod html_source_element {
     }
 
     fn set_sizes(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_sizes_body(this_js, args, ctx))
+    }
+
+    fn set_sizes_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLSourceElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26171,6 +28210,10 @@ pub mod html_source_element {
     }
 
     fn set_media(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_media_body(this_js, args, ctx))
+    }
+
+    fn set_media_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLSourceElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26189,6 +28232,10 @@ pub mod html_source_element {
     }
 
     fn set_width(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_width_body(this_js, args, ctx))
+    }
+
+    fn set_width_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLSourceElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26207,6 +28254,14 @@ pub mod html_source_element {
     }
 
     fn set_height(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_height_body(this_js, args, ctx))
+    }
+
+    fn set_height_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLSourceElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26216,12 +28271,16 @@ pub mod html_source_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLSourceElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLSourceElement,
         name: "HTMLSourceElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -26272,12 +28331,16 @@ pub mod html_source_element {
 pub mod html_span_element {
     use super::*;
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLSpanElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLSpanElement,
         name: "HTMLSpanElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[],
         ops: &[],
@@ -26299,6 +28362,10 @@ pub mod html_style_element {
     }
 
     fn set_media(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_media_body(this_js, args, ctx))
+    }
+
+    fn set_media_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLStyleElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26333,6 +28400,10 @@ pub mod html_style_element {
     }
 
     fn set_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_type_body(this_js, args, ctx))
+    }
+
+    fn set_type_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLStyleElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26342,12 +28413,16 @@ pub mod html_style_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLStyleElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLStyleElement,
         name: "HTMLStyleElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -26385,6 +28460,10 @@ pub mod html_table_caption_element {
     }
 
     fn set_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_align_body(this_js, args, ctx))
+    }
+
+    fn set_align_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableCaptionElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26394,12 +28473,16 @@ pub mod html_table_caption_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLTableCaptionElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLTableCaptionElement,
         name: "HTMLTableCaptionElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
             name: "align",
@@ -26427,6 +28510,14 @@ pub mod html_table_cell_element {
     }
 
     fn set_col_span(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_col_span_body(this_js, args, ctx))
+    }
+
+    fn set_col_span_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableCellElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26445,6 +28536,14 @@ pub mod html_table_cell_element {
     }
 
     fn set_row_span(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_row_span_body(this_js, args, ctx))
+    }
+
+    fn set_row_span_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableCellElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26463,6 +28562,14 @@ pub mod html_table_cell_element {
     }
 
     fn set_headers(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_headers_body(this_js, args, ctx))
+    }
+
+    fn set_headers_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableCellElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26479,6 +28586,10 @@ pub mod html_table_cell_element {
     }
 
     fn set_abbr(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_abbr_body(this_js, args, ctx))
+    }
+
+    fn set_abbr_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableCellElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26495,6 +28606,10 @@ pub mod html_table_cell_element {
     }
 
     fn set_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_align_body(this_js, args, ctx))
+    }
+
+    fn set_align_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableCellElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26511,6 +28626,10 @@ pub mod html_table_cell_element {
     }
 
     fn set_axis(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_axis_body(this_js, args, ctx))
+    }
+
+    fn set_axis_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableCellElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26529,6 +28648,14 @@ pub mod html_table_cell_element {
     }
 
     fn set_height(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_height_body(this_js, args, ctx))
+    }
+
+    fn set_height_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableCellElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26545,6 +28672,10 @@ pub mod html_table_cell_element {
     }
 
     fn set_width(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_width_body(this_js, args, ctx))
+    }
+
+    fn set_width_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableCellElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26561,6 +28692,10 @@ pub mod html_table_cell_element {
     }
 
     fn set_ch(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_ch_body(this_js, args, ctx))
+    }
+
+    fn set_ch_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableCellElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26579,6 +28714,14 @@ pub mod html_table_cell_element {
     }
 
     fn set_ch_off(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_ch_off_body(this_js, args, ctx))
+    }
+
+    fn set_ch_off_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableCellElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26595,6 +28738,14 @@ pub mod html_table_cell_element {
     }
 
     fn set_no_wrap(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_no_wrap_body(this_js, args, ctx))
+    }
+
+    fn set_no_wrap_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableCellElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -26613,6 +28764,14 @@ pub mod html_table_cell_element {
     }
 
     fn set_v_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_v_align_body(this_js, args, ctx))
+    }
+
+    fn set_v_align_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableCellElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26631,6 +28790,14 @@ pub mod html_table_cell_element {
     }
 
     fn set_bg_color(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_bg_color_body(this_js, args, ctx))
+    }
+
+    fn set_bg_color_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableCellElement, ctx)?;
         let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26640,12 +28807,16 @@ pub mod html_table_cell_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLTableCellElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLTableCellElement,
         name: "HTMLTableCellElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -26735,6 +28906,10 @@ pub mod html_table_col_element {
     }
 
     fn set_span(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_span_body(this_js, args, ctx))
+    }
+
+    fn set_span_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableColElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26751,6 +28926,10 @@ pub mod html_table_col_element {
     }
 
     fn set_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_align_body(this_js, args, ctx))
+    }
+
+    fn set_align_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableColElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26767,6 +28946,10 @@ pub mod html_table_col_element {
     }
 
     fn set_ch(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_ch_body(this_js, args, ctx))
+    }
+
+    fn set_ch_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableColElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26785,6 +28968,14 @@ pub mod html_table_col_element {
     }
 
     fn set_ch_off(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_ch_off_body(this_js, args, ctx))
+    }
+
+    fn set_ch_off_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableColElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26803,6 +28994,14 @@ pub mod html_table_col_element {
     }
 
     fn set_v_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_v_align_body(this_js, args, ctx))
+    }
+
+    fn set_v_align_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableColElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26819,6 +29018,10 @@ pub mod html_table_col_element {
     }
 
     fn set_width(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_width_body(this_js, args, ctx))
+    }
+
+    fn set_width_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableColElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26828,12 +29031,16 @@ pub mod html_table_col_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLTableColElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLTableColElement,
         name: "HTMLTableColElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -26886,6 +29093,10 @@ pub mod html_table_element {
     }
 
     fn set_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_align_body(this_js, args, ctx))
+    }
+
+    fn set_align_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26904,6 +29115,14 @@ pub mod html_table_element {
     }
 
     fn set_border(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_border_body(this_js, args, ctx))
+    }
+
+    fn set_border_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26920,6 +29139,10 @@ pub mod html_table_element {
     }
 
     fn set_frame(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_frame_body(this_js, args, ctx))
+    }
+
+    fn set_frame_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26936,6 +29159,10 @@ pub mod html_table_element {
     }
 
     fn set_rules(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_rules_body(this_js, args, ctx))
+    }
+
+    fn set_rules_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26954,6 +29181,14 @@ pub mod html_table_element {
     }
 
     fn set_summary(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_summary_body(this_js, args, ctx))
+    }
+
+    fn set_summary_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26970,6 +29205,10 @@ pub mod html_table_element {
     }
 
     fn set_width(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_width_body(this_js, args, ctx))
+    }
+
+    fn set_width_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -26988,6 +29227,14 @@ pub mod html_table_element {
     }
 
     fn set_bg_color(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_bg_color_body(this_js, args, ctx))
+    }
+
+    fn set_bg_color_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableElement, ctx)?;
         let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27010,6 +29257,14 @@ pub mod html_table_element {
     }
 
     fn set_cell_padding(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_cell_padding_body(this_js, args, ctx))
+    }
+
+    fn set_cell_padding_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -27040,6 +29295,14 @@ pub mod html_table_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_cell_spacing_body(this_js, args, ctx))
+    }
+
+    fn set_cell_spacing_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableElement, ctx)?;
         let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27049,12 +29312,16 @@ pub mod html_table_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLTableElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLTableElement,
         name: "HTMLTableElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -27122,6 +29389,10 @@ pub mod html_table_row_element {
     }
 
     fn set_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_align_body(this_js, args, ctx))
+    }
+
+    fn set_align_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableRowElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27138,6 +29409,10 @@ pub mod html_table_row_element {
     }
 
     fn set_ch(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_ch_body(this_js, args, ctx))
+    }
+
+    fn set_ch_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableRowElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27156,6 +29431,14 @@ pub mod html_table_row_element {
     }
 
     fn set_ch_off(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_ch_off_body(this_js, args, ctx))
+    }
+
+    fn set_ch_off_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableRowElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27174,6 +29457,14 @@ pub mod html_table_row_element {
     }
 
     fn set_v_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_v_align_body(this_js, args, ctx))
+    }
+
+    fn set_v_align_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableRowElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27192,6 +29483,14 @@ pub mod html_table_row_element {
     }
 
     fn set_bg_color(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_bg_color_body(this_js, args, ctx))
+    }
+
+    fn set_bg_color_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableRowElement, ctx)?;
         let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27201,12 +29500,16 @@ pub mod html_table_row_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLTableRowElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLTableRowElement,
         name: "HTMLTableRowElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -27254,6 +29557,10 @@ pub mod html_table_section_element {
     }
 
     fn set_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_align_body(this_js, args, ctx))
+    }
+
+    fn set_align_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableSectionElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27270,6 +29577,10 @@ pub mod html_table_section_element {
     }
 
     fn set_ch(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_ch_body(this_js, args, ctx))
+    }
+
+    fn set_ch_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableSectionElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27288,6 +29599,14 @@ pub mod html_table_section_element {
     }
 
     fn set_ch_off(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_ch_off_body(this_js, args, ctx))
+    }
+
+    fn set_ch_off_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableSectionElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27306,6 +29625,14 @@ pub mod html_table_section_element {
     }
 
     fn set_v_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_v_align_body(this_js, args, ctx))
+    }
+
+    fn set_v_align_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTableSectionElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27315,12 +29642,16 @@ pub mod html_table_section_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLTableSectionElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLTableSectionElement,
         name: "HTMLTableSectionElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -27371,6 +29702,14 @@ pub mod html_template_element {
     }
 
     fn set_html_for(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_html_for_body(this_js, args, ctx))
+    }
+
+    fn set_html_for_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTemplateElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27393,6 +29732,16 @@ pub mod html_template_element {
     }
 
     fn set_shadow_root_delegates_focus(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| {
+            set_shadow_root_delegates_focus_body(this_js, args, ctx)
+        })
+    }
+
+    fn set_shadow_root_delegates_focus_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -27423,6 +29772,16 @@ pub mod html_template_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| {
+            set_shadow_root_serializable_body(this_js, args, ctx)
+        })
+    }
+
+    fn set_shadow_root_serializable_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTemplateElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -27445,6 +29804,14 @@ pub mod html_template_element {
     }
 
     fn set_shadow_root_clonable(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_shadow_root_clonable_body(this_js, args, ctx))
+    }
+
+    fn set_shadow_root_clonable_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -27475,6 +29842,16 @@ pub mod html_template_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| {
+            set_shadow_root_custom_element_registry_body(this_js, args, ctx)
+        })
+    }
+
+    fn set_shadow_root_custom_element_registry_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTemplateElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27484,12 +29861,16 @@ pub mod html_template_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLTemplateElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLTemplateElement,
         name: "HTMLTemplateElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -27552,6 +29933,14 @@ pub mod html_text_area_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_autocomplete_body(this_js, args, ctx))
+    }
+
+    fn set_autocomplete_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTextAreaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27570,6 +29959,10 @@ pub mod html_text_area_element {
     }
 
     fn set_cols(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_cols_body(this_js, args, ctx))
+    }
+
+    fn set_cols_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTextAreaElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27595,6 +29988,14 @@ pub mod html_text_area_element {
     }
 
     fn set_dir_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_dir_name_body(this_js, args, ctx))
+    }
+
+    fn set_dir_name_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTextAreaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27613,6 +30014,14 @@ pub mod html_text_area_element {
     }
 
     fn set_disabled(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_disabled_body(this_js, args, ctx))
+    }
+
+    fn set_disabled_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTextAreaElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -27635,6 +30044,14 @@ pub mod html_text_area_element {
     }
 
     fn set_max_length(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_max_length_body(this_js, args, ctx))
+    }
+
+    fn set_max_length_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTextAreaElement, ctx)?;
         let a0 = rt::arg(args, 0).to_i32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27657,6 +30074,14 @@ pub mod html_text_area_element {
     }
 
     fn set_min_length(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_min_length_body(this_js, args, ctx))
+    }
+
+    fn set_min_length_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTextAreaElement, ctx)?;
         let a0 = rt::arg(args, 0).to_i32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27673,6 +30098,10 @@ pub mod html_text_area_element {
     }
 
     fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_name_body(this_js, args, ctx))
+    }
+
+    fn set_name_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTextAreaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27699,6 +30128,14 @@ pub mod html_text_area_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_placeholder_body(this_js, args, ctx))
+    }
+
+    fn set_placeholder_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTextAreaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27717,6 +30154,14 @@ pub mod html_text_area_element {
     }
 
     fn set_read_only(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_read_only_body(this_js, args, ctx))
+    }
+
+    fn set_read_only_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTextAreaElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -27735,6 +30180,14 @@ pub mod html_text_area_element {
     }
 
     fn set_required(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_required_body(this_js, args, ctx))
+    }
+
+    fn set_required_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTextAreaElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -27753,6 +30206,10 @@ pub mod html_text_area_element {
     }
 
     fn set_rows(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_rows_body(this_js, args, ctx))
+    }
+
+    fn set_rows_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTextAreaElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27776,6 +30233,10 @@ pub mod html_text_area_element {
     }
 
     fn set_wrap(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_wrap_body(this_js, args, ctx))
+    }
+
+    fn set_wrap_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTextAreaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27803,12 +30264,16 @@ pub mod html_text_area_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLTextAreaElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLTextAreaElement,
         name: "HTMLTextAreaElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -27898,6 +30363,14 @@ pub mod html_time_element {
     }
 
     fn set_date_time(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_date_time_body(this_js, args, ctx))
+    }
+
+    fn set_date_time_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTimeElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27907,12 +30380,16 @@ pub mod html_time_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLTimeElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLTimeElement,
         name: "HTMLTimeElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
             name: "dateTime",
@@ -27938,6 +30415,10 @@ pub mod html_title_element {
     }
 
     fn set_text(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_text_body(this_js, args, ctx))
+    }
+
+    fn set_text_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTitleElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27947,12 +30428,16 @@ pub mod html_title_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLTitleElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLTitleElement,
         name: "HTMLTitleElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
             name: "text",
@@ -27978,6 +30463,10 @@ pub mod html_track_element {
     }
 
     fn set_src(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_src_body(this_js, args, ctx))
+    }
+
+    fn set_src_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTrackElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27996,6 +30485,14 @@ pub mod html_track_element {
     }
 
     fn set_srclang(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_srclang_body(this_js, args, ctx))
+    }
+
+    fn set_srclang_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTrackElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -28012,6 +30509,10 @@ pub mod html_track_element {
     }
 
     fn set_label(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_label_body(this_js, args, ctx))
+    }
+
+    fn set_label_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTrackElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -28028,6 +30529,14 @@ pub mod html_track_element {
     }
 
     fn set_default(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_default_body(this_js, args, ctx))
+    }
+
+    fn set_default_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTrackElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -28037,12 +30546,16 @@ pub mod html_track_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLTrackElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLTrackElement,
         name: "HTMLTrackElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -28090,6 +30603,14 @@ pub mod htmlu_list_element {
     }
 
     fn set_compact(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_compact_body(this_js, args, ctx))
+    }
+
+    fn set_compact_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLUListElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -28106,6 +30627,10 @@ pub mod htmlu_list_element {
     }
 
     fn set_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_type_body(this_js, args, ctx))
+    }
+
+    fn set_type_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLUListElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -28115,12 +30640,16 @@ pub mod htmlu_list_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLUListElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLUListElement,
         name: "HTMLUListElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -28175,6 +30704,10 @@ pub mod html_video_element {
     }
 
     fn set_width(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_width_body(this_js, args, ctx))
+    }
+
+    fn set_width_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLVideoElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -28193,6 +30726,14 @@ pub mod html_video_element {
     }
 
     fn set_height(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_height_body(this_js, args, ctx))
+    }
+
+    fn set_height_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLVideoElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -28209,6 +30750,14 @@ pub mod html_video_element {
     }
 
     fn set_poster(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_poster_body(this_js, args, ctx))
+    }
+
+    fn set_poster_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLVideoElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -28235,6 +30784,14 @@ pub mod html_video_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_plays_inline_body(this_js, args, ctx))
+    }
+
+    fn set_plays_inline_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLVideoElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -28244,12 +30801,16 @@ pub mod html_video_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLVideoElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLVideoElement,
         name: "HTMLVideoElement",
         parent: Some(I::HTMLMediaElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -30049,6 +32610,14 @@ pub mod svg_element {
     }
 
     fn set_autofocus(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_autofocus_body(this_js, args, ctx))
+    }
+
+    fn set_autofocus_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::SVGElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -30067,6 +32636,14 @@ pub mod svg_element {
     }
 
     fn set_tab_index(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_tab_index_body(this_js, args, ctx))
+    }
+
+    fn set_tab_index_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::SVGElement, ctx)?;
         let a0 = rt::arg(args, 0).to_i32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32213,6 +34790,14 @@ pub mod html_anchor_element {
     }
 
     fn set_download(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_download_body(this_js, args, ctx))
+    }
+
+    fn set_download_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32229,6 +34814,10 @@ pub mod html_anchor_element {
     }
 
     fn set_ping(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_ping_body(this_js, args, ctx))
+    }
+
+    fn set_ping_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32245,6 +34834,10 @@ pub mod html_anchor_element {
     }
 
     fn set_rel(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_rel_body(this_js, args, ctx))
+    }
+
+    fn set_rel_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32281,6 +34874,10 @@ pub mod html_anchor_element {
     }
 
     fn set_text(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_text_body(this_js, args, ctx))
+    }
+
+    fn set_text_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32299,6 +34896,14 @@ pub mod html_anchor_element {
     }
 
     fn set_coords(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_coords_body(this_js, args, ctx))
+    }
+
+    fn set_coords_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32317,6 +34922,14 @@ pub mod html_anchor_element {
     }
 
     fn set_charset(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_charset_body(this_js, args, ctx))
+    }
+
+    fn set_charset_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32333,6 +34946,10 @@ pub mod html_anchor_element {
     }
 
     fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_name_body(this_js, args, ctx))
+    }
+
+    fn set_name_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32349,6 +34966,10 @@ pub mod html_anchor_element {
     }
 
     fn set_rev(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_rev_body(this_js, args, ctx))
+    }
+
+    fn set_rev_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32365,6 +34986,10 @@ pub mod html_anchor_element {
     }
 
     fn set_shape(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_shape_body(this_js, args, ctx))
+    }
+
+    fn set_shape_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32391,6 +35016,14 @@ pub mod html_anchor_element {
     }
 
     fn set_protocol(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_protocol_body(this_js, args, ctx))
+    }
+
+    fn set_protocol_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32409,6 +35042,14 @@ pub mod html_anchor_element {
     }
 
     fn set_username(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_username_body(this_js, args, ctx))
+    }
+
+    fn set_username_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32427,6 +35068,14 @@ pub mod html_anchor_element {
     }
 
     fn set_password(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_password_body(this_js, args, ctx))
+    }
+
+    fn set_password_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32445,6 +35094,10 @@ pub mod html_anchor_element {
     }
 
     fn set_host(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_host_body(this_js, args, ctx))
+    }
+
+    fn set_host_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32463,6 +35116,14 @@ pub mod html_anchor_element {
     }
 
     fn set_hostname(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_hostname_body(this_js, args, ctx))
+    }
+
+    fn set_hostname_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32481,6 +35142,10 @@ pub mod html_anchor_element {
     }
 
     fn set_port(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_port_body(this_js, args, ctx))
+    }
+
+    fn set_port_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32499,6 +35164,14 @@ pub mod html_anchor_element {
     }
 
     fn set_pathname(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_pathname_body(this_js, args, ctx))
+    }
+
+    fn set_pathname_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32517,6 +35190,14 @@ pub mod html_anchor_element {
     }
 
     fn set_search(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_search_body(this_js, args, ctx))
+    }
+
+    fn set_search_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32535,6 +35216,10 @@ pub mod html_anchor_element {
     }
 
     fn set_hash(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_hash_body(this_js, args, ctx))
+    }
+
+    fn set_hash_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32553,6 +35238,14 @@ pub mod html_anchor_element {
     }
 
     fn set_hreflang(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_hreflang_body(this_js, args, ctx))
+    }
+
+    fn set_hreflang_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32569,6 +35262,10 @@ pub mod html_anchor_element {
     }
 
     fn set_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_type_body(this_js, args, ctx))
+    }
+
+    fn set_type_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32585,6 +35282,10 @@ pub mod html_anchor_element {
     }
 
     fn set_href(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_href_body(this_js, args, ctx))
+    }
+
+    fn set_href_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32603,6 +35304,14 @@ pub mod html_anchor_element {
     }
 
     fn set_target(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_target_body(this_js, args, ctx))
+    }
+
+    fn set_target_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32612,12 +35321,16 @@ pub mod html_anchor_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLAnchorElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLAnchorElement,
         name: "HTMLAnchorElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -32764,6 +35477,10 @@ pub mod html_area_element {
     }
 
     fn set_alt(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_alt_body(this_js, args, ctx))
+    }
+
+    fn set_alt_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32782,6 +35499,14 @@ pub mod html_area_element {
     }
 
     fn set_coords(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_coords_body(this_js, args, ctx))
+    }
+
+    fn set_coords_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32798,6 +35523,10 @@ pub mod html_area_element {
     }
 
     fn set_shape(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_shape_body(this_js, args, ctx))
+    }
+
+    fn set_shape_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32816,6 +35545,14 @@ pub mod html_area_element {
     }
 
     fn set_download(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_download_body(this_js, args, ctx))
+    }
+
+    fn set_download_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32832,6 +35569,10 @@ pub mod html_area_element {
     }
 
     fn set_ping(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_ping_body(this_js, args, ctx))
+    }
+
+    fn set_ping_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32848,6 +35589,10 @@ pub mod html_area_element {
     }
 
     fn set_rel(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_rel_body(this_js, args, ctx))
+    }
+
+    fn set_rel_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32882,6 +35627,14 @@ pub mod html_area_element {
     }
 
     fn set_no_href(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_no_href_body(this_js, args, ctx))
+    }
+
+    fn set_no_href_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -32908,6 +35661,14 @@ pub mod html_area_element {
     }
 
     fn set_protocol(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_protocol_body(this_js, args, ctx))
+    }
+
+    fn set_protocol_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32926,6 +35687,14 @@ pub mod html_area_element {
     }
 
     fn set_username(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_username_body(this_js, args, ctx))
+    }
+
+    fn set_username_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32944,6 +35713,14 @@ pub mod html_area_element {
     }
 
     fn set_password(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_password_body(this_js, args, ctx))
+    }
+
+    fn set_password_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32962,6 +35739,10 @@ pub mod html_area_element {
     }
 
     fn set_host(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_host_body(this_js, args, ctx))
+    }
+
+    fn set_host_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32980,6 +35761,14 @@ pub mod html_area_element {
     }
 
     fn set_hostname(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_hostname_body(this_js, args, ctx))
+    }
+
+    fn set_hostname_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -32998,6 +35787,10 @@ pub mod html_area_element {
     }
 
     fn set_port(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_port_body(this_js, args, ctx))
+    }
+
+    fn set_port_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -33016,6 +35809,14 @@ pub mod html_area_element {
     }
 
     fn set_pathname(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_pathname_body(this_js, args, ctx))
+    }
+
+    fn set_pathname_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -33034,6 +35835,14 @@ pub mod html_area_element {
     }
 
     fn set_search(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_search_body(this_js, args, ctx))
+    }
+
+    fn set_search_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -33052,6 +35861,10 @@ pub mod html_area_element {
     }
 
     fn set_hash(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_hash_body(this_js, args, ctx))
+    }
+
+    fn set_hash_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -33070,6 +35883,14 @@ pub mod html_area_element {
     }
 
     fn set_hreflang(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_hreflang_body(this_js, args, ctx))
+    }
+
+    fn set_hreflang_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -33086,6 +35907,10 @@ pub mod html_area_element {
     }
 
     fn set_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_type_body(this_js, args, ctx))
+    }
+
+    fn set_type_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -33102,6 +35927,10 @@ pub mod html_area_element {
     }
 
     fn set_href(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_href_body(this_js, args, ctx))
+    }
+
+    fn set_href_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -33120,6 +35949,14 @@ pub mod html_area_element {
     }
 
     fn set_target(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_target_body(this_js, args, ctx))
+    }
+
+    fn set_target_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -33129,12 +35966,16 @@ pub mod html_area_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLAreaElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLAreaElement,
         name: "HTMLAreaElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -33264,12 +36105,16 @@ pub mod html_area_element {
 pub mod html_audio_element {
     use super::*;
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLAudioElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLAudioElement,
         name: "HTMLAudioElement",
         parent: Some(I::HTMLMediaElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[],
         ops: &[],
@@ -33291,6 +36136,10 @@ pub mod htmlbr_element {
     }
 
     fn set_clear(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_clear_body(this_js, args, ctx))
+    }
+
+    fn set_clear_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLBRElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -33300,12 +36149,16 @@ pub mod htmlbr_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLBRElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLBRElement,
         name: "HTMLBRElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
             name: "clear",
@@ -33331,6 +36184,10 @@ pub mod html_base_element {
     }
 
     fn set_href(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_href_body(this_js, args, ctx))
+    }
+
+    fn set_href_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLBaseElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -33349,6 +36206,14 @@ pub mod html_base_element {
     }
 
     fn set_target(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_target_body(this_js, args, ctx))
+    }
+
+    fn set_target_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLBaseElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -33358,12 +36223,16 @@ pub mod html_base_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLBaseElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLBaseElement,
         name: "HTMLBaseElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -33396,6 +36265,10 @@ pub mod html_body_element {
     }
 
     fn set_text(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_text_body(this_js, args, ctx))
+    }
+
+    fn set_text_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLBodyElement, ctx)?;
         let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -33412,6 +36285,10 @@ pub mod html_body_element {
     }
 
     fn set_link(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_link_body(this_js, args, ctx))
+    }
+
+    fn set_link_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLBodyElement, ctx)?;
         let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -33428,6 +36305,14 @@ pub mod html_body_element {
     }
 
     fn set_v_link(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_v_link_body(this_js, args, ctx))
+    }
+
+    fn set_v_link_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLBodyElement, ctx)?;
         let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -33444,6 +36329,14 @@ pub mod html_body_element {
     }
 
     fn set_a_link(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_a_link_body(this_js, args, ctx))
+    }
+
+    fn set_a_link_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLBodyElement, ctx)?;
         let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -33462,6 +36355,14 @@ pub mod html_body_element {
     }
 
     fn set_bg_color(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_bg_color_body(this_js, args, ctx))
+    }
+
+    fn set_bg_color_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLBodyElement, ctx)?;
         let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -33484,6 +36385,14 @@ pub mod html_body_element {
     }
 
     fn set_background(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_background_body(this_js, args, ctx))
+    }
+
+    fn set_background_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLBodyElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -33930,12 +36839,16 @@ pub mod html_body_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLBodyElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLBodyElement,
         name: "HTMLBodyElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -34080,6 +36993,14 @@ pub mod html_button_element {
     }
 
     fn set_command(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_command_body(this_js, args, ctx))
+    }
+
+    fn set_command_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLButtonElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -34098,6 +37019,14 @@ pub mod html_button_element {
     }
 
     fn set_disabled(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_disabled_body(this_js, args, ctx))
+    }
+
+    fn set_disabled_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLButtonElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -34120,6 +37049,14 @@ pub mod html_button_element {
     }
 
     fn set_form_action(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_form_action_body(this_js, args, ctx))
+    }
+
+    fn set_form_action_body(
         this_js: &JsValue,
         args: &[JsValue],
         ctx: &mut Context,
@@ -34150,6 +37087,14 @@ pub mod html_button_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_form_no_validate_body(this_js, args, ctx))
+    }
+
+    fn set_form_no_validate_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLButtonElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -34176,6 +37121,14 @@ pub mod html_button_element {
         args: &[JsValue],
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_form_target_body(this_js, args, ctx))
+    }
+
+    fn set_form_target_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLButtonElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -34192,6 +37145,10 @@ pub mod html_button_element {
     }
 
     fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_name_body(this_js, args, ctx))
+    }
+
+    fn set_name_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLButtonElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -34208,6 +37165,10 @@ pub mod html_button_element {
     }
 
     fn set_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_type_body(this_js, args, ctx))
+    }
+
+    fn set_type_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLButtonElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -34224,6 +37185,10 @@ pub mod html_button_element {
     }
 
     fn set_value(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_value_body(this_js, args, ctx))
+    }
+
+    fn set_value_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLButtonElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -34233,12 +37198,16 @@ pub mod html_button_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLButtonElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLButtonElement,
         name: "HTMLButtonElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -34303,6 +37272,10 @@ pub mod html_canvas_element {
     }
 
     fn set_width(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_width_body(this_js, args, ctx))
+    }
+
+    fn set_width_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLCanvasElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -34321,6 +37294,14 @@ pub mod html_canvas_element {
     }
 
     fn set_height(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_height_body(this_js, args, ctx))
+    }
+
+    fn set_height_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLCanvasElement, ctx)?;
         let a0 = rt::arg(args, 0).to_u32(ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -34330,12 +37311,16 @@ pub mod html_canvas_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLCanvasElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLCanvasElement,
         name: "HTMLCanvasElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -34368,6 +37353,14 @@ pub mod htmld_list_element {
     }
 
     fn set_compact(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_compact_body(this_js, args, ctx))
+    }
+
+    fn set_compact_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLDListElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -34377,12 +37370,16 @@ pub mod htmld_list_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLDListElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLDListElement,
         name: "HTMLDListElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
             name: "compact",
@@ -34408,6 +37405,10 @@ pub mod html_data_element {
     }
 
     fn set_value(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_value_body(this_js, args, ctx))
+    }
+
+    fn set_value_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLDataElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -34417,12 +37418,16 @@ pub mod html_data_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLDataElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLDataElement,
         name: "HTMLDataElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
             name: "value",
@@ -34441,12 +37446,16 @@ pub mod html_data_element {
 pub mod html_data_list_element {
     use super::*;
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLDataListElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLDataListElement,
         name: "HTMLDataListElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[],
         ops: &[],
@@ -34468,6 +37477,10 @@ pub mod html_details_element {
     }
 
     fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_name_body(this_js, args, ctx))
+    }
+
+    fn set_name_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLDetailsElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -34484,6 +37497,10 @@ pub mod html_details_element {
     }
 
     fn set_open(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_open_body(this_js, args, ctx))
+    }
+
+    fn set_open_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLDetailsElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -34493,12 +37510,16 @@ pub mod html_details_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLDetailsElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLDetailsElement,
         name: "HTMLDetailsElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -34531,6 +37552,10 @@ pub mod html_dialog_element {
     }
 
     fn set_open(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_open_body(this_js, args, ctx))
+    }
+
+    fn set_open_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLDialogElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -34549,6 +37574,14 @@ pub mod html_dialog_element {
     }
 
     fn set_closed_by(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_closed_by_body(this_js, args, ctx))
+    }
+
+    fn set_closed_by_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLDialogElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -34558,12 +37591,16 @@ pub mod html_dialog_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLDialogElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLDialogElement,
         name: "HTMLDialogElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
@@ -34596,6 +37633,14 @@ pub mod html_directory_element {
     }
 
     fn set_compact(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_compact_body(this_js, args, ctx))
+    }
+
+    fn set_compact_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLDirectoryElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
@@ -34605,12 +37650,16 @@ pub mod html_directory_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLDirectoryElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLDirectoryElement,
         name: "HTMLDirectoryElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
             name: "compact",
@@ -34636,6 +37685,10 @@ pub mod html_div_element {
     }
 
     fn set_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_align_body(this_js, args, ctx))
+    }
+
+    fn set_align_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLDivElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -34645,12 +37698,16 @@ pub mod html_div_element {
         Ok(JsValue::undefined())
     }
 
+    fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::html_constructor(new_target, I::HTMLDivElement, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLDivElement,
         name: "HTMLDivElement",
         parent: Some(I::HTMLElement),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
             name: "align",
@@ -34765,6 +37822,14 @@ pub mod svga_element {
     }
 
     fn set_protocol(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_protocol_body(this_js, args, ctx))
+    }
+
+    fn set_protocol_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -34783,6 +37848,14 @@ pub mod svga_element {
     }
 
     fn set_username(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_username_body(this_js, args, ctx))
+    }
+
+    fn set_username_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -34801,6 +37874,14 @@ pub mod svga_element {
     }
 
     fn set_password(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_password_body(this_js, args, ctx))
+    }
+
+    fn set_password_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -34819,6 +37900,10 @@ pub mod svga_element {
     }
 
     fn set_host(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_host_body(this_js, args, ctx))
+    }
+
+    fn set_host_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -34837,6 +37922,14 @@ pub mod svga_element {
     }
 
     fn set_hostname(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_hostname_body(this_js, args, ctx))
+    }
+
+    fn set_hostname_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -34855,6 +37948,10 @@ pub mod svga_element {
     }
 
     fn set_port(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_port_body(this_js, args, ctx))
+    }
+
+    fn set_port_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -34873,6 +37970,14 @@ pub mod svga_element {
     }
 
     fn set_pathname(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_pathname_body(this_js, args, ctx))
+    }
+
+    fn set_pathname_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -34891,6 +37996,14 @@ pub mod svga_element {
     }
 
     fn set_search(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_search_body(this_js, args, ctx))
+    }
+
+    fn set_search_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -34909,6 +38022,10 @@ pub mod svga_element {
     }
 
     fn set_hash(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_hash_body(this_js, args, ctx))
+    }
+
+    fn set_hash_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -34927,6 +38044,14 @@ pub mod svga_element {
     }
 
     fn set_hreflang(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_hreflang_body(this_js, args, ctx))
+    }
+
+    fn set_hreflang_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -34943,6 +38068,10 @@ pub mod svga_element {
     }
 
     fn set_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_type_body(this_js, args, ctx))
+    }
+
+    fn set_type_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -35659,6 +38788,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &css_style_declaration::DEF,
     &css_style_properties::DEF,
     &crypto::DEF,
+    &custom_element_registry::DEF,
     &dom_implementation::DEF,
     &dom_parser::DEF,
     &dom_rect_read_only::DEF,

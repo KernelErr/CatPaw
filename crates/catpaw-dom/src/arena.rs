@@ -54,6 +54,25 @@ pub struct ElementData {
     pub script_already_started: bool,
     /// Form owner assigned by the parser's form element pointer.
     pub form_owner: Option<NodeId>,
+    /// What became of the element as a custom element.
+    pub custom_element_state: CustomElementState,
+    /// The `is` value of a customized built-in element.
+    pub is_value: Option<String>,
+}
+
+/// What became of an element as a custom element. The states are the DOM
+/// Standard's, with "uncustomized" and "undefined" told apart by the
+/// element's name instead.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CustomElementState {
+    /// Not (yet) upgraded: ordinary, or waiting for a definition.
+    #[default]
+    Undefined,
+    /// Its constructor threw.
+    Failed,
+    /// Upgraded or constructed, by the definition with this index in the
+    /// page's registry.
+    Custom(u32),
 }
 
 impl ElementData {
@@ -65,6 +84,8 @@ impl ElementData {
             mathml_annotation_xml_integration_point: false,
             script_already_started: false,
             form_owner: None,
+            custom_element_state: CustomElementState::Undefined,
+            is_value: None,
         }
     }
 
@@ -744,6 +765,7 @@ impl Dom {
                 let mut cloned = ElementData::new(el.name.clone(), el.attrs.clone());
                 cloned.mathml_annotation_xml_integration_point =
                     el.mathml_annotation_xml_integration_point;
+                cloned.is_value = el.is_value.clone();
                 (NodeKind::Element(cloned), el.template_contents)
             }
             other => (other.clone(), None),

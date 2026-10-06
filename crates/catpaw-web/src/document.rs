@@ -159,7 +159,7 @@ impl web::DocumentImpl for Web {
         cx: &mut Cx<'_>,
         this: NodeId,
         local_name: String,
-        _options: web::StringOrElementCreationOptions,
+        options: web::StringOrElementCreationOptions,
     ) -> Fallible<NodeId> {
         if !is_valid_element_name(&local_name) {
             return Err(Exception::invalid_character(format!(
@@ -179,9 +179,26 @@ impl web::DocumentImpl for Web {
         } else {
             local_name
         };
+        let is = match options {
+            web::StringOrElementCreationOptions::ElementCreationOptions(o) => o.is,
+            web::StringOrElementCreationOptions::String(_) => None,
+        };
+        if html
+            && let Some(element) =
+                crate::custom_elements::create_synchronously(cx, this, &local, is.as_deref())
+        {
+            return Ok(element);
+        }
         let namespace = if html || xhtml { HTML_NS } else { "" };
         let name = QualName::new(None, Namespace::from(namespace), LocalName::from(local));
-        let element = node::create_element_node(&mut cx.dom_mut(), name);
+        let element = {
+            let mut dom = cx.dom_mut();
+            let element = node::create_element_node(&mut dom, name);
+            if let (Some(is), Some(data)) = (is, dom.element_mut(element)) {
+                data.is_value = Some(is);
+            }
+            element
+        };
         Ok(created(cx, this, element))
     }
 
