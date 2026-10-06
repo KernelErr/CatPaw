@@ -47,6 +47,11 @@ pub enum InterfaceId {
     Node,
     NodeList,
     Performance,
+    PerformanceEntry,
+    PerformanceMark,
+    PerformanceMeasure,
+    PerformanceObserver,
+    PerformanceObserverEntryList,
     PopStateEvent,
     ProgressEvent,
     PromiseRejectionEvent,
@@ -151,8 +156,8 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 126;
-    pub const ALL: [InterfaceId; 126] = [
+    pub const COUNT: usize = 131;
+    pub const ALL: [InterfaceId; 131] = [
         InterfaceId::AbortController,
         InterfaceId::CSSStyleDeclaration,
         InterfaceId::CSSStyleProperties,
@@ -178,6 +183,11 @@ impl InterfaceId {
         InterfaceId::Node,
         InterfaceId::NodeList,
         InterfaceId::Performance,
+        InterfaceId::PerformanceEntry,
+        InterfaceId::PerformanceMark,
+        InterfaceId::PerformanceMeasure,
+        InterfaceId::PerformanceObserver,
+        InterfaceId::PerformanceObserverEntryList,
         InterfaceId::PopStateEvent,
         InterfaceId::ProgressEvent,
         InterfaceId::PromiseRejectionEvent,
@@ -308,6 +318,11 @@ impl InterfaceId {
             InterfaceId::Node => "Node",
             InterfaceId::NodeList => "NodeList",
             InterfaceId::Performance => "Performance",
+            InterfaceId::PerformanceEntry => "PerformanceEntry",
+            InterfaceId::PerformanceMark => "PerformanceMark",
+            InterfaceId::PerformanceMeasure => "PerformanceMeasure",
+            InterfaceId::PerformanceObserver => "PerformanceObserver",
+            InterfaceId::PerformanceObserverEntryList => "PerformanceObserverEntryList",
             InterfaceId::PopStateEvent => "PopStateEvent",
             InterfaceId::ProgressEvent => "ProgressEvent",
             InterfaceId::PromiseRejectionEvent => "PromiseRejectionEvent",
@@ -439,6 +454,11 @@ impl InterfaceId {
             "Node" => InterfaceId::Node,
             "NodeList" => InterfaceId::NodeList,
             "Performance" => InterfaceId::Performance,
+            "PerformanceEntry" => InterfaceId::PerformanceEntry,
+            "PerformanceMark" => InterfaceId::PerformanceMark,
+            "PerformanceMeasure" => InterfaceId::PerformanceMeasure,
+            "PerformanceObserver" => InterfaceId::PerformanceObserver,
+            "PerformanceObserverEntryList" => InterfaceId::PerformanceObserverEntryList,
             "PopStateEvent" => InterfaceId::PopStateEvent,
             "ProgressEvent" => InterfaceId::ProgressEvent,
             "PromiseRejectionEvent" => InterfaceId::PromiseRejectionEvent,
@@ -571,6 +591,11 @@ impl InterfaceId {
             InterfaceId::Node => Some(InterfaceId::EventTarget),
             InterfaceId::NodeList => None,
             InterfaceId::Performance => Some(InterfaceId::EventTarget),
+            InterfaceId::PerformanceEntry => None,
+            InterfaceId::PerformanceMark => Some(InterfaceId::PerformanceEntry),
+            InterfaceId::PerformanceMeasure => Some(InterfaceId::PerformanceEntry),
+            InterfaceId::PerformanceObserver => None,
+            InterfaceId::PerformanceObserverEntryList => None,
             InterfaceId::PopStateEvent => Some(InterfaceId::Event),
             InterfaceId::ProgressEvent => Some(InterfaceId::Event),
             InterfaceId::PromiseRejectionEvent => Some(InterfaceId::Event),
@@ -1432,6 +1457,27 @@ pub struct MutationObserverInit {
 }
 
 #[derive(Clone, Debug)]
+pub struct PerformanceMarkOptions {
+    pub detail: Value,
+    pub start_time: Option<f64>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PerformanceMeasureOptions {
+    pub detail: Value,
+    pub start: Option<StringOrDouble>,
+    pub duration: Option<f64>,
+    pub end: Option<StringOrDouble>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PerformanceObserverInit {
+    pub entry_types: Option<Vec<String>>,
+    pub type_: Option<String>,
+    pub buffered: Option<bool>,
+}
+
+#[derive(Clone, Debug)]
 pub struct PopStateEventInit {
     pub bubbles: bool,
     pub cancelable: bool,
@@ -1592,6 +1638,12 @@ pub enum RequestOrString {
 }
 
 #[derive(Clone, Debug)]
+pub enum StringOrDouble {
+    String(String),
+    Double(f64),
+}
+
+#[derive(Clone, Debug)]
 pub enum StringOrElementCreationOptions {
     String(String),
     ElementCreationOptions(ElementCreationOptions),
@@ -1601,6 +1653,12 @@ pub enum StringOrElementCreationOptions {
 pub enum StringOrFunction {
     String(String),
     Function(Callback),
+}
+
+#[derive(Clone, Debug)]
+pub enum StringOrPerformanceMeasureOptions {
+    String(String),
+    PerformanceMeasureOptions(PerformanceMeasureOptions),
 }
 
 #[derive(Clone, Debug)]
@@ -2177,6 +2235,81 @@ pub trait NodeListImpl {
 pub trait PerformanceImpl {
     fn now(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
     fn time_origin(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn get_entries(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<ObjectId>>;
+    fn get_entries_by_type(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        type_: String,
+    ) -> Fallible<Vec<ObjectId>>;
+    fn get_entries_by_name(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        name: String,
+        type_: Option<String>,
+    ) -> Fallible<Vec<ObjectId>>;
+    fn mark(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        mark_name: String,
+        mark_options: PerformanceMarkOptions,
+    ) -> Fallible<ObjectId>;
+    fn clear_marks(cx: &mut Cx<'_>, this: ObjectId, mark_name: Option<String>) -> Fallible<()>;
+    fn measure(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        measure_name: String,
+        start_or_measure_options: StringOrPerformanceMeasureOptions,
+        end_mark: Option<String>,
+    ) -> Fallible<ObjectId>;
+    fn clear_measures(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        measure_name: Option<String>,
+    ) -> Fallible<()>;
+}
+
+pub trait PerformanceEntryImpl {
+    fn name(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn entry_type(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn start_time(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn duration(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn to_json(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
+}
+
+pub trait PerformanceMarkImpl {
+    fn detail(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        mark_name: String,
+        mark_options: PerformanceMarkOptions,
+    ) -> Fallible<ObjectId>;
+}
+
+pub trait PerformanceMeasureImpl {
+    fn detail(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
+}
+
+pub trait PerformanceObserverImpl {
+    fn observe(cx: &mut Cx<'_>, this: ObjectId, options: PerformanceObserverInit) -> Fallible<()>;
+    fn disconnect(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn take_records(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<ObjectId>>;
+    fn supported_entry_types(cx: &mut Cx<'_>) -> Fallible<Vec<String>>;
+    fn constructor(cx: &mut Cx<'_>, callback: Callback) -> Fallible<ObjectId>;
+}
+
+pub trait PerformanceObserverEntryListImpl {
+    fn get_entries(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<ObjectId>>;
+    fn get_entries_by_type(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        type_: String,
+    ) -> Fallible<Vec<ObjectId>>;
+    fn get_entries_by_name(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        name: String,
+        type_: Option<String>,
+    ) -> Fallible<Vec<ObjectId>>;
 }
 
 pub trait PopStateEventImpl {

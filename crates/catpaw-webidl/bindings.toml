@@ -354,7 +354,29 @@ members = ["hardwareConcurrency"]
 members = ["webdriver"]
 
 [interfaces.Performance]
-members = ["now", "timeOrigin"]
+members = [
+  "now", "timeOrigin", "mark", "measure", "clearMarks", "clearMeasures", "getEntries",
+  "getEntriesByType", "getEntriesByName",
+]
+
+# Marks and measures are the entries there are: nothing else is timed yet.
+
+[interfaces.PerformanceEntry]
+members = ["name", "entryType", "startTime", "duration", "toJSON"]
+
+[interfaces.PerformanceMark]
+constructor = true
+members = ["detail"]
+
+[interfaces.PerformanceMeasure]
+members = ["detail"]
+
+[interfaces.PerformanceObserver]
+constructor = true
+members = ["observe", "disconnect", "takeRecords", "supportedEntryTypes"]
+
+[interfaces.PerformanceObserverEntryList]
+members = ["getEntries", "getEntriesByType", "getEntriesByName"]
 
 [interfaces.Storage]
 exotic = true

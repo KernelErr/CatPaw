@@ -11,7 +11,7 @@ use url::Url;
 use crate::event_loop::{self, TimerAction};
 use crate::generated::{self as web, StringOrFunction};
 use crate::page::{ConsoleLevel, Cx, DialogRecord, NavigationRequest, PageState, Singletons};
-use crate::{Web, platform_object};
+use crate::{Web, performance, platform_object};
 
 pub struct LocationObject;
 platform_object!(LocationObject, Location);
@@ -665,6 +665,60 @@ impl web::PerformanceImpl for Web {
 
     fn time_origin(cx: &mut Cx<'_>, _this: ObjectId) -> Fallible<f64> {
         Ok(cx.page.clock.time_origin())
+    }
+
+    fn mark(
+        cx: &mut Cx<'_>,
+        _this: ObjectId,
+        mark_name: String,
+        mark_options: web::PerformanceMarkOptions,
+    ) -> Fallible<ObjectId> {
+        performance::mark(cx, mark_name, mark_options)
+    }
+
+    fn clear_marks(cx: &mut Cx<'_>, _this: ObjectId, mark_name: Option<String>) -> Fallible<()> {
+        performance::clear(cx.page, false, mark_name.as_deref());
+        Ok(())
+    }
+
+    fn measure(
+        cx: &mut Cx<'_>,
+        _this: ObjectId,
+        measure_name: String,
+        start_or_measure_options: web::StringOrPerformanceMeasureOptions,
+        end_mark: Option<String>,
+    ) -> Fallible<ObjectId> {
+        performance::measure(cx, measure_name, start_or_measure_options, end_mark)
+    }
+
+    fn clear_measures(
+        cx: &mut Cx<'_>,
+        _this: ObjectId,
+        measure_name: Option<String>,
+    ) -> Fallible<()> {
+        performance::clear(cx.page, true, measure_name.as_deref());
+        Ok(())
+    }
+
+    fn get_entries(cx: &mut Cx<'_>, _this: ObjectId) -> Fallible<Vec<ObjectId>> {
+        Ok(performance::entries(cx.page, None, None))
+    }
+
+    fn get_entries_by_type(
+        cx: &mut Cx<'_>,
+        _this: ObjectId,
+        type_: String,
+    ) -> Fallible<Vec<ObjectId>> {
+        Ok(performance::entries(cx.page, None, Some(&type_)))
+    }
+
+    fn get_entries_by_name(
+        cx: &mut Cx<'_>,
+        _this: ObjectId,
+        name: String,
+        type_: Option<String>,
+    ) -> Fallible<Vec<ObjectId>> {
+        Ok(performance::entries(cx.page, Some(&name), type_.as_deref()))
     }
 }
 

@@ -35,6 +35,7 @@ mod mutation_observer;
 pub mod net;
 mod node;
 pub mod page;
+mod performance;
 pub mod reflect;
 mod resize_observer;
 pub mod scripting;

@@ -684,6 +684,98 @@ impl IntoJs for web::MutationObserverInit {
     }
 }
 
+impl FromJs for web::PerformanceMarkOptions {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "PerformanceMarkOptions")?;
+        Ok(Self {
+            detail: match rt::dictionary_member(&obj, "detail", ctx)? {
+                Some(m) => rt::value_from_js((&m), ctx)?,
+                None => Value::Undefined,
+            },
+            start_time: match rt::dictionary_member(&obj, "startTime", ctx)? {
+                Some(m) => Some(rt::to_finite((&m), ctx)?),
+                None => None,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::PerformanceMarkOptions {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "detail", self.detail, ctx)?;
+        rt::set_member(&obj, "startTime", self.start_time, ctx)?;
+        Ok(obj.into())
+    }
+}
+
+impl FromJs for web::PerformanceMeasureOptions {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "PerformanceMeasureOptions")?;
+        Ok(Self {
+            detail: match rt::dictionary_member(&obj, "detail", ctx)? {
+                Some(m) => rt::value_from_js((&m), ctx)?,
+                None => Value::Undefined,
+            },
+            start: match rt::dictionary_member(&obj, "start", ctx)? {
+                Some(m) => Some(<web::StringOrDouble as FromJs>::from_js((&m), ctx)?),
+                None => None,
+            },
+            duration: match rt::dictionary_member(&obj, "duration", ctx)? {
+                Some(m) => Some(rt::to_finite((&m), ctx)?),
+                None => None,
+            },
+            end: match rt::dictionary_member(&obj, "end", ctx)? {
+                Some(m) => Some(<web::StringOrDouble as FromJs>::from_js((&m), ctx)?),
+                None => None,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::PerformanceMeasureOptions {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "detail", self.detail, ctx)?;
+        rt::set_member(&obj, "start", self.start, ctx)?;
+        rt::set_member(&obj, "duration", self.duration, ctx)?;
+        rt::set_member(&obj, "end", self.end, ctx)?;
+        Ok(obj.into())
+    }
+}
+
+impl FromJs for web::PerformanceObserverInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "PerformanceObserverInit")?;
+        Ok(Self {
+            entry_types: match rt::dictionary_member(&obj, "entryTypes", ctx)? {
+                Some(m) => Some(rt::sequence_from_js((&m), ctx, |v, ctx| {
+                    Ok(rt::string_from_js(v, ctx)?)
+                })?),
+                None => None,
+            },
+            type_: match rt::dictionary_member(&obj, "type", ctx)? {
+                Some(m) => Some(rt::string_from_js((&m), ctx)?),
+                None => None,
+            },
+            buffered: match rt::dictionary_member(&obj, "buffered", ctx)? {
+                Some(m) => Some((&m).to_boolean()),
+                None => None,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::PerformanceObserverInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "entryTypes", self.entry_types, ctx)?;
+        rt::set_member(&obj, "type", self.type_, ctx)?;
+        rt::set_member(&obj, "buffered", self.buffered, ctx)?;
+        Ok(obj.into())
+    }
+}
+
 impl FromJs for web::PopStateEventInit {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let obj = rt::dictionary_object(v, "PopStateEventInit")?;
@@ -1411,6 +1503,24 @@ impl IntoJs for web::RequestOrString {
     }
 }
 
+impl FromJs for web::StringOrDouble {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if v.is_number() {
+            return Ok(web::StringOrDouble::Double(rt::to_finite(v, ctx)?));
+        }
+        Ok(web::StringOrDouble::String(rt::string_from_js(v, ctx)?))
+    }
+}
+
+impl IntoJs for web::StringOrDouble {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+            web::StringOrDouble::String(v) => v.into_js(ctx),
+            web::StringOrDouble::Double(v) => v.into_js(ctx),
+        }
+    }
+}
+
 impl FromJs for web::StringOrElementCreationOptions {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         if v.is_object() || v.is_null_or_undefined() {
@@ -1451,6 +1561,30 @@ impl IntoJs for web::StringOrFunction {
         match self {
             web::StringOrFunction::String(v) => v.into_js(ctx),
             web::StringOrFunction::Function(v) => v.into_js(ctx),
+        }
+    }
+}
+
+impl FromJs for web::StringOrPerformanceMeasureOptions {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if v.is_object() || v.is_null_or_undefined() {
+            return Ok(
+                web::StringOrPerformanceMeasureOptions::PerformanceMeasureOptions(
+                    <web::PerformanceMeasureOptions as FromJs>::from_js(v, ctx)?,
+                ),
+            );
+        }
+        Ok(web::StringOrPerformanceMeasureOptions::String(
+            rt::string_from_js(v, ctx)?,
+        ))
+    }
+}
+
+impl IntoJs for web::StringOrPerformanceMeasureOptions {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+            web::StringOrPerformanceMeasureOptions::String(v) => v.into_js(ctx),
+            web::StringOrPerformanceMeasureOptions::PerformanceMeasureOptions(v) => v.into_js(ctx),
         }
     }
 }
@@ -5350,6 +5484,117 @@ pub mod performance {
         rt::ret(r, ctx)
     }
 
+    fn op_get_entries(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Performance, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceImpl>::get_entries(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_get_entries_by_type(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Performance, ctx)?;
+        rt::require_args(args, 1, "Performance.getEntriesByType")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceImpl>::get_entries_by_type(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_get_entries_by_name(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Performance, ctx)?;
+        rt::require_args(args, 1, "Performance.getEntriesByName")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            Some(rt::string_from_js(rt::arg(args, 1), ctx)?)
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceImpl>::get_entries_by_name(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_mark(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Performance, ctx)?;
+        rt::require_args(args, 1, "Performance.mark")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::PerformanceMarkOptions as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceImpl>::mark(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_clear_marks(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Performance, ctx)?;
+        let a0 = if args.len() > 0 && !args[0].is_undefined() {
+            Some(rt::string_from_js(rt::arg(args, 0), ctx)?)
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceImpl>::clear_marks(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_measure(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Performance, ctx)?;
+        rt::require_args(args, 1, "Performance.measure")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            <web::StringOrPerformanceMeasureOptions as FromJs>::from_js(rt::arg(args, 1), ctx)?
+        } else {
+            web::StringOrPerformanceMeasureOptions::PerformanceMeasureOptions(
+                <web::PerformanceMeasureOptions as FromJs>::from_js(&JsValue::undefined(), ctx)?,
+            )
+        };
+        let a2 = if args.len() > 2 && !args[2].is_undefined() {
+            Some(rt::string_from_js(rt::arg(args, 2), ctx)?)
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceImpl>::measure(cx, this, a0, a1, a2)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_clear_measures(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Performance, ctx)?;
+        let a0 = if args.len() > 0 && !args[0].is_undefined() {
+            Some(rt::string_from_js(rt::arg(args, 0), ctx)?)
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceImpl>::clear_measures(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::Performance,
         name: "Performance",
@@ -5362,11 +5607,396 @@ pub mod performance {
             getter: get_time_origin,
             setter: None,
         }],
+        ops: &[
+            rt::OpDef {
+                name: "now",
+                func: op_now,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "getEntries",
+                func: op_get_entries,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "getEntriesByType",
+                func: op_get_entries_by_type,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "getEntriesByName",
+                func: op_get_entries_by_name,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "mark",
+                func: op_mark,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "clearMarks",
+                func: op_clear_marks,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "measure",
+                func: op_measure,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "clearMeasures",
+                func: op_clear_measures,
+                length: 0,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod performance_entry {
+    use super::*;
+
+    fn get_name(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceEntry, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::PerformanceEntryImpl>::name(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_entry_type(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceEntry, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceEntryImpl>::entry_type(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_start_time(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceEntry, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceEntryImpl>::start_time(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_duration(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceEntry, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceEntryImpl>::duration(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_to_json(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::PerformanceEntry, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceEntryImpl>::to_json(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::PerformanceEntry,
+        name: "PerformanceEntry",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "name",
+                getter: get_name,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "entryType",
+                getter: get_entry_type,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "startTime",
+                getter: get_start_time,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "duration",
+                getter: get_duration,
+                setter: None,
+            },
+        ],
         ops: &[rt::OpDef {
-            name: "now",
-            func: op_now,
+            name: "toJSON",
+            func: op_to_json,
             length: 0,
         }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod performance_mark {
+    use super::*;
+
+    fn get_detail(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceMark, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceMarkImpl>::detail(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "PerformanceMark")?;
+        rt::require_args(args, 1, "PerformanceMark constructor")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::PerformanceMarkOptions as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceMarkImpl>::constructor(cx, a0, a1)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::PerformanceMark, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::PerformanceMark,
+        name: "PerformanceMark",
+        parent: Some(I::PerformanceEntry),
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[rt::AttrDef {
+            name: "detail",
+            getter: get_detail,
+            setter: None,
+        }],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod performance_measure {
+    use super::*;
+
+    fn get_detail(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceMeasure, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceMeasureImpl>::detail(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::PerformanceMeasure,
+        name: "PerformanceMeasure",
+        parent: Some(I::PerformanceEntry),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "detail",
+            getter: get_detail,
+            setter: None,
+        }],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod performance_observer {
+    use super::*;
+
+    fn get_supported_entry_types(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "supportedEntryTypes", ctx) {
+            return Ok(v);
+        }
+
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceObserverImpl>::supported_entry_types(cx)
+        });
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "supportedEntryTypes", &v, ctx);
+        Ok(v)
+    }
+
+    fn op_observe(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::PerformanceObserver, ctx)?;
+        let a0 = <web::PerformanceObserverInit as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceObserverImpl>::observe(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_disconnect(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::PerformanceObserver, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceObserverImpl>::disconnect(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_take_records(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::PerformanceObserver, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceObserverImpl>::take_records(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "PerformanceObserver")?;
+        rt::require_args(args, 1, "PerformanceObserver constructor")?;
+        let a0 = rt::callback_from_js(rt::arg(args, 0), CallbackKind::Function, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceObserverImpl>::constructor(cx, a0)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::PerformanceObserver, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::PerformanceObserver,
+        name: "PerformanceObserver",
+        parent: None,
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[],
+        ops: &[
+            rt::OpDef {
+                name: "observe",
+                func: op_observe,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "disconnect",
+                func: op_disconnect,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "takeRecords",
+                func: op_take_records,
+                length: 0,
+            },
+        ],
+        static_attrs: &[rt::AttrDef {
+            name: "supportedEntryTypes",
+            getter: get_supported_entry_types,
+            setter: None,
+        }],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod performance_observer_entry_list {
+    use super::*;
+
+    fn op_get_entries(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::PerformanceObserverEntryList, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceObserverEntryListImpl>::get_entries(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_get_entries_by_type(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::PerformanceObserverEntryList, ctx)?;
+        rt::require_args(args, 1, "PerformanceObserverEntryList.getEntriesByType")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceObserverEntryListImpl>::get_entries_by_type(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_get_entries_by_name(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::PerformanceObserverEntryList, ctx)?;
+        rt::require_args(args, 1, "PerformanceObserverEntryList.getEntriesByName")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            Some(rt::string_from_js(rt::arg(args, 1), ctx)?)
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceObserverEntryListImpl>::get_entries_by_name(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::PerformanceObserverEntryList,
+        name: "PerformanceObserverEntryList",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[
+            rt::OpDef {
+                name: "getEntries",
+                func: op_get_entries,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "getEntriesByType",
+                func: op_get_entries_by_type,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "getEntriesByName",
+                func: op_get_entries_by_name,
+                length: 1,
+            },
+        ],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -30358,6 +30988,11 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &node::DEF,
     &node_list::DEF,
     &performance::DEF,
+    &performance_entry::DEF,
+    &performance_mark::DEF,
+    &performance_measure::DEF,
+    &performance_observer::DEF,
+    &performance_observer_entry_list::DEF,
     &pop_state_event::DEF,
     &progress_event::DEF,
     &promise_rejection_event::DEF,
