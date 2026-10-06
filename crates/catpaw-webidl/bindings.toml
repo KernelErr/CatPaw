@@ -246,7 +246,47 @@ members = [
 [mixins.HTMLOrSVGOrMathMLElement]
 members = ["dataset", "focus", "blur"]
 
+# The element interfaces script tells elements apart by. Members that
+# reflect content attributes come with them; the rest is added as it is
+# implemented.
 [interfaces.HTMLUnknownElement]
+[interfaces.HTMLAreaElement]
+[interfaces.HTMLMediaElement]
+[interfaces.HTMLAudioElement]
+[interfaces.HTMLVideoElement]
+[interfaces.HTMLBaseElement]
+[interfaces.HTMLCanvasElement]
+members = ["width", "height"]
+[interfaces.HTMLDListElement]
+[interfaces.HTMLDataElement]
+[interfaces.HTMLDataListElement]
+[interfaces.HTMLDetailsElement]
+[interfaces.HTMLDialogElement]
+[interfaces.HTMLDirectoryElement]
+[interfaces.HTMLEmbedElement]
+[interfaces.HTMLFieldSetElement]
+[interfaces.HTMLFontElement]
+[interfaces.HTMLFrameElement]
+[interfaces.HTMLFrameSetElement]
+[interfaces.HTMLLegendElement]
+[interfaces.HTMLMapElement]
+[interfaces.HTMLMarqueeElement]
+[interfaces.HTMLMenuElement]
+[interfaces.HTMLMeterElement]
+[interfaces.HTMLModElement]
+[interfaces.HTMLObjectElement]
+[interfaces.HTMLOptGroupElement]
+[interfaces.HTMLOutputElement]
+[interfaces.HTMLParamElement]
+[interfaces.HTMLPictureElement]
+[interfaces.HTMLProgressElement]
+[interfaces.HTMLQuoteElement]
+[interfaces.HTMLSlotElement]
+[interfaces.HTMLSourceElement]
+[interfaces.HTMLTableCaptionElement]
+[interfaces.HTMLTableColElement]
+[interfaces.HTMLTimeElement]
+[interfaces.HTMLTrackElement]
 [interfaces.HTMLHtmlElement]
 [interfaces.HTMLHeadElement]
 [interfaces.HTMLBodyElement]
@@ -565,6 +605,46 @@ view = "SVGViewElement"
 
 [tags]
 a = "HTMLAnchorElement"
+area = "HTMLAreaElement"
+audio = "HTMLAudioElement"
+base = "HTMLBaseElement"
+blockquote = "HTMLQuoteElement"
+canvas = "HTMLCanvasElement"
+caption = "HTMLTableCaptionElement"
+col = "HTMLTableColElement"
+colgroup = "HTMLTableColElement"
+data = "HTMLDataElement"
+datalist = "HTMLDataListElement"
+del = "HTMLModElement"
+details = "HTMLDetailsElement"
+dialog = "HTMLDialogElement"
+dir = "HTMLDirectoryElement"
+dl = "HTMLDListElement"
+embed = "HTMLEmbedElement"
+fieldset = "HTMLFieldSetElement"
+font = "HTMLFontElement"
+frame = "HTMLFrameElement"
+frameset = "HTMLFrameSetElement"
+ins = "HTMLModElement"
+legend = "HTMLLegendElement"
+listing = "HTMLPreElement"
+map = "HTMLMapElement"
+marquee = "HTMLMarqueeElement"
+menu = "HTMLMenuElement"
+meter = "HTMLMeterElement"
+object = "HTMLObjectElement"
+optgroup = "HTMLOptGroupElement"
+output = "HTMLOutputElement"
+param = "HTMLParamElement"
+picture = "HTMLPictureElement"
+progress = "HTMLProgressElement"
+q = "HTMLQuoteElement"
+slot = "HTMLSlotElement"
+source = "HTMLSourceElement"
+time = "HTMLTimeElement"
+track = "HTMLTrackElement"
+video = "HTMLVideoElement"
+xmp = "HTMLPreElement"
 body = "HTMLBodyElement"
 br = "HTMLBRElement"
 button = "HTMLButtonElement"

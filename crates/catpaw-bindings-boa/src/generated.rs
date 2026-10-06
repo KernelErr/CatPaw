@@ -20227,6 +20227,304 @@ pub mod html_element {
     };
 }
 
+pub mod html_embed_element {
+    use super::*;
+
+    fn get_src(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLEmbedElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_url(cx, this, "src"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_src(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLEmbedElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "src", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_type(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLEmbedElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "type"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLEmbedElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "type", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_width(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLEmbedElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "width"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_width(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLEmbedElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "width", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_height(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLEmbedElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "height")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_height(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLEmbedElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "height", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_align(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLEmbedElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "align"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLEmbedElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "align", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_name(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLEmbedElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "name"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLEmbedElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "name", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLEmbedElement,
+        name: "HTMLEmbedElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "src",
+                getter: get_src,
+                setter: Some(set_src),
+            },
+            rt::AttrDef {
+                name: "type",
+                getter: get_type,
+                setter: Some(set_type),
+            },
+            rt::AttrDef {
+                name: "width",
+                getter: get_width,
+                setter: Some(set_width),
+            },
+            rt::AttrDef {
+                name: "height",
+                getter: get_height,
+                setter: Some(set_height),
+            },
+            rt::AttrDef {
+                name: "align",
+                getter: get_align,
+                setter: Some(set_align),
+            },
+            rt::AttrDef {
+                name: "name",
+                getter: get_name,
+                setter: Some(set_name),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_field_set_element {
+    use super::*;
+
+    fn get_disabled(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFieldSetElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_bool(cx, this, "disabled")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_disabled(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFieldSetElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_boolean();
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_bool(cx, this, "disabled", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_name(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFieldSetElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "name"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFieldSetElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "name", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLFieldSetElement,
+        name: "HTMLFieldSetElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "disabled",
+                getter: get_disabled,
+                setter: Some(set_disabled),
+            },
+            rt::AttrDef {
+                name: "name",
+                getter: get_name,
+                setter: Some(set_name),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_font_element {
+    use super::*;
+
+    fn get_color(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFontElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "color"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_color(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFontElement, ctx)?;
+        let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "color", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_face(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFontElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "face"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_face(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFontElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "face", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_size(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFontElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "size"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_size(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFontElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "size", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLFontElement,
+        name: "HTMLFontElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "color",
+                getter: get_color,
+                setter: Some(set_color),
+            },
+            rt::AttrDef {
+                name: "face",
+                getter: get_face,
+                setter: Some(set_face),
+            },
+            rt::AttrDef {
+                name: "size",
+                getter: get_size,
+                setter: Some(set_size),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod html_form_element {
     use super::*;
 
@@ -20408,6 +20706,819 @@ pub mod html_form_element {
                 name: "relList",
                 getter: get_rel_list,
                 setter: Some(set_rel_list),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_frame_element {
+    use super::*;
+
+    fn get_name(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "name"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "name", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_scrolling(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "scrolling")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_scrolling(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "scrolling", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_src(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_url(cx, this, "src"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_src(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "src", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_frame_border(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "frameborder")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_frame_border(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "frameborder", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_long_desc(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_url(cx, this, "longdesc"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_long_desc(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "longdesc", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_no_resize(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_bool(cx, this, "noresize")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_no_resize(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_boolean();
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_bool(cx, this, "noresize", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_margin_height(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "marginheight")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_margin_height(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameElement, ctx)?;
+        let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "marginheight", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_margin_width(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "marginwidth")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_margin_width(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameElement, ctx)?;
+        let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "marginwidth", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLFrameElement,
+        name: "HTMLFrameElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "name",
+                getter: get_name,
+                setter: Some(set_name),
+            },
+            rt::AttrDef {
+                name: "scrolling",
+                getter: get_scrolling,
+                setter: Some(set_scrolling),
+            },
+            rt::AttrDef {
+                name: "src",
+                getter: get_src,
+                setter: Some(set_src),
+            },
+            rt::AttrDef {
+                name: "frameBorder",
+                getter: get_frame_border,
+                setter: Some(set_frame_border),
+            },
+            rt::AttrDef {
+                name: "longDesc",
+                getter: get_long_desc,
+                setter: Some(set_long_desc),
+            },
+            rt::AttrDef {
+                name: "noResize",
+                getter: get_no_resize,
+                setter: Some(set_no_resize),
+            },
+            rt::AttrDef {
+                name: "marginHeight",
+                getter: get_margin_height,
+                setter: Some(set_margin_height),
+            },
+            rt::AttrDef {
+                name: "marginWidth",
+                getter: get_margin_width,
+                setter: Some(set_margin_width),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_frame_set_element {
+    use super::*;
+
+    fn get_cols(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "cols"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_cols(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "cols", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_rows(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "rows"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_rows(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "rows", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onafterprint(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "afterprint")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onafterprint(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "afterprint", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onbeforeprint(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "beforeprint")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onbeforeprint(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "beforeprint", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onbeforeunload(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "beforeunload")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onbeforeunload(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "beforeunload",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onhashchange(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "hashchange")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onhashchange(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "hashchange", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onlanguagechange(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "languagechange")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onlanguagechange(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "languagechange",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onmessage(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "message")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onmessage(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "message", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onmessageerror(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "messageerror")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onmessageerror(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "messageerror",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onoffline(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "offline")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onoffline(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "offline", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ononline(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "line")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_ononline(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "line", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpagehide(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pagehide")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpagehide(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "pagehide", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpagereveal(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pagereveal")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpagereveal(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "pagereveal", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpageshow(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pageshow")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpageshow(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "pageshow", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpageswap(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pageswap")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpageswap(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "pageswap", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpopstate(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "popstate")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpopstate(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "popstate", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onrejectionhandled(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "rejectionhandled")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onrejectionhandled(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "rejectionhandled",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onstorage(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "storage")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onstorage(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "storage", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onunhandledrejection(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "unhandledrejection")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onunhandledrejection(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "unhandledrejection",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onunload(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "unload")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onunload(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFrameSetElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "unload", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLFrameSetElement,
+        name: "HTMLFrameSetElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "cols",
+                getter: get_cols,
+                setter: Some(set_cols),
+            },
+            rt::AttrDef {
+                name: "rows",
+                getter: get_rows,
+                setter: Some(set_rows),
+            },
+            rt::AttrDef {
+                name: "onafterprint",
+                getter: get_onafterprint,
+                setter: Some(set_onafterprint),
+            },
+            rt::AttrDef {
+                name: "onbeforeprint",
+                getter: get_onbeforeprint,
+                setter: Some(set_onbeforeprint),
+            },
+            rt::AttrDef {
+                name: "onbeforeunload",
+                getter: get_onbeforeunload,
+                setter: Some(set_onbeforeunload),
+            },
+            rt::AttrDef {
+                name: "onhashchange",
+                getter: get_onhashchange,
+                setter: Some(set_onhashchange),
+            },
+            rt::AttrDef {
+                name: "onlanguagechange",
+                getter: get_onlanguagechange,
+                setter: Some(set_onlanguagechange),
+            },
+            rt::AttrDef {
+                name: "onmessage",
+                getter: get_onmessage,
+                setter: Some(set_onmessage),
+            },
+            rt::AttrDef {
+                name: "onmessageerror",
+                getter: get_onmessageerror,
+                setter: Some(set_onmessageerror),
+            },
+            rt::AttrDef {
+                name: "onoffline",
+                getter: get_onoffline,
+                setter: Some(set_onoffline),
+            },
+            rt::AttrDef {
+                name: "ononline",
+                getter: get_ononline,
+                setter: Some(set_ononline),
+            },
+            rt::AttrDef {
+                name: "onpagehide",
+                getter: get_onpagehide,
+                setter: Some(set_onpagehide),
+            },
+            rt::AttrDef {
+                name: "onpagereveal",
+                getter: get_onpagereveal,
+                setter: Some(set_onpagereveal),
+            },
+            rt::AttrDef {
+                name: "onpageshow",
+                getter: get_onpageshow,
+                setter: Some(set_onpageshow),
+            },
+            rt::AttrDef {
+                name: "onpageswap",
+                getter: get_onpageswap,
+                setter: Some(set_onpageswap),
+            },
+            rt::AttrDef {
+                name: "onpopstate",
+                getter: get_onpopstate,
+                setter: Some(set_onpopstate),
+            },
+            rt::AttrDef {
+                name: "onrejectionhandled",
+                getter: get_onrejectionhandled,
+                setter: Some(set_onrejectionhandled),
+            },
+            rt::AttrDef {
+                name: "onstorage",
+                getter: get_onstorage,
+                setter: Some(set_onstorage),
+            },
+            rt::AttrDef {
+                name: "onunhandledrejection",
+                getter: get_onunhandledrejection,
+                setter: Some(set_onunhandledrejection),
+            },
+            rt::AttrDef {
+                name: "onunload",
+                getter: get_onunload,
+                setter: Some(set_onunload),
             },
         ],
         ops: &[],
@@ -22220,6 +23331,46 @@ pub mod html_label_element {
     };
 }
 
+pub mod html_legend_element {
+    use super::*;
+
+    fn get_align(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLLegendElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "align"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLLegendElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "align", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLLegendElement,
+        name: "HTMLLegendElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "align",
+            getter: get_align,
+            setter: Some(set_align),
+        }],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod html_link_element {
     use super::*;
 
@@ -22592,6 +23743,503 @@ pub mod html_link_element {
     };
 }
 
+pub mod html_map_element {
+    use super::*;
+
+    fn get_name(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMapElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "name"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMapElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "name", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLMapElement,
+        name: "HTMLMapElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "name",
+            getter: get_name,
+            setter: Some(set_name),
+        }],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_marquee_element {
+    use super::*;
+
+    fn get_behavior(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "behavior")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_behavior(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "behavior", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_bg_color(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "bgcolor")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_bg_color(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "bgcolor", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_direction(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "direction")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_direction(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "direction", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_height(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "height")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_height(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "height", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_hspace(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_unsigned_long(cx, this, "hspace", 0, "none")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_hspace(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_unsigned_long(cx, this, "hspace", a0, 0, "none")
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_scroll_amount(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_unsigned_long(cx, this, "scrollamount", 6, "none")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_scroll_amount(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_unsigned_long(cx, this, "scrollamount", a0, 6, "none")
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_scroll_delay(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_unsigned_long(cx, this, "scrolldelay", 85, "none")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_scroll_delay(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_unsigned_long(cx, this, "scrolldelay", a0, 85, "none")
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_true_speed(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_bool(cx, this, "truespeed")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_true_speed(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_boolean();
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_bool(cx, this, "truespeed", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_vspace(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_unsigned_long(cx, this, "vspace", 0, "none")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_vspace(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_unsigned_long(cx, this, "vspace", a0, 0, "none")
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_width(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "width"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_width(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMarqueeElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "width", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLMarqueeElement,
+        name: "HTMLMarqueeElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "behavior",
+                getter: get_behavior,
+                setter: Some(set_behavior),
+            },
+            rt::AttrDef {
+                name: "bgColor",
+                getter: get_bg_color,
+                setter: Some(set_bg_color),
+            },
+            rt::AttrDef {
+                name: "direction",
+                getter: get_direction,
+                setter: Some(set_direction),
+            },
+            rt::AttrDef {
+                name: "height",
+                getter: get_height,
+                setter: Some(set_height),
+            },
+            rt::AttrDef {
+                name: "hspace",
+                getter: get_hspace,
+                setter: Some(set_hspace),
+            },
+            rt::AttrDef {
+                name: "scrollAmount",
+                getter: get_scroll_amount,
+                setter: Some(set_scroll_amount),
+            },
+            rt::AttrDef {
+                name: "scrollDelay",
+                getter: get_scroll_delay,
+                setter: Some(set_scroll_delay),
+            },
+            rt::AttrDef {
+                name: "trueSpeed",
+                getter: get_true_speed,
+                setter: Some(set_true_speed),
+            },
+            rt::AttrDef {
+                name: "vspace",
+                getter: get_vspace,
+                setter: Some(set_vspace),
+            },
+            rt::AttrDef {
+                name: "width",
+                getter: get_width,
+                setter: Some(set_width),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_media_element {
+    use super::*;
+
+    fn get_src(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_url(cx, this, "src"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_src(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "src", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_autoplay(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_bool(cx, this, "autoplay")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_autoplay(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_boolean();
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_bool(cx, this, "autoplay", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_loop(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_bool(cx, this, "loop"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_loop(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_boolean();
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_bool(cx, this, "loop", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_controls(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_bool(cx, this, "controls")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_controls(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_boolean();
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_bool(cx, this, "controls", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_default_muted(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_bool(cx, this, "muted"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_default_muted(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_boolean();
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_bool(cx, this, "muted", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLMediaElement,
+        name: "HTMLMediaElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "src",
+                getter: get_src,
+                setter: Some(set_src),
+            },
+            rt::AttrDef {
+                name: "autoplay",
+                getter: get_autoplay,
+                setter: Some(set_autoplay),
+            },
+            rt::AttrDef {
+                name: "loop",
+                getter: get_loop,
+                setter: Some(set_loop),
+            },
+            rt::AttrDef {
+                name: "controls",
+                getter: get_controls,
+                setter: Some(set_controls),
+            },
+            rt::AttrDef {
+                name: "defaultMuted",
+                getter: get_default_muted,
+                setter: Some(set_default_muted),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[
+            ("NETWORK_EMPTY", 0_f64),
+            ("NETWORK_IDLE", 1_f64),
+            ("NETWORK_LOADING", 2_f64),
+            ("NETWORK_NO_SOURCE", 3_f64),
+            ("HAVE_NOTHING", 0_f64),
+            ("HAVE_METADATA", 1_f64),
+            ("HAVE_CURRENT_DATA", 2_f64),
+            ("HAVE_FUTURE_DATA", 3_f64),
+            ("HAVE_ENOUGH_DATA", 4_f64),
+        ],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_menu_element {
+    use super::*;
+
+    fn get_compact(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMenuElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_bool(cx, this, "compact"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_compact(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMenuElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_boolean();
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_bool(cx, this, "compact", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLMenuElement,
+        name: "HTMLMenuElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "compact",
+            getter: get_compact,
+            setter: Some(set_compact),
+        }],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod html_meta_element {
     use super::*;
 
@@ -22728,6 +24376,230 @@ pub mod html_meta_element {
     };
 }
 
+pub mod html_meter_element {
+    use super::*;
+
+    fn get_value(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMeterElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_double(cx, this, "value", 0.0_f64, "none")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_value(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMeterElement, ctx)?;
+        let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_double(cx, this, "value", a0, "none")
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_min(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMeterElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_double(cx, this, "min", 0.0_f64, "none")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_min(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMeterElement, ctx)?;
+        let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_double(cx, this, "min", a0, "none")
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_max(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMeterElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_double(cx, this, "max", 0.0_f64, "none")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_max(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMeterElement, ctx)?;
+        let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_double(cx, this, "max", a0, "none")
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_low(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMeterElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_double(cx, this, "low", 0.0_f64, "none")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_low(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMeterElement, ctx)?;
+        let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_double(cx, this, "low", a0, "none")
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_high(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMeterElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_double(cx, this, "high", 0.0_f64, "none")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_high(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMeterElement, ctx)?;
+        let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_double(cx, this, "high", a0, "none")
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_optimum(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMeterElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_double(cx, this, "optimum", 0.0_f64, "none")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_optimum(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMeterElement, ctx)?;
+        let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_double(cx, this, "optimum", a0, "none")
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLMeterElement,
+        name: "HTMLMeterElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "value",
+                getter: get_value,
+                setter: Some(set_value),
+            },
+            rt::AttrDef {
+                name: "min",
+                getter: get_min,
+                setter: Some(set_min),
+            },
+            rt::AttrDef {
+                name: "max",
+                getter: get_max,
+                setter: Some(set_max),
+            },
+            rt::AttrDef {
+                name: "low",
+                getter: get_low,
+                setter: Some(set_low),
+            },
+            rt::AttrDef {
+                name: "high",
+                getter: get_high,
+                setter: Some(set_high),
+            },
+            rt::AttrDef {
+                name: "optimum",
+                getter: get_optimum,
+                setter: Some(set_optimum),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_mod_element {
+    use super::*;
+
+    fn get_cite(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLModElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_url(cx, this, "cite"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_cite(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLModElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "cite", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_date_time(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLModElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "datetime")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_date_time(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLModElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "datetime", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLModElement,
+        name: "HTMLModElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "cite",
+                getter: get_cite,
+                setter: Some(set_cite),
+            },
+            rt::AttrDef {
+                name: "dateTime",
+                getter: get_date_time,
+                setter: Some(set_date_time),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod htmlo_list_element {
     use super::*;
 
@@ -22826,6 +24698,444 @@ pub mod htmlo_list_element {
                 name: "compact",
                 getter: get_compact,
                 setter: Some(set_compact),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_object_element {
+    use super::*;
+
+    fn get_data(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_url(cx, this, "data"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_data(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "data", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_type(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "type"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "type", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_name(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "name"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "name", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_width(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "width"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_width(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "width", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_height(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "height")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_height(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "height", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_align(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "align"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "align", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_archive(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "archive")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_archive(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "archive", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_code(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "code"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_code(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "code", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_declare(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_bool(cx, this, "declare"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_declare(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_boolean();
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_bool(cx, this, "declare", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_hspace(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_unsigned_long(cx, this, "hspace", 0, "none")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_hspace(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_unsigned_long(cx, this, "hspace", a0, 0, "none")
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_standby(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "standby")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_standby(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "standby", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_vspace(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_unsigned_long(cx, this, "vspace", 0, "none")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_vspace(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_unsigned_long(cx, this, "vspace", a0, 0, "none")
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_code_base(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_url(cx, this, "codebase"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_code_base(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "codebase", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_code_type(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "codetype")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_code_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "codetype", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_use_map(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "usemap")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_use_map(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "usemap", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_border(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "border")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_border(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLObjectElement, ctx)?;
+        let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "border", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLObjectElement,
+        name: "HTMLObjectElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "data",
+                getter: get_data,
+                setter: Some(set_data),
+            },
+            rt::AttrDef {
+                name: "type",
+                getter: get_type,
+                setter: Some(set_type),
+            },
+            rt::AttrDef {
+                name: "name",
+                getter: get_name,
+                setter: Some(set_name),
+            },
+            rt::AttrDef {
+                name: "width",
+                getter: get_width,
+                setter: Some(set_width),
+            },
+            rt::AttrDef {
+                name: "height",
+                getter: get_height,
+                setter: Some(set_height),
+            },
+            rt::AttrDef {
+                name: "align",
+                getter: get_align,
+                setter: Some(set_align),
+            },
+            rt::AttrDef {
+                name: "archive",
+                getter: get_archive,
+                setter: Some(set_archive),
+            },
+            rt::AttrDef {
+                name: "code",
+                getter: get_code,
+                setter: Some(set_code),
+            },
+            rt::AttrDef {
+                name: "declare",
+                getter: get_declare,
+                setter: Some(set_declare),
+            },
+            rt::AttrDef {
+                name: "hspace",
+                getter: get_hspace,
+                setter: Some(set_hspace),
+            },
+            rt::AttrDef {
+                name: "standby",
+                getter: get_standby,
+                setter: Some(set_standby),
+            },
+            rt::AttrDef {
+                name: "vspace",
+                getter: get_vspace,
+                setter: Some(set_vspace),
+            },
+            rt::AttrDef {
+                name: "codeBase",
+                getter: get_code_base,
+                setter: Some(set_code_base),
+            },
+            rt::AttrDef {
+                name: "codeType",
+                getter: get_code_type,
+                setter: Some(set_code_type),
+            },
+            rt::AttrDef {
+                name: "useMap",
+                getter: get_use_map,
+                setter: Some(set_use_map),
+            },
+            rt::AttrDef {
+                name: "border",
+                getter: get_border,
+                setter: Some(set_border),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_opt_group_element {
+    use super::*;
+
+    fn get_disabled(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLOptGroupElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_bool(cx, this, "disabled")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_disabled(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLOptGroupElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_boolean();
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_bool(cx, this, "disabled", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_label(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLOptGroupElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "label"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_label(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLOptGroupElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "label", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLOptGroupElement,
+        name: "HTMLOptGroupElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "disabled",
+                getter: get_disabled,
+                setter: Some(set_disabled),
+            },
+            rt::AttrDef {
+                name: "label",
+                getter: get_label,
+                setter: Some(set_label),
             },
         ],
         ops: &[],
@@ -22954,6 +25264,71 @@ pub mod html_option_element {
     };
 }
 
+pub mod html_output_element {
+    use super::*;
+
+    fn get_html_for(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "htmlFor", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::HTMLOutputElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_token_list(cx, this, "for")
+        });
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "htmlFor", &v, ctx);
+        Ok(v)
+    }
+
+    fn set_html_for(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::put_forwards(this_js, "htmlFor", "value", rt::arg(args, 0), ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_name(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLOutputElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "name"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLOutputElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "name", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLOutputElement,
+        name: "HTMLOutputElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "htmlFor",
+                getter: get_html_for,
+                setter: Some(set_html_for),
+            },
+            rt::AttrDef {
+                name: "name",
+                getter: get_name,
+                setter: Some(set_name),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod html_paragraph_element {
     use super::*;
 
@@ -22985,6 +25360,137 @@ pub mod html_paragraph_element {
             getter: get_align,
             setter: Some(set_align),
         }],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_param_element {
+    use super::*;
+
+    fn get_name(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLParamElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "name"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLParamElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "name", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_value(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLParamElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "value"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_value(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLParamElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "value", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_type(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLParamElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "type"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLParamElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "type", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_value_type(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLParamElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "valuetype")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_value_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLParamElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "valuetype", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLParamElement,
+        name: "HTMLParamElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "name",
+                getter: get_name,
+                setter: Some(set_name),
+            },
+            rt::AttrDef {
+                name: "value",
+                getter: get_value,
+                setter: Some(set_value),
+            },
+            rt::AttrDef {
+                name: "type",
+                getter: get_type,
+                setter: Some(set_type),
+            },
+            rt::AttrDef {
+                name: "valueType",
+                getter: get_value_type,
+                setter: Some(set_value_type),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_picture_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLPictureElement,
+        name: "HTMLPictureElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
         ops: &[],
         static_attrs: &[],
         static_ops: &[],
@@ -23026,6 +25532,113 @@ pub mod html_pre_element {
             name: "width",
             getter: get_width,
             setter: Some(set_width),
+        }],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_progress_element {
+    use super::*;
+
+    fn get_value(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLProgressElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_double(cx, this, "value", 0.0_f64, "none")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_value(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLProgressElement, ctx)?;
+        let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_double(cx, this, "value", a0, "none")
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_max(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLProgressElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_double(cx, this, "max", 1.0_f64, "positive")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_max(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLProgressElement, ctx)?;
+        let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_double(cx, this, "max", a0, "positive")
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLProgressElement,
+        name: "HTMLProgressElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "value",
+                getter: get_value,
+                setter: Some(set_value),
+            },
+            rt::AttrDef {
+                name: "max",
+                getter: get_max,
+                setter: Some(set_max),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_quote_element {
+    use super::*;
+
+    fn get_cite(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLQuoteElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_url(cx, this, "cite"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_cite(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLQuoteElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "cite", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLQuoteElement,
+        name: "HTMLQuoteElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "cite",
+            getter: get_cite,
+            setter: Some(set_cite),
         }],
         ops: &[],
         static_attrs: &[],
@@ -23442,6 +26055,220 @@ pub mod html_select_element {
     };
 }
 
+pub mod html_slot_element {
+    use super::*;
+
+    fn get_name(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLSlotElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "name"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLSlotElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "name", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLSlotElement,
+        name: "HTMLSlotElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "name",
+            getter: get_name,
+            setter: Some(set_name),
+        }],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_source_element {
+    use super::*;
+
+    fn get_src(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLSourceElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_url(cx, this, "src"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_src(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLSourceElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "src", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_type(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLSourceElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "type"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLSourceElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "type", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_srcset(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLSourceElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "srcset")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_srcset(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLSourceElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "srcset", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_sizes(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLSourceElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "sizes"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_sizes(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLSourceElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "sizes", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_media(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLSourceElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "media"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_media(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLSourceElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "media", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_width(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLSourceElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_unsigned_long(cx, this, "width", 0, "none")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_width(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLSourceElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_unsigned_long(cx, this, "width", a0, 0, "none")
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_height(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLSourceElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_unsigned_long(cx, this, "height", 0, "none")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_height(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLSourceElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_unsigned_long(cx, this, "height", a0, 0, "none")
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLSourceElement,
+        name: "HTMLSourceElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "src",
+                getter: get_src,
+                setter: Some(set_src),
+            },
+            rt::AttrDef {
+                name: "type",
+                getter: get_type,
+                setter: Some(set_type),
+            },
+            rt::AttrDef {
+                name: "srcset",
+                getter: get_srcset,
+                setter: Some(set_srcset),
+            },
+            rt::AttrDef {
+                name: "sizes",
+                getter: get_sizes,
+                setter: Some(set_sizes),
+            },
+            rt::AttrDef {
+                name: "media",
+                getter: get_media,
+                setter: Some(set_media),
+            },
+            rt::AttrDef {
+                name: "width",
+                getter: get_width,
+                setter: Some(set_width),
+            },
+            rt::AttrDef {
+                name: "height",
+                getter: get_height,
+                setter: Some(set_height),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod html_span_element {
     use super::*;
 
@@ -23539,6 +26366,46 @@ pub mod html_style_element {
                 setter: Some(set_type),
             },
         ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_table_caption_element {
+    use super::*;
+
+    fn get_align(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTableCaptionElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "align"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTableCaptionElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "align", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLTableCaptionElement,
+        name: "HTMLTableCaptionElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "align",
+            getter: get_align,
+            setter: Some(set_align),
+        }],
         ops: &[],
         static_attrs: &[],
         static_ops: &[],
@@ -23845,6 +26712,159 @@ pub mod html_table_cell_element {
                 name: "bgColor",
                 getter: get_bg_color,
                 setter: Some(set_bg_color),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_table_col_element {
+    use super::*;
+
+    fn get_span(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTableColElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_unsigned_long(cx, this, "span", 1, "none")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_span(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTableColElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_unsigned_long(cx, this, "span", a0, 1, "none")
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_align(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTableColElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "align"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTableColElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "align", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ch(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTableColElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "char"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_ch(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTableColElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "char", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ch_off(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTableColElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "charoff")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_ch_off(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTableColElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "charoff", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_v_align(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTableColElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "valign")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_v_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTableColElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "valign", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_width(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTableColElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "width"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_width(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTableColElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "width", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLTableColElement,
+        name: "HTMLTableColElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "span",
+                getter: get_span,
+                setter: Some(set_span),
+            },
+            rt::AttrDef {
+                name: "align",
+                getter: get_align,
+                setter: Some(set_align),
+            },
+            rt::AttrDef {
+                name: "ch",
+                getter: get_ch,
+                setter: Some(set_ch),
+            },
+            rt::AttrDef {
+                name: "chOff",
+                getter: get_ch_off,
+                setter: Some(set_ch_off),
+            },
+            rt::AttrDef {
+                name: "vAlign",
+                getter: get_v_align,
+                setter: Some(set_v_align),
+            },
+            rt::AttrDef {
+                name: "width",
+                getter: get_width,
+                setter: Some(set_width),
             },
         ],
         ops: &[],
@@ -24866,6 +27886,48 @@ pub mod html_text_area_element {
     };
 }
 
+pub mod html_time_element {
+    use super::*;
+
+    fn get_date_time(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTimeElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "datetime")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_date_time(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTimeElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "datetime", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLTimeElement,
+        name: "HTMLTimeElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "dateTime",
+            getter: get_date_time,
+            setter: Some(set_date_time),
+        }],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod html_title_element {
     use super::*;
 
@@ -24901,6 +27963,118 @@ pub mod html_title_element {
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_track_element {
+    use super::*;
+
+    fn get_src(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTrackElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_url(cx, this, "src"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_src(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTrackElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "src", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_srclang(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTrackElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "srclang")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_srclang(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTrackElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "srclang", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_label(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTrackElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "label"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_label(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTrackElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "label", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_default(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTrackElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_bool(cx, this, "default"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_default(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTrackElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_boolean();
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_bool(cx, this, "default", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLTrackElement,
+        name: "HTMLTrackElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "src",
+                getter: get_src,
+                setter: Some(set_src),
+            },
+            rt::AttrDef {
+                name: "srclang",
+                getter: get_srclang,
+                setter: Some(set_srclang),
+            },
+            rt::AttrDef {
+                name: "label",
+                getter: get_label,
+                setter: Some(set_label),
+            },
+            rt::AttrDef {
+                name: "default",
+                getter: get_default,
+                setter: Some(set_default),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[
+            ("NONE", 0_f64),
+            ("LOADING", 1_f64),
+            ("LOADED", 2_f64),
+            ("ERROR", 3_f64),
+        ],
         iterable: rt::Iterable::None,
         exotic: None,
     };
@@ -24980,6 +28154,125 @@ pub mod html_unknown_element {
         constructor: None,
         constructor_length: 0,
         attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_video_element {
+    use super::*;
+
+    fn get_width(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLVideoElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_unsigned_long(cx, this, "width", 0, "none")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_width(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLVideoElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_unsigned_long(cx, this, "width", a0, 0, "none")
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_height(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLVideoElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_unsigned_long(cx, this, "height", 0, "none")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_height(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLVideoElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_unsigned_long(cx, this, "height", a0, 0, "none")
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_poster(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLVideoElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_url(cx, this, "poster"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_poster(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLVideoElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "poster", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_plays_inline(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLVideoElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_bool(cx, this, "playsinline")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_plays_inline(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLVideoElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_boolean();
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_bool(cx, this, "playsinline", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLVideoElement,
+        name: "HTMLVideoElement",
+        parent: Some(I::HTMLMediaElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "width",
+                getter: get_width,
+                setter: Some(set_width),
+            },
+            rt::AttrDef {
+                name: "height",
+                getter: get_height,
+                setter: Some(set_height),
+            },
+            rt::AttrDef {
+                name: "poster",
+                getter: get_poster,
+                setter: Some(set_poster),
+            },
+            rt::AttrDef {
+                name: "playsInline",
+                getter: get_plays_inline,
+                setter: Some(set_plays_inline),
+            },
+        ],
         ops: &[],
         static_attrs: &[],
         static_ops: &[],
@@ -29461,6 +32754,533 @@ pub mod html_anchor_element {
     };
 }
 
+pub mod html_area_element {
+    use super::*;
+
+    fn get_alt(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "alt"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_alt(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "alt", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_coords(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "coords")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_coords(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "coords", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_shape(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "shape"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_shape(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "shape", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_download(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "download")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_download(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "download", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ping(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "ping"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_ping(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "ping", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_rel(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "rel"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_rel(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "rel", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_rel_list(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "relList", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_token_list(cx, this, "rel")
+        });
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "relList", &v, ctx);
+        Ok(v)
+    }
+
+    fn set_rel_list(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::put_forwards(this_js, "relList", "value", rt::arg(args, 0), ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_no_href(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_bool(cx, this, "nohref"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_no_href(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_boolean();
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_bool(cx, this, "nohref", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_origin(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::origin(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_protocol(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::protocol(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_protocol(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_protocol(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_username(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::username(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_username(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_username(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_password(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::password(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_password(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_password(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_host(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::host(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_host(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_host(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_hostname(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::hostname(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_hostname(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_hostname(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_port(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::port(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_port(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_port(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_pathname(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::pathname(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_pathname(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_pathname(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_search(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::search(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_search(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_search(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_hash(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::hash(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_hash(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_hash(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_hreflang(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "hreflang")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_hreflang(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "hreflang", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_type(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "type"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "type", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_href(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_url(cx, this, "href"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_href(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "href", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_target(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "target")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_target(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAreaElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "target", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLAreaElement,
+        name: "HTMLAreaElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "alt",
+                getter: get_alt,
+                setter: Some(set_alt),
+            },
+            rt::AttrDef {
+                name: "coords",
+                getter: get_coords,
+                setter: Some(set_coords),
+            },
+            rt::AttrDef {
+                name: "shape",
+                getter: get_shape,
+                setter: Some(set_shape),
+            },
+            rt::AttrDef {
+                name: "download",
+                getter: get_download,
+                setter: Some(set_download),
+            },
+            rt::AttrDef {
+                name: "ping",
+                getter: get_ping,
+                setter: Some(set_ping),
+            },
+            rt::AttrDef {
+                name: "rel",
+                getter: get_rel,
+                setter: Some(set_rel),
+            },
+            rt::AttrDef {
+                name: "relList",
+                getter: get_rel_list,
+                setter: Some(set_rel_list),
+            },
+            rt::AttrDef {
+                name: "noHref",
+                getter: get_no_href,
+                setter: Some(set_no_href),
+            },
+            rt::AttrDef {
+                name: "origin",
+                getter: get_origin,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "protocol",
+                getter: get_protocol,
+                setter: Some(set_protocol),
+            },
+            rt::AttrDef {
+                name: "username",
+                getter: get_username,
+                setter: Some(set_username),
+            },
+            rt::AttrDef {
+                name: "password",
+                getter: get_password,
+                setter: Some(set_password),
+            },
+            rt::AttrDef {
+                name: "host",
+                getter: get_host,
+                setter: Some(set_host),
+            },
+            rt::AttrDef {
+                name: "hostname",
+                getter: get_hostname,
+                setter: Some(set_hostname),
+            },
+            rt::AttrDef {
+                name: "port",
+                getter: get_port,
+                setter: Some(set_port),
+            },
+            rt::AttrDef {
+                name: "pathname",
+                getter: get_pathname,
+                setter: Some(set_pathname),
+            },
+            rt::AttrDef {
+                name: "search",
+                getter: get_search,
+                setter: Some(set_search),
+            },
+            rt::AttrDef {
+                name: "hash",
+                getter: get_hash,
+                setter: Some(set_hash),
+            },
+            rt::AttrDef {
+                name: "hreflang",
+                getter: get_hreflang,
+                setter: Some(set_hreflang),
+            },
+            rt::AttrDef {
+                name: "type",
+                getter: get_type,
+                setter: Some(set_type),
+            },
+            rt::AttrDef {
+                name: "href",
+                getter: get_href,
+                setter: Some(set_href),
+            },
+            rt::AttrDef {
+                name: "target",
+                getter: get_target,
+                setter: Some(set_target),
+            },
+        ],
+        ops: &[rt::OpDef {
+            name: "toString",
+            func: get_href,
+            length: 0,
+        }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_audio_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLAudioElement,
+        name: "HTMLAudioElement",
+        parent: Some(I::HTMLMediaElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod htmlbr_element {
     use super::*;
 
@@ -29492,6 +33312,71 @@ pub mod htmlbr_element {
             getter: get_clear,
             setter: Some(set_clear),
         }],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_base_element {
+    use super::*;
+
+    fn get_href(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLBaseElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_url(cx, this, "href"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_href(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLBaseElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "href", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_target(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLBaseElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "target")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_target(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLBaseElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "target", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLBaseElement,
+        name: "HTMLBaseElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "href",
+                getter: get_href,
+                setter: Some(set_href),
+            },
+            rt::AttrDef {
+                name: "target",
+                getter: get_target,
+                setter: Some(set_target),
+            },
+        ],
         ops: &[],
         static_attrs: &[],
         static_ops: &[],
@@ -30397,6 +34282,341 @@ pub mod html_button_element {
                 setter: Some(set_value),
             },
         ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_canvas_element {
+    use super::*;
+
+    fn get_width(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLCanvasElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLCanvasElementImpl>::width(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_width(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLCanvasElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLCanvasElementImpl>::set_width(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_height(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLCanvasElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLCanvasElementImpl>::height(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_height(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLCanvasElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLCanvasElementImpl>::set_height(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLCanvasElement,
+        name: "HTMLCanvasElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "width",
+                getter: get_width,
+                setter: Some(set_width),
+            },
+            rt::AttrDef {
+                name: "height",
+                getter: get_height,
+                setter: Some(set_height),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod htmld_list_element {
+    use super::*;
+
+    fn get_compact(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLDListElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_bool(cx, this, "compact"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_compact(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLDListElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_boolean();
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_bool(cx, this, "compact", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLDListElement,
+        name: "HTMLDListElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "compact",
+            getter: get_compact,
+            setter: Some(set_compact),
+        }],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_data_element {
+    use super::*;
+
+    fn get_value(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLDataElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "value"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_value(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLDataElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "value", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLDataElement,
+        name: "HTMLDataElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "value",
+            getter: get_value,
+            setter: Some(set_value),
+        }],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_data_list_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLDataListElement,
+        name: "HTMLDataListElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_details_element {
+    use super::*;
+
+    fn get_name(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLDetailsElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "name"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLDetailsElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "name", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_open(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLDetailsElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_bool(cx, this, "open"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_open(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLDetailsElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_boolean();
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_bool(cx, this, "open", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLDetailsElement,
+        name: "HTMLDetailsElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "name",
+                getter: get_name,
+                setter: Some(set_name),
+            },
+            rt::AttrDef {
+                name: "open",
+                getter: get_open,
+                setter: Some(set_open),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_dialog_element {
+    use super::*;
+
+    fn get_open(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLDialogElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_bool(cx, this, "open"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_open(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLDialogElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_boolean();
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_bool(cx, this, "open", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_closed_by(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLDialogElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "closedby")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_closed_by(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLDialogElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "closedby", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLDialogElement,
+        name: "HTMLDialogElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "open",
+                getter: get_open,
+                setter: Some(set_open),
+            },
+            rt::AttrDef {
+                name: "closedBy",
+                getter: get_closed_by,
+                setter: Some(set_closed_by),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod html_directory_element {
+    use super::*;
+
+    fn get_compact(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLDirectoryElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_bool(cx, this, "compact"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_compact(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLDirectoryElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_boolean();
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_bool(cx, this, "compact", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLDirectoryElement,
+        name: "HTMLDirectoryElement",
+        parent: Some(I::HTMLElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "compact",
+            getter: get_compact,
+            setter: Some(set_compact),
+        }],
         ops: &[],
         static_attrs: &[],
         static_ops: &[],
@@ -31496,7 +35716,12 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &element::DEF,
     &error_event::DEF,
     &html_element::DEF,
+    &html_embed_element::DEF,
+    &html_field_set_element::DEF,
+    &html_font_element::DEF,
     &html_form_element::DEF,
+    &html_frame_element::DEF,
+    &html_frame_set_element::DEF,
     &htmlhr_element::DEF,
     &html_head_element::DEF,
     &html_heading_element::DEF,
@@ -31506,25 +35731,46 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &html_input_element::DEF,
     &htmlli_element::DEF,
     &html_label_element::DEF,
+    &html_legend_element::DEF,
     &html_link_element::DEF,
+    &html_map_element::DEF,
+    &html_marquee_element::DEF,
+    &html_media_element::DEF,
+    &html_menu_element::DEF,
     &html_meta_element::DEF,
+    &html_meter_element::DEF,
+    &html_mod_element::DEF,
     &htmlo_list_element::DEF,
+    &html_object_element::DEF,
+    &html_opt_group_element::DEF,
     &html_option_element::DEF,
+    &html_output_element::DEF,
     &html_paragraph_element::DEF,
+    &html_param_element::DEF,
+    &html_picture_element::DEF,
     &html_pre_element::DEF,
+    &html_progress_element::DEF,
+    &html_quote_element::DEF,
     &html_script_element::DEF,
     &html_select_element::DEF,
+    &html_slot_element::DEF,
+    &html_source_element::DEF,
     &html_span_element::DEF,
     &html_style_element::DEF,
+    &html_table_caption_element::DEF,
     &html_table_cell_element::DEF,
+    &html_table_col_element::DEF,
     &html_table_element::DEF,
     &html_table_row_element::DEF,
     &html_table_section_element::DEF,
     &html_template_element::DEF,
     &html_text_area_element::DEF,
+    &html_time_element::DEF,
     &html_title_element::DEF,
+    &html_track_element::DEF,
     &htmlu_list_element::DEF,
     &html_unknown_element::DEF,
+    &html_video_element::DEF,
     &svg_element::DEF,
     &svg_gradient_element::DEF,
     &svg_graphics_element::DEF,
@@ -31550,9 +35796,19 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &xml_document::DEF,
     &xml_http_request::DEF,
     &html_anchor_element::DEF,
+    &html_area_element::DEF,
+    &html_audio_element::DEF,
     &htmlbr_element::DEF,
+    &html_base_element::DEF,
     &html_body_element::DEF,
     &html_button_element::DEF,
+    &html_canvas_element::DEF,
+    &htmld_list_element::DEF,
+    &html_data_element::DEF,
+    &html_data_list_element::DEF,
+    &html_details_element::DEF,
+    &html_dialog_element::DEF,
+    &html_directory_element::DEF,
     &html_div_element::DEF,
     &svga_element::DEF,
     &svg_defs_element::DEF,

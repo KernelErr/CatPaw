@@ -1591,6 +1591,25 @@ impl web::HTMLTitleElementImpl for Web {
     }
 }
 
+impl web::HTMLCanvasElementImpl for Web {
+    // The bitmap has no pixels yet; its size is what the attributes say.
+    fn width(cx: &mut Cx<'_>, this: NodeId) -> Fallible<u32> {
+        crate::reflect::get_unsigned_long(cx, this, "width", 300, "none")
+    }
+
+    fn set_width(cx: &mut Cx<'_>, this: NodeId, value: u32) -> Fallible<()> {
+        crate::reflect::set_unsigned_long(cx, this, "width", value, 300, "none")
+    }
+
+    fn height(cx: &mut Cx<'_>, this: NodeId) -> Fallible<u32> {
+        crate::reflect::get_unsigned_long(cx, this, "height", 150, "none")
+    }
+
+    fn set_height(cx: &mut Cx<'_>, this: NodeId, value: u32) -> Fallible<()> {
+        crate::reflect::set_unsigned_long(cx, this, "height", value, 150, "none")
+    }
+}
+
 impl web::HTMLAnchorElementImpl for Web {
     fn text(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {
         node::check(cx, this)?;

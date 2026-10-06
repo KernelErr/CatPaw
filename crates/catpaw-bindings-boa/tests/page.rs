@@ -1116,3 +1116,46 @@ fn crypto_hands_out_random_values() {
         assert_eq!(eval(&mut page, source), expected, "{source}");
     }
 }
+
+#[test]
+fn every_html_element_has_its_interface() {
+    let mut page = load(
+        "<body><dialog id=d open></dialog><canvas id=c width=40></canvas><video id=v></video><blockquote id=q cite='/src'></blockquote><progress id=p max=10 value=3></progress>",
+    );
+    for (source, expected) in [
+        (
+            "var d = document.getElementById('d'); d instanceof HTMLDialogElement && d.open",
+            "true",
+        ),
+        (
+            "d.open = false; d.hasAttribute('open') + ' ' + typeof d.showModal",
+            "false undefined",
+        ),
+        (
+            "var c = document.getElementById('c'); c instanceof HTMLCanvasElement && c.width + ' ' + c.height + ' ' + typeof c.getContext",
+            "40 150 undefined",
+        ),
+        (
+            "var v = document.getElementById('v'); v instanceof HTMLVideoElement && v instanceof HTMLMediaElement && v instanceof HTMLElement",
+            "true",
+        ),
+        (
+            "document.getElementById('q').cite",
+            "https://example.test/src",
+        ),
+        (
+            "var p = document.getElementById('p'); p instanceof HTMLProgressElement && p.getAttribute('max')",
+            "10",
+        ),
+        (
+            "document.createElement('bgsound') instanceof HTMLUnknownElement",
+            "true",
+        ),
+        (
+            "document.createElement('abbr').constructor.name + ' ' + document.createElement('xmp').constructor.name",
+            "HTMLElement HTMLPreElement",
+        ),
+    ] {
+        assert_eq!(eval(&mut page, source), expected, "{source}");
+    }
+}
