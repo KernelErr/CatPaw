@@ -60,6 +60,34 @@ impl IntoJs for web::DocumentVisibilityState {
     }
 }
 
+impl FromJs for web::FontFaceLoadStatus {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::FontFaceLoadStatus::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid FontFaceLoadStatus")))
+    }
+}
+
+impl IntoJs for web::FontFaceLoadStatus {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
+impl FromJs for web::FontFaceSetLoadStatus {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::FontFaceSetLoadStatus::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid FontFaceSetLoadStatus")))
+    }
+}
+
+impl IntoJs for web::FontFaceSetLoadStatus {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
 impl FromJs for web::NavigationTimingType {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let s = rt::string_from_js(v, ctx)?;
@@ -585,6 +613,71 @@ impl IntoJs for web::FocusOptions {
         let obj = rt::new_plain_object(ctx);
         rt::set_member(&obj, "preventScroll", self.prevent_scroll, ctx)?;
         rt::set_member(&obj, "focusVisible", self.focus_visible, ctx)?;
+        Ok(obj.into())
+    }
+}
+
+impl FromJs for web::FontFaceDescriptors {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "FontFaceDescriptors")?;
+        Ok(Self {
+            style: match rt::dictionary_member(&obj, "style", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "normal".to_string(),
+            },
+            weight: match rt::dictionary_member(&obj, "weight", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "normal".to_string(),
+            },
+            stretch: match rt::dictionary_member(&obj, "stretch", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "normal".to_string(),
+            },
+            unicode_range: match rt::dictionary_member(&obj, "unicodeRange", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "U+0-10FFFF".to_string(),
+            },
+            feature_settings: match rt::dictionary_member(&obj, "featureSettings", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "normal".to_string(),
+            },
+            variation_settings: match rt::dictionary_member(&obj, "variationSettings", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "normal".to_string(),
+            },
+            display: match rt::dictionary_member(&obj, "display", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "auto".to_string(),
+            },
+            ascent_override: match rt::dictionary_member(&obj, "ascentOverride", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "normal".to_string(),
+            },
+            descent_override: match rt::dictionary_member(&obj, "descentOverride", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "normal".to_string(),
+            },
+            line_gap_override: match rt::dictionary_member(&obj, "lineGapOverride", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "normal".to_string(),
+            },
+        })
+    }
+}
+
+impl IntoJs for web::FontFaceDescriptors {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "style", self.style, ctx)?;
+        rt::set_member(&obj, "weight", self.weight, ctx)?;
+        rt::set_member(&obj, "stretch", self.stretch, ctx)?;
+        rt::set_member(&obj, "unicodeRange", self.unicode_range, ctx)?;
+        rt::set_member(&obj, "featureSettings", self.feature_settings, ctx)?;
+        rt::set_member(&obj, "variationSettings", self.variation_settings, ctx)?;
+        rt::set_member(&obj, "display", self.display, ctx)?;
+        rt::set_member(&obj, "ascentOverride", self.ascent_override, ctx)?;
+        rt::set_member(&obj, "descentOverride", self.descent_override, ctx)?;
+        rt::set_member(&obj, "lineGapOverride", self.line_gap_override, ctx)?;
         Ok(obj.into())
     }
 }
@@ -1818,6 +1911,28 @@ impl IntoJs for web::RequestOrString {
         match self {
             web::RequestOrString::Request(v) => v.into_js(ctx),
             web::RequestOrString::String(v) => v.into_js(ctx),
+        }
+    }
+}
+
+impl FromJs for web::StringOrBufferSource {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if rt::is_buffer(v) {
+            return Ok(web::StringOrBufferSource::BufferSource(rt::buffer_from_js(
+                v, ctx,
+            )?));
+        }
+        Ok(web::StringOrBufferSource::String(rt::string_from_js(
+            v, ctx,
+        )?))
+    }
+}
+
+impl IntoJs for web::StringOrBufferSource {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+            web::StringOrBufferSource::String(v) => v.into_js(ctx),
+            web::StringOrBufferSource::BufferSource(v) => v.into_js(ctx),
         }
     }
 }
@@ -3548,6 +3663,595 @@ pub mod event_target {
         static_ops: &[],
         consts: &[],
         iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod font_face {
+    use super::*;
+
+    fn get_family(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FontFaceImpl>::family(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn set_family(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FontFaceImpl>::set_family(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_style(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FontFaceImpl>::style(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn set_style(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FontFaceImpl>::set_style(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_weight(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FontFaceImpl>::weight(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn set_weight(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FontFaceImpl>::set_weight(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_stretch(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FontFaceImpl>::stretch(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn set_stretch(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FontFaceImpl>::set_stretch(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_unicode_range(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FontFaceImpl>::unicode_range(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_unicode_range(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FontFaceImpl>::set_unicode_range(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_feature_settings(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FontFaceImpl>::feature_settings(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_feature_settings(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FontFaceImpl>::set_feature_settings(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_variation_settings(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FontFaceImpl>::variation_settings(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_variation_settings(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FontFaceImpl>::set_variation_settings(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_display(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FontFaceImpl>::display(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn set_display(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FontFaceImpl>::set_display(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ascent_override(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FontFaceImpl>::ascent_override(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_ascent_override(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FontFaceImpl>::set_ascent_override(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_descent_override(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FontFaceImpl>::descent_override(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_descent_override(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FontFaceImpl>::set_descent_override(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_line_gap_override(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FontFaceImpl>::line_gap_override(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_line_gap_override(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FontFaceImpl>::set_line_gap_override(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_status(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FontFaceImpl>::status(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_loaded(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FontFaceImpl>::loaded(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_load(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::FontFace, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FontFaceImpl>::load(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "FontFace")?;
+        rt::require_args(args, 2, "FontFace constructor")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::StringOrBufferSource as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let a2 = <web::FontFaceDescriptors as FromJs>::from_js(rt::arg(args, 2), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FontFaceImpl>::constructor(cx, a0, a1, a2)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::FontFace, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::FontFace,
+        name: "FontFace",
+        parent: None,
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 2,
+        attrs: &[
+            rt::AttrDef {
+                name: "family",
+                getter: get_family,
+                setter: Some(set_family),
+            },
+            rt::AttrDef {
+                name: "style",
+                getter: get_style,
+                setter: Some(set_style),
+            },
+            rt::AttrDef {
+                name: "weight",
+                getter: get_weight,
+                setter: Some(set_weight),
+            },
+            rt::AttrDef {
+                name: "stretch",
+                getter: get_stretch,
+                setter: Some(set_stretch),
+            },
+            rt::AttrDef {
+                name: "unicodeRange",
+                getter: get_unicode_range,
+                setter: Some(set_unicode_range),
+            },
+            rt::AttrDef {
+                name: "featureSettings",
+                getter: get_feature_settings,
+                setter: Some(set_feature_settings),
+            },
+            rt::AttrDef {
+                name: "variationSettings",
+                getter: get_variation_settings,
+                setter: Some(set_variation_settings),
+            },
+            rt::AttrDef {
+                name: "display",
+                getter: get_display,
+                setter: Some(set_display),
+            },
+            rt::AttrDef {
+                name: "ascentOverride",
+                getter: get_ascent_override,
+                setter: Some(set_ascent_override),
+            },
+            rt::AttrDef {
+                name: "descentOverride",
+                getter: get_descent_override,
+                setter: Some(set_descent_override),
+            },
+            rt::AttrDef {
+                name: "lineGapOverride",
+                getter: get_line_gap_override,
+                setter: Some(set_line_gap_override),
+            },
+            rt::AttrDef {
+                name: "status",
+                getter: get_status,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "loaded",
+                getter: get_loaded,
+                setter: None,
+            },
+        ],
+        ops: &[rt::OpDef {
+            name: "load",
+            func: op_load,
+            length: 0,
+        }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod font_face_set {
+    use super::*;
+
+    fn get_onloading(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFaceSet, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "loading")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onloading(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFaceSet, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "loading", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onloadingdone(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFaceSet, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "loadingdone")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onloadingdone(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFaceSet, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Object(this),
+                "loadingdone",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onloadingerror(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFaceSet, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "loadingerror")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onloadingerror(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFaceSet, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Object(this),
+                "loadingerror",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ready(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFaceSet, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FontFaceSetImpl>::ready(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_status(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFaceSet, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FontFaceSetImpl>::status(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_add(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::FontFaceSet, ctx)?;
+        rt::require_args(args, 1, "FontFaceSet.add")?;
+        let a0 = rt::object_from_js(rt::arg(args, 0), I::FontFace, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FontFaceSetImpl>::add(cx, this, a0));
+        rt::ret(r, ctx)
+    }
+
+    fn op_delete(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::FontFaceSet, ctx)?;
+        rt::require_args(args, 1, "FontFaceSet.delete")?;
+        let a0 = rt::object_from_js(rt::arg(args, 0), I::FontFace, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FontFaceSetImpl>::delete(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_clear(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::FontFaceSet, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FontFaceSetImpl>::clear(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_load(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::FontFaceSet, ctx)?;
+        rt::require_args(args, 1, "FontFaceSet.load")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            rt::string_from_js(rt::arg(args, 1), ctx)?
+        } else {
+            " ".to_string()
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FontFaceSetImpl>::load(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_check(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::FontFaceSet, ctx)?;
+        rt::require_args(args, 1, "FontFaceSet.check")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            rt::string_from_js(rt::arg(args, 1), ctx)?
+        } else {
+            " ".to_string()
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FontFaceSetImpl>::check(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_values(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FontFaceSet, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FontFaceSetImpl>::set_values(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::FontFaceSet,
+        name: "FontFaceSet",
+        parent: Some(I::EventTarget),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "onloading",
+                getter: get_onloading,
+                setter: Some(set_onloading),
+            },
+            rt::AttrDef {
+                name: "onloadingdone",
+                getter: get_onloadingdone,
+                setter: Some(set_onloadingdone),
+            },
+            rt::AttrDef {
+                name: "onloadingerror",
+                getter: get_onloadingerror,
+                setter: Some(set_onloadingerror),
+            },
+            rt::AttrDef {
+                name: "ready",
+                getter: get_ready,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "status",
+                getter: get_status,
+                setter: None,
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "add",
+                func: op_add,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "delete",
+                func: op_delete,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "clear",
+                func: op_clear,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "load",
+                func: op_load,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "check",
+                func: op_check,
+                length: 1,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::Set(set_values),
         exotic: None,
     };
 }
@@ -15061,6 +15765,18 @@ pub mod dom_rect {
 pub mod document {
     use super::*;
 
+    fn get_scrolling_element(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DocumentImpl>::scrolling_element(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn get_implementation(
         this_js: &JsValue,
         _args: &[JsValue],
@@ -15369,6 +16085,17 @@ pub mod document {
         });
         rt::ret(r, ctx)?;
         Ok(JsValue::undefined())
+    }
+
+    fn get_fonts(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "fonts", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FontFaceSourceImpl>::fonts(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "fonts", &v, ctx);
+        Ok(v)
     }
 
     fn get_active_element(
@@ -17653,6 +18380,11 @@ pub mod document {
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
+                name: "scrollingElement",
+                getter: get_scrolling_element,
+                setter: None,
+            },
+            rt::AttrDef {
                 name: "implementation",
                 getter: get_implementation,
                 setter: None,
@@ -17771,6 +18503,11 @@ pub mod document {
                 name: "onvisibilitychange",
                 getter: get_onvisibilitychange,
                 setter: Some(set_onvisibilitychange),
+            },
+            rt::AttrDef {
+                name: "fonts",
+                getter: get_fonts,
+                setter: None,
             },
             rt::AttrDef {
                 name: "activeElement",
@@ -19111,6 +19848,72 @@ pub mod element {
         rt::ret(r, ctx)
     }
 
+    fn op_scroll(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Element, ctx)?;
+        if args.len() >= 2 && rt::arg(args, 0).is_number() {
+            rt::require_args(args, 2, "Element.scroll")?;
+            let a0 = rt::arg(args, 0).to_number(ctx)?;
+            let a1 = rt::arg(args, 1).to_number(ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::ElementImpl>::scroll_overload2(cx, this, a0, a1)
+            });
+            rt::ret(r, ctx)
+        } else if args.len() >= 0 && true {
+            let a0 = <web::ScrollToOptions as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+            let r = rt::with_cx(ctx, |cx| <Web as web::ElementImpl>::scroll(cx, this, a0));
+            rt::ret(r, ctx)
+        } else {
+            Err(rt::type_error(
+                "Element.scroll: no overload matches the arguments",
+            ))
+        }
+    }
+
+    fn op_scroll_to(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Element, ctx)?;
+        if args.len() >= 2 && rt::arg(args, 0).is_number() {
+            rt::require_args(args, 2, "Element.scrollTo")?;
+            let a0 = rt::arg(args, 0).to_number(ctx)?;
+            let a1 = rt::arg(args, 1).to_number(ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::ElementImpl>::scroll_to_overload2(cx, this, a0, a1)
+            });
+            rt::ret(r, ctx)
+        } else if args.len() >= 0 && true {
+            let a0 = <web::ScrollToOptions as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+            let r = rt::with_cx(ctx, |cx| <Web as web::ElementImpl>::scroll_to(cx, this, a0));
+            rt::ret(r, ctx)
+        } else {
+            Err(rt::type_error(
+                "Element.scrollTo: no overload matches the arguments",
+            ))
+        }
+    }
+
+    fn op_scroll_by(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Element, ctx)?;
+        if args.len() >= 2 && rt::arg(args, 0).is_number() {
+            rt::require_args(args, 2, "Element.scrollBy")?;
+            let a0 = rt::arg(args, 0).to_number(ctx)?;
+            let a1 = rt::arg(args, 1).to_number(ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::ElementImpl>::scroll_by_overload2(cx, this, a0, a1)
+            });
+            rt::ret(r, ctx)
+        } else if args.len() >= 0 && true {
+            let a0 = <web::ScrollToOptions as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+            let r = rt::with_cx(ctx, |cx| <Web as web::ElementImpl>::scroll_by(cx, this, a0));
+            rt::ret(r, ctx)
+        } else {
+            Err(rt::type_error(
+                "Element.scrollBy: no overload matches the arguments",
+            ))
+        }
+    }
+
     fn op_has_attributes(
         this_js: &JsValue,
         args: &[JsValue],
@@ -19898,6 +20701,21 @@ pub mod element {
             rt::OpDef {
                 name: "scrollIntoView",
                 func: op_scroll_into_view,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "scroll",
+                func: op_scroll,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "scrollTo",
+                func: op_scroll_to,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "scrollBy",
+                func: op_scroll_by,
                 length: 0,
             },
             rt::OpDef {
@@ -41161,6 +41979,8 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &dom_token_list::DEF,
     &event::DEF,
     &event_target::DEF,
+    &font_face::DEF,
+    &font_face_set::DEF,
     &html_collection::DEF,
     &hash_change_event::DEF,
     &headers::DEF,

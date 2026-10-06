@@ -581,6 +581,52 @@ impl web::ElementImpl for Web {
         Ok(resolved_promise(cx))
     }
 
+    fn scroll(
+        cx: &mut Cx<'_>,
+        _this: NodeId,
+        _options: web::ScrollToOptions,
+    ) -> Fallible<PromiseRef> {
+        Ok(resolved_promise(cx))
+    }
+
+    fn scroll_overload2(cx: &mut Cx<'_>, _this: NodeId, _x: f64, _y: f64) -> Fallible<PromiseRef> {
+        Ok(resolved_promise(cx))
+    }
+
+    fn scroll_to(
+        cx: &mut Cx<'_>,
+        _this: NodeId,
+        _options: web::ScrollToOptions,
+    ) -> Fallible<PromiseRef> {
+        Ok(resolved_promise(cx))
+    }
+
+    fn scroll_to_overload2(
+        cx: &mut Cx<'_>,
+        _this: NodeId,
+        _x: f64,
+        _y: f64,
+    ) -> Fallible<PromiseRef> {
+        Ok(resolved_promise(cx))
+    }
+
+    fn scroll_by(
+        cx: &mut Cx<'_>,
+        _this: NodeId,
+        _options: web::ScrollToOptions,
+    ) -> Fallible<PromiseRef> {
+        Ok(resolved_promise(cx))
+    }
+
+    fn scroll_by_overload2(
+        cx: &mut Cx<'_>,
+        _this: NodeId,
+        _x: f64,
+        _y: f64,
+    ) -> Fallible<PromiseRef> {
+        Ok(resolved_promise(cx))
+    }
+
     fn scroll_top(_cx: &mut Cx<'_>, _this: NodeId) -> Fallible<f64> {
         Ok(0.0)
     }

@@ -27,6 +27,7 @@ mod encoding;
 pub mod event_loop;
 pub mod events;
 mod fetch;
+mod fonts;
 pub mod generated;
 mod history;
 pub mod html_names;

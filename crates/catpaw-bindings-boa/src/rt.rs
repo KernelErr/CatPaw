@@ -92,6 +92,8 @@ pub enum Iterable {
     Values,
     /// `iterable<K, V>`: the function returns an array of `[key, value]` pairs.
     Pairs(NativeFunctionPointer),
+    /// `setlike<V>`: the function returns an array of the set's values.
+    Set(NativeFunctionPointer),
 }
 
 pub struct AttrDef {
@@ -1821,6 +1823,68 @@ fn define_pair_iteration(ctx: &mut Context, proto: &JsObject, pairs: NativeFunct
     proto.insert_property(js_string!("forEach"), method_descriptor(for_each));
 }
 
+/// Installs the read-only half of `setlike<V>`: `size`, `has`, `entries`,
+/// `keys`, `values`, `forEach` and `@`, over the values that
+/// `values_of` returns. `add`, `delete` and `clear` are ordinary operations
+/// the interface declares itself.
+fn define_set_iteration(ctx: &mut Context, proto: &JsObject, values_of: NativeFunctionPointer) {
+    let size = NativeFunction::from_copy_closure(move |this, _args, ctx| {
+        Ok(JsValue::from(pairs_of(values_of, this, ctx)?.len() as u32))
+    });
+    let has = NativeFunction::from_copy_closure(move |this, args, ctx| {
+        let wanted = arg(args, 0);
+        let found = pairs_of(values_of, this, ctx)?
+            .iter()
+            .any(|v| JsValue::same_value_zero(v, wanted));
+        Ok(JsValue::from(found))
+    });
+    let entries = NativeFunction::from_copy_closure(move |this, _args, ctx| {
+        let mut items = Vec::new();
+        for value in pairs_of(values_of, this, ctx)? {
+            let pair: JsValue = JsArray::from_iter([value.clone(), value], ctx).into();
+            items.push(pair);
+        }
+        let array: JsValue = JsArray::from_iter(items, ctx).into();
+        iterator_of(&array, ctx)
+    });
+    let values = NativeFunction::from_copy_closure(move |this, _args, ctx| {
+        let items = pairs_of(values_of, this, ctx)?;
+        let array: JsValue = JsArray::from_iter(items, ctx).into();
+        iterator_of(&array, ctx)
+    });
+    let for_each = NativeFunction::from_copy_closure(move |this, args, ctx| {
+        let callback = arg(args, 0)
+            .as_callable()
+            .ok_or_else(|| type_error("The callback provided as parameter is not a function."))?;
+        let this_arg = arg(args, 1).clone();
+        for value in pairs_of(values_of, this, ctx)? {
+            callback.call(&this_arg, &[value.clone(), value, this.clone()], ctx)?;
+        }
+        Ok(JsValue::undefined())
+    });
+
+    let size = function(ctx, size, "get size", 0, false);
+    proto.insert_property(
+        js_string!("size"),
+        PropertyDescriptor::builder()
+            .get(size)
+            .set(JsValue::undefined())
+            .enumerable(true)
+            .configurable(true)
+            .build(),
+    );
+    let has = function(ctx, has, "has", 1, false);
+    proto.insert_property(js_string!("has"), method_descriptor(has));
+    let entries = function(ctx, entries, "entries", 0, false);
+    proto.insert_property(js_string!("entries"), method_descriptor(entries));
+    let values = function(ctx, values, "values", 0, false);
+    proto.insert_property(js_string!("keys"), method_descriptor(values.clone()));
+    proto.insert_property(js_string!("values"), method_descriptor(values.clone()));
+    proto.insert_property(JsSymbol::iterator(), hidden_descriptor(values));
+    let for_each = function(ctx, for_each, "forEach", 1, false);
+    proto.insert_property(js_string!("forEach"), method_descriptor(for_each));
+}
+
 /// Gives a value iterable the Array.prototype iteration methods, which
 /// work on any object with a length and indexed properties.
 fn define_value_iteration(ctx: &mut Context, proto: &JsObject) -> JsResult<()> {
@@ -1926,6 +1990,7 @@ fn install_interface(
         }
         Iterable::Values => define_value_iteration(ctx, &proto)?,
         Iterable::Pairs(pairs) => define_pair_iteration(ctx, &proto, pairs),
+        Iterable::Set(values) => define_set_iteration(ctx, &proto, values),
     }
 
     global.insert_property(

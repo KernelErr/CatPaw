@@ -258,6 +258,7 @@ pub struct PageState {
     pub(crate) timeline: crate::performance::Timeline,
     pub(crate) traversers: crate::traversal::Traversers,
     pub(crate) custom_elements: crate::custom_elements::Registry,
+    pub(crate) fonts: crate::fonts::FontSets,
     pub(crate) reactions: crate::promises::Reactions,
     /// When the document's loading reached its milestones.
     pub timing: crate::navigation_timing::DocumentTiming,
@@ -325,6 +326,7 @@ impl PageState {
             timeline: Default::default(),
             traversers: Default::default(),
             custom_elements: Default::default(),
+            fonts: Default::default(),
             reactions: Default::default(),
             timing: Default::default(),
             microtask_queue: RefCell::new(None),

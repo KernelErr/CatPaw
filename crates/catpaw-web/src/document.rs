@@ -124,6 +124,21 @@ impl web::DocumentImpl for Web {
         Ok(cx.dom().child_elements(this).next())
     }
 
+    /// <https://drafts.csswg.org/cssom-view/#dom-document-scrollingelement>
+    fn scrolling_element(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>> {
+        let dom = cx.dom();
+        let quirks = dom
+            .document_data_of(this)
+            .is_some_and(|d| d.quirks_mode == QuirksMode::Quirks);
+        // Without layout no body is potentially scrollable, so quirks mode
+        // answers with the body itself, as a browser would for a static page.
+        Ok(if quirks {
+            body(&dom, this)
+        } else {
+            dom.child_elements(this).next()
+        })
+    }
+
     fn get_elements_by_tag_name(
         cx: &mut Cx<'_>,
         this: NodeId,

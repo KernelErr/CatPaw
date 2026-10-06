@@ -9,11 +9,14 @@
 #   implementation).
 # - `exotic = true`: the interface's indexed/named special operations are
 #   wired up (the wrapper becomes a proxy).
+# - `same_object = [...]`: attributes read once and then cached on the
+#   wrapper, where the IDL lacks `[SameObject]` but identity matters.
 #
 # Anything not listed is simply absent, so feature detection stays honest.
-# Two kinds of members need no entry: attributes annotated `[Reflect*]` in the
-# HTML IDL (generated as content-attribute reflection) and `on*` event handler
-# attributes.
+# Three kinds of members need no entry: attributes annotated `[Reflect*]` in
+# the HTML IDL (generated as content-attribute reflection), `on*` event
+# handler attributes, and `iterable<>`/`setlike<>` declarations (a listed
+# interface gets its iteration methods; a setlike one needs `set_values`).
 #
 # `cargo xtask bindgen --list <Interface>` shows what an interface offers.
 
@@ -108,6 +111,7 @@ members = [
   "getElementsByName", "currentScript", "defaultView", "hasFocus", "hidden",
   "visibilityState", "write", "writeln", "open", "close", "implementation",
   "createAttribute", "createAttributeNS", "createNodeIterator", "createTreeWalker", "domain",
+  "scrollingElement",
 ]
 
 [interfaces.XMLDocument]
@@ -164,7 +168,7 @@ members = [
   "hasAttribute", "hasAttributeNS", "closest", "matches", "webkitMatchesSelector",
   "getElementsByTagName", "getElementsByClassName", "insertAdjacentElement",
   "insertAdjacentText", "innerHTML", "outerHTML", "insertAdjacentHTML",
-  "getBoundingClientRect", "scrollIntoView", "scrollTop", "scrollLeft", "scrollWidth",
+  "getBoundingClientRect", "scrollIntoView", "scroll", "scrollTo", "scrollBy", "scrollTop", "scrollLeft", "scrollWidth",
   "scrollHeight", "clientTop", "clientLeft", "clientWidth", "clientHeight", "attributes",
   "getAttributeNode", "getAttributeNodeNS", "setAttributeNode", "setAttributeNodeNS",
   "removeAttributeNode", "attachShadow", "shadowRoot",
@@ -475,6 +479,25 @@ members = ["getEntries", "getEntriesByType", "getEntriesByName"]
 # is given. `subtle` is absent until SubtleCrypto is there.
 [interfaces.Crypto]
 members = ["randomUUID"]
+
+# ------------------------------------------------------------ font loading
+# No fonts are fetched or shaped: faces count as loaded once asked for.
+[interfaces.FontFace]
+constructor = true
+members = [
+  "family", "style", "weight", "stretch", "unicodeRange", "featureSettings",
+  "variationSettings", "display", "ascentOverride", "descentOverride", "lineGapOverride",
+  "status", "load", "loaded",
+]
+
+[interfaces.FontFaceSet]
+members = [
+  "add", "delete", "clear", "load", "check", "ready", "status",
+]
+
+[mixins.FontFaceSource]
+members = ["fonts"]
+same_object = ["fonts"]
 
 # ------------------------------------------------------------------ Streams
 # Default (non-byte) streams. Byte streams and BYOB readers are not there yet.

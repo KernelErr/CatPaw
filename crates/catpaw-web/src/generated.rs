@@ -34,6 +34,8 @@ pub enum InterfaceId {
     DOMTokenList,
     Event,
     EventTarget,
+    FontFace,
+    FontFaceSet,
     HTMLCollection,
     HashChangeEvent,
     Headers,
@@ -209,8 +211,8 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 184;
-    pub const ALL: [InterfaceId; 184] = [
+    pub const COUNT: usize = 186;
+    pub const ALL: [InterfaceId; 186] = [
         InterfaceId::AbortController,
         InterfaceId::CSSStyleDeclaration,
         InterfaceId::CSSStyleProperties,
@@ -223,6 +225,8 @@ impl InterfaceId {
         InterfaceId::DOMTokenList,
         InterfaceId::Event,
         InterfaceId::EventTarget,
+        InterfaceId::FontFace,
+        InterfaceId::FontFaceSet,
         InterfaceId::HTMLCollection,
         InterfaceId::HashChangeEvent,
         InterfaceId::Headers,
@@ -411,6 +415,8 @@ impl InterfaceId {
             InterfaceId::DOMTokenList => "DOMTokenList",
             InterfaceId::Event => "Event",
             InterfaceId::EventTarget => "EventTarget",
+            InterfaceId::FontFace => "FontFace",
+            InterfaceId::FontFaceSet => "FontFaceSet",
             InterfaceId::HTMLCollection => "HTMLCollection",
             InterfaceId::HashChangeEvent => "HashChangeEvent",
             InterfaceId::Headers => "Headers",
@@ -600,6 +606,8 @@ impl InterfaceId {
             "DOMTokenList" => InterfaceId::DOMTokenList,
             "Event" => InterfaceId::Event,
             "EventTarget" => InterfaceId::EventTarget,
+            "FontFace" => InterfaceId::FontFace,
+            "FontFaceSet" => InterfaceId::FontFaceSet,
             "HTMLCollection" => InterfaceId::HTMLCollection,
             "HashChangeEvent" => InterfaceId::HashChangeEvent,
             "Headers" => InterfaceId::Headers,
@@ -790,6 +798,8 @@ impl InterfaceId {
             InterfaceId::DOMTokenList => None,
             InterfaceId::Event => None,
             InterfaceId::EventTarget => None,
+            InterfaceId::FontFace => None,
+            InterfaceId::FontFaceSet => Some(InterfaceId::EventTarget),
             InterfaceId::HTMLCollection => None,
             InterfaceId::HashChangeEvent => Some(InterfaceId::Event),
             InterfaceId::Headers => None,
@@ -1181,6 +1191,58 @@ impl DocumentVisibilityState {
         Some(match s {
             "visible" => DocumentVisibilityState::Visible,
             "hidden" => DocumentVisibilityState::Hidden,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum FontFaceLoadStatus {
+    Unloaded,
+    Loading,
+    Loaded,
+    Error,
+}
+
+impl FontFaceLoadStatus {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            FontFaceLoadStatus::Unloaded => "unloaded",
+            FontFaceLoadStatus::Loading => "loading",
+            FontFaceLoadStatus::Loaded => "loaded",
+            FontFaceLoadStatus::Error => "error",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "unloaded" => FontFaceLoadStatus::Unloaded,
+            "loading" => FontFaceLoadStatus::Loading,
+            "loaded" => FontFaceLoadStatus::Loaded,
+            "error" => FontFaceLoadStatus::Error,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum FontFaceSetLoadStatus {
+    Loading,
+    Loaded,
+}
+
+impl FontFaceSetLoadStatus {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            FontFaceSetLoadStatus::Loading => "loading",
+            FontFaceSetLoadStatus::Loaded => "loaded",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "loading" => FontFaceSetLoadStatus::Loading,
+            "loaded" => FontFaceSetLoadStatus::Loaded,
             _ => return None,
         })
     }
@@ -1822,6 +1884,20 @@ pub struct FocusOptions {
 }
 
 #[derive(Clone, Debug)]
+pub struct FontFaceDescriptors {
+    pub style: String,
+    pub weight: String,
+    pub stretch: String,
+    pub unicode_range: String,
+    pub feature_settings: String,
+    pub variation_settings: String,
+    pub display: String,
+    pub ascent_override: String,
+    pub descent_override: String,
+    pub line_gap_override: String,
+}
+
+#[derive(Clone, Debug)]
 pub struct GetRootNodeOptions {
     pub composed: bool,
 }
@@ -2086,6 +2162,12 @@ pub enum RequestOrString {
 }
 
 #[derive(Clone, Debug)]
+pub enum StringOrBufferSource {
+    String(String),
+    BufferSource(Vec<u8>),
+}
+
+#[derive(Clone, Debug)]
 pub enum StringOrDouble {
     String(String),
     Double(f64),
@@ -2149,6 +2231,10 @@ pub trait DocumentOrShadowRootImpl {
 
 pub trait ElementCSSInlineStyleImpl {
     fn style(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
+}
+
+pub trait FontFaceSourceImpl {
+    fn fonts(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
 }
 
 pub trait HTMLOrSVGOrMathMLElementImpl {
@@ -2469,6 +2555,51 @@ pub trait EventTargetImpl {
     ) -> Fallible<()>;
     fn dispatch_event(cx: &mut Cx<'_>, this: EventTargetRef, event: ObjectId) -> Fallible<bool>;
     fn constructor(cx: &mut Cx<'_>) -> Fallible<EventTargetRef>;
+}
+
+pub trait FontFaceImpl {
+    fn family(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_family(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+    fn style(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_style(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+    fn weight(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_weight(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+    fn stretch(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_stretch(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+    fn unicode_range(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_unicode_range(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+    fn feature_settings(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_feature_settings(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+    fn variation_settings(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_variation_settings(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+    fn display(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_display(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+    fn ascent_override(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_ascent_override(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+    fn descent_override(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_descent_override(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+    fn line_gap_override(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_line_gap_override(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+    fn status(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<FontFaceLoadStatus>;
+    fn load(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
+    fn loaded(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        family: String,
+        source: StringOrBufferSource,
+        descriptors: FontFaceDescriptors,
+    ) -> Fallible<ObjectId>;
+}
+
+pub trait FontFaceSetImpl {
+    fn add(cx: &mut Cx<'_>, this: ObjectId, font: ObjectId) -> Fallible<ObjectId>;
+    fn delete(cx: &mut Cx<'_>, this: ObjectId, font: ObjectId) -> Fallible<bool>;
+    fn clear(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn load(cx: &mut Cx<'_>, this: ObjectId, font: String, text: String) -> Fallible<PromiseRef>;
+    fn check(cx: &mut Cx<'_>, this: ObjectId, font: String, text: String) -> Fallible<bool>;
+    fn ready(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
+    fn status(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<FontFaceSetLoadStatus>;
+    fn set_values(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<ObjectId>>;
 }
 
 pub trait HTMLCollectionImpl {
@@ -3265,6 +3396,7 @@ pub trait DOMRectImpl {
 }
 
 pub trait DocumentImpl {
+    fn scrolling_element(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
     fn implementation(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
     fn url(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
     fn document_uri(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
@@ -3387,6 +3519,12 @@ pub trait ElementImpl {
         this: NodeId,
         arg: BooleanOrScrollIntoViewOptions,
     ) -> Fallible<PromiseRef>;
+    fn scroll(cx: &mut Cx<'_>, this: NodeId, options: ScrollToOptions) -> Fallible<PromiseRef>;
+    fn scroll_overload2(cx: &mut Cx<'_>, this: NodeId, x: f64, y: f64) -> Fallible<PromiseRef>;
+    fn scroll_to(cx: &mut Cx<'_>, this: NodeId, options: ScrollToOptions) -> Fallible<PromiseRef>;
+    fn scroll_to_overload2(cx: &mut Cx<'_>, this: NodeId, x: f64, y: f64) -> Fallible<PromiseRef>;
+    fn scroll_by(cx: &mut Cx<'_>, this: NodeId, options: ScrollToOptions) -> Fallible<PromiseRef>;
+    fn scroll_by_overload2(cx: &mut Cx<'_>, this: NodeId, x: f64, y: f64) -> Fallible<PromiseRef>;
     fn scroll_top(cx: &mut Cx<'_>, this: NodeId) -> Fallible<f64>;
     fn set_scroll_top(cx: &mut Cx<'_>, this: NodeId, value: f64) -> Fallible<()>;
     fn scroll_left(cx: &mut Cx<'_>, this: NodeId) -> Fallible<f64>;

@@ -439,6 +439,13 @@ impl<'a> Emitter<'a> {
                         self.rust_type(value, Pos::Ret)
                     );
                 }
+                TraitMember::SetValues { value } => {
+                    w!(
+                        out,
+                        "    fn set_values(cx: &mut Cx<'_>{this}) -> Fallible<Vec<{}>>;",
+                        self.rust_type(value, Pos::Ret)
+                    );
+                }
                 TraitMember::Stringify => {
                     w!(
                         out,
@@ -1319,6 +1326,23 @@ Ok(if v.is_null() {{ JsValue::undefined() }} else {{ v }})"
                 iterable = "rt::Iterable::Pairs(iterate)".to_string();
             }
             None => {}
+        }
+        if iface.setlike.is_some() {
+            w!(
+                out,
+                "fn set_values(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {{"
+            );
+            w!(out, "{}", Self::this_stmt(iface));
+            w!(
+                out,
+                "let r = rt::with_cx(ctx, |cx| <Web as web::{}Impl>::set_values(cx{}));
+rt::ret(r, ctx)
+}}
+",
+                iface.name,
+                Self::this_arg(iface.handle)
+            );
+            iterable = "rt::Iterable::Set(set_values)".to_string();
         }
 
         let exotic = self.emit_exotic(out, iface);

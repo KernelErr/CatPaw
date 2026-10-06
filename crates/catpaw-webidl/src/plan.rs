@@ -26,6 +26,9 @@ pub struct MemberCfg {
     /// Generate indexed/named property access for the interface's special
     /// operations (the wrapper becomes an exotic object).
     pub exotic: bool,
+    /// Attributes whose value is cached on the wrapper after the first read,
+    /// as if the IDL said `[SameObject]`.
+    pub same_object: Vec<String>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -201,6 +204,8 @@ pub struct PInterface {
     pub exotic: Option<Exotic>,
     /// `iterable<V>` (value iterator) or `iterable<K, V>` (pair iterator).
     pub iterable: Option<(Option<Type>, Type)>,
+    /// `setlike<V>`: the value type.
+    pub setlike: Option<Type>,
     pub stringifier: Option<Stringifier>,
     /// Members this interface or mixin declares natively (the trait body).
     pub trait_members: Vec<TraitMember>,
@@ -238,6 +243,10 @@ pub enum TraitMember {
     NamedProperties,
     Iterate {
         key: Type,
+        value: Type,
+    },
+    /// `setlike<V>`: the values in the set, in insertion order.
+    SetValues {
         value: Type,
     },
     Stringify,
@@ -652,7 +661,8 @@ impl<'a> Planner<'a> {
                         readonly: a.readonly,
                         is_static: a.is_static,
                         kind,
-                        same_object: a.ext.has("SameObject"),
+                        same_object: a.ext.has("SameObject")
+                            || cfg.same_object.iter().any(|n| n == &a.name),
                         put_forwards: a.ext.value_str("PutForwards").map(str::to_string),
                         replaceable: a.ext.has("Replaceable"),
                         stringifier: a.stringifier,
@@ -795,6 +805,7 @@ impl<'a> Planner<'a> {
                     ops: Vec::new(),
                     exotic: None,
                     iterable: None,
+                    setlike: None,
                     stringifier: None,
                     trait_members: traits,
                 });
@@ -963,9 +974,18 @@ impl<'a> Planner<'a> {
             }
 
             let mut iterable = None;
+            let mut setlike = None;
             let mut stringifier = None;
             for m in &def.members {
                 match m {
+                    Member::Setlike { value, .. } => {
+                        let value = self.idl.resolve(value);
+                        self.note(&value);
+                        traits.push(TraitMember::SetValues {
+                            value: value.clone(),
+                        });
+                        setlike = Some(value);
+                    }
                     Member::Iterable { key, value } => {
                         let value = self.idl.resolve(value);
                         let key = key.as_ref().map(|k| self.idl.resolve(k));
@@ -1011,6 +1031,7 @@ impl<'a> Planner<'a> {
                 ops,
                 exotic,
                 iterable,
+                setlike,
                 stringifier,
                 trait_members: traits,
             });
@@ -1032,6 +1053,7 @@ impl<'a> Planner<'a> {
                 ops,
                 exotic: None,
                 iterable: None,
+                setlike: None,
                 stringifier: None,
                 trait_members: traits,
             });
