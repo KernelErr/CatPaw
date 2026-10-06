@@ -1017,3 +1017,64 @@ fn svg_elements_have_their_interfaces() {
         assert_eq!(eval(&mut page, source), expected, "{source}");
     }
 }
+
+#[test]
+fn hyperlinks_take_their_urls_apart() {
+    let mut page = load(
+        r##"<body><a id="a" href="../docs/guide.html?q=1#top">The <b>guide</b></a>
+<a id="abs" href="https://user:pw@other.test:8443/p/a/t/h?x=y#z">x</a><a id="none">n</a>
+<script>
+  var a = document.getElementById('a'), abs = document.getElementById('abs'), none = document.getElementById('none');
+</script>"##,
+    );
+    for (source, expected) in [
+        ("a.href", "https://example.test/docs/guide.html?q=1#top"),
+        ("String(a)", "https://example.test/docs/guide.html?q=1#top"),
+        (
+            "[a.protocol, a.host, a.hostname, a.port, a.pathname, a.search, a.hash, a.origin].join(' ')",
+            "https: example.test example.test  /docs/guide.html ?q=1 #top https://example.test",
+        ),
+        (
+            "[abs.username, abs.password, abs.host, abs.hostname, abs.port, abs.pathname].join(' ')",
+            "user pw other.test:8443 other.test 8443 /p/a/t/h",
+        ),
+        // Without an `href` there is no URL.
+        (
+            "[none.href, none.protocol, none.host, none.pathname, none.search, none.hash, none.origin].join('|')",
+            "|:|||||",
+        ),
+        ("none.pathname = '/x'; none.hasAttribute('href')", "false"),
+        // Writes go back to the attribute, as an absolute URL.
+        (
+            "a.pathname = '/api/'; a.getAttribute('href')",
+            "https://example.test/api/?q=1#top",
+        ),
+        (
+            "a.search = 'r=2'; a.hash = ''; a.href",
+            "https://example.test/api/?r=2",
+        ),
+        (
+            "a.hostname = 'docs.test'; a.port = '8080'; a.protocol = 'http'; a.href",
+            "http://docs.test:8080/api/?r=2",
+        ),
+        (
+            "a.host = 'h.test:1'; a.username = 'u'; a.password = 'p'; a.href",
+            "http://u:p@h.test:1/api/?r=2",
+        ),
+        (
+            "a.setAttribute('href', '#frag'); a.hash + ' ' + a.pathname",
+            "#frag /dir/page.html",
+        ),
+        ("a.text + '|' + abs.text", "The guide|x"),
+        (
+            "a.text = 'new <text>'; a.innerHTML + ' ' + a.childNodes.length",
+            "new &lt;text&gt; 1",
+        ),
+        (
+            "a.target = '_blank'; a.rel = 'noopener'; a.getAttribute('target') + ' ' + a.relList.contains('noopener')",
+            "_blank true",
+        ),
+    ] {
+        assert_eq!(eval(&mut page, source), expected, "{source}");
+    }
+}

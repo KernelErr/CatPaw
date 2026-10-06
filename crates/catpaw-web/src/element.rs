@@ -1591,6 +1591,19 @@ impl web::HTMLTitleElementImpl for Web {
     }
 }
 
+impl web::HTMLAnchorElementImpl for Web {
+    fn text(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {
+        node::check(cx, this)?;
+        Ok(cx.dom().text_content(this))
+    }
+
+    fn set_text(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()> {
+        node::check(cx, this)?;
+        node::string_replace_all(cx, &value, this);
+        Ok(())
+    }
+}
+
 impl web::HTMLTemplateElementImpl for Web {
     fn content(cx: &mut Cx<'_>, this: NodeId) -> Fallible<NodeId> {
         with_element(cx, this, |el| el.template_contents)?.ok_or_else(stale)

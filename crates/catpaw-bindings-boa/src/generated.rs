@@ -27877,6 +27877,24 @@ pub mod html_anchor_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_text(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLAnchorElementImpl>::text(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_text(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLAnchorElementImpl>::set_text(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
     fn get_coords(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -27956,6 +27974,176 @@ pub mod html_anchor_element {
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
             catpaw_web::reflect::set_string(cx, this, "shape", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_origin(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::origin(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_protocol(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::protocol(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_protocol(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_protocol(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_username(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::username(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_username(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_username(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_password(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::password(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_password(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_password(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_host(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::host(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_host(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_host(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_hostname(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::hostname(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_hostname(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_hostname(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_port(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::port(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_port(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_port(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_pathname(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::pathname(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_pathname(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_pathname(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_search(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::search(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_search(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_search(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_hash(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::hash(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_hash(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLAnchorElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_hash(cx, this, a0)
         });
         rt::ret(r, ctx)?;
         Ok(JsValue::undefined())
@@ -28058,6 +28246,11 @@ pub mod html_anchor_element {
                 setter: Some(set_rel_list),
             },
             rt::AttrDef {
+                name: "text",
+                getter: get_text,
+                setter: Some(set_text),
+            },
+            rt::AttrDef {
                 name: "coords",
                 getter: get_coords,
                 setter: Some(set_coords),
@@ -28081,6 +28274,56 @@ pub mod html_anchor_element {
                 name: "shape",
                 getter: get_shape,
                 setter: Some(set_shape),
+            },
+            rt::AttrDef {
+                name: "origin",
+                getter: get_origin,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "protocol",
+                getter: get_protocol,
+                setter: Some(set_protocol),
+            },
+            rt::AttrDef {
+                name: "username",
+                getter: get_username,
+                setter: Some(set_username),
+            },
+            rt::AttrDef {
+                name: "password",
+                getter: get_password,
+                setter: Some(set_password),
+            },
+            rt::AttrDef {
+                name: "host",
+                getter: get_host,
+                setter: Some(set_host),
+            },
+            rt::AttrDef {
+                name: "hostname",
+                getter: get_hostname,
+                setter: Some(set_hostname),
+            },
+            rt::AttrDef {
+                name: "port",
+                getter: get_port,
+                setter: Some(set_port),
+            },
+            rt::AttrDef {
+                name: "pathname",
+                getter: get_pathname,
+                setter: Some(set_pathname),
+            },
+            rt::AttrDef {
+                name: "search",
+                getter: get_search,
+                setter: Some(set_search),
+            },
+            rt::AttrDef {
+                name: "hash",
+                getter: get_hash,
+                setter: Some(set_hash),
             },
             rt::AttrDef {
                 name: "hreflang",
@@ -29183,6 +29426,176 @@ pub mod svga_element {
         Ok(v)
     }
 
+    fn get_origin(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::origin(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_protocol(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::protocol(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_protocol(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_protocol(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_username(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::username(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_username(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_username(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_password(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::password(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_password(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_password(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_host(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::host(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_host(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_host(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_hostname(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::hostname(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_hostname(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_hostname(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_port(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::port(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_port(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_port(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_pathname(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::pathname(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_pathname(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_pathname(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_search(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::search(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_search(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_search(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_hash(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::hash(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_hash(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HyperlinkElementUtilsImpl>::set_hash(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
     fn get_hreflang(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -29249,6 +29662,56 @@ pub mod svga_element {
                 name: "href",
                 getter: get_href,
                 setter: None,
+            },
+            rt::AttrDef {
+                name: "origin",
+                getter: get_origin,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "protocol",
+                getter: get_protocol,
+                setter: Some(set_protocol),
+            },
+            rt::AttrDef {
+                name: "username",
+                getter: get_username,
+                setter: Some(set_username),
+            },
+            rt::AttrDef {
+                name: "password",
+                getter: get_password,
+                setter: Some(set_password),
+            },
+            rt::AttrDef {
+                name: "host",
+                getter: get_host,
+                setter: Some(set_host),
+            },
+            rt::AttrDef {
+                name: "hostname",
+                getter: get_hostname,
+                setter: Some(set_hostname),
+            },
+            rt::AttrDef {
+                name: "port",
+                getter: get_port,
+                setter: Some(set_port),
+            },
+            rt::AttrDef {
+                name: "pathname",
+                getter: get_pathname,
+                setter: Some(set_pathname),
+            },
+            rt::AttrDef {
+                name: "search",
+                getter: get_search,
+                setter: Some(set_search),
+            },
+            rt::AttrDef {
+                name: "hash",
+                getter: get_hash,
+                setter: Some(set_hash),
             },
             rt::AttrDef {
                 name: "hreflang",

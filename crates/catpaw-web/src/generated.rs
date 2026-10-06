@@ -1650,6 +1650,28 @@ pub trait HTMLOrSVGOrMathMLElementImpl {
     fn blur(cx: &mut Cx<'_>, this: NodeId) -> Fallible<()>;
 }
 
+pub trait HyperlinkElementUtilsImpl {
+    fn origin(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn protocol(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_protocol(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+    fn username(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_username(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+    fn password(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_password(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+    fn host(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_host(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+    fn hostname(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_hostname(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+    fn port(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_port(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+    fn pathname(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_pathname(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+    fn search(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_search(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+    fn hash(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_hash(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+}
+
 pub trait NavigatorAutomationInformationImpl {
     fn webdriver(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
 }
@@ -2812,6 +2834,11 @@ pub trait XMLHttpRequestImpl {
     fn response(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
     fn response_text(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
     fn constructor(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
+}
+
+pub trait HTMLAnchorElementImpl {
+    fn text(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_text(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
 }
 
 pub trait consoleImpl {

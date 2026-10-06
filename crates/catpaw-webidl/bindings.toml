@@ -243,6 +243,14 @@ members = ["dataset", "focus", "blur"]
 [interfaces.HTMLParagraphElement]
 [interfaces.HTMLHeadingElement]
 [interfaces.HTMLAnchorElement]
+members = ["text"]
+
+[mixins.HyperlinkElementUtils]
+members = [
+  "origin", "protocol", "username", "password", "host", "hostname", "port", "pathname",
+  "search", "hash",
+]
+
 [interfaces.HTMLImageElement]
 [interfaces.HTMLStyleElement]
 [interfaces.HTMLLinkElement]

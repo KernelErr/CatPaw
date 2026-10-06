@@ -27,6 +27,7 @@ mod fetch;
 pub mod generated;
 mod history;
 pub mod html_names;
+mod hyperlink;
 mod implementation;
 mod intersection_observer;
 mod media;

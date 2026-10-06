@@ -29,6 +29,17 @@ const DOCUMENT_POSITION_CONTAINED_BY: u16 = 0x10;
 const DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC: u16 = 0x20;
 
 /// The qualified name of an element (`prefix:local`).
+/// The URL that relative URLs in `node` are resolved against: the base URL
+/// of its document. `None` for a document without a URL.
+pub(crate) fn base_url(cx: &Cx<'_>, node: NodeId) -> Option<url::Url> {
+    let dom = cx.dom();
+    let document = dom.owner_document(node);
+    if document == dom.document() {
+        return Some(cx.page.base_url());
+    }
+    dom.document_data_of(document).and_then(|d| d.url.clone())
+}
+
 /// Whether `node`'s document is an HTML document (rather than an XML one).
 pub(crate) fn in_html_document(dom: &Dom, node: NodeId) -> bool {
     crate::document::is_html_document(dom, dom.owner_document(node))
@@ -635,13 +646,7 @@ impl web::NodeImpl for Web {
 
     fn base_uri(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {
         check(cx, this)?;
-        let dom = cx.dom();
-        let document = dom.owner_document(this);
-        if document == dom.document() {
-            return Ok(cx.page.base_url().to_string());
-        }
-        let url = dom.document_data_of(document).and_then(|d| d.url.as_ref());
-        Ok(url.map_or_else(|| "about:blank".to_string(), ToString::to_string))
+        Ok(base_url(cx, this).map_or_else(|| "about:blank".to_string(), |url| url.to_string()))
     }
 
     fn is_connected(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool> {
