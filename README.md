@@ -16,12 +16,15 @@ isolated contexts.
 > M1 so far, behind `catpaw fetch --js`: classic scripts (inline, external,
 > `defer`, `async`, script-inserted, `document.write`) and module scripts
 > (static and dynamic imports, import maps) run interleaved with the parser
-> on Boa, against bindings generated from Web IDL for the core DOM,
-> events, mutation observers, timers, history, inline and computed styles
-> (style sheets are fetched and cascaded by Stylo), `fetch`/`XMLHttpRequest`
-> (with CORS enforced), `URL`, storage, encoding and console APIs, on an
-> event loop with virtual time. Not there yet: layout, streams, and much of the HTML
-> element API surface.
+> on Boa, against bindings generated from Web IDL for the core DOM (every
+> HTML and SVG element interface, attributes, traversal, `DOMParser`,
+> `document.implementation`), custom elements, events, mutation,
+> intersection and performance observers, timers, history, inline and
+> computed styles (style sheets are fetched and cascaded by Stylo),
+> `fetch`/`XMLHttpRequest` (with CORS enforced), `URL`, storage, encoding,
+> `crypto.getRandomValues` and console APIs, on an event loop with virtual
+> time. Not there yet: layout, streams, shadow DOM, workers, and the members
+> of HTML elements that go beyond their attributes.
 >
 > What works without JavaScript: HTTP/1.1 and HTTP/2 over rustls,
 > redirects, cookies, gzip/brotli/zstd, encoding sniffing, Web Bot Auth
