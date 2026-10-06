@@ -9,6 +9,7 @@
 pub mod arena;
 pub mod html;
 pub mod serialize;
+pub mod xpath;
 
 pub use arena::{
     Attr, CustomElementState, DoctypeData, DocumentData, Dom, ElementData, FragmentKind, Node,

@@ -54,6 +54,7 @@ mod traversal;
 mod url_api;
 mod window;
 mod xhr;
+mod xpath;
 
 pub use element::interface_for_node;
 pub use generated::InterfaceId;

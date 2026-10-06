@@ -98,7 +98,8 @@ members = [
   "parentNode", "parentElement", "hasChildNodes", "childNodes", "firstChild", "lastChild",
   "previousSibling", "nextSibling", "nodeValue", "textContent", "normalize", "cloneNode",
   "isEqualNode", "isSameNode", "compareDocumentPosition", "contains", "insertBefore",
-  "appendChild", "replaceChild", "removeChild",
+  "appendChild", "replaceChild", "removeChild", "lookupPrefix", "lookupNamespaceURI",
+  "isDefaultNamespace",
 ]
 
 [interfaces.Document]
@@ -113,6 +114,24 @@ members = [
   "createAttribute", "createAttributeNS", "createNodeIterator", "createTreeWalker", "domain",
   "scrollingElement",
 ]
+
+# XPath 1.0 (`catpaw_dom::xpath`). Node results may be attributes, which are
+# platform objects rather than arena nodes, hence `any_return`.
+[mixins.XPathEvaluatorBase]
+members = ["createExpression", "createNSResolver", "evaluate"]
+
+[interfaces.XPathEvaluator]
+constructor = true
+
+[interfaces.XPathExpression]
+members = ["evaluate"]
+
+[interfaces.XPathResult]
+members = [
+  "resultType", "numberValue", "stringValue", "booleanValue", "singleNodeValue",
+  "invalidIteratorState", "snapshotLength", "iterateNext", "snapshotItem",
+]
+any_return = ["singleNodeValue", "iterateNext", "snapshotItem"]
 
 [interfaces.XMLDocument]
 

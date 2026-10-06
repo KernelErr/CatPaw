@@ -85,6 +85,9 @@ pub enum InterfaceId {
     WritableStreamDefaultWriter,
     XMLHttpRequestEventTarget,
     XMLHttpRequestUpload,
+    XPathEvaluator,
+    XPathExpression,
+    XPathResult,
     AbortSignal,
     Attr,
     CharacterData,
@@ -211,8 +214,8 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 186;
-    pub const ALL: [InterfaceId; 186] = [
+    pub const COUNT: usize = 189;
+    pub const ALL: [InterfaceId; 189] = [
         InterfaceId::AbortController,
         InterfaceId::CSSStyleDeclaration,
         InterfaceId::CSSStyleProperties,
@@ -276,6 +279,9 @@ impl InterfaceId {
         InterfaceId::WritableStreamDefaultWriter,
         InterfaceId::XMLHttpRequestEventTarget,
         InterfaceId::XMLHttpRequestUpload,
+        InterfaceId::XPathEvaluator,
+        InterfaceId::XPathExpression,
+        InterfaceId::XPathResult,
         InterfaceId::AbortSignal,
         InterfaceId::Attr,
         InterfaceId::CharacterData,
@@ -466,6 +472,9 @@ impl InterfaceId {
             InterfaceId::WritableStreamDefaultWriter => "WritableStreamDefaultWriter",
             InterfaceId::XMLHttpRequestEventTarget => "XMLHttpRequestEventTarget",
             InterfaceId::XMLHttpRequestUpload => "XMLHttpRequestUpload",
+            InterfaceId::XPathEvaluator => "XPathEvaluator",
+            InterfaceId::XPathExpression => "XPathExpression",
+            InterfaceId::XPathResult => "XPathResult",
             InterfaceId::AbortSignal => "AbortSignal",
             InterfaceId::Attr => "Attr",
             InterfaceId::CharacterData => "CharacterData",
@@ -657,6 +666,9 @@ impl InterfaceId {
             "WritableStreamDefaultWriter" => InterfaceId::WritableStreamDefaultWriter,
             "XMLHttpRequestEventTarget" => InterfaceId::XMLHttpRequestEventTarget,
             "XMLHttpRequestUpload" => InterfaceId::XMLHttpRequestUpload,
+            "XPathEvaluator" => InterfaceId::XPathEvaluator,
+            "XPathExpression" => InterfaceId::XPathExpression,
+            "XPathResult" => InterfaceId::XPathResult,
             "AbortSignal" => InterfaceId::AbortSignal,
             "Attr" => InterfaceId::Attr,
             "CharacterData" => InterfaceId::CharacterData,
@@ -849,6 +861,9 @@ impl InterfaceId {
             InterfaceId::WritableStreamDefaultWriter => None,
             InterfaceId::XMLHttpRequestEventTarget => Some(InterfaceId::EventTarget),
             InterfaceId::XMLHttpRequestUpload => Some(InterfaceId::XMLHttpRequestEventTarget),
+            InterfaceId::XPathEvaluator => None,
+            InterfaceId::XPathExpression => None,
+            InterfaceId::XPathResult => None,
             InterfaceId::AbortSignal => Some(InterfaceId::EventTarget),
             InterfaceId::Attr => Some(InterfaceId::Node),
             InterfaceId::CharacterData => Some(InterfaceId::Node),
@@ -2382,6 +2397,49 @@ pub trait WindowSessionStorageImpl {
     fn session_storage(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
 }
 
+pub trait XPathEvaluatorBaseForNodeImpl {
+    fn create_expression(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        expression: String,
+        resolver: Option<Callback>,
+    ) -> Fallible<ObjectId>;
+    fn create_ns_resolver(cx: &mut Cx<'_>, this: NodeId, node_resolver: NodeId)
+    -> Fallible<NodeId>;
+    fn evaluate(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        expression: String,
+        context_node: NodeId,
+        resolver: Option<Callback>,
+        type_: u16,
+        result: Option<ObjectId>,
+    ) -> Fallible<ObjectId>;
+}
+
+pub trait XPathEvaluatorBaseForObjectImpl {
+    fn create_expression(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        expression: String,
+        resolver: Option<Callback>,
+    ) -> Fallible<ObjectId>;
+    fn create_ns_resolver(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        node_resolver: NodeId,
+    ) -> Fallible<NodeId>;
+    fn evaluate(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        expression: String,
+        context_node: NodeId,
+        resolver: Option<Callback>,
+        type_: u16,
+        result: Option<ObjectId>,
+    ) -> Fallible<ObjectId>;
+}
+
 pub trait AbortControllerImpl {
     fn signal(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
     fn abort(cx: &mut Cx<'_>, this: ObjectId, reason: Value) -> Fallible<()>;
@@ -2822,6 +2880,21 @@ pub trait NodeImpl {
     fn is_same_node(cx: &mut Cx<'_>, this: NodeId, other_node: Option<NodeId>) -> Fallible<bool>;
     fn compare_document_position(cx: &mut Cx<'_>, this: NodeId, other: NodeId) -> Fallible<u16>;
     fn contains(cx: &mut Cx<'_>, this: NodeId, other: Option<NodeId>) -> Fallible<bool>;
+    fn lookup_prefix(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        namespace: Option<String>,
+    ) -> Fallible<Option<String>>;
+    fn lookup_namespace_uri(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        prefix: Option<String>,
+    ) -> Fallible<Option<String>>;
+    fn is_default_namespace(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        namespace: Option<String>,
+    ) -> Fallible<bool>;
     fn insert_before(
         cx: &mut Cx<'_>,
         this: NodeId,
@@ -3314,6 +3387,32 @@ pub trait WritableStreamDefaultWriterImpl {
     fn release_lock(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
     fn write(cx: &mut Cx<'_>, this: ObjectId, chunk: Value) -> Fallible<PromiseRef>;
     fn constructor(cx: &mut Cx<'_>, stream: ObjectId) -> Fallible<ObjectId>;
+}
+
+pub trait XPathEvaluatorImpl {
+    fn constructor(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
+}
+
+pub trait XPathExpressionImpl {
+    fn evaluate(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        context_node: NodeId,
+        type_: u16,
+        result: Option<ObjectId>,
+    ) -> Fallible<ObjectId>;
+}
+
+pub trait XPathResultImpl {
+    fn result_type(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u16>;
+    fn number_value(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn string_value(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn boolean_value(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn single_node_value(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
+    fn invalid_iterator_state(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn snapshot_length(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn iterate_next(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
+    fn snapshot_item(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Value>;
 }
 
 pub trait AbortSignalImpl {

@@ -627,6 +627,56 @@ fn viable_sibling(
 
 // ---------------------------------------------------------------- bindings
 
+/// <https://dom.spec.whatwg.org/#locate-a-namespace>
+fn locate_namespace(dom: &Dom, node: NodeId, prefix: Option<&str>) -> Option<String> {
+    match dom.kind(node) {
+        NodeKind::Element(el) => {
+            if !el.name.ns.is_empty() && el.name.prefix.as_deref() == prefix {
+                return Some(el.name.ns.to_string());
+            }
+            let declared = el.attrs.iter().find(|a| {
+                a.name.ns == catpaw_dom::ns!(xmlns)
+                    && match prefix {
+                        Some(p) => a.name.prefix.as_deref() == Some("xmlns") && &*a.name.local == p,
+                        None => a.name.prefix.is_none() && &*a.name.local == "xmlns",
+                    }
+            });
+            if let Some(attr) = declared {
+                return (!attr.value.is_empty()).then(|| attr.value.clone());
+            }
+            dom.parent_element(node)
+                .and_then(|p| locate_namespace(dom, p, prefix))
+        }
+        NodeKind::Document(_) => dom
+            .child_elements(node)
+            .next()
+            .and_then(|e| locate_namespace(dom, e, prefix)),
+        NodeKind::Doctype(_) | NodeKind::DocumentFragment(_) => None,
+        _ => dom
+            .parent_element(node)
+            .and_then(|p| locate_namespace(dom, p, prefix)),
+    }
+}
+
+/// <https://dom.spec.whatwg.org/#locate-a-namespace-prefix>
+fn locate_namespace_prefix(dom: &Dom, element: NodeId, namespace: &str) -> Option<String> {
+    let el = dom.element(element)?;
+    if &*el.name.ns == namespace
+        && let Some(prefix) = &el.name.prefix
+    {
+        return Some(prefix.to_string());
+    }
+    if let Some(attr) = el.attrs.iter().find(|a| {
+        a.name.ns == catpaw_dom::ns!(xmlns)
+            && a.name.prefix.as_deref() == Some("xmlns")
+            && a.value == namespace
+    }) {
+        return Some(attr.name.local.to_string());
+    }
+    dom.parent_element(element)
+        .and_then(|p| locate_namespace_prefix(dom, p, namespace))
+}
+
 impl web::NodeImpl for Web {
     fn node_type(cx: &mut Cx<'_>, this: NodeId) -> Fallible<u16> {
         check(cx, this)?;
@@ -827,6 +877,42 @@ impl web::NodeImpl for Web {
 
     fn is_same_node(_cx: &mut Cx<'_>, this: NodeId, other_node: Option<NodeId>) -> Fallible<bool> {
         Ok(other_node == Some(this))
+    }
+
+    fn lookup_prefix(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        namespace: Option<String>,
+    ) -> Fallible<Option<String>> {
+        let Some(namespace) = namespace.filter(|n| !n.is_empty()) else {
+            return Ok(None);
+        };
+        let dom = cx.dom();
+        let element = match dom.kind(this) {
+            NodeKind::Element(_) => Some(this),
+            NodeKind::Document(_) => dom.child_elements(this).next(),
+            NodeKind::Doctype(_) | NodeKind::DocumentFragment(_) => None,
+            _ => dom.parent_element(this),
+        };
+        Ok(element.and_then(|e| locate_namespace_prefix(&dom, e, &namespace)))
+    }
+
+    fn lookup_namespace_uri(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        prefix: Option<String>,
+    ) -> Fallible<Option<String>> {
+        let prefix = prefix.filter(|p| !p.is_empty());
+        Ok(locate_namespace(&cx.dom(), this, prefix.as_deref()))
+    }
+
+    fn is_default_namespace(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        namespace: Option<String>,
+    ) -> Fallible<bool> {
+        let namespace = namespace.filter(|n| !n.is_empty());
+        Ok(locate_namespace(&cx.dom(), this, None) == namespace)
     }
 
     fn compare_document_position(cx: &mut Cx<'_>, this: NodeId, other: NodeId) -> Fallible<u16> {

@@ -6463,6 +6463,63 @@ pub mod node {
         rt::ret(r, ctx)
     }
 
+    fn op_lookup_prefix(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Node, ctx)?;
+        rt::require_args(args, 1, "Node.lookupPrefix")?;
+        let a0 = if rt::arg(args, 0).is_null_or_undefined() {
+            None
+        } else {
+            Some(rt::string_from_js(rt::arg(args, 0), ctx)?)
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NodeImpl>::lookup_prefix(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_lookup_namespace_uri(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Node, ctx)?;
+        rt::require_args(args, 1, "Node.lookupNamespaceURI")?;
+        let a0 = if rt::arg(args, 0).is_null_or_undefined() {
+            None
+        } else {
+            Some(rt::string_from_js(rt::arg(args, 0), ctx)?)
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NodeImpl>::lookup_namespace_uri(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_is_default_namespace(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Node, ctx)?;
+        rt::require_args(args, 1, "Node.isDefaultNamespace")?;
+        let a0 = if rt::arg(args, 0).is_null_or_undefined() {
+            None
+        } else {
+            Some(rt::string_from_js(rt::arg(args, 0), ctx)?)
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NodeImpl>::is_default_namespace(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn op_insert_before(
         this_js: &JsValue,
         args: &[JsValue],
@@ -6675,6 +6732,21 @@ pub mod node {
             rt::OpDef {
                 name: "contains",
                 func: op_contains,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "lookupPrefix",
+                func: op_lookup_prefix,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "lookupNamespaceURI",
+                func: op_lookup_namespace_uri,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "isDefaultNamespace",
+                func: op_is_default_namespace,
                 length: 1,
             },
             rt::OpDef {
@@ -14877,6 +14949,370 @@ pub mod xml_http_request_upload {
     };
 }
 
+pub mod x_path_evaluator {
+    use super::*;
+
+    fn op_create_expression(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::XPathEvaluator, ctx)?;
+        rt::require_args(args, 1, "XPathEvaluator.createExpression")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            if rt::arg(args, 1).is_null_or_undefined() {
+                None
+            } else {
+                Some(rt::callback_from_js(
+                    rt::arg(args, 1),
+                    CallbackKind::Interface("lookupNamespaceURI"),
+                    ctx,
+                )?)
+            }
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XPathEvaluatorBaseForObjectImpl>::create_expression(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_create_ns_resolver(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::XPathEvaluator, ctx)?;
+        rt::require_args(args, 1, "XPathEvaluator.createNSResolver")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XPathEvaluatorBaseForObjectImpl>::create_ns_resolver(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_evaluate(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::XPathEvaluator, ctx)?;
+        rt::require_args(args, 2, "XPathEvaluator.evaluate")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::node_from_js(rt::arg(args, 1), I::Node, ctx)?;
+        let a2 = if args.len() > 2 && !args[2].is_undefined() {
+            if rt::arg(args, 2).is_null_or_undefined() {
+                None
+            } else {
+                Some(rt::callback_from_js(
+                    rt::arg(args, 2),
+                    CallbackKind::Interface("lookupNamespaceURI"),
+                    ctx,
+                )?)
+            }
+        } else {
+            None
+        };
+        let a3 = if args.len() > 3 && !args[3].is_undefined() {
+            rt::arg(args, 3).to_uint16(ctx)?
+        } else {
+            (0) as u16
+        };
+        let a4 = if args.len() > 4 && !args[4].is_undefined() {
+            if rt::arg(args, 4).is_null_or_undefined() {
+                None
+            } else {
+                Some(rt::object_from_js(rt::arg(args, 4), I::XPathResult, ctx)?)
+            }
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XPathEvaluatorBaseForObjectImpl>::evaluate(cx, this, a0, a1, a2, a3, a4)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "XPathEvaluator")?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::XPathEvaluatorImpl>::constructor(cx));
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::XPathEvaluator, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::XPathEvaluator,
+        name: "XPathEvaluator",
+        parent: None,
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[
+            rt::OpDef {
+                name: "createExpression",
+                func: op_create_expression,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "createNSResolver",
+                func: op_create_ns_resolver,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "evaluate",
+                func: op_evaluate,
+                length: 2,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod x_path_expression {
+    use super::*;
+
+    fn op_evaluate(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::XPathExpression, ctx)?;
+        rt::require_args(args, 1, "XPathExpression.evaluate")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            rt::arg(args, 1).to_uint16(ctx)?
+        } else {
+            (0) as u16
+        };
+        let a2 = if args.len() > 2 && !args[2].is_undefined() {
+            if rt::arg(args, 2).is_null_or_undefined() {
+                None
+            } else {
+                Some(rt::object_from_js(rt::arg(args, 2), I::XPathResult, ctx)?)
+            }
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XPathExpressionImpl>::evaluate(cx, this, a0, a1, a2)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::XPathExpression,
+        name: "XPathExpression",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[rt::OpDef {
+            name: "evaluate",
+            func: op_evaluate,
+            length: 1,
+        }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod x_path_result {
+    use super::*;
+
+    fn get_result_type(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XPathResult, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XPathResultImpl>::result_type(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_number_value(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XPathResult, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XPathResultImpl>::number_value(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_string_value(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XPathResult, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XPathResultImpl>::string_value(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_boolean_value(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XPathResult, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XPathResultImpl>::boolean_value(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_single_node_value(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XPathResult, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XPathResultImpl>::single_node_value(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_invalid_iterator_state(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XPathResult, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XPathResultImpl>::invalid_iterator_state(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_snapshot_length(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XPathResult, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XPathResultImpl>::snapshot_length(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_iterate_next(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::XPathResult, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XPathResultImpl>::iterate_next(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_snapshot_item(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::XPathResult, ctx)?;
+        rt::require_args(args, 1, "XPathResult.snapshotItem")?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XPathResultImpl>::snapshot_item(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::XPathResult,
+        name: "XPathResult",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "resultType",
+                getter: get_result_type,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "numberValue",
+                getter: get_number_value,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "stringValue",
+                getter: get_string_value,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "booleanValue",
+                getter: get_boolean_value,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "singleNodeValue",
+                getter: get_single_node_value,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "invalidIteratorState",
+                getter: get_invalid_iterator_state,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "snapshotLength",
+                getter: get_snapshot_length,
+                setter: None,
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "iterateNext",
+                func: op_iterate_next,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "snapshotItem",
+                func: op_snapshot_item,
+                length: 1,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[
+            ("ANY_TYPE", 0_f64),
+            ("NUMBER_TYPE", 1_f64),
+            ("STRING_TYPE", 2_f64),
+            ("BOOLEAN_TYPE", 3_f64),
+            ("UNORDERED_NODE_ITERATOR_TYPE", 4_f64),
+            ("ORDERED_NODE_ITERATOR_TYPE", 5_f64),
+            ("UNORDERED_NODE_SNAPSHOT_TYPE", 6_f64),
+            ("ORDERED_NODE_SNAPSHOT_TYPE", 7_f64),
+            ("ANY_UNORDERED_NODE_TYPE", 8_f64),
+            ("FIRST_ORDERED_NODE_TYPE", 9_f64),
+        ],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod abort_signal {
     use super::*;
 
@@ -18371,6 +18807,88 @@ pub mod document {
         rt::ret(r, ctx)
     }
 
+    fn op_create_expression(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        rt::require_args(args, 1, "Document.createExpression")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            if rt::arg(args, 1).is_null_or_undefined() {
+                None
+            } else {
+                Some(rt::callback_from_js(
+                    rt::arg(args, 1),
+                    CallbackKind::Interface("lookupNamespaceURI"),
+                    ctx,
+                )?)
+            }
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XPathEvaluatorBaseForNodeImpl>::create_expression(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_create_ns_resolver(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        rt::require_args(args, 1, "Document.createNSResolver")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XPathEvaluatorBaseForNodeImpl>::create_ns_resolver(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_evaluate(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        rt::require_args(args, 2, "Document.evaluate")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::node_from_js(rt::arg(args, 1), I::Node, ctx)?;
+        let a2 = if args.len() > 2 && !args[2].is_undefined() {
+            if rt::arg(args, 2).is_null_or_undefined() {
+                None
+            } else {
+                Some(rt::callback_from_js(
+                    rt::arg(args, 2),
+                    CallbackKind::Interface("lookupNamespaceURI"),
+                    ctx,
+                )?)
+            }
+        } else {
+            None
+        };
+        let a3 = if args.len() > 3 && !args[3].is_undefined() {
+            rt::arg(args, 3).to_uint16(ctx)?
+        } else {
+            (0) as u16
+        };
+        let a4 = if args.len() > 4 && !args[4].is_undefined() {
+            if rt::arg(args, 4).is_null_or_undefined() {
+                None
+            } else {
+                Some(rt::object_from_js(rt::arg(args, 4), I::XPathResult, ctx)?)
+            }
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XPathEvaluatorBaseForNodeImpl>::evaluate(cx, this, a0, a1, a2, a3, a4)
+        });
+        rt::ret(r, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::Document,
         name: "Document",
@@ -19045,6 +19563,21 @@ pub mod document {
                 name: "querySelectorAll",
                 func: op_query_selector_all,
                 length: 1,
+            },
+            rt::OpDef {
+                name: "createExpression",
+                func: op_create_expression,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "createNSResolver",
+                func: op_create_ns_resolver,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "evaluate",
+                func: op_evaluate,
+                length: 2,
             },
         ],
         static_attrs: &[],
@@ -42030,6 +42563,9 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &writable_stream_default_writer::DEF,
     &xml_http_request_event_target::DEF,
     &xml_http_request_upload::DEF,
+    &x_path_evaluator::DEF,
+    &x_path_expression::DEF,
+    &x_path_result::DEF,
     &abort_signal::DEF,
     &attr::DEF,
     &character_data::DEF,

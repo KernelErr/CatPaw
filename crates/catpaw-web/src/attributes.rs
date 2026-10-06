@@ -77,7 +77,7 @@ fn find_by_name<'a>(dom: &'a Dom, element: NodeId, qualified_name: &str) -> Opti
 }
 
 /// The object that stands for `attr`, an attribute of `element`.
-fn object_for(page: &PageState, dom: &Dom, element: NodeId, attr: &Attr) -> ObjectId {
+pub(crate) fn object_for(page: &PageState, dom: &Dom, element: NodeId, attr: &Attr) -> ObjectId {
     let key = (
         element,
         attr.name.ns.to_string(),

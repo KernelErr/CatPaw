@@ -29,6 +29,9 @@ pub struct MemberCfg {
     /// Attributes whose value is cached on the wrapper after the first read,
     /// as if the IDL said `[SameObject]`.
     pub same_object: Vec<String>,
+    /// Members whose IDL return type is replaced by `any`: for `Node`
+    /// results that may be attributes, which are platform objects here.
+    pub any_return: Vec<String>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -50,7 +53,15 @@ impl Manifest {
 }
 
 /// How the receiver of a member is represented in implementations.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Attributes, operations, the trait members they need, and constants.
+type Members = (
+    Vec<PAttr>,
+    Vec<POp>,
+    Vec<TraitMember>,
+    Vec<(String, ConstValue)>,
+);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Handle {
     Node,
     Object,
@@ -589,17 +600,18 @@ impl<'a> Planner<'a> {
 
     /// Plans the members declared by one interface, mixin or namespace.
     /// Returns attributes, operations and the trait members they need.
-    #[allow(clippy::type_complexity)]
-    fn members(
+    fn members(&mut self, owner: &str, cfg: Option<&MemberCfg>) -> Result<Members> {
+        self.members_owned_by(owner, owner, cfg)
+    }
+
+    /// The members of `owner`, with their trait named `trait_owner` (a
+    /// mixin split by handle kind has one trait per kind).
+    fn members_owned_by(
         &mut self,
         owner: &str,
+        trait_owner: &str,
         cfg: Option<&MemberCfg>,
-    ) -> Result<(
-        Vec<PAttr>,
-        Vec<POp>,
-        Vec<TraitMember>,
-        Vec<(String, ConstValue)>,
-    )> {
+    ) -> Result<Members> {
         let Some(def) = self.idl.interfaces.get(owner) else {
             bail!("manifest names `{owner}`, which is not defined in the IDL corpus");
         };
@@ -619,7 +631,11 @@ impl<'a> Planner<'a> {
             match m {
                 Member::Const { name, value, .. } => consts.push((name.clone(), value.clone())),
                 Member::Attribute(a) => {
-                    let resolved = self.idl.resolve(&a.ty);
+                    let resolved = if cfg.any_return.iter().any(|n| n == &a.name) {
+                        Type::Any
+                    } else {
+                        self.idl.resolve(&a.ty)
+                    };
                     let ty = self.prune(&resolved).unwrap_or(resolved);
                     let rust = snake(&a.name);
                     let kind = if native.contains(a.name.as_str()) {
@@ -668,7 +684,7 @@ impl<'a> Planner<'a> {
                         stringifier: a.stringifier,
                         undefined_when_absent: matches!(&a.ty, Type::Union(ms)
                             if ms.iter().any(|m| matches!(m, Type::Named(n) if n == "undefined"))),
-                        owner: owner.to_string(),
+                        owner: trait_owner.to_string(),
                         ce_reactions: a.ext.has("CEReactions"),
                     });
                 }
@@ -692,7 +708,13 @@ impl<'a> Planner<'a> {
                             index + 1
                         )
                     };
-                    let Some(overload) = self.overload(rust, &o.args, &o.ret) else {
+                    let any = Type::Any;
+                    let ret = if cfg.any_return.iter().any(|n| n == name) {
+                        &any
+                    } else {
+                        &o.ret
+                    };
+                    let Some(overload) = self.overload(rust, &o.args, ret) else {
                         if is_native && existing.is_none() {
                             eprintln!(
                                 "bindgen: skipping {owner}.{name} overload with unsupported types"
@@ -713,7 +735,7 @@ impl<'a> Planner<'a> {
                             overloads: vec![overload],
                             is_static: o.is_static,
                             stub: is_stub && !is_native,
-                            owner: owner.to_string(),
+                            owner: trait_owner.to_string(),
                             ce_reactions: o.ext.has("CEReactions"),
                         }),
                     }
@@ -733,20 +755,14 @@ impl<'a> Planner<'a> {
         Ok((attrs, ops, traits, consts))
     }
 
-    fn mixin_handle(&self, mixin: &str) -> Option<Handle> {
-        let mut handle = None;
-        for (iface, m) in &self.idl.includes {
-            if m != mixin || !self.planned.contains(iface) {
-                continue;
-            }
-            let h = self.interface_handle(iface);
-            match handle {
-                None => handle = Some(h),
-                Some(existing) if existing != h => return None,
-                _ => {}
-            }
-        }
-        handle
+    /// The handle kinds of the planned interfaces including `mixin`.
+    fn mixin_handles(&self, mixin: &str) -> BTreeSet<Handle> {
+        self.idl
+            .includes
+            .iter()
+            .filter(|(iface, m)| m == mixin && self.planned.contains(iface))
+            .map(|(iface, _)| self.interface_handle(iface))
+            .collect()
     }
 
     fn interface_handle(&self, name: &str) -> Handle {
@@ -774,7 +790,7 @@ impl<'a> Planner<'a> {
         };
 
         // Mixins first: their members are copied into including interfaces.
-        let mut mixin_members: BTreeMap<String, (Vec<PAttr>, Vec<POp>)> = BTreeMap::new();
+        let mut mixin_members: BTreeMap<(String, Handle), (Vec<PAttr>, Vec<POp>)> = BTreeMap::new();
         let all_mixins: BTreeSet<String> = self
             .idl
             .includes
@@ -787,30 +803,38 @@ impl<'a> Planner<'a> {
                 continue;
             }
             let cfg = self.manifest.mixins.get(mixin);
-            let (attrs, ops, traits, _) = self.members(mixin, cfg)?;
-            if !traits.is_empty() {
-                let Some(handle) = self.mixin_handle(mixin) else {
-                    bail!("mixin `{mixin}` is included by interfaces with different handle kinds");
+            // A mixin included by interfaces of different handle kinds gets
+            // one trait per kind.
+            let handles = self.mixin_handles(mixin);
+            let split = handles.len() > 1;
+            for handle in handles {
+                let trait_owner = if split {
+                    format!("{mixin}For{handle:?}")
+                } else {
+                    mixin.clone()
                 };
-                plan.mixins.push(PInterface {
-                    name: mixin.clone(),
-                    parent: None,
-                    handle,
-                    html_constructor: false,
-                    kind: InterfaceKind::Mixin,
-                    global: false,
-                    constructor: None,
-                    consts: Vec::new(),
-                    attrs: Vec::new(),
-                    ops: Vec::new(),
-                    exotic: None,
-                    iterable: None,
-                    setlike: None,
-                    stringifier: None,
-                    trait_members: traits,
-                });
+                let (attrs, ops, traits, _) = self.members_owned_by(mixin, &trait_owner, cfg)?;
+                if !traits.is_empty() {
+                    plan.mixins.push(PInterface {
+                        name: trait_owner.clone(),
+                        parent: None,
+                        handle,
+                        html_constructor: false,
+                        kind: InterfaceKind::Mixin,
+                        global: false,
+                        constructor: None,
+                        consts: Vec::new(),
+                        attrs: Vec::new(),
+                        ops: Vec::new(),
+                        exotic: None,
+                        iterable: None,
+                        setlike: None,
+                        stringifier: None,
+                        trait_members: traits,
+                    });
+                }
+                mixin_members.insert((mixin.clone(), handle), (attrs, ops));
             }
-            mixin_members.insert(mixin.clone(), (attrs, ops));
         }
         for name in self.manifest.mixins.keys() {
             if !all_mixins.contains(name) {
@@ -847,7 +871,7 @@ impl<'a> Planner<'a> {
 
             let mixins: Vec<String> = self.idl.mixins_of(name).map(str::to_string).collect();
             for mixin in mixins {
-                if let Some((m_attrs, m_ops)) = mixin_members.get(&mixin) {
+                if let Some((m_attrs, m_ops)) = mixin_members.get(&(mixin, handle)) {
                     attrs.extend(m_attrs.iter().cloned());
                     ops.extend(m_ops.iter().cloned());
                 }
