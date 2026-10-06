@@ -74,6 +74,7 @@ pub enum InterfaceId {
     Response,
     SVGAnimatedString,
     Screen,
+    Selection,
     Storage,
     StyleSheet,
     StyleSheetList,
@@ -222,8 +223,8 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 197;
-    pub const ALL: [InterfaceId; 197] = [
+    pub const COUNT: usize = 198;
+    pub const ALL: [InterfaceId; 198] = [
         InterfaceId::AbortController,
         InterfaceId::CSSRule,
         InterfaceId::CSSRuleList,
@@ -276,6 +277,7 @@ impl InterfaceId {
         InterfaceId::Response,
         InterfaceId::SVGAnimatedString,
         InterfaceId::Screen,
+        InterfaceId::Selection,
         InterfaceId::Storage,
         InterfaceId::StyleSheet,
         InterfaceId::StyleSheetList,
@@ -477,6 +479,7 @@ impl InterfaceId {
             InterfaceId::Response => "Response",
             InterfaceId::SVGAnimatedString => "SVGAnimatedString",
             InterfaceId::Screen => "Screen",
+            InterfaceId::Selection => "Selection",
             InterfaceId::Storage => "Storage",
             InterfaceId::StyleSheet => "StyleSheet",
             InterfaceId::StyleSheetList => "StyleSheetList",
@@ -679,6 +682,7 @@ impl InterfaceId {
             "Response" => InterfaceId::Response,
             "SVGAnimatedString" => InterfaceId::SVGAnimatedString,
             "Screen" => InterfaceId::Screen,
+            "Selection" => InterfaceId::Selection,
             "Storage" => InterfaceId::Storage,
             "StyleSheet" => InterfaceId::StyleSheet,
             "StyleSheetList" => InterfaceId::StyleSheetList,
@@ -882,6 +886,7 @@ impl InterfaceId {
             InterfaceId::Response => None,
             InterfaceId::SVGAnimatedString => None,
             InterfaceId::Screen => None,
+            InterfaceId::Selection => None,
             InterfaceId::Storage => None,
             InterfaceId::StyleSheet => None,
             InterfaceId::StyleSheetList => None,
@@ -3300,6 +3305,54 @@ pub trait ScreenImpl {
     fn pixel_depth(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
 }
 
+pub trait SelectionImpl {
+    fn anchor_node(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
+    fn anchor_offset(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn focus_node(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
+    fn focus_offset(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn is_collapsed(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn range_count(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn type_(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn direction(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn remove_all_ranges(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn empty(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn collapse(cx: &mut Cx<'_>, this: ObjectId, node: Option<NodeId>, offset: u32)
+    -> Fallible<()>;
+    fn set_position(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        node: Option<NodeId>,
+        offset: u32,
+    ) -> Fallible<()>;
+    fn collapse_to_start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn collapse_to_end(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn extend(cx: &mut Cx<'_>, this: ObjectId, node: NodeId, offset: u32) -> Fallible<()>;
+    fn set_base_and_extent(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        anchor_node: NodeId,
+        anchor_offset: u32,
+        focus_node: NodeId,
+        focus_offset: u32,
+    ) -> Fallible<()>;
+    fn select_all_children(cx: &mut Cx<'_>, this: ObjectId, node: NodeId) -> Fallible<()>;
+    fn modify(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        alter: Option<String>,
+        direction: Option<String>,
+        granularity: Option<String>,
+    ) -> Fallible<()>;
+    fn delete_from_document(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn contains_node(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        node: NodeId,
+        allow_partial_containment: bool,
+    ) -> Fallible<bool>;
+    fn stringify(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+}
+
 pub trait StorageImpl {
     fn length(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
     fn key(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<String>>;
@@ -3474,6 +3527,7 @@ pub trait WindowImpl {
     fn alert_overload2(cx: &mut Cx<'_>, message: String) -> Fallible<()>;
     fn confirm(cx: &mut Cx<'_>, message: String) -> Fallible<bool>;
     fn prompt(cx: &mut Cx<'_>, message: String, default: String) -> Fallible<Option<String>>;
+    fn get_selection(cx: &mut Cx<'_>) -> Fallible<Option<ObjectId>>;
 }
 
 pub trait WritableStreamImpl {
@@ -3737,6 +3791,7 @@ pub trait DocumentImpl {
     fn has_focus(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool>;
     fn hidden(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool>;
     fn visibility_state(cx: &mut Cx<'_>, this: NodeId) -> Fallible<DocumentVisibilityState>;
+    fn get_selection(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<ObjectId>>;
 }
 
 pub trait DocumentFragmentImpl {

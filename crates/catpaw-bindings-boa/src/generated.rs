@@ -10098,6 +10098,421 @@ pub mod screen {
     };
 }
 
+pub mod selection {
+    use super::*;
+
+    fn get_anchor_node(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Selection, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::SelectionImpl>::anchor_node(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_anchor_offset(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Selection, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SelectionImpl>::anchor_offset(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_focus_node(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Selection, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::SelectionImpl>::focus_node(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_focus_offset(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Selection, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SelectionImpl>::focus_offset(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_is_collapsed(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Selection, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SelectionImpl>::is_collapsed(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_range_count(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Selection, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::SelectionImpl>::range_count(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_type(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Selection, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::SelectionImpl>::type_(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_direction(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Selection, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::SelectionImpl>::direction(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_remove_all_ranges(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Selection, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SelectionImpl>::remove_all_ranges(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_empty(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Selection, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::SelectionImpl>::empty(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_collapse(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Selection, ctx)?;
+        rt::require_args(args, 1, "Selection.collapse")?;
+        let a0 = if rt::arg(args, 0).is_null_or_undefined() {
+            None
+        } else {
+            Some(rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?)
+        };
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            rt::arg(args, 1).to_u32(ctx)?
+        } else {
+            (0) as u32
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SelectionImpl>::collapse(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_set_position(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Selection, ctx)?;
+        rt::require_args(args, 1, "Selection.setPosition")?;
+        let a0 = if rt::arg(args, 0).is_null_or_undefined() {
+            None
+        } else {
+            Some(rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?)
+        };
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            rt::arg(args, 1).to_u32(ctx)?
+        } else {
+            (0) as u32
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SelectionImpl>::set_position(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_collapse_to_start(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Selection, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SelectionImpl>::collapse_to_start(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_collapse_to_end(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Selection, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SelectionImpl>::collapse_to_end(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_extend(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Selection, ctx)?;
+        rt::require_args(args, 1, "Selection.extend")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            rt::arg(args, 1).to_u32(ctx)?
+        } else {
+            (0) as u32
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SelectionImpl>::extend(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_set_base_and_extent(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Selection, ctx)?;
+        rt::require_args(args, 4, "Selection.setBaseAndExtent")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let a1 = rt::arg(args, 1).to_u32(ctx)?;
+        let a2 = rt::node_from_js(rt::arg(args, 2), I::Node, ctx)?;
+        let a3 = rt::arg(args, 3).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SelectionImpl>::set_base_and_extent(cx, this, a0, a1, a2, a3)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_select_all_children(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Selection, ctx)?;
+        rt::require_args(args, 1, "Selection.selectAllChildren")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SelectionImpl>::select_all_children(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_modify(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Selection, ctx)?;
+        let a0 = if args.len() > 0 && !args[0].is_undefined() {
+            Some(rt::string_from_js(rt::arg(args, 0), ctx)?)
+        } else {
+            None
+        };
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            Some(rt::string_from_js(rt::arg(args, 1), ctx)?)
+        } else {
+            None
+        };
+        let a2 = if args.len() > 2 && !args[2].is_undefined() {
+            Some(rt::string_from_js(rt::arg(args, 2), ctx)?)
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SelectionImpl>::modify(cx, this, a0, a1, a2)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_delete_from_document(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_delete_from_document_body(this_js, args, ctx))
+    }
+
+    fn op_delete_from_document_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Selection, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SelectionImpl>::delete_from_document(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_contains_node(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Selection, ctx)?;
+        rt::require_args(args, 1, "Selection.containsNode")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            rt::arg(args, 1).to_boolean()
+        } else {
+            false
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SelectionImpl>::contains_node(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_to_string(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Selection, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::SelectionImpl>::stringify(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::Selection,
+        name: "Selection",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "anchorNode",
+                getter: get_anchor_node,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "anchorOffset",
+                getter: get_anchor_offset,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "focusNode",
+                getter: get_focus_node,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "focusOffset",
+                getter: get_focus_offset,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "isCollapsed",
+                getter: get_is_collapsed,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "rangeCount",
+                getter: get_range_count,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "type",
+                getter: get_type,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "direction",
+                getter: get_direction,
+                setter: None,
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "removeAllRanges",
+                func: op_remove_all_ranges,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "empty",
+                func: op_empty,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "collapse",
+                func: op_collapse,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "setPosition",
+                func: op_set_position,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "collapseToStart",
+                func: op_collapse_to_start,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "collapseToEnd",
+                func: op_collapse_to_end,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "extend",
+                func: op_extend,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "setBaseAndExtent",
+                func: op_set_base_and_extent,
+                length: 4,
+            },
+            rt::OpDef {
+                name: "selectAllChildren",
+                func: op_select_all_children,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "modify",
+                func: op_modify,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "deleteFromDocument",
+                func: op_delete_from_document,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "containsNode",
+                func: op_contains_node,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "toString",
+                func: op_to_string,
+                length: 0,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod storage {
     use super::*;
 
@@ -13454,6 +13869,58 @@ pub mod window {
         Ok(JsValue::undefined())
     }
 
+    fn get_onselectstart(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Window, "selectstart")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onselectstart(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Window, "selectstart", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onselectionchange(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Window, "selectionchange")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onselectionchange(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Window, "selectionchange", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
     fn get_onafterprint(
         this_js: &JsValue,
         _args: &[JsValue],
@@ -14116,6 +14583,17 @@ pub mod window {
             "".to_string()
         };
         let r = rt::with_cx(ctx, |cx| <Web as web::WindowImpl>::prompt(cx, a0, a1));
+        rt::ret(r, ctx)
+    }
+
+    fn op_get_selection(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WindowImpl>::get_selection(cx));
         rt::ret(r, ctx)
     }
 
@@ -14830,6 +15308,16 @@ pub mod window {
                 setter: Some(set_onwheel),
             },
             rt::AttrDef {
+                name: "onselectstart",
+                getter: get_onselectstart,
+                setter: Some(set_onselectstart),
+            },
+            rt::AttrDef {
+                name: "onselectionchange",
+                getter: get_onselectionchange,
+                setter: Some(set_onselectionchange),
+            },
+            rt::AttrDef {
                 name: "onafterprint",
                 getter: get_onafterprint,
                 setter: Some(set_onafterprint),
@@ -14999,6 +15487,11 @@ pub mod window {
             rt::OpDef {
                 name: "prompt",
                 func: op_prompt,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "getSelection",
+                func: op_get_selection,
                 length: 0,
             },
             rt::OpDef {
@@ -19205,6 +19698,63 @@ pub mod document {
         Ok(JsValue::undefined())
     }
 
+    fn get_onselectstart(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "selectstart")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onselectstart(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "selectstart", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onselectionchange(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "selectionchange")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onselectionchange(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "selectionchange",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
     fn op_get_elements_by_tag_name(
         this_js: &JsValue,
         args: &[JsValue],
@@ -19604,6 +20154,19 @@ pub mod document {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Document, ctx)?;
         let r = rt::with_cx(ctx, |cx| <Web as web::DocumentImpl>::has_focus(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_get_selection(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DocumentImpl>::get_selection(cx, this)
+        });
         rt::ret(r, ctx)
     }
 
@@ -20351,6 +20914,16 @@ pub mod document {
                 getter: get_onwheel,
                 setter: Some(set_onwheel),
             },
+            rt::AttrDef {
+                name: "onselectstart",
+                getter: get_onselectstart,
+                setter: Some(set_onselectstart),
+            },
+            rt::AttrDef {
+                name: "onselectionchange",
+                getter: get_onselectionchange,
+                setter: Some(set_onselectionchange),
+            },
         ],
         ops: &[
             rt::OpDef {
@@ -20451,6 +21024,11 @@ pub mod document {
             rt::OpDef {
                 name: "hasFocus",
                 func: op_has_focus,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "getSelection",
+                func: op_get_selection,
                 length: 0,
             },
             rt::OpDef {
@@ -24555,6 +25133,63 @@ pub mod html_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_onselectstart(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "selectstart")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onselectstart(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "selectstart", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onselectionchange(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "selectionchange")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onselectionchange(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "selectionchange",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
     fn get_dataset(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         if let Some(v) = rt::cached(this_js, "dataset", ctx) {
             return Ok(v);
@@ -25122,6 +25757,16 @@ pub mod html_element {
                 name: "onwheel",
                 getter: get_onwheel,
                 setter: Some(set_onwheel),
+            },
+            rt::AttrDef {
+                name: "onselectstart",
+                getter: get_onselectstart,
+                setter: Some(set_onselectstart),
+            },
+            rt::AttrDef {
+                name: "onselectionchange",
+                getter: get_onselectionchange,
+                setter: Some(set_onselectionchange),
             },
             rt::AttrDef {
                 name: "dataset",
@@ -37067,6 +37712,63 @@ pub mod svg_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_onselectstart(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "selectstart")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onselectstart(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "selectstart", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onselectionchange(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "selectionchange")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onselectionchange(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "selectionchange",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
     fn get_dataset(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         if let Some(v) = rt::cached(this_js, "dataset", ctx) {
             return Ok(v);
@@ -37571,6 +38273,16 @@ pub mod svg_element {
                 name: "onwheel",
                 getter: get_onwheel,
                 setter: Some(set_onwheel),
+            },
+            rt::AttrDef {
+                name: "onselectstart",
+                getter: get_onselectstart,
+                setter: Some(set_onselectstart),
+            },
+            rt::AttrDef {
+                name: "onselectionchange",
+                getter: get_onselectionchange,
+                setter: Some(set_onselectionchange),
             },
             rt::AttrDef {
                 name: "dataset",
@@ -43634,6 +44346,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &response::DEF,
     &svg_animated_string::DEF,
     &screen::DEF,
+    &selection::DEF,
     &storage::DEF,
     &style_sheet::DEF,
     &style_sheet_list::DEF,

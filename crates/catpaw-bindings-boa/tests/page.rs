@@ -1262,6 +1262,11 @@ fn vendored_engine_fixes_hold() {
             "function g(a, b = 1) { var h = () => b; var b = 5; return h(); }; g(1, 2)",
             "5",
         ),
+        // Date.parse takes what browsers take.
+        (
+            "['2025-10-01T12:34:56.789123+00:00', '2025-10-01 12:34:56Z', '7 Oct 2026 10:00:00 GMT', 'Oct 7, 2026 10:30 PM UTC', '2026-10-07T10:00:00.000+0000', '10/07/2026 10:00 GMT'].map(function (s) { return new Date(s).toISOString(); }).join(' ') + ' ' + isNaN(new Date('nonsense'))",
+            "2025-10-01T12:34:56.789Z 2025-10-01T12:34:56.000Z 2026-10-07T10:00:00.000Z 2026-10-07T22:30:00.000Z 2026-10-07T10:00:00.000Z 2026-10-07T10:00:00.000Z true",
+        ),
     ] {
         assert_eq!(eval(&mut page, source), expected, "{source}");
     }
@@ -1284,4 +1289,39 @@ fn beacons_go_out_in_the_background() {
         ),
         "TypeError"
     );
+}
+
+#[test]
+fn the_selection_is_empty_but_present() {
+    let mut page = load(
+        "<p id=p>text</p><script>function attempt(f) { try { return String(f()); } catch (e) { return e.name; } }</script>",
+    );
+    for (source, expected) in [
+        (
+            "var s = getSelection(); [s === document.getSelection(), s === window.getSelection(), Object.prototype.toString.call(s), s.type, s.rangeCount, s.isCollapsed, s.anchorNode, s.focusNode, s.anchorOffset, s.direction, s.toString() === ''].map(String).join(' ')",
+            "true true [object Selection] None 0 true null null 0 none true",
+        ),
+        (
+            "s.removeAllRanges(); s.empty(); s.collapse(null); s.collapse(document.body, 0); var p = document.getElementById('p'); s.setBaseAndExtent(p, 0, p.firstChild, 4); s.selectAllChildren(p); s.modify('move', 'forward', 'word'); s.containsNode(p) + ' ' + s.type",
+            "false None",
+        ),
+        (
+            "attempt(function () { s.collapse(p.firstChild, 5); })",
+            "IndexSizeError",
+        ),
+        (
+            "attempt(function () { s.collapseToStart(); })",
+            "InvalidStateError",
+        ),
+        (
+            "attempt(function () { s.selectAllChildren(document.doctype || document.implementation.createDocumentType('html', '', '')); })",
+            "InvalidNodeTypeError",
+        ),
+        (
+            "String(document.implementation.createHTMLDocument('').getSelection())",
+            "null",
+        ),
+    ] {
+        assert_eq!(eval(&mut page, source), expected, "{source}");
+    }
 }

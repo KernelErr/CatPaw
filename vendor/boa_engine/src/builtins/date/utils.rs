@@ -797,6 +797,13 @@ pub(super) fn parse_date(date: &JsString, hooks: &dyn HostHooks) -> Option<i64> 
         return Some(t.unix_timestamp() * 1000 + i64::from(t.millisecond()));
     }
 
+    // What browsers accept beyond that, rewritten into the strict format.
+    if let Some(normalized) = normalize_lenient(&date)
+        && normalized != date
+    {
+        return DateParser::new(&normalized, hooks).parse();
+    }
+
     None
 }
 
@@ -1067,4 +1074,244 @@ impl<'a> DateParser<'a> {
         }
         Some(())
     }
+}
+
+// ---- CatPaw: formats browsers accept beyond the specified ones ----------
+//
+// `Date.parse` is implementation-defined for anything but the Date Time
+// String Format, and real pages lean on what browsers accept: a space in
+// place of `T`, fractions of other than three digits, offsets without a
+// colon, and the legacy `Oct 7, 2026`, `7 Oct 2026 10:00:00 GMT` and
+// `10/07/2026` forms. Each is rewritten into the strict format and parsed
+// by the parser above, so validation and local time stay in one place.
+
+/// Rewrites a lenient date string into the Date Time String Format.
+fn normalize_lenient(date: &str) -> Option<String> {
+    let date = date.trim();
+    if date.is_empty() {
+        return None;
+    }
+    normalize_iso_like(date).or_else(|| normalize_legacy(date))
+}
+
+/// `YYYY-MM-DD[T| ]HH:MM[:SS[.fraction]][Z|±HH[:]MM]`.
+fn normalize_iso_like(date: &str) -> Option<String> {
+    let bytes = date.as_bytes();
+    if bytes.len() < 10
+        || !bytes[..4].iter().all(u8::is_ascii_digit)
+        || bytes[4] != b'-'
+        || !bytes[5..7].iter().all(u8::is_ascii_digit)
+        || bytes[7] != b'-'
+        || !bytes[8..10].iter().all(u8::is_ascii_digit)
+    {
+        return None;
+    }
+    let (day, rest) = date.split_at(10);
+    if rest.is_empty() {
+        return Some(day.to_string());
+    }
+    let time = match rest.as_bytes()[0] {
+        b'T' | b't' | b' ' => &rest[1..],
+        _ => return None,
+    };
+    // Split the zone off the time.
+    let zone_at = time
+        .char_indices()
+        .skip(1)
+        .find(|(_, c)| matches!(c, 'Z' | 'z' | '+' | '-'))
+        .map(|(i, _)| i);
+    let (clock, zone) = match zone_at {
+        Some(i) => (&time[..i], &time[i..]),
+        None => (time, ""),
+    };
+    let mut parts = clock.split(':');
+    let hour = parts.next()?;
+    let minute = parts.next()?;
+    let second = parts.next();
+    if parts.next().is_some() || hour.len() != 2 || minute.len() != 2 {
+        return None;
+    }
+    let mut out = format!("{day}T{hour}:{minute}");
+    if let Some(second) = second {
+        let (whole, fraction) = match second.find('.') {
+            Some(i) => (&second[..i], Some(&second[i + 1..])),
+            None => (second, None),
+        };
+        if whole.len() != 2 {
+            return None;
+        }
+        out.push(':');
+        out.push_str(whole);
+        if let Some(fraction) = fraction {
+            if fraction.is_empty() || !fraction.bytes().all(|b| b.is_ascii_digit()) {
+                return None;
+            }
+            let mut millis: String = fraction.chars().take(3).collect();
+            while millis.len() < 3 {
+                millis.push('0');
+            }
+            out.push('.');
+            out.push_str(&millis);
+        }
+    }
+    match zone.as_bytes() {
+        [] => {}
+        [b'Z' | b'z'] => out.push('Z'),
+        [sign @ (b'+' | b'-'), digits @ ..] => {
+            let digits: String = digits.iter().map(|&b| b as char).collect();
+            let (h, m) = match digits.len() {
+                2 => (digits.clone(), "00".to_string()),
+                4 => (digits[..2].to_string(), digits[2..].to_string()),
+                5 if digits.as_bytes()[2] == b':' => (digits[..2].to_string(), digits[3..].to_string()),
+                _ => return None,
+            };
+            if !h.bytes().all(|b| b.is_ascii_digit()) || !m.bytes().all(|b| b.is_ascii_digit()) {
+                return None;
+            }
+            out.push(*sign as char);
+            out.push_str(&h);
+            out.push(':');
+            out.push_str(&m);
+        }
+        _ => return None,
+    }
+    Some(out)
+}
+
+const MONTHS: [&str; 12] = [
+    "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec",
+];
+
+/// The legacy forms: a month name with a day and year in either order, or
+/// `MM/DD/YYYY`, each with an optional `HH:MM[:SS]`, `AM`/`PM`, and a
+/// `GMT`/`UTC`/`Z` or `±HHMM` zone; local time otherwise.
+fn normalize_legacy(date: &str) -> Option<String> {
+    let mut year: Option<u32> = None;
+    let mut month: Option<u32> = None;
+    let mut day: Option<u32> = None;
+    let mut time: Option<(u32, u32, u32)> = None;
+    let mut zone: Option<String> = None;
+    let mut pm: Option<bool> = None;
+    let mut numbers: Vec<u32> = Vec::new();
+
+    for raw in date.split(|c: char| c.is_whitespace() || c == ',') {
+        if raw.is_empty() {
+            continue;
+        }
+        let token = raw.to_ascii_lowercase();
+        let token = token.as_str();
+        if token.contains('/') {
+            let mut parts = token.split('/');
+            let (m, d, y) = (parts.next()?, parts.next()?, parts.next()?);
+            if parts.next().is_some() {
+                return None;
+            }
+            month = Some(m.parse().ok()?);
+            day = Some(d.parse().ok()?);
+            year = Some(y.parse().ok()?);
+            continue;
+        }
+        if token.contains(':') && token.as_bytes()[0].is_ascii_digit() {
+            let mut parts = token.split(':');
+            let h: u32 = parts.next()?.parse().ok()?;
+            let m: u32 = parts.next()?.parse().ok()?;
+            let s: u32 = match parts.next() {
+                Some(s) => s.split('.').next()?.parse().ok()?,
+                None => 0,
+            };
+            if parts.next().is_some() {
+                return None;
+            }
+            time = Some((h, m, s));
+            continue;
+        }
+        if let Some(rest) = token.strip_prefix("gmt").or_else(|| token.strip_prefix("utc")) {
+            zone = Some(if rest.is_empty() { "Z".to_string() } else { rest.to_string() });
+            continue;
+        }
+        if token == "z" {
+            zone = Some("Z".to_string());
+            continue;
+        }
+        if (token.starts_with('+') || token.starts_with('-')) && token.len() > 1 {
+            zone = Some(token.to_string());
+            continue;
+        }
+        if token == "am" || token == "pm" {
+            pm = Some(token == "pm");
+            continue;
+        }
+        if token.bytes().all(|b| b.is_ascii_digit()) {
+            numbers.push(token.parse().ok()?);
+            continue;
+        }
+        if token.bytes().all(|b| b.is_ascii_alphabetic() || b == b'.') {
+            let name = token.trim_end_matches('.');
+            if name.len() >= 3
+                && let Some(i) = MONTHS.iter().position(|m| name.starts_with(m))
+            {
+                if month.is_some() {
+                    return None;
+                }
+                month = Some(i as u32 + 1);
+            }
+            // Weekday names and other words are ignored, as browsers do.
+            continue;
+        }
+        return None;
+    }
+
+    // With a month name, the numbers are the day and the year: the year
+    // is the one that cannot be a day, or the later one.
+    if day.is_none() || year.is_none() {
+        match numbers.as_slice() {
+            [a, b] => {
+                if *a > 31 {
+                    year = Some(*a);
+                    day = Some(*b);
+                } else {
+                    day = Some(*a);
+                    year = Some(*b);
+                }
+            }
+            [a] if year.is_some() => day = Some(*a),
+            _ => return None,
+        }
+    }
+    let (year, month, mut day) = (year?, month?, day?);
+    if !(1..=12).contains(&month) || !(1..=31).contains(&day) || year > 9999 {
+        return None;
+    }
+    let (mut hour, minute, second) = time.unwrap_or((0, 0, 0));
+    match pm {
+        Some(true) if hour < 12 => hour += 12,
+        Some(false) if hour == 12 => hour = 0,
+        _ => {}
+    }
+    if hour > 24 || minute > 59 || second > 59 {
+        return None;
+    }
+    day = day.max(1);
+    let mut out = format!("{year:04}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}");
+    match zone.as_deref() {
+        None => {}
+        Some("Z") => out.push('Z'),
+        Some(offset) => {
+            let (sign, digits) = offset.split_at(1);
+            let digits = digits.replace(':', "");
+            if !matches!(sign, "+" | "-") || !digits.bytes().all(|b| b.is_ascii_digit()) {
+                return None;
+            }
+            let (h, m) = match digits.len() {
+                1 | 2 => (format!("{:0>2}", digits), "00".to_string()),
+                4 => (digits[..2].to_string(), digits[2..].to_string()),
+                _ => return None,
+            };
+            out.push_str(sign);
+            out.push_str(&h);
+            out.push(':');
+            out.push_str(&m);
+        }
+    }
+    Some(out)
 }

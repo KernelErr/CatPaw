@@ -20,3 +20,10 @@ f(1, 2); // threw "access of uninitialized binding"; now 2
 
 The value is now read from the scope enclosing the var environment, where
 the parameters live, and stored as read.
+
+`src/builtins/date/utils.rs`: `Date.parse` took only the Date Time String
+Format and the two `toString` forms, so timestamps with microseconds
+(`2025-10-01T12:34:56.789123+00:00`), a space instead of `T`, a `+0000`
+offset, and the legacy `Oct 7, 2026`, `7 Oct 2026 10:00:00 GMT` and
+`10/07/2026` forms were `NaN`, where every browser accepts them. Those
+are now rewritten into the strict format and parsed by the same parser.

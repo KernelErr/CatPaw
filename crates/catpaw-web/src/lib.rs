@@ -46,6 +46,7 @@ pub mod promises;
 pub mod reflect;
 mod resize_observer;
 pub mod scripting;
+mod selection;
 mod shadow;
 mod streams;
 mod style;

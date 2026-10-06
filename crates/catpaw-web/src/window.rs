@@ -30,7 +30,7 @@ platform_object!(StorageObject, Storage);
 
 /// Returns the page-wide object in `slot`, creating and pinning it on first
 /// use so that script always sees the same object.
-fn singleton(
+pub(crate) fn singleton(
     cx: &mut Cx<'_>,
     slot: fn(&mut Singletons) -> &mut Option<ObjectId>,
     make: impl FnOnce(&PageState) -> ObjectId,
@@ -112,6 +112,10 @@ impl web::WindowImpl for Web {
 
     fn scroll_by_overload2(cx: &mut Cx<'_>, _x: f64, _y: f64) -> Fallible<PromiseRef> {
         Ok(resolved_promise(cx))
+    }
+
+    fn get_selection(cx: &mut Cx<'_>) -> Fallible<Option<ObjectId>> {
+        Ok(Some(crate::selection::selection(cx)))
     }
 
     fn device_pixel_ratio(cx: &mut Cx<'_>) -> Fallible<f64> {

@@ -112,7 +112,7 @@ members = [
   "getElementsByName", "currentScript", "defaultView", "hasFocus", "hidden",
   "visibilityState", "write", "writeln", "open", "close", "implementation",
   "createAttribute", "createAttributeNS", "createNodeIterator", "createTreeWalker", "domain",
-  "scrollingElement",
+  "scrollingElement", "getSelection",
 ]
 
 # XPath 1.0 (`catpaw_dom::xpath`). Node results may be attributes, which are
@@ -378,6 +378,7 @@ members = [
   "window", "self", "document", "location", "history", "navigator", "frames", "top", "parent",
   "closed", "focus", "blur", "alert", "confirm", "prompt", "innerWidth", "innerHeight",
   "scrollX", "scrollY", "pageXOffset", "pageYOffset", "scroll", "scrollTo", "scrollBy",
+  "getSelection",
   "devicePixelRatio", "event", "matchMedia", "screen", "outerWidth", "outerHeight", "screenX",
   "screenY", "screenLeft", "screenTop", "getComputedStyle", "customElements",
 ]
@@ -539,6 +540,17 @@ members = ["selectorText"]
 
 [mixins.LinkStyle]
 members = ["sheet"]
+
+# --------------------------------------------------------------- selection
+# The selection has no ranges until `Range` exists: it reports itself empty
+# and takes the calls that would set it.
+[interfaces.Selection]
+members = [
+  "anchorNode", "anchorOffset", "focusNode", "focusOffset", "isCollapsed", "rangeCount",
+  "type", "direction", "removeAllRanges", "empty", "collapse", "setPosition",
+  "collapseToStart", "collapseToEnd", "extend", "setBaseAndExtent", "selectAllChildren",
+  "modify", "deleteFromDocument", "containsNode",
+]
 
 # ------------------------------------------------------------ font loading
 # No fonts are fetched or shaped: faces count as loaded once asked for.

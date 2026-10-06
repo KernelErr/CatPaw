@@ -124,6 +124,14 @@ impl web::DocumentImpl for Web {
         Ok(cx.dom().child_elements(this).next())
     }
 
+    /// The document's selection, or none for a document without a window.
+    fn get_selection(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<ObjectId>> {
+        if this != cx.page.document() {
+            return Ok(None);
+        }
+        Ok(Some(crate::selection::selection(cx)))
+    }
+
     /// <https://drafts.csswg.org/cssom-view/#dom-document-scrollingelement>
     fn scrolling_element(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>> {
         let dom = cx.dom();
