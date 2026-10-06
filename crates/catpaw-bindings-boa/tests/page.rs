@@ -1344,3 +1344,36 @@ fn subtle_crypto_digests() {
         "NotSupportedError | TypeError | a9993e364706816a ba7816bf8f01cfea cb00753f45a35e8b ddaf35a193617aba"
     );
 }
+
+#[test]
+fn ui_events_carry_their_state() {
+    let mut page = load("<button id=b>x</button><input id=i>");
+    for (source, expected) in [
+        (
+            "var m = new MouseEvent('click', { bubbles: true, clientX: 10, clientY: 20, screenX: 30, button: 2, buttons: 2, ctrlKey: true, relatedTarget: document.body, view: window, detail: 1 }); [m instanceof UIEvent, m instanceof Event, m.type, m.bubbles, m.clientX, m.clientY, m.pageX, m.x, m.offsetY, m.screenX, m.screenY, m.button, m.buttons, m.ctrlKey, m.shiftKey, m.getModifierState('Control'), m.getModifierState('Shift'), m.relatedTarget === document.body, m.view === window, m.detail, m.isTrusted, String(m)].join(' ')",
+            "true true click true 10 20 10 10 20 30 0 2 2 true false true false true true 1 false [object MouseEvent]",
+        ),
+        (
+            "var k = new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, shiftKey: true, repeat: true }); [k instanceof UIEvent, k.key, k.code, k.keyCode, k.charCode, k.location, k.shiftKey, k.repeat, k.isComposing, k.getModifierState('Shift'), KeyboardEvent.DOM_KEY_LOCATION_NUMPAD].join(' ')",
+            "true Enter Enter 13 0 0 true true false true 3",
+        ),
+        (
+            "var p = new PointerEvent('pointerdown', { pointerId: 7, pointerType: 'touch', isPrimary: true, pressure: 0.5, clientX: 3 }); [p instanceof MouseEvent, p.pointerId, p.pointerType, p.isPrimary, p.pressure, p.width, p.clientX, p.tiltX].join(' ')",
+            "true 7 touch true 0.5 1 3 0",
+        ),
+        (
+            "var w = new WheelEvent('wheel', { deltaY: -3.5, deltaMode: 1 }); var f = new FocusEvent('blur', { relatedTarget: document.getElementById('i') }); var inp = new InputEvent('input', { data: 'a', inputType: 'insertText' }); var u = new UIEvent('resize', { detail: 2 }); [w instanceof MouseEvent, w.deltaY, w.deltaMode, WheelEvent.DOM_DELTA_LINE, f.relatedTarget.id, inp.data, inp.inputType, inp.isComposing, u.detail, u.view, u.which].map(String).join(' ')",
+            "true -3.5 1 1 i a insertText false 2 null 0",
+        ),
+        (
+            "var seen = []; var b = document.getElementById('b'); b.addEventListener('click', function (e) { seen.push(e.constructor.name, e instanceof PointerEvent, e.isTrusted, e.composed, e.bubbles, e.pointerType === ''); }); b.click(); seen.join(' ')",
+            "PointerEvent true false true true true",
+        ),
+        (
+            "var got = null; b.addEventListener('keyup', function (e) { got = e.key + e.keyCode; }); b.dispatchEvent(new KeyboardEvent('keyup', { key: 'a', keyCode: 65 })); got",
+            "a65",
+        ),
+    ] {
+        assert_eq!(eval(&mut page, source), expected, "{source}");
+    }
+}

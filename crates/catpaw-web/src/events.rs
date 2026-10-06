@@ -44,6 +44,8 @@ pub enum EventData {
         loaded: f64,
         total: f64,
     },
+    /// The UI event family; see `ui_events`.
+    Ui(Box<crate::ui_events::UiEvent>),
 }
 
 /// The state behind every event interface (`Event`, `CustomEvent`, ...).

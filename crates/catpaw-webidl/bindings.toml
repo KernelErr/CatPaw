@@ -59,6 +59,45 @@ members = ["state", "hasUAVisualTransition"]
 constructor = true
 members = ["lengthComputable", "loaded", "total"]
 
+# UI events carry their state; without layout, the coordinates are what
+# the constructor was given.
+[interfaces.UIEvent]
+constructor = true
+members = ["view", "detail", "which"]
+
+[interfaces.FocusEvent]
+constructor = true
+members = ["relatedTarget"]
+
+[interfaces.InputEvent]
+constructor = true
+members = ["data", "isComposing", "inputType"]
+
+[interfaces.KeyboardEvent]
+constructor = true
+members = [
+  "key", "code", "location", "ctrlKey", "shiftKey", "altKey", "metaKey", "repeat", "isComposing",
+  "getModifierState", "charCode", "keyCode",
+]
+
+[interfaces.MouseEvent]
+constructor = true
+members = [
+  "screenX", "screenY", "clientX", "clientY", "ctrlKey", "shiftKey", "altKey", "metaKey", "button",
+  "buttons", "relatedTarget", "getModifierState", "pageX", "pageY", "x", "y", "offsetX", "offsetY",
+]
+
+[interfaces.WheelEvent]
+constructor = true
+members = ["deltaX", "deltaY", "deltaZ", "deltaMode"]
+
+[interfaces.PointerEvent]
+constructor = true
+members = [
+  "pointerId", "width", "height", "pressure", "tangentialPressure", "tiltX", "tiltY", "twist",
+  "pointerType", "isPrimary",
+]
+
 [interfaces.MutationObserver]
 constructor = true
 members = ["observe", "disconnect", "takeRecords"]

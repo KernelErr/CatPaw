@@ -53,6 +53,7 @@ mod style;
 mod stylesheets;
 mod svg;
 mod traversal;
+mod ui_events;
 mod url_api;
 mod window;
 mod xhr;

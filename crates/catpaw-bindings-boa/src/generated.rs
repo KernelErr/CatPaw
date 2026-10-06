@@ -648,6 +648,68 @@ impl IntoJs for web::EventListenerOptions {
     }
 }
 
+impl FromJs for web::FocusEventInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "FocusEventInit")?;
+        Ok(Self {
+            bubbles: match rt::dictionary_member(&obj, "bubbles", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            cancelable: match rt::dictionary_member(&obj, "cancelable", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            composed: match rt::dictionary_member(&obj, "composed", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            view: match rt::dictionary_member(&obj, "view", ctx)? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(rt::window_from_js((&m), ctx)?)
+                    }
+                }
+                None => None,
+            },
+            detail: match rt::dictionary_member(&obj, "detail", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            which: match rt::dictionary_member(&obj, "which", ctx)? {
+                Some(m) => (&m).to_u32(ctx)?,
+                None => (0) as u32,
+            },
+            related_target: match rt::dictionary_member(&obj, "relatedTarget", ctx)? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(rt::event_target_from_js((&m), ctx)?)
+                    }
+                }
+                None => None,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::FocusEventInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "bubbles", self.bubbles, ctx)?;
+        rt::set_member(&obj, "cancelable", self.cancelable, ctx)?;
+        rt::set_member(&obj, "composed", self.composed, ctx)?;
+        rt::set_member(&obj, "view", self.view, ctx)?;
+        rt::set_member(&obj, "detail", self.detail, ctx)?;
+        rt::set_member(&obj, "which", self.which, ctx)?;
+        rt::set_member(&obj, "relatedTarget", self.related_target, ctx)?;
+        Ok(obj.into())
+    }
+}
+
 impl FromJs for web::FocusOptions {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let obj = rt::dictionary_object(v, "FocusOptions")?;
@@ -832,6 +894,78 @@ impl IntoJs for web::ImportNodeOptions {
     }
 }
 
+impl FromJs for web::InputEventInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "InputEventInit")?;
+        Ok(Self {
+            bubbles: match rt::dictionary_member(&obj, "bubbles", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            cancelable: match rt::dictionary_member(&obj, "cancelable", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            composed: match rt::dictionary_member(&obj, "composed", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            view: match rt::dictionary_member(&obj, "view", ctx)? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(rt::window_from_js((&m), ctx)?)
+                    }
+                }
+                None => None,
+            },
+            detail: match rt::dictionary_member(&obj, "detail", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            which: match rt::dictionary_member(&obj, "which", ctx)? {
+                Some(m) => (&m).to_u32(ctx)?,
+                None => (0) as u32,
+            },
+            data: match rt::dictionary_member(&obj, "data", ctx)? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(rt::string_from_js((&m), ctx)?)
+                    }
+                }
+                None => None,
+            },
+            is_composing: match rt::dictionary_member(&obj, "isComposing", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            input_type: match rt::dictionary_member(&obj, "inputType", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "".to_string(),
+            },
+        })
+    }
+}
+
+impl IntoJs for web::InputEventInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "bubbles", self.bubbles, ctx)?;
+        rt::set_member(&obj, "cancelable", self.cancelable, ctx)?;
+        rt::set_member(&obj, "composed", self.composed, ctx)?;
+        rt::set_member(&obj, "view", self.view, ctx)?;
+        rt::set_member(&obj, "detail", self.detail, ctx)?;
+        rt::set_member(&obj, "which", self.which, ctx)?;
+        rt::set_member(&obj, "data", self.data, ctx)?;
+        rt::set_member(&obj, "isComposing", self.is_composing, ctx)?;
+        rt::set_member(&obj, "inputType", self.input_type, ctx)?;
+        Ok(obj.into())
+    }
+}
+
 impl FromJs for web::IntersectionObserverInit {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let obj = rt::dictionary_object(v, "IntersectionObserverInit")?;
@@ -879,6 +1013,324 @@ impl IntoJs for web::IntersectionObserverInit {
         rt::set_member(&obj, "threshold", self.threshold, ctx)?;
         rt::set_member(&obj, "delay", self.delay, ctx)?;
         rt::set_member(&obj, "trackVisibility", self.track_visibility, ctx)?;
+        Ok(obj.into())
+    }
+}
+
+impl FromJs for web::KeyboardEventInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "KeyboardEventInit")?;
+        Ok(Self {
+            bubbles: match rt::dictionary_member(&obj, "bubbles", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            cancelable: match rt::dictionary_member(&obj, "cancelable", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            composed: match rt::dictionary_member(&obj, "composed", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            view: match rt::dictionary_member(&obj, "view", ctx)? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(rt::window_from_js((&m), ctx)?)
+                    }
+                }
+                None => None,
+            },
+            detail: match rt::dictionary_member(&obj, "detail", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            which: match rt::dictionary_member(&obj, "which", ctx)? {
+                Some(m) => (&m).to_u32(ctx)?,
+                None => (0) as u32,
+            },
+            ctrl_key: match rt::dictionary_member(&obj, "ctrlKey", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            shift_key: match rt::dictionary_member(&obj, "shiftKey", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            alt_key: match rt::dictionary_member(&obj, "altKey", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            meta_key: match rt::dictionary_member(&obj, "metaKey", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_alt_graph: match rt::dictionary_member(&obj, "modifierAltGraph", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_caps_lock: match rt::dictionary_member(&obj, "modifierCapsLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_fn: match rt::dictionary_member(&obj, "modifierFn", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_fn_lock: match rt::dictionary_member(&obj, "modifierFnLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_hyper: match rt::dictionary_member(&obj, "modifierHyper", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_num_lock: match rt::dictionary_member(&obj, "modifierNumLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_scroll_lock: match rt::dictionary_member(&obj, "modifierScrollLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_super: match rt::dictionary_member(&obj, "modifierSuper", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_symbol: match rt::dictionary_member(&obj, "modifierSymbol", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_symbol_lock: match rt::dictionary_member(&obj, "modifierSymbolLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            key: match rt::dictionary_member(&obj, "key", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "".to_string(),
+            },
+            code: match rt::dictionary_member(&obj, "code", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "".to_string(),
+            },
+            location: match rt::dictionary_member(&obj, "location", ctx)? {
+                Some(m) => (&m).to_u32(ctx)?,
+                None => (0) as u32,
+            },
+            repeat: match rt::dictionary_member(&obj, "repeat", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            is_composing: match rt::dictionary_member(&obj, "isComposing", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            char_code: match rt::dictionary_member(&obj, "charCode", ctx)? {
+                Some(m) => (&m).to_u32(ctx)?,
+                None => (0) as u32,
+            },
+            key_code: match rt::dictionary_member(&obj, "keyCode", ctx)? {
+                Some(m) => (&m).to_u32(ctx)?,
+                None => (0) as u32,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::KeyboardEventInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "bubbles", self.bubbles, ctx)?;
+        rt::set_member(&obj, "cancelable", self.cancelable, ctx)?;
+        rt::set_member(&obj, "composed", self.composed, ctx)?;
+        rt::set_member(&obj, "view", self.view, ctx)?;
+        rt::set_member(&obj, "detail", self.detail, ctx)?;
+        rt::set_member(&obj, "which", self.which, ctx)?;
+        rt::set_member(&obj, "ctrlKey", self.ctrl_key, ctx)?;
+        rt::set_member(&obj, "shiftKey", self.shift_key, ctx)?;
+        rt::set_member(&obj, "altKey", self.alt_key, ctx)?;
+        rt::set_member(&obj, "metaKey", self.meta_key, ctx)?;
+        rt::set_member(&obj, "modifierAltGraph", self.modifier_alt_graph, ctx)?;
+        rt::set_member(&obj, "modifierCapsLock", self.modifier_caps_lock, ctx)?;
+        rt::set_member(&obj, "modifierFn", self.modifier_fn, ctx)?;
+        rt::set_member(&obj, "modifierFnLock", self.modifier_fn_lock, ctx)?;
+        rt::set_member(&obj, "modifierHyper", self.modifier_hyper, ctx)?;
+        rt::set_member(&obj, "modifierNumLock", self.modifier_num_lock, ctx)?;
+        rt::set_member(&obj, "modifierScrollLock", self.modifier_scroll_lock, ctx)?;
+        rt::set_member(&obj, "modifierSuper", self.modifier_super, ctx)?;
+        rt::set_member(&obj, "modifierSymbol", self.modifier_symbol, ctx)?;
+        rt::set_member(&obj, "modifierSymbolLock", self.modifier_symbol_lock, ctx)?;
+        rt::set_member(&obj, "key", self.key, ctx)?;
+        rt::set_member(&obj, "code", self.code, ctx)?;
+        rt::set_member(&obj, "location", self.location, ctx)?;
+        rt::set_member(&obj, "repeat", self.repeat, ctx)?;
+        rt::set_member(&obj, "isComposing", self.is_composing, ctx)?;
+        rt::set_member(&obj, "charCode", self.char_code, ctx)?;
+        rt::set_member(&obj, "keyCode", self.key_code, ctx)?;
+        Ok(obj.into())
+    }
+}
+
+impl FromJs for web::MouseEventInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "MouseEventInit")?;
+        Ok(Self {
+            bubbles: match rt::dictionary_member(&obj, "bubbles", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            cancelable: match rt::dictionary_member(&obj, "cancelable", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            composed: match rt::dictionary_member(&obj, "composed", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            view: match rt::dictionary_member(&obj, "view", ctx)? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(rt::window_from_js((&m), ctx)?)
+                    }
+                }
+                None => None,
+            },
+            detail: match rt::dictionary_member(&obj, "detail", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            which: match rt::dictionary_member(&obj, "which", ctx)? {
+                Some(m) => (&m).to_u32(ctx)?,
+                None => (0) as u32,
+            },
+            ctrl_key: match rt::dictionary_member(&obj, "ctrlKey", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            shift_key: match rt::dictionary_member(&obj, "shiftKey", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            alt_key: match rt::dictionary_member(&obj, "altKey", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            meta_key: match rt::dictionary_member(&obj, "metaKey", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_alt_graph: match rt::dictionary_member(&obj, "modifierAltGraph", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_caps_lock: match rt::dictionary_member(&obj, "modifierCapsLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_fn: match rt::dictionary_member(&obj, "modifierFn", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_fn_lock: match rt::dictionary_member(&obj, "modifierFnLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_hyper: match rt::dictionary_member(&obj, "modifierHyper", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_num_lock: match rt::dictionary_member(&obj, "modifierNumLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_scroll_lock: match rt::dictionary_member(&obj, "modifierScrollLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_super: match rt::dictionary_member(&obj, "modifierSuper", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_symbol: match rt::dictionary_member(&obj, "modifierSymbol", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_symbol_lock: match rt::dictionary_member(&obj, "modifierSymbolLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            screen_x: match rt::dictionary_member(&obj, "screenX", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            screen_y: match rt::dictionary_member(&obj, "screenY", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            client_x: match rt::dictionary_member(&obj, "clientX", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            client_y: match rt::dictionary_member(&obj, "clientY", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            button: match rt::dictionary_member(&obj, "button", ctx)? {
+                Some(m) => (&m).to_int16(ctx)?,
+                None => (0) as i16,
+            },
+            buttons: match rt::dictionary_member(&obj, "buttons", ctx)? {
+                Some(m) => (&m).to_uint16(ctx)?,
+                None => (0) as u16,
+            },
+            related_target: match rt::dictionary_member(&obj, "relatedTarget", ctx)? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(rt::event_target_from_js((&m), ctx)?)
+                    }
+                }
+                None => None,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::MouseEventInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "bubbles", self.bubbles, ctx)?;
+        rt::set_member(&obj, "cancelable", self.cancelable, ctx)?;
+        rt::set_member(&obj, "composed", self.composed, ctx)?;
+        rt::set_member(&obj, "view", self.view, ctx)?;
+        rt::set_member(&obj, "detail", self.detail, ctx)?;
+        rt::set_member(&obj, "which", self.which, ctx)?;
+        rt::set_member(&obj, "ctrlKey", self.ctrl_key, ctx)?;
+        rt::set_member(&obj, "shiftKey", self.shift_key, ctx)?;
+        rt::set_member(&obj, "altKey", self.alt_key, ctx)?;
+        rt::set_member(&obj, "metaKey", self.meta_key, ctx)?;
+        rt::set_member(&obj, "modifierAltGraph", self.modifier_alt_graph, ctx)?;
+        rt::set_member(&obj, "modifierCapsLock", self.modifier_caps_lock, ctx)?;
+        rt::set_member(&obj, "modifierFn", self.modifier_fn, ctx)?;
+        rt::set_member(&obj, "modifierFnLock", self.modifier_fn_lock, ctx)?;
+        rt::set_member(&obj, "modifierHyper", self.modifier_hyper, ctx)?;
+        rt::set_member(&obj, "modifierNumLock", self.modifier_num_lock, ctx)?;
+        rt::set_member(&obj, "modifierScrollLock", self.modifier_scroll_lock, ctx)?;
+        rt::set_member(&obj, "modifierSuper", self.modifier_super, ctx)?;
+        rt::set_member(&obj, "modifierSymbol", self.modifier_symbol, ctx)?;
+        rt::set_member(&obj, "modifierSymbolLock", self.modifier_symbol_lock, ctx)?;
+        rt::set_member(&obj, "screenX", self.screen_x, ctx)?;
+        rt::set_member(&obj, "screenY", self.screen_y, ctx)?;
+        rt::set_member(&obj, "clientX", self.client_x, ctx)?;
+        rt::set_member(&obj, "clientY", self.client_y, ctx)?;
+        rt::set_member(&obj, "button", self.button, ctx)?;
+        rt::set_member(&obj, "buttons", self.buttons, ctx)?;
+        rt::set_member(&obj, "relatedTarget", self.related_target, ctx)?;
         Ok(obj.into())
     }
 }
@@ -1032,6 +1484,247 @@ impl IntoJs for web::PerformanceObserverInit {
         rt::set_member(&obj, "entryTypes", self.entry_types, ctx)?;
         rt::set_member(&obj, "type", self.type_, ctx)?;
         rt::set_member(&obj, "buffered", self.buffered, ctx)?;
+        Ok(obj.into())
+    }
+}
+
+impl FromJs for web::PointerEventInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "PointerEventInit")?;
+        Ok(Self {
+            bubbles: match rt::dictionary_member(&obj, "bubbles", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            cancelable: match rt::dictionary_member(&obj, "cancelable", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            composed: match rt::dictionary_member(&obj, "composed", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            view: match rt::dictionary_member(&obj, "view", ctx)? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(rt::window_from_js((&m), ctx)?)
+                    }
+                }
+                None => None,
+            },
+            detail: match rt::dictionary_member(&obj, "detail", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            which: match rt::dictionary_member(&obj, "which", ctx)? {
+                Some(m) => (&m).to_u32(ctx)?,
+                None => (0) as u32,
+            },
+            ctrl_key: match rt::dictionary_member(&obj, "ctrlKey", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            shift_key: match rt::dictionary_member(&obj, "shiftKey", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            alt_key: match rt::dictionary_member(&obj, "altKey", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            meta_key: match rt::dictionary_member(&obj, "metaKey", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_alt_graph: match rt::dictionary_member(&obj, "modifierAltGraph", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_caps_lock: match rt::dictionary_member(&obj, "modifierCapsLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_fn: match rt::dictionary_member(&obj, "modifierFn", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_fn_lock: match rt::dictionary_member(&obj, "modifierFnLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_hyper: match rt::dictionary_member(&obj, "modifierHyper", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_num_lock: match rt::dictionary_member(&obj, "modifierNumLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_scroll_lock: match rt::dictionary_member(&obj, "modifierScrollLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_super: match rt::dictionary_member(&obj, "modifierSuper", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_symbol: match rt::dictionary_member(&obj, "modifierSymbol", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_symbol_lock: match rt::dictionary_member(&obj, "modifierSymbolLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            screen_x: match rt::dictionary_member(&obj, "screenX", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            screen_y: match rt::dictionary_member(&obj, "screenY", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            client_x: match rt::dictionary_member(&obj, "clientX", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            client_y: match rt::dictionary_member(&obj, "clientY", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            button: match rt::dictionary_member(&obj, "button", ctx)? {
+                Some(m) => (&m).to_int16(ctx)?,
+                None => (0) as i16,
+            },
+            buttons: match rt::dictionary_member(&obj, "buttons", ctx)? {
+                Some(m) => (&m).to_uint16(ctx)?,
+                None => (0) as u16,
+            },
+            related_target: match rt::dictionary_member(&obj, "relatedTarget", ctx)? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(rt::event_target_from_js((&m), ctx)?)
+                    }
+                }
+                None => None,
+            },
+            pointer_id: match rt::dictionary_member(&obj, "pointerId", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            width: match rt::dictionary_member(&obj, "width", ctx)? {
+                Some(m) => rt::to_finite((&m), ctx)?,
+                None => 1_f64,
+            },
+            height: match rt::dictionary_member(&obj, "height", ctx)? {
+                Some(m) => rt::to_finite((&m), ctx)?,
+                None => 1_f64,
+            },
+            pressure: match rt::dictionary_member(&obj, "pressure", ctx)? {
+                Some(m) => rt::to_finite((&m), ctx)?,
+                None => 0_f64,
+            },
+            tangential_pressure: match rt::dictionary_member(&obj, "tangentialPressure", ctx)? {
+                Some(m) => rt::to_finite((&m), ctx)?,
+                None => 0_f64,
+            },
+            tilt_x: match rt::dictionary_member(&obj, "tiltX", ctx)? {
+                Some(m) => Some((&m).to_i32(ctx)?),
+                None => None,
+            },
+            tilt_y: match rt::dictionary_member(&obj, "tiltY", ctx)? {
+                Some(m) => Some((&m).to_i32(ctx)?),
+                None => None,
+            },
+            twist: match rt::dictionary_member(&obj, "twist", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            altitude_angle: match rt::dictionary_member(&obj, "altitudeAngle", ctx)? {
+                Some(m) => Some(rt::to_finite((&m), ctx)?),
+                None => None,
+            },
+            azimuth_angle: match rt::dictionary_member(&obj, "azimuthAngle", ctx)? {
+                Some(m) => Some(rt::to_finite((&m), ctx)?),
+                None => None,
+            },
+            pointer_type: match rt::dictionary_member(&obj, "pointerType", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "".to_string(),
+            },
+            is_primary: match rt::dictionary_member(&obj, "isPrimary", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            persistent_device_id: match rt::dictionary_member(&obj, "persistentDeviceId", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            coalesced_events: match rt::dictionary_member(&obj, "coalescedEvents", ctx)? {
+                Some(m) => rt::sequence_from_js((&m), ctx, |v, ctx| {
+                    Ok(rt::object_from_js(v, I::PointerEvent, ctx)?)
+                })?,
+                None => Vec::new(),
+            },
+            predicted_events: match rt::dictionary_member(&obj, "predictedEvents", ctx)? {
+                Some(m) => rt::sequence_from_js((&m), ctx, |v, ctx| {
+                    Ok(rt::object_from_js(v, I::PointerEvent, ctx)?)
+                })?,
+                None => Vec::new(),
+            },
+        })
+    }
+}
+
+impl IntoJs for web::PointerEventInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "bubbles", self.bubbles, ctx)?;
+        rt::set_member(&obj, "cancelable", self.cancelable, ctx)?;
+        rt::set_member(&obj, "composed", self.composed, ctx)?;
+        rt::set_member(&obj, "view", self.view, ctx)?;
+        rt::set_member(&obj, "detail", self.detail, ctx)?;
+        rt::set_member(&obj, "which", self.which, ctx)?;
+        rt::set_member(&obj, "ctrlKey", self.ctrl_key, ctx)?;
+        rt::set_member(&obj, "shiftKey", self.shift_key, ctx)?;
+        rt::set_member(&obj, "altKey", self.alt_key, ctx)?;
+        rt::set_member(&obj, "metaKey", self.meta_key, ctx)?;
+        rt::set_member(&obj, "modifierAltGraph", self.modifier_alt_graph, ctx)?;
+        rt::set_member(&obj, "modifierCapsLock", self.modifier_caps_lock, ctx)?;
+        rt::set_member(&obj, "modifierFn", self.modifier_fn, ctx)?;
+        rt::set_member(&obj, "modifierFnLock", self.modifier_fn_lock, ctx)?;
+        rt::set_member(&obj, "modifierHyper", self.modifier_hyper, ctx)?;
+        rt::set_member(&obj, "modifierNumLock", self.modifier_num_lock, ctx)?;
+        rt::set_member(&obj, "modifierScrollLock", self.modifier_scroll_lock, ctx)?;
+        rt::set_member(&obj, "modifierSuper", self.modifier_super, ctx)?;
+        rt::set_member(&obj, "modifierSymbol", self.modifier_symbol, ctx)?;
+        rt::set_member(&obj, "modifierSymbolLock", self.modifier_symbol_lock, ctx)?;
+        rt::set_member(&obj, "screenX", self.screen_x, ctx)?;
+        rt::set_member(&obj, "screenY", self.screen_y, ctx)?;
+        rt::set_member(&obj, "clientX", self.client_x, ctx)?;
+        rt::set_member(&obj, "clientY", self.client_y, ctx)?;
+        rt::set_member(&obj, "button", self.button, ctx)?;
+        rt::set_member(&obj, "buttons", self.buttons, ctx)?;
+        rt::set_member(&obj, "relatedTarget", self.related_target, ctx)?;
+        rt::set_member(&obj, "pointerId", self.pointer_id, ctx)?;
+        rt::set_member(&obj, "width", self.width, ctx)?;
+        rt::set_member(&obj, "height", self.height, ctx)?;
+        rt::set_member(&obj, "pressure", self.pressure, ctx)?;
+        rt::set_member(&obj, "tangentialPressure", self.tangential_pressure, ctx)?;
+        rt::set_member(&obj, "tiltX", self.tilt_x, ctx)?;
+        rt::set_member(&obj, "tiltY", self.tilt_y, ctx)?;
+        rt::set_member(&obj, "twist", self.twist, ctx)?;
+        rt::set_member(&obj, "altitudeAngle", self.altitude_angle, ctx)?;
+        rt::set_member(&obj, "azimuthAngle", self.azimuth_angle, ctx)?;
+        rt::set_member(&obj, "pointerType", self.pointer_type, ctx)?;
+        rt::set_member(&obj, "isPrimary", self.is_primary, ctx)?;
+        rt::set_member(&obj, "persistentDeviceId", self.persistent_device_id, ctx)?;
+        rt::set_member(&obj, "coalescedEvents", self.coalesced_events, ctx)?;
+        rt::set_member(&obj, "predictedEvents", self.predicted_events, ctx)?;
         Ok(obj.into())
     }
 }
@@ -1657,6 +2350,244 @@ impl IntoJs for web::TextDecoderOptions {
         let obj = rt::new_plain_object(ctx);
         rt::set_member(&obj, "fatal", self.fatal, ctx)?;
         rt::set_member(&obj, "ignoreBOM", self.ignore_bom, ctx)?;
+        Ok(obj.into())
+    }
+}
+
+impl FromJs for web::UIEventInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "UIEventInit")?;
+        Ok(Self {
+            bubbles: match rt::dictionary_member(&obj, "bubbles", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            cancelable: match rt::dictionary_member(&obj, "cancelable", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            composed: match rt::dictionary_member(&obj, "composed", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            view: match rt::dictionary_member(&obj, "view", ctx)? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(rt::window_from_js((&m), ctx)?)
+                    }
+                }
+                None => None,
+            },
+            detail: match rt::dictionary_member(&obj, "detail", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            which: match rt::dictionary_member(&obj, "which", ctx)? {
+                Some(m) => (&m).to_u32(ctx)?,
+                None => (0) as u32,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::UIEventInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "bubbles", self.bubbles, ctx)?;
+        rt::set_member(&obj, "cancelable", self.cancelable, ctx)?;
+        rt::set_member(&obj, "composed", self.composed, ctx)?;
+        rt::set_member(&obj, "view", self.view, ctx)?;
+        rt::set_member(&obj, "detail", self.detail, ctx)?;
+        rt::set_member(&obj, "which", self.which, ctx)?;
+        Ok(obj.into())
+    }
+}
+
+impl FromJs for web::WheelEventInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "WheelEventInit")?;
+        Ok(Self {
+            bubbles: match rt::dictionary_member(&obj, "bubbles", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            cancelable: match rt::dictionary_member(&obj, "cancelable", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            composed: match rt::dictionary_member(&obj, "composed", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            view: match rt::dictionary_member(&obj, "view", ctx)? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(rt::window_from_js((&m), ctx)?)
+                    }
+                }
+                None => None,
+            },
+            detail: match rt::dictionary_member(&obj, "detail", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            which: match rt::dictionary_member(&obj, "which", ctx)? {
+                Some(m) => (&m).to_u32(ctx)?,
+                None => (0) as u32,
+            },
+            ctrl_key: match rt::dictionary_member(&obj, "ctrlKey", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            shift_key: match rt::dictionary_member(&obj, "shiftKey", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            alt_key: match rt::dictionary_member(&obj, "altKey", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            meta_key: match rt::dictionary_member(&obj, "metaKey", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_alt_graph: match rt::dictionary_member(&obj, "modifierAltGraph", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_caps_lock: match rt::dictionary_member(&obj, "modifierCapsLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_fn: match rt::dictionary_member(&obj, "modifierFn", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_fn_lock: match rt::dictionary_member(&obj, "modifierFnLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_hyper: match rt::dictionary_member(&obj, "modifierHyper", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_num_lock: match rt::dictionary_member(&obj, "modifierNumLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_scroll_lock: match rt::dictionary_member(&obj, "modifierScrollLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_super: match rt::dictionary_member(&obj, "modifierSuper", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_symbol: match rt::dictionary_member(&obj, "modifierSymbol", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_symbol_lock: match rt::dictionary_member(&obj, "modifierSymbolLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            screen_x: match rt::dictionary_member(&obj, "screenX", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            screen_y: match rt::dictionary_member(&obj, "screenY", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            client_x: match rt::dictionary_member(&obj, "clientX", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            client_y: match rt::dictionary_member(&obj, "clientY", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            button: match rt::dictionary_member(&obj, "button", ctx)? {
+                Some(m) => (&m).to_int16(ctx)?,
+                None => (0) as i16,
+            },
+            buttons: match rt::dictionary_member(&obj, "buttons", ctx)? {
+                Some(m) => (&m).to_uint16(ctx)?,
+                None => (0) as u16,
+            },
+            related_target: match rt::dictionary_member(&obj, "relatedTarget", ctx)? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(rt::event_target_from_js((&m), ctx)?)
+                    }
+                }
+                None => None,
+            },
+            delta_x: match rt::dictionary_member(&obj, "deltaX", ctx)? {
+                Some(m) => rt::to_finite((&m), ctx)?,
+                None => 0.0_f64,
+            },
+            delta_y: match rt::dictionary_member(&obj, "deltaY", ctx)? {
+                Some(m) => rt::to_finite((&m), ctx)?,
+                None => 0.0_f64,
+            },
+            delta_z: match rt::dictionary_member(&obj, "deltaZ", ctx)? {
+                Some(m) => rt::to_finite((&m), ctx)?,
+                None => 0.0_f64,
+            },
+            delta_mode: match rt::dictionary_member(&obj, "deltaMode", ctx)? {
+                Some(m) => (&m).to_u32(ctx)?,
+                None => (0) as u32,
+            },
+            momentum: match rt::dictionary_member(&obj, "momentum", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::WheelEventInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "bubbles", self.bubbles, ctx)?;
+        rt::set_member(&obj, "cancelable", self.cancelable, ctx)?;
+        rt::set_member(&obj, "composed", self.composed, ctx)?;
+        rt::set_member(&obj, "view", self.view, ctx)?;
+        rt::set_member(&obj, "detail", self.detail, ctx)?;
+        rt::set_member(&obj, "which", self.which, ctx)?;
+        rt::set_member(&obj, "ctrlKey", self.ctrl_key, ctx)?;
+        rt::set_member(&obj, "shiftKey", self.shift_key, ctx)?;
+        rt::set_member(&obj, "altKey", self.alt_key, ctx)?;
+        rt::set_member(&obj, "metaKey", self.meta_key, ctx)?;
+        rt::set_member(&obj, "modifierAltGraph", self.modifier_alt_graph, ctx)?;
+        rt::set_member(&obj, "modifierCapsLock", self.modifier_caps_lock, ctx)?;
+        rt::set_member(&obj, "modifierFn", self.modifier_fn, ctx)?;
+        rt::set_member(&obj, "modifierFnLock", self.modifier_fn_lock, ctx)?;
+        rt::set_member(&obj, "modifierHyper", self.modifier_hyper, ctx)?;
+        rt::set_member(&obj, "modifierNumLock", self.modifier_num_lock, ctx)?;
+        rt::set_member(&obj, "modifierScrollLock", self.modifier_scroll_lock, ctx)?;
+        rt::set_member(&obj, "modifierSuper", self.modifier_super, ctx)?;
+        rt::set_member(&obj, "modifierSymbol", self.modifier_symbol, ctx)?;
+        rt::set_member(&obj, "modifierSymbolLock", self.modifier_symbol_lock, ctx)?;
+        rt::set_member(&obj, "screenX", self.screen_x, ctx)?;
+        rt::set_member(&obj, "screenY", self.screen_y, ctx)?;
+        rt::set_member(&obj, "clientX", self.client_x, ctx)?;
+        rt::set_member(&obj, "clientY", self.client_y, ctx)?;
+        rt::set_member(&obj, "button", self.button, ctx)?;
+        rt::set_member(&obj, "buttons", self.buttons, ctx)?;
+        rt::set_member(&obj, "relatedTarget", self.related_target, ctx)?;
+        rt::set_member(&obj, "deltaX", self.delta_x, ctx)?;
+        rt::set_member(&obj, "deltaY", self.delta_y, ctx)?;
+        rt::set_member(&obj, "deltaZ", self.delta_z, ctx)?;
+        rt::set_member(&obj, "deltaMode", self.delta_mode, ctx)?;
+        rt::set_member(&obj, "momentum", self.momentum, ctx)?;
         Ok(obj.into())
     }
 }
@@ -11415,6 +12346,70 @@ pub mod tree_walker {
     };
 }
 
+pub mod ui_event {
+    use super::*;
+
+    fn get_view(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::UIEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::UIEventImpl>::view(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_detail(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::UIEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::UIEventImpl>::detail(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_which(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::UIEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::UIEventImpl>::which(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "UIEvent")?;
+        rt::require_args(args, 1, "UIEvent constructor")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::UIEventInit as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::UIEventImpl>::constructor(cx, a0, a1));
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::UIEvent, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::UIEvent,
+        name: "UIEvent",
+        parent: Some(I::Event),
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[
+            rt::AttrDef {
+                name: "view",
+                getter: get_view,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "detail",
+                getter: get_detail,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "which",
+                getter: get_which,
+                setter: None,
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod url {
     use super::*;
 
@@ -13920,6 +14915,307 @@ pub mod window {
         Ok(JsValue::undefined())
     }
 
+    fn get_onpointerover(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Window, "pointerover")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerover(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Window, "pointerover", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointerenter(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Window, "pointerenter")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerenter(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Window, "pointerenter", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointerdown(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Window, "pointerdown")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerdown(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Window, "pointerdown", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointermove(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Window, "pointermove")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointermove(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Window, "pointermove", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointerrawupdate(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Window, "pointerrawupdate")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerrawupdate(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Window,
+                "pointerrawupdate",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointerup(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Window, "pointerup")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerup(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Window, "pointerup", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointercancel(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Window, "pointercancel")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointercancel(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Window, "pointercancel", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointerout(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Window, "pointerout")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerout(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Window, "pointerout", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointerleave(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Window, "pointerleave")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerleave(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Window, "pointerleave", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ongotpointercapture(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Window, "gotpointercapture")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_ongotpointercapture(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Window,
+                "gotpointercapture",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onlostpointercapture(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Window, "lostpointercapture")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onlostpointercapture(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Window,
+                "lostpointercapture",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
     fn get_onselectstart(
         this_js: &JsValue,
         _args: &[JsValue],
@@ -15357,6 +16653,61 @@ pub mod window {
                 name: "onwheel",
                 getter: get_onwheel,
                 setter: Some(set_onwheel),
+            },
+            rt::AttrDef {
+                name: "onpointerover",
+                getter: get_onpointerover,
+                setter: Some(set_onpointerover),
+            },
+            rt::AttrDef {
+                name: "onpointerenter",
+                getter: get_onpointerenter,
+                setter: Some(set_onpointerenter),
+            },
+            rt::AttrDef {
+                name: "onpointerdown",
+                getter: get_onpointerdown,
+                setter: Some(set_onpointerdown),
+            },
+            rt::AttrDef {
+                name: "onpointermove",
+                getter: get_onpointermove,
+                setter: Some(set_onpointermove),
+            },
+            rt::AttrDef {
+                name: "onpointerrawupdate",
+                getter: get_onpointerrawupdate,
+                setter: Some(set_onpointerrawupdate),
+            },
+            rt::AttrDef {
+                name: "onpointerup",
+                getter: get_onpointerup,
+                setter: Some(set_onpointerup),
+            },
+            rt::AttrDef {
+                name: "onpointercancel",
+                getter: get_onpointercancel,
+                setter: Some(set_onpointercancel),
+            },
+            rt::AttrDef {
+                name: "onpointerout",
+                getter: get_onpointerout,
+                setter: Some(set_onpointerout),
+            },
+            rt::AttrDef {
+                name: "onpointerleave",
+                getter: get_onpointerleave,
+                setter: Some(set_onpointerleave),
+            },
+            rt::AttrDef {
+                name: "ongotpointercapture",
+                getter: get_ongotpointercapture,
+                setter: Some(set_ongotpointercapture),
+            },
+            rt::AttrDef {
+                name: "onlostpointercapture",
+                getter: get_onlostpointercapture,
+                setter: Some(set_onlostpointercapture),
             },
             rt::AttrDef {
                 name: "onselectstart",
@@ -19749,6 +21100,322 @@ pub mod document {
         Ok(JsValue::undefined())
     }
 
+    fn get_onpointerover(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointerover")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerover(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "pointerover", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointerenter(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointerenter")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerenter(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "pointerenter",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointerdown(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointerdown")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerdown(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "pointerdown", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointermove(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointermove")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointermove(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "pointermove", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointerrawupdate(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointerrawupdate")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerrawupdate(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "pointerrawupdate",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointerup(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointerup")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerup(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "pointerup", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointercancel(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointercancel")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointercancel(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "pointercancel",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointerout(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointerout")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerout(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "pointerout", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointerleave(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointerleave")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerleave(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "pointerleave",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ongotpointercapture(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "gotpointercapture")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_ongotpointercapture(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "gotpointercapture",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onlostpointercapture(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "lostpointercapture")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onlostpointercapture(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "lostpointercapture",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
     fn get_onselectstart(
         this_js: &JsValue,
         _args: &[JsValue],
@@ -20964,6 +22631,61 @@ pub mod document {
                 name: "onwheel",
                 getter: get_onwheel,
                 setter: Some(set_onwheel),
+            },
+            rt::AttrDef {
+                name: "onpointerover",
+                getter: get_onpointerover,
+                setter: Some(set_onpointerover),
+            },
+            rt::AttrDef {
+                name: "onpointerenter",
+                getter: get_onpointerenter,
+                setter: Some(set_onpointerenter),
+            },
+            rt::AttrDef {
+                name: "onpointerdown",
+                getter: get_onpointerdown,
+                setter: Some(set_onpointerdown),
+            },
+            rt::AttrDef {
+                name: "onpointermove",
+                getter: get_onpointermove,
+                setter: Some(set_onpointermove),
+            },
+            rt::AttrDef {
+                name: "onpointerrawupdate",
+                getter: get_onpointerrawupdate,
+                setter: Some(set_onpointerrawupdate),
+            },
+            rt::AttrDef {
+                name: "onpointerup",
+                getter: get_onpointerup,
+                setter: Some(set_onpointerup),
+            },
+            rt::AttrDef {
+                name: "onpointercancel",
+                getter: get_onpointercancel,
+                setter: Some(set_onpointercancel),
+            },
+            rt::AttrDef {
+                name: "onpointerout",
+                getter: get_onpointerout,
+                setter: Some(set_onpointerout),
+            },
+            rt::AttrDef {
+                name: "onpointerleave",
+                getter: get_onpointerleave,
+                setter: Some(set_onpointerleave),
+            },
+            rt::AttrDef {
+                name: "ongotpointercapture",
+                getter: get_ongotpointercapture,
+                setter: Some(set_ongotpointercapture),
+            },
+            rt::AttrDef {
+                name: "onlostpointercapture",
+                getter: get_onlostpointercapture,
+                setter: Some(set_onlostpointercapture),
             },
             rt::AttrDef {
                 name: "onselectstart",
@@ -23083,6 +24805,54 @@ pub mod error_event {
     };
 }
 
+pub mod focus_event {
+    use super::*;
+
+    fn get_related_target(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FocusEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FocusEventImpl>::related_target(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "FocusEvent")?;
+        rt::require_args(args, 1, "FocusEvent constructor")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::FocusEventInit as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FocusEventImpl>::constructor(cx, a0, a1)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::FocusEvent, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::FocusEvent,
+        name: "FocusEvent",
+        parent: Some(I::UIEvent),
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[rt::AttrDef {
+            name: "relatedTarget",
+            getter: get_related_target,
+            setter: None,
+        }],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod html_element {
     use super::*;
 
@@ -25184,6 +26954,322 @@ pub mod html_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_onpointerover(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointerover")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerover(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "pointerover", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointerenter(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointerenter")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerenter(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "pointerenter",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointerdown(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointerdown")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerdown(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "pointerdown", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointermove(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointermove")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointermove(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "pointermove", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointerrawupdate(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointerrawupdate")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerrawupdate(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "pointerrawupdate",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointerup(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointerup")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerup(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "pointerup", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointercancel(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointercancel")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointercancel(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "pointercancel",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointerout(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointerout")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerout(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "pointerout", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointerleave(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointerleave")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerleave(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "pointerleave",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ongotpointercapture(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "gotpointercapture")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_ongotpointercapture(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "gotpointercapture",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onlostpointercapture(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "lostpointercapture")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onlostpointercapture(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "lostpointercapture",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
     fn get_onselectstart(
         this_js: &JsValue,
         _args: &[JsValue],
@@ -25808,6 +27894,61 @@ pub mod html_element {
                 name: "onwheel",
                 getter: get_onwheel,
                 setter: Some(set_onwheel),
+            },
+            rt::AttrDef {
+                name: "onpointerover",
+                getter: get_onpointerover,
+                setter: Some(set_onpointerover),
+            },
+            rt::AttrDef {
+                name: "onpointerenter",
+                getter: get_onpointerenter,
+                setter: Some(set_onpointerenter),
+            },
+            rt::AttrDef {
+                name: "onpointerdown",
+                getter: get_onpointerdown,
+                setter: Some(set_onpointerdown),
+            },
+            rt::AttrDef {
+                name: "onpointermove",
+                getter: get_onpointermove,
+                setter: Some(set_onpointermove),
+            },
+            rt::AttrDef {
+                name: "onpointerrawupdate",
+                getter: get_onpointerrawupdate,
+                setter: Some(set_onpointerrawupdate),
+            },
+            rt::AttrDef {
+                name: "onpointerup",
+                getter: get_onpointerup,
+                setter: Some(set_onpointerup),
+            },
+            rt::AttrDef {
+                name: "onpointercancel",
+                getter: get_onpointercancel,
+                setter: Some(set_onpointercancel),
+            },
+            rt::AttrDef {
+                name: "onpointerout",
+                getter: get_onpointerout,
+                setter: Some(set_onpointerout),
+            },
+            rt::AttrDef {
+                name: "onpointerleave",
+                getter: get_onpointerleave,
+                setter: Some(set_onpointerleave),
+            },
+            rt::AttrDef {
+                name: "ongotpointercapture",
+                getter: get_ongotpointercapture,
+                setter: Some(set_ongotpointercapture),
+            },
+            rt::AttrDef {
+                name: "onlostpointercapture",
+                getter: get_onlostpointercapture,
+                setter: Some(set_onlostpointercapture),
             },
             rt::AttrDef {
                 name: "onselectstart",
@@ -35818,6 +37959,523 @@ pub mod html_video_element {
     };
 }
 
+pub mod input_event {
+    use super::*;
+
+    fn get_data(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::InputEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::InputEventImpl>::data(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_is_composing(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::InputEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::InputEventImpl>::is_composing(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_input_type(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::InputEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::InputEventImpl>::input_type(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "InputEvent")?;
+        rt::require_args(args, 1, "InputEvent constructor")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::InputEventInit as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::InputEventImpl>::constructor(cx, a0, a1)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::InputEvent, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::InputEvent,
+        name: "InputEvent",
+        parent: Some(I::UIEvent),
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[
+            rt::AttrDef {
+                name: "data",
+                getter: get_data,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "isComposing",
+                getter: get_is_composing,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "inputType",
+                getter: get_input_type,
+                setter: None,
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod keyboard_event {
+    use super::*;
+
+    fn get_key(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::KeyboardEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::KeyboardEventImpl>::key(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_code(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::KeyboardEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::KeyboardEventImpl>::code(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_location(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::KeyboardEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::KeyboardEventImpl>::location(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_ctrl_key(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::KeyboardEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::KeyboardEventImpl>::ctrl_key(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_shift_key(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::KeyboardEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::KeyboardEventImpl>::shift_key(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_alt_key(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::KeyboardEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::KeyboardEventImpl>::alt_key(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_meta_key(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::KeyboardEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::KeyboardEventImpl>::meta_key(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_repeat(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::KeyboardEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::KeyboardEventImpl>::repeat(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_is_composing(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::KeyboardEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::KeyboardEventImpl>::is_composing(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_char_code(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::KeyboardEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::KeyboardEventImpl>::char_code(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_key_code(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::KeyboardEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::KeyboardEventImpl>::key_code(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_get_modifier_state(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::KeyboardEvent, ctx)?;
+        rt::require_args(args, 1, "KeyboardEvent.getModifierState")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::KeyboardEventImpl>::get_modifier_state(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "KeyboardEvent")?;
+        rt::require_args(args, 1, "KeyboardEvent constructor")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::KeyboardEventInit as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::KeyboardEventImpl>::constructor(cx, a0, a1)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::KeyboardEvent, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::KeyboardEvent,
+        name: "KeyboardEvent",
+        parent: Some(I::UIEvent),
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[
+            rt::AttrDef {
+                name: "key",
+                getter: get_key,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "code",
+                getter: get_code,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "location",
+                getter: get_location,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "ctrlKey",
+                getter: get_ctrl_key,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "shiftKey",
+                getter: get_shift_key,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "altKey",
+                getter: get_alt_key,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "metaKey",
+                getter: get_meta_key,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "repeat",
+                getter: get_repeat,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "isComposing",
+                getter: get_is_composing,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "charCode",
+                getter: get_char_code,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "keyCode",
+                getter: get_key_code,
+                setter: None,
+            },
+        ],
+        ops: &[rt::OpDef {
+            name: "getModifierState",
+            func: op_get_modifier_state,
+            length: 1,
+        }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[
+            ("DOM_KEY_LOCATION_STANDARD", 0_f64),
+            ("DOM_KEY_LOCATION_LEFT", 1_f64),
+            ("DOM_KEY_LOCATION_RIGHT", 2_f64),
+            ("DOM_KEY_LOCATION_NUMPAD", 3_f64),
+        ],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod mouse_event {
+    use super::*;
+
+    fn get_page_x(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MouseEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MouseEventImpl>::page_x(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_page_y(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MouseEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MouseEventImpl>::page_y(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_x(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MouseEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MouseEventImpl>::x(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_y(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MouseEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MouseEventImpl>::y(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_offset_x(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MouseEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MouseEventImpl>::offset_x(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_offset_y(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MouseEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MouseEventImpl>::offset_y(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_screen_x(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MouseEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MouseEventImpl>::screen_x(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_screen_y(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MouseEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MouseEventImpl>::screen_y(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_client_x(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MouseEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MouseEventImpl>::client_x(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_client_y(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MouseEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MouseEventImpl>::client_y(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_ctrl_key(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MouseEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MouseEventImpl>::ctrl_key(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_shift_key(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MouseEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MouseEventImpl>::shift_key(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_alt_key(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MouseEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MouseEventImpl>::alt_key(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_meta_key(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MouseEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MouseEventImpl>::meta_key(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_button(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MouseEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MouseEventImpl>::button(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_buttons(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MouseEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MouseEventImpl>::buttons(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_related_target(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MouseEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MouseEventImpl>::related_target(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_get_modifier_state(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::MouseEvent, ctx)?;
+        rt::require_args(args, 1, "MouseEvent.getModifierState")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MouseEventImpl>::get_modifier_state(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "MouseEvent")?;
+        rt::require_args(args, 1, "MouseEvent constructor")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::MouseEventInit as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MouseEventImpl>::constructor(cx, a0, a1)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::MouseEvent, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::MouseEvent,
+        name: "MouseEvent",
+        parent: Some(I::UIEvent),
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[
+            rt::AttrDef {
+                name: "pageX",
+                getter: get_page_x,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "pageY",
+                getter: get_page_y,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "x",
+                getter: get_x,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "y",
+                getter: get_y,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "offsetX",
+                getter: get_offset_x,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "offsetY",
+                getter: get_offset_y,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "screenX",
+                getter: get_screen_x,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "screenY",
+                getter: get_screen_y,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "clientX",
+                getter: get_client_x,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "clientY",
+                getter: get_client_y,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "ctrlKey",
+                getter: get_ctrl_key,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "shiftKey",
+                getter: get_shift_key,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "altKey",
+                getter: get_alt_key,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "metaKey",
+                getter: get_meta_key,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "button",
+                getter: get_button,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "buttons",
+                getter: get_buttons,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "relatedTarget",
+                getter: get_related_target,
+                setter: None,
+            },
+        ],
+        ops: &[rt::OpDef {
+            name: "getModifierState",
+            func: op_get_modifier_state,
+            length: 1,
+        }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod performance_navigation_timing {
     use super::*;
 
@@ -36010,6 +38668,173 @@ pub mod performance_navigation_timing {
             func: op_to_json,
             length: 0,
         }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod pointer_event {
+    use super::*;
+
+    fn get_pointer_id(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PointerEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PointerEventImpl>::pointer_id(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_width(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PointerEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::PointerEventImpl>::width(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_height(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PointerEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::PointerEventImpl>::height(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_pressure(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PointerEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::PointerEventImpl>::pressure(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_tangential_pressure(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PointerEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PointerEventImpl>::tangential_pressure(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_tilt_x(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PointerEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::PointerEventImpl>::tilt_x(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_tilt_y(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PointerEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::PointerEventImpl>::tilt_y(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_twist(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PointerEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::PointerEventImpl>::twist(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_pointer_type(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PointerEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PointerEventImpl>::pointer_type(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_is_primary(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PointerEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PointerEventImpl>::is_primary(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "PointerEvent")?;
+        rt::require_args(args, 1, "PointerEvent constructor")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::PointerEventInit as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PointerEventImpl>::constructor(cx, a0, a1)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::PointerEvent, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::PointerEvent,
+        name: "PointerEvent",
+        parent: Some(I::MouseEvent),
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[
+            rt::AttrDef {
+                name: "pointerId",
+                getter: get_pointer_id,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "width",
+                getter: get_width,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "height",
+                getter: get_height,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "pressure",
+                getter: get_pressure,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "tangentialPressure",
+                getter: get_tangential_pressure,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "tiltX",
+                getter: get_tilt_x,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "tiltY",
+                getter: get_tilt_y,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "twist",
+                getter: get_twist,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "pointerType",
+                getter: get_pointer_type,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "isPrimary",
+                getter: get_is_primary,
+                setter: None,
+            },
+        ],
+        ops: &[],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -37763,6 +40588,322 @@ pub mod svg_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_onpointerover(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointerover")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerover(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "pointerover", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointerenter(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointerenter")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerenter(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "pointerenter",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointerdown(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointerdown")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerdown(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "pointerdown", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointermove(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointermove")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointermove(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "pointermove", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointerrawupdate(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointerrawupdate")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerrawupdate(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "pointerrawupdate",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointerup(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointerup")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerup(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "pointerup", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointercancel(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointercancel")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointercancel(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "pointercancel",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointerout(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointerout")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerout(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "pointerout", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpointerleave(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pointerleave")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpointerleave(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "pointerleave",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ongotpointercapture(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "gotpointercapture")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_ongotpointercapture(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "gotpointercapture",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onlostpointercapture(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "lostpointercapture")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onlostpointercapture(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "lostpointercapture",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
     fn get_onselectstart(
         this_js: &JsValue,
         _args: &[JsValue],
@@ -38324,6 +41465,61 @@ pub mod svg_element {
                 name: "onwheel",
                 getter: get_onwheel,
                 setter: Some(set_onwheel),
+            },
+            rt::AttrDef {
+                name: "onpointerover",
+                getter: get_onpointerover,
+                setter: Some(set_onpointerover),
+            },
+            rt::AttrDef {
+                name: "onpointerenter",
+                getter: get_onpointerenter,
+                setter: Some(set_onpointerenter),
+            },
+            rt::AttrDef {
+                name: "onpointerdown",
+                getter: get_onpointerdown,
+                setter: Some(set_onpointerdown),
+            },
+            rt::AttrDef {
+                name: "onpointermove",
+                getter: get_onpointermove,
+                setter: Some(set_onpointermove),
+            },
+            rt::AttrDef {
+                name: "onpointerrawupdate",
+                getter: get_onpointerrawupdate,
+                setter: Some(set_onpointerrawupdate),
+            },
+            rt::AttrDef {
+                name: "onpointerup",
+                getter: get_onpointerup,
+                setter: Some(set_onpointerup),
+            },
+            rt::AttrDef {
+                name: "onpointercancel",
+                getter: get_onpointercancel,
+                setter: Some(set_onpointercancel),
+            },
+            rt::AttrDef {
+                name: "onpointerout",
+                getter: get_onpointerout,
+                setter: Some(set_onpointerout),
+            },
+            rt::AttrDef {
+                name: "onpointerleave",
+                getter: get_onpointerleave,
+                setter: Some(set_onpointerleave),
+            },
+            rt::AttrDef {
+                name: "ongotpointercapture",
+                getter: get_ongotpointercapture,
+                setter: Some(set_ongotpointercapture),
+            },
+            rt::AttrDef {
+                name: "onlostpointercapture",
+                getter: get_onlostpointercapture,
+                setter: Some(set_onlostpointercapture),
             },
             rt::AttrDef {
                 name: "onselectstart",
@@ -39830,6 +43026,91 @@ pub mod text {
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod wheel_event {
+    use super::*;
+
+    fn get_delta_x(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WheelEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WheelEventImpl>::delta_x(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_delta_y(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WheelEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WheelEventImpl>::delta_y(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_delta_z(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WheelEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WheelEventImpl>::delta_z(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_delta_mode(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WheelEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WheelEventImpl>::delta_mode(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "WheelEvent")?;
+        rt::require_args(args, 1, "WheelEvent constructor")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::WheelEventInit as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WheelEventImpl>::constructor(cx, a0, a1)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::WheelEvent, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::WheelEvent,
+        name: "WheelEvent",
+        parent: Some(I::MouseEvent),
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[
+            rt::AttrDef {
+                name: "deltaX",
+                getter: get_delta_x,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "deltaY",
+                getter: get_delta_y,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "deltaZ",
+                getter: get_delta_z,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "deltaMode",
+                getter: get_delta_mode,
+                setter: None,
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[
+            ("DOM_DELTA_PIXEL", 0_f64),
+            ("DOM_DELTA_LINE", 1_f64),
+            ("DOM_DELTA_PAGE", 2_f64),
+        ],
         iterable: rt::Iterable::None,
         exotic: None,
     };
@@ -44407,6 +47688,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &transform_stream::DEF,
     &transform_stream_default_controller::DEF,
     &tree_walker::DEF,
+    &ui_event::DEF,
     &url::DEF,
     &url_search_params::DEF,
     &window::DEF,
@@ -44432,6 +47714,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &document_type::DEF,
     &element::DEF,
     &error_event::DEF,
+    &focus_event::DEF,
     &html_element::DEF,
     &html_embed_element::DEF,
     &html_field_set_element::DEF,
@@ -44488,7 +47771,11 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &htmlu_list_element::DEF,
     &html_unknown_element::DEF,
     &html_video_element::DEF,
+    &input_event::DEF,
+    &keyboard_event::DEF,
+    &mouse_event::DEF,
     &performance_navigation_timing::DEF,
+    &pointer_event::DEF,
     &svg_element::DEF,
     &svg_gradient_element::DEF,
     &svg_graphics_element::DEF,
@@ -44512,6 +47799,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &svg_view_element::DEF,
     &shadow_root::DEF,
     &text::DEF,
+    &wheel_event::DEF,
     &xml_document::DEF,
     &xml_http_request::DEF,
     &html_anchor_element::DEF,

@@ -8,7 +8,7 @@ use catpaw_dom::NodeId;
 use catpaw_js::EventTargetRef;
 
 use crate::element;
-use crate::events::{self, Event};
+use crate::events;
 use crate::page::Cx;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -53,10 +53,7 @@ pub fn click(cx: &mut Cx<'_>, el: NodeId, trusted: bool) {
         was
     });
 
-    let mut event = Event::new("click", true, true, cx.page.clock.peek());
-    event.composed = true;
-    event.trusted = trusted;
-    let event = cx.page.alloc(event);
+    let event = crate::ui_events::synthetic_click(cx, trusted);
     let proceed = events::dispatch(cx, EventTargetRef::Node(el), event);
 
     if let Some(was) = previous {

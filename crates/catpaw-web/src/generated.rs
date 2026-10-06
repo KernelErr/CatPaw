@@ -84,6 +84,7 @@ pub enum InterfaceId {
     TransformStream,
     TransformStreamDefaultController,
     TreeWalker,
+    UIEvent,
     URL,
     URLSearchParams,
     Window,
@@ -109,6 +110,7 @@ pub enum InterfaceId {
     DocumentType,
     Element,
     ErrorEvent,
+    FocusEvent,
     HTMLElement,
     HTMLEmbedElement,
     HTMLFieldSetElement,
@@ -165,7 +167,11 @@ pub enum InterfaceId {
     HTMLUListElement,
     HTMLUnknownElement,
     HTMLVideoElement,
+    InputEvent,
+    KeyboardEvent,
+    MouseEvent,
     PerformanceNavigationTiming,
+    PointerEvent,
     SVGElement,
     SVGGradientElement,
     SVGGraphicsElement,
@@ -189,6 +195,7 @@ pub enum InterfaceId {
     SVGViewElement,
     ShadowRoot,
     Text,
+    WheelEvent,
     XMLDocument,
     XMLHttpRequest,
     HTMLAnchorElement,
@@ -224,8 +231,8 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 199;
-    pub const ALL: [InterfaceId; 199] = [
+    pub const COUNT: usize = 206;
+    pub const ALL: [InterfaceId; 206] = [
         InterfaceId::AbortController,
         InterfaceId::CSSRule,
         InterfaceId::CSSRuleList,
@@ -288,6 +295,7 @@ impl InterfaceId {
         InterfaceId::TransformStream,
         InterfaceId::TransformStreamDefaultController,
         InterfaceId::TreeWalker,
+        InterfaceId::UIEvent,
         InterfaceId::URL,
         InterfaceId::URLSearchParams,
         InterfaceId::Window,
@@ -313,6 +321,7 @@ impl InterfaceId {
         InterfaceId::DocumentType,
         InterfaceId::Element,
         InterfaceId::ErrorEvent,
+        InterfaceId::FocusEvent,
         InterfaceId::HTMLElement,
         InterfaceId::HTMLEmbedElement,
         InterfaceId::HTMLFieldSetElement,
@@ -369,7 +378,11 @@ impl InterfaceId {
         InterfaceId::HTMLUListElement,
         InterfaceId::HTMLUnknownElement,
         InterfaceId::HTMLVideoElement,
+        InterfaceId::InputEvent,
+        InterfaceId::KeyboardEvent,
+        InterfaceId::MouseEvent,
         InterfaceId::PerformanceNavigationTiming,
+        InterfaceId::PointerEvent,
         InterfaceId::SVGElement,
         InterfaceId::SVGGradientElement,
         InterfaceId::SVGGraphicsElement,
@@ -393,6 +406,7 @@ impl InterfaceId {
         InterfaceId::SVGViewElement,
         InterfaceId::ShadowRoot,
         InterfaceId::Text,
+        InterfaceId::WheelEvent,
         InterfaceId::XMLDocument,
         InterfaceId::XMLHttpRequest,
         InterfaceId::HTMLAnchorElement,
@@ -491,6 +505,7 @@ impl InterfaceId {
             InterfaceId::TransformStream => "TransformStream",
             InterfaceId::TransformStreamDefaultController => "TransformStreamDefaultController",
             InterfaceId::TreeWalker => "TreeWalker",
+            InterfaceId::UIEvent => "UIEvent",
             InterfaceId::URL => "URL",
             InterfaceId::URLSearchParams => "URLSearchParams",
             InterfaceId::Window => "Window",
@@ -516,6 +531,7 @@ impl InterfaceId {
             InterfaceId::DocumentType => "DocumentType",
             InterfaceId::Element => "Element",
             InterfaceId::ErrorEvent => "ErrorEvent",
+            InterfaceId::FocusEvent => "FocusEvent",
             InterfaceId::HTMLElement => "HTMLElement",
             InterfaceId::HTMLEmbedElement => "HTMLEmbedElement",
             InterfaceId::HTMLFieldSetElement => "HTMLFieldSetElement",
@@ -572,7 +588,11 @@ impl InterfaceId {
             InterfaceId::HTMLUListElement => "HTMLUListElement",
             InterfaceId::HTMLUnknownElement => "HTMLUnknownElement",
             InterfaceId::HTMLVideoElement => "HTMLVideoElement",
+            InterfaceId::InputEvent => "InputEvent",
+            InterfaceId::KeyboardEvent => "KeyboardEvent",
+            InterfaceId::MouseEvent => "MouseEvent",
             InterfaceId::PerformanceNavigationTiming => "PerformanceNavigationTiming",
+            InterfaceId::PointerEvent => "PointerEvent",
             InterfaceId::SVGElement => "SVGElement",
             InterfaceId::SVGGradientElement => "SVGGradientElement",
             InterfaceId::SVGGraphicsElement => "SVGGraphicsElement",
@@ -596,6 +616,7 @@ impl InterfaceId {
             InterfaceId::SVGViewElement => "SVGViewElement",
             InterfaceId::ShadowRoot => "ShadowRoot",
             InterfaceId::Text => "Text",
+            InterfaceId::WheelEvent => "WheelEvent",
             InterfaceId::XMLDocument => "XMLDocument",
             InterfaceId::XMLHttpRequest => "XMLHttpRequest",
             InterfaceId::HTMLAnchorElement => "HTMLAnchorElement",
@@ -695,6 +716,7 @@ impl InterfaceId {
             "TransformStream" => InterfaceId::TransformStream,
             "TransformStreamDefaultController" => InterfaceId::TransformStreamDefaultController,
             "TreeWalker" => InterfaceId::TreeWalker,
+            "UIEvent" => InterfaceId::UIEvent,
             "URL" => InterfaceId::URL,
             "URLSearchParams" => InterfaceId::URLSearchParams,
             "Window" => InterfaceId::Window,
@@ -720,6 +742,7 @@ impl InterfaceId {
             "DocumentType" => InterfaceId::DocumentType,
             "Element" => InterfaceId::Element,
             "ErrorEvent" => InterfaceId::ErrorEvent,
+            "FocusEvent" => InterfaceId::FocusEvent,
             "HTMLElement" => InterfaceId::HTMLElement,
             "HTMLEmbedElement" => InterfaceId::HTMLEmbedElement,
             "HTMLFieldSetElement" => InterfaceId::HTMLFieldSetElement,
@@ -776,7 +799,11 @@ impl InterfaceId {
             "HTMLUListElement" => InterfaceId::HTMLUListElement,
             "HTMLUnknownElement" => InterfaceId::HTMLUnknownElement,
             "HTMLVideoElement" => InterfaceId::HTMLVideoElement,
+            "InputEvent" => InterfaceId::InputEvent,
+            "KeyboardEvent" => InterfaceId::KeyboardEvent,
+            "MouseEvent" => InterfaceId::MouseEvent,
             "PerformanceNavigationTiming" => InterfaceId::PerformanceNavigationTiming,
+            "PointerEvent" => InterfaceId::PointerEvent,
             "SVGElement" => InterfaceId::SVGElement,
             "SVGGradientElement" => InterfaceId::SVGGradientElement,
             "SVGGraphicsElement" => InterfaceId::SVGGraphicsElement,
@@ -800,6 +827,7 @@ impl InterfaceId {
             "SVGViewElement" => InterfaceId::SVGViewElement,
             "ShadowRoot" => InterfaceId::ShadowRoot,
             "Text" => InterfaceId::Text,
+            "WheelEvent" => InterfaceId::WheelEvent,
             "XMLDocument" => InterfaceId::XMLDocument,
             "XMLHttpRequest" => InterfaceId::XMLHttpRequest,
             "HTMLAnchorElement" => InterfaceId::HTMLAnchorElement,
@@ -900,6 +928,7 @@ impl InterfaceId {
             InterfaceId::TransformStream => None,
             InterfaceId::TransformStreamDefaultController => None,
             InterfaceId::TreeWalker => None,
+            InterfaceId::UIEvent => Some(InterfaceId::Event),
             InterfaceId::URL => None,
             InterfaceId::URLSearchParams => None,
             InterfaceId::Window => Some(InterfaceId::EventTarget),
@@ -925,6 +954,7 @@ impl InterfaceId {
             InterfaceId::DocumentType => Some(InterfaceId::Node),
             InterfaceId::Element => Some(InterfaceId::Node),
             InterfaceId::ErrorEvent => Some(InterfaceId::Event),
+            InterfaceId::FocusEvent => Some(InterfaceId::UIEvent),
             InterfaceId::HTMLElement => Some(InterfaceId::Element),
             InterfaceId::HTMLEmbedElement => Some(InterfaceId::HTMLElement),
             InterfaceId::HTMLFieldSetElement => Some(InterfaceId::HTMLElement),
@@ -981,9 +1011,13 @@ impl InterfaceId {
             InterfaceId::HTMLUListElement => Some(InterfaceId::HTMLElement),
             InterfaceId::HTMLUnknownElement => Some(InterfaceId::HTMLElement),
             InterfaceId::HTMLVideoElement => Some(InterfaceId::HTMLMediaElement),
+            InterfaceId::InputEvent => Some(InterfaceId::UIEvent),
+            InterfaceId::KeyboardEvent => Some(InterfaceId::UIEvent),
+            InterfaceId::MouseEvent => Some(InterfaceId::UIEvent),
             InterfaceId::PerformanceNavigationTiming => {
                 Some(InterfaceId::PerformanceResourceTiming)
             }
+            InterfaceId::PointerEvent => Some(InterfaceId::MouseEvent),
             InterfaceId::SVGElement => Some(InterfaceId::Element),
             InterfaceId::SVGGradientElement => Some(InterfaceId::SVGElement),
             InterfaceId::SVGGraphicsElement => Some(InterfaceId::SVGElement),
@@ -1007,6 +1041,7 @@ impl InterfaceId {
             InterfaceId::SVGViewElement => Some(InterfaceId::SVGElement),
             InterfaceId::ShadowRoot => Some(InterfaceId::DocumentFragment),
             InterfaceId::Text => Some(InterfaceId::CharacterData),
+            InterfaceId::WheelEvent => Some(InterfaceId::MouseEvent),
             InterfaceId::XMLDocument => Some(InterfaceId::Document),
             InterfaceId::XMLHttpRequest => Some(InterfaceId::XMLHttpRequestEventTarget),
             InterfaceId::HTMLAnchorElement => Some(InterfaceId::HTMLElement),
@@ -1955,6 +1990,17 @@ pub struct EventListenerOptions {
 }
 
 #[derive(Clone, Debug)]
+pub struct FocusEventInit {
+    pub bubbles: bool,
+    pub cancelable: bool,
+    pub composed: bool,
+    pub view: Option<WindowRef>,
+    pub detail: i32,
+    pub which: u32,
+    pub related_target: Option<EventTargetRef>,
+}
+
+#[derive(Clone, Debug)]
 pub struct FocusOptions {
     pub prevent_scroll: bool,
     pub focus_visible: Option<bool>,
@@ -1995,6 +2041,19 @@ pub struct ImportNodeOptions {
 }
 
 #[derive(Clone, Debug)]
+pub struct InputEventInit {
+    pub bubbles: bool,
+    pub cancelable: bool,
+    pub composed: bool,
+    pub view: Option<WindowRef>,
+    pub detail: i32,
+    pub which: u32,
+    pub data: Option<String>,
+    pub is_composing: bool,
+    pub input_type: String,
+}
+
+#[derive(Clone, Debug)]
 pub struct IntersectionObserverInit {
     pub root: Option<ElementOrDocument>,
     pub root_margin: String,
@@ -2002,6 +2061,68 @@ pub struct IntersectionObserverInit {
     pub threshold: DoubleOrDoubleSequence,
     pub delay: i32,
     pub track_visibility: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct KeyboardEventInit {
+    pub bubbles: bool,
+    pub cancelable: bool,
+    pub composed: bool,
+    pub view: Option<WindowRef>,
+    pub detail: i32,
+    pub which: u32,
+    pub ctrl_key: bool,
+    pub shift_key: bool,
+    pub alt_key: bool,
+    pub meta_key: bool,
+    pub modifier_alt_graph: bool,
+    pub modifier_caps_lock: bool,
+    pub modifier_fn: bool,
+    pub modifier_fn_lock: bool,
+    pub modifier_hyper: bool,
+    pub modifier_num_lock: bool,
+    pub modifier_scroll_lock: bool,
+    pub modifier_super: bool,
+    pub modifier_symbol: bool,
+    pub modifier_symbol_lock: bool,
+    pub key: String,
+    pub code: String,
+    pub location: u32,
+    pub repeat: bool,
+    pub is_composing: bool,
+    pub char_code: u32,
+    pub key_code: u32,
+}
+
+#[derive(Clone, Debug)]
+pub struct MouseEventInit {
+    pub bubbles: bool,
+    pub cancelable: bool,
+    pub composed: bool,
+    pub view: Option<WindowRef>,
+    pub detail: i32,
+    pub which: u32,
+    pub ctrl_key: bool,
+    pub shift_key: bool,
+    pub alt_key: bool,
+    pub meta_key: bool,
+    pub modifier_alt_graph: bool,
+    pub modifier_caps_lock: bool,
+    pub modifier_fn: bool,
+    pub modifier_fn_lock: bool,
+    pub modifier_hyper: bool,
+    pub modifier_num_lock: bool,
+    pub modifier_scroll_lock: bool,
+    pub modifier_super: bool,
+    pub modifier_symbol: bool,
+    pub modifier_symbol_lock: bool,
+    pub screen_x: i32,
+    pub screen_y: i32,
+    pub client_x: i32,
+    pub client_y: i32,
+    pub button: i16,
+    pub buttons: u16,
+    pub related_target: Option<EventTargetRef>,
 }
 
 #[derive(Clone, Debug)]
@@ -2034,6 +2155,52 @@ pub struct PerformanceObserverInit {
     pub entry_types: Option<Vec<String>>,
     pub type_: Option<String>,
     pub buffered: Option<bool>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PointerEventInit {
+    pub bubbles: bool,
+    pub cancelable: bool,
+    pub composed: bool,
+    pub view: Option<WindowRef>,
+    pub detail: i32,
+    pub which: u32,
+    pub ctrl_key: bool,
+    pub shift_key: bool,
+    pub alt_key: bool,
+    pub meta_key: bool,
+    pub modifier_alt_graph: bool,
+    pub modifier_caps_lock: bool,
+    pub modifier_fn: bool,
+    pub modifier_fn_lock: bool,
+    pub modifier_hyper: bool,
+    pub modifier_num_lock: bool,
+    pub modifier_scroll_lock: bool,
+    pub modifier_super: bool,
+    pub modifier_symbol: bool,
+    pub modifier_symbol_lock: bool,
+    pub screen_x: i32,
+    pub screen_y: i32,
+    pub client_x: i32,
+    pub client_y: i32,
+    pub button: i16,
+    pub buttons: u16,
+    pub related_target: Option<EventTargetRef>,
+    pub pointer_id: i32,
+    pub width: f64,
+    pub height: f64,
+    pub pressure: f64,
+    pub tangential_pressure: f64,
+    pub tilt_x: Option<i32>,
+    pub tilt_y: Option<i32>,
+    pub twist: i32,
+    pub altitude_angle: Option<f64>,
+    pub azimuth_angle: Option<f64>,
+    pub pointer_type: String,
+    pub is_primary: bool,
+    pub persistent_device_id: i32,
+    pub coalesced_events: Vec<ObjectId>,
+    pub predicted_events: Vec<ObjectId>,
 }
 
 #[derive(Clone, Debug)]
@@ -2165,6 +2332,52 @@ pub struct TextDecodeOptions {
 pub struct TextDecoderOptions {
     pub fatal: bool,
     pub ignore_bom: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct UIEventInit {
+    pub bubbles: bool,
+    pub cancelable: bool,
+    pub composed: bool,
+    pub view: Option<WindowRef>,
+    pub detail: i32,
+    pub which: u32,
+}
+
+#[derive(Clone, Debug)]
+pub struct WheelEventInit {
+    pub bubbles: bool,
+    pub cancelable: bool,
+    pub composed: bool,
+    pub view: Option<WindowRef>,
+    pub detail: i32,
+    pub which: u32,
+    pub ctrl_key: bool,
+    pub shift_key: bool,
+    pub alt_key: bool,
+    pub meta_key: bool,
+    pub modifier_alt_graph: bool,
+    pub modifier_caps_lock: bool,
+    pub modifier_fn: bool,
+    pub modifier_fn_lock: bool,
+    pub modifier_hyper: bool,
+    pub modifier_num_lock: bool,
+    pub modifier_scroll_lock: bool,
+    pub modifier_super: bool,
+    pub modifier_symbol: bool,
+    pub modifier_symbol_lock: bool,
+    pub screen_x: i32,
+    pub screen_y: i32,
+    pub client_x: i32,
+    pub client_y: i32,
+    pub button: i16,
+    pub buttons: u16,
+    pub related_target: Option<EventTargetRef>,
+    pub delta_x: f64,
+    pub delta_y: f64,
+    pub delta_z: f64,
+    pub delta_mode: u32,
+    pub momentum: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -3450,6 +3663,17 @@ pub trait TreeWalkerImpl {
     fn next_node(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
 }
 
+pub trait UIEventImpl {
+    fn view(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<WindowRef>>;
+    fn detail(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<i32>;
+    fn which(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        type_: String,
+        event_init_dict: UIEventInit,
+    ) -> Fallible<ObjectId>;
+}
+
 pub trait URLImpl {
     fn parse(cx: &mut Cx<'_>, url: String, base: Option<String>) -> Fallible<Option<ObjectId>>;
     fn can_parse(cx: &mut Cx<'_>, url: String, base: Option<String>) -> Fallible<bool>;
@@ -3974,6 +4198,15 @@ pub trait ErrorEventImpl {
     ) -> Fallible<ObjectId>;
 }
 
+pub trait FocusEventImpl {
+    fn related_target(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<EventTargetRef>>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        type_: String,
+        event_init_dict: FocusEventInit,
+    ) -> Fallible<ObjectId>;
+}
+
 pub trait HTMLElementImpl {
     fn offset_parent(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
     fn offset_top(cx: &mut Cx<'_>, this: NodeId) -> Fallible<i32>;
@@ -4032,6 +4265,63 @@ pub trait HTMLTitleElementImpl {
     fn set_text(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
 }
 
+pub trait InputEventImpl {
+    fn data(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<String>>;
+    fn is_composing(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn input_type(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        type_: String,
+        event_init_dict: InputEventInit,
+    ) -> Fallible<ObjectId>;
+}
+
+pub trait KeyboardEventImpl {
+    fn key(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn code(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn location(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn ctrl_key(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn shift_key(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn alt_key(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn meta_key(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn repeat(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn is_composing(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn get_modifier_state(cx: &mut Cx<'_>, this: ObjectId, key_arg: String) -> Fallible<bool>;
+    fn char_code(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn key_code(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        type_: String,
+        event_init_dict: KeyboardEventInit,
+    ) -> Fallible<ObjectId>;
+}
+
+pub trait MouseEventImpl {
+    fn page_x(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn page_y(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn x(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn y(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn offset_x(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn offset_y(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn screen_x(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<i32>;
+    fn screen_y(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<i32>;
+    fn client_x(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<i32>;
+    fn client_y(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<i32>;
+    fn ctrl_key(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn shift_key(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn alt_key(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn meta_key(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn button(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<i16>;
+    fn buttons(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u16>;
+    fn related_target(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<EventTargetRef>>;
+    fn get_modifier_state(cx: &mut Cx<'_>, this: ObjectId, key_arg: String) -> Fallible<bool>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        type_: String,
+        event_init_dict: MouseEventInit,
+    ) -> Fallible<ObjectId>;
+}
+
 pub trait PerformanceNavigationTimingImpl {
     fn unload_event_start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
     fn unload_event_end(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
@@ -4044,6 +4334,24 @@ pub trait PerformanceNavigationTimingImpl {
     fn type_(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<NavigationTimingType>;
     fn redirect_count(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u16>;
     fn to_json(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
+}
+
+pub trait PointerEventImpl {
+    fn pointer_id(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<i32>;
+    fn width(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn height(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn pressure(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn tangential_pressure(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn tilt_x(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<i32>;
+    fn tilt_y(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<i32>;
+    fn twist(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<i32>;
+    fn pointer_type(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn is_primary(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        type_: String,
+        event_init_dict: PointerEventInit,
+    ) -> Fallible<ObjectId>;
 }
 
 pub trait SVGElementImpl {
@@ -4067,6 +4375,18 @@ pub trait TextImpl {
     fn split_text(cx: &mut Cx<'_>, this: NodeId, offset: u32) -> Fallible<NodeId>;
     fn whole_text(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
     fn constructor(cx: &mut Cx<'_>, data: String) -> Fallible<NodeId>;
+}
+
+pub trait WheelEventImpl {
+    fn delta_x(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn delta_y(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn delta_z(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn delta_mode(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        type_: String,
+        event_init_dict: WheelEventInit,
+    ) -> Fallible<ObjectId>;
 }
 
 pub trait XMLHttpRequestImpl {
