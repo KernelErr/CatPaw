@@ -1235,10 +1235,10 @@ fn css_namespace_and_element_factories() {
     }
 }
 
-/// The engine's own behaviour that the patched `boa_ast` in `vendor/`
-/// fixes; this fails again if the patch is dropped before a release has it.
+/// Engine behaviour the patched Boa crates in `vendor/` fix; this fails
+/// again if a patch is dropped before a release has it.
 #[test]
-fn this_reaches_through_nested_arrows() {
+fn vendored_engine_fixes_hold() {
     let mut page = load("");
     for (source, expected) in [
         (
@@ -1252,6 +1252,15 @@ fn this_reaches_through_nested_arrows() {
         (
             "var obj = { x: 9, f() { return (() => () => this.x)()(); } }; obj.f()",
             "9",
+        ),
+        // A body var named after a parameter, in a function with a default.
+        (
+            "function f(a, b = 1) { var x = b; var b = 5; return x; }; f(1, 2) + ' ' + f(1)",
+            "2 1",
+        ),
+        (
+            "function g(a, b = 1) { var h = () => b; var b = 5; return h(); }; g(1, 2)",
+            "5",
         ),
     ] {
         assert_eq!(eval(&mut page, source), expected, "{source}");
