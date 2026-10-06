@@ -392,6 +392,7 @@ members = [
 ]
 
 [interfaces.Navigator]
+members = ["sendBeacon"]
 
 [mixins.NavigatorID]
 members = [

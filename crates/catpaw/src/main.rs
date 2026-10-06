@@ -105,6 +105,10 @@ struct FetchArgs {
     /// With --js: print the page's console output to stderr.
     #[arg(long, requires = "js")]
     console: bool,
+    /// With --js: list every request the page made, with a preview of
+    /// request bodies, on stderr.
+    #[arg(long, requires = "js")]
+    requests: bool,
     /// With --js: evaluate this script once the page has settled and print
     /// its result instead of a view of the page.
     #[arg(long, requires = "js")]
@@ -469,6 +473,19 @@ fn fetch_with_scripts(args: FetchArgs) -> Result<()> {
             describe_stop(page.report()),
             state.errors.borrow().len(),
         );
+        if args.requests {
+            for request in &requests {
+                let status = request
+                    .status
+                    .map_or_else(|| "failed".to_string(), |s| s.to_string());
+                eprintln!("[request] {} {} -> {}", request.method, request.url, status);
+                if let Some(body) = &request.body_preview {
+                    for line in body.lines().take(20) {
+                        eprintln!("    {line}");
+                    }
+                }
+            }
+        }
         if args.console {
             for message in state.console_messages() {
                 eprintln!("[console.{}] {}", message.level.as_str(), message.text);

@@ -28,7 +28,12 @@ pub struct RequestRecord {
     pub kind: RequestKind,
     /// The response status, or `None` if the request failed or is pending.
     pub status: Option<u16>,
+    /// The start of the request body, when there is one.
+    pub body_preview: Option<String>,
 }
+
+/// How much of a request body a record keeps.
+const BODY_PREVIEW_BYTES: usize = 4096;
 
 pub struct EngineNet {
     runtime: Runtime,
@@ -161,6 +166,10 @@ impl EngineNet {
             url: request.url.clone(),
             kind: request.kind,
             status: None,
+            body_preview: request.body.as_ref().map(|body| {
+                let end = body.len().min(BODY_PREVIEW_BYTES);
+                String::from_utf8_lossy(&body[..end]).into_owned()
+            }),
         });
         log.len() - 1
     }

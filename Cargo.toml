@@ -81,3 +81,8 @@ opt-level = 3
 
 [profile.release]
 debug = 1
+
+[patch.crates-io]
+# boa_ast 0.22.0 with a fix for `this` read through nested arrow functions;
+# see vendor/boa_ast/CATPAW.md.
+boa_ast = { path = "vendor/boa_ast" }

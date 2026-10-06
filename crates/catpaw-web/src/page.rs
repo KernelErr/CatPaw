@@ -230,6 +230,9 @@ pub struct PageState {
 
     pub(crate) net: RefCell<Option<Rc<dyn NetHost>>>,
     pub(crate) net_callbacks: RefCell<HashMap<u64, NetCallback>>,
+    /// How many of those are background requests (beacons), which do not
+    /// keep the page from settling.
+    pub(crate) background_requests: Cell<usize>,
 
     pub(crate) scripts: ScriptState,
 
@@ -304,6 +307,7 @@ impl PageState {
             raf: RefCell::new(RafState::default()),
             net: RefCell::new(None),
             net_callbacks: RefCell::new(HashMap::new()),
+            background_requests: Cell::new(0),
             scripts: ScriptState::default(),
             storage: [RefCell::new(IndexMap::new()), RefCell::new(IndexMap::new())],
             id_index: RefCell::new((u64::MAX, HashMap::new())),

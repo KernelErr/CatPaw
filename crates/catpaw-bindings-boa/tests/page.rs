@@ -1234,3 +1234,45 @@ fn css_namespace_and_element_factories() {
         assert_eq!(eval(&mut page, source), expected, "{source}");
     }
 }
+
+/// The engine's own behaviour that the patched `boa_ast` in `vendor/`
+/// fixes; this fails again if the patch is dropped before a release has it.
+#[test]
+fn this_reaches_through_nested_arrows() {
+    let mut page = load("");
+    for (source, expected) in [
+        (
+            "class A { constructor() { this.x = 5 } f() { return (() => () => this.x)()(); } g() { return (() => () => () => this)()()() === this; } }; new A().f() + ' ' + new A().g()",
+            "5 true",
+        ),
+        (
+            "class P { #m = 1; get #w() { return this.#m } f() { return [1].map(() => { const o = () => this.#w; return o(); }); } }; String(new P().f())",
+            "1",
+        ),
+        (
+            "var obj = { x: 9, f() { return (() => () => this.x)()(); } }; obj.f()",
+            "9",
+        ),
+    ] {
+        assert_eq!(eval(&mut page, source), expected, "{source}");
+    }
+}
+
+#[test]
+fn beacons_go_out_in_the_background() {
+    let mut page = load("");
+    assert_eq!(
+        eval(
+            &mut page,
+            "navigator.sendBeacon('/collect', 'a=1') + ' ' + navigator.sendBeacon('/collect') + ' ' + navigator.sendBeacon('/collect', new URLSearchParams('b=2'))"
+        ),
+        "true true true"
+    );
+    assert_eq!(
+        eval(
+            &mut page,
+            "try { navigator.sendBeacon('http://[bad'); } catch (e) { e.name }"
+        ),
+        "TypeError"
+    );
+}

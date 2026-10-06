@@ -2653,6 +2653,15 @@ pub trait NamedNodeMapImpl {
     fn named_properties(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<String>>;
 }
 
+pub trait NavigatorImpl {
+    fn send_beacon(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        url: String,
+        data: Option<ReadableStreamOrBufferSourceOrURLSearchParamsOrString>,
+    ) -> Fallible<bool>;
+}
+
 pub trait NodeImpl {
     fn node_type(cx: &mut Cx<'_>, this: NodeId) -> Fallible<u16>;
     fn node_name(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;

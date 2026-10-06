@@ -5334,6 +5334,26 @@ pub mod navigator {
         rt::ret(r, ctx)
     }
 
+    fn op_send_beacon(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Navigator, ctx)?;
+        rt::require_args(args, 1, "Navigator.sendBeacon")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            if rt::arg(args, 1).is_null_or_undefined() {
+                None
+            } else {
+                Some(<web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString as FromJs>::from_js(rt::arg(args, 1), ctx)?)
+            }
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NavigatorImpl>::send_beacon(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::Navigator,
         name: "Navigator",
@@ -5418,7 +5438,11 @@ pub mod navigator {
                 setter: None,
             },
         ],
-        ops: &[],
+        ops: &[rt::OpDef {
+            name: "sendBeacon",
+            func: op_send_beacon,
+            length: 1,
+        }],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],

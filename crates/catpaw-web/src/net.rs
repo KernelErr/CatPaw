@@ -17,6 +17,8 @@ pub enum RequestKind {
     Style,
     Xhr,
     Fetch,
+    /// `navigator.sendBeacon()`: sent in the background, its response ignored.
+    Beacon,
     Other,
 }
 
@@ -225,9 +227,13 @@ pub fn abort_request(page: &PageState, token: u64) {
     }
 }
 
-/// Number of requests whose results are still awaited.
+/// Number of requests whose results are still awaited, not counting
+/// background ones such as beacons.
 pub fn inflight(page: &PageState) -> usize {
-    page.net_callbacks.borrow().len()
+    page.net_callbacks
+        .borrow()
+        .len()
+        .saturating_sub(page.background_requests.get())
 }
 
 /// Delivers completed requests to their callbacks. Returns how many were

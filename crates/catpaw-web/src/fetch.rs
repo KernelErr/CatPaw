@@ -210,7 +210,10 @@ impl web::HeadersImpl for Web {
 // ---- bodies ----------------------------------------------------------------
 
 /// The bytes of a body given by script, and the Content-Type it implies.
-fn extract_body(cx: &Cx<'_>, body: BodyInit) -> Fallible<(Vec<u8>, Option<&'static str>)> {
+pub(crate) fn extract_body(
+    cx: &Cx<'_>,
+    body: BodyInit,
+) -> Fallible<(Vec<u8>, Option<&'static str>)> {
     Ok(match body {
         // Bodies are kept as bytes: a stream would have to be read first.
         BodyInit::ReadableStream(_) => {

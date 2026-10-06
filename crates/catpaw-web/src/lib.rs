@@ -14,6 +14,7 @@
 mod abort;
 pub mod activation;
 mod attributes;
+mod beacon;
 pub mod clock;
 mod collections;
 mod console;
