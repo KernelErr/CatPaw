@@ -252,6 +252,7 @@ impl Node {
 pub struct Dom {
     nodes: SlotMap<NodeId, Node>,
     document: NodeId,
+    version: u64,
 }
 
 impl Default for Dom {
@@ -265,7 +266,11 @@ impl Dom {
     pub fn new() -> Self {
         let mut nodes = SlotMap::with_key();
         let document = nodes.insert(Node::new(NodeKind::Document(DocumentData::default())));
-        Self { nodes, document }
+        Self {
+            nodes,
+            document,
+            version: 0,
+        }
     }
 
     pub fn with_url(url: Option<Url>) -> Self {
@@ -277,6 +282,13 @@ impl Dom {
     /// The Document node.
     pub fn document(&self) -> NodeId {
         self.document
+    }
+
+    /// A counter that changes whenever the tree or any node's data may have
+    /// changed (every mutable access bumps it). Caches derived from the tree,
+    /// such as live collections, compare it to know when to recompute.
+    pub fn version(&self) -> u64 {
+        self.version
     }
 
     /// Number of live nodes in the arena (including detached ones).
@@ -297,6 +309,7 @@ impl Dom {
     }
 
     pub fn get_mut(&mut self, id: NodeId) -> Option<&mut Node> {
+        self.version += 1;
         self.nodes.get_mut(id)
     }
 
@@ -306,6 +319,7 @@ impl Dom {
     }
 
     pub fn node_mut(&mut self, id: NodeId) -> &mut Node {
+        self.version += 1;
         &mut self.nodes[id]
     }
 
@@ -318,6 +332,7 @@ impl Dom {
     }
 
     pub fn element_mut(&mut self, id: NodeId) -> Option<&mut ElementData> {
+        self.version += 1;
         self.nodes.get_mut(id).and_then(Node::as_element_mut)
     }
 
@@ -339,6 +354,7 @@ impl Dom {
     }
 
     pub fn document_data_mut(&mut self) -> &mut DocumentData {
+        self.version += 1;
         match &mut self.nodes[self.document].kind {
             NodeKind::Document(d) => d,
             _ => unreachable!("document node is always a Document"),
@@ -501,6 +517,7 @@ impl Dom {
             "reference node is not a child of parent"
         );
         self.detach(child);
+        self.version += 1;
         match reference {
             None => {
                 let prev = self.nodes[parent].last_child;
@@ -543,6 +560,7 @@ impl Dom {
         let Some(parent) = parent else {
             return;
         };
+        self.version += 1;
         match prev {
             Some(p) => self.nodes[p].next_sibling = next,
             None => self.nodes[parent].first_child = next,
@@ -569,6 +587,7 @@ impl Dom {
     /// (including template contents).
     pub fn remove_subtree(&mut self, id: NodeId) {
         self.detach(id);
+        self.version += 1;
         let mut stack = vec![id];
         while let Some(n) = stack.pop() {
             if let Some(node) = self.nodes.remove(n) {

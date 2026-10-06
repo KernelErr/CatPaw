@@ -8,3 +8,11 @@ publish = false
 description = "CatPaw browser engine: web"
 
 [dependencies]
+catpaw-dom = { path = "../catpaw-dom", version = "0.0.1" }
+catpaw-js = { path = "../catpaw-js", version = "0.0.1" }
+catpaw-style = { path = "../catpaw-style", version = "0.0.1" }
+base64.workspace = true
+encoding_rs.workspace = true
+indexmap.workspace = true
+slotmap.workspace = true
+url.workspace = true

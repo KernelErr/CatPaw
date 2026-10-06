@@ -1,0 +1,8 @@
+// CatPaw additions to the vendored Web IDL corpus: members defined by
+// specifications that are not vendored as a whole.
+
+// https://w3c.github.io/webdriver/#interface
+interface mixin NavigatorAutomationInformation {
+  readonly attribute boolean webdriver;
+};
+Navigator includes NavigatorAutomationInformation;

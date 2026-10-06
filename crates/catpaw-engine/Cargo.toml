@@ -8,3 +8,13 @@ publish = false
 description = "CatPaw browser engine: engine"
 
 [dependencies]
+catpaw-bindings-boa = { path = "../catpaw-bindings-boa", version = "0.0.1" }
+catpaw-dom = { path = "../catpaw-dom", version = "0.0.1" }
+catpaw-fetch = { path = "../catpaw-fetch", version = "0.0.1" }
+catpaw-net = { path = "../catpaw-net", version = "0.0.1" }
+catpaw-web = { path = "../catpaw-web", version = "0.0.1" }
+bytes.workspace = true
+http.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+url.workspace = true

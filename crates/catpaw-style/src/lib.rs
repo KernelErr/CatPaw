@@ -12,10 +12,12 @@
 
 pub mod engine;
 pub mod node;
+pub mod query;
 pub mod table;
 
 pub use engine::{StyleEngine, StyleOptions};
 pub use node::{CatNode, with_style_context};
+pub use query::Selectors;
 pub use table::{StyleSlot, StyleTable};
 
 /// The user-agent stylesheet: the HTML rendering section's `display` rules

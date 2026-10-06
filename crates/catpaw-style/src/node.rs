@@ -370,7 +370,11 @@ impl Element for CatNode {
         pseudo_class: &NonTSPseudoClass,
         _context: &mut MatchingContext<Self::Impl>,
     ) -> bool {
-        let state = self.slot().state;
+        let state = match self.table().slot(self.id) {
+            Some(slot) => slot.state,
+            // Selector queries run without style slots: derive the state.
+            None => crate::engine::element_state(self.dom(), self.id),
+        };
         match *pseudo_class {
             NonTSPseudoClass::Active => state.contains(ElementState::ACTIVE),
             NonTSPseudoClass::AnyLink => state.intersects(ElementState::VISITED_OR_UNVISITED),
@@ -402,16 +406,17 @@ impl Element for CatNode {
 
     fn apply_selector_flags(&self, flags: ElementSelectorFlags) {
         let self_flags = flags.for_self();
-        if !self_flags.is_empty() {
-            let slot = self.slot();
+        if !self_flags.is_empty()
+            && let Some(slot) = self.table().slot(self.id)
+        {
             slot.selector_flags
                 .set(slot.selector_flags.get() | self_flags);
         }
         let parent_flags = flags.for_parent();
         if !parent_flags.is_empty()
             && let Some(parent) = TElement::traversal_parent(self)
+            && let Some(slot) = parent.table().slot(parent.id)
         {
-            let slot = parent.slot();
             slot.selector_flags
                 .set(slot.selector_flags.get() | parent_flags);
         }
@@ -428,10 +433,16 @@ impl Element for CatNode {
     }
 
     fn has_id(&self, id: &AtomIdent, case_sensitivity: CaseSensitivity) -> bool {
-        self.slot()
-            .id_atom
-            .as_ref()
-            .is_some_and(|own| case_sensitivity.eq_atom(own, id))
+        match self.table().slot(self.id) {
+            Some(slot) => slot
+                .id_atom
+                .as_ref()
+                .is_some_and(|own| case_sensitivity.eq_atom(own, id)),
+            None => self
+                .element()
+                .and_then(|e| e.id())
+                .is_some_and(|own| case_sensitivity.eq_atom(&Atom::from(own), id)),
+        }
     }
 
     fn has_class(&self, search_name: &AtomIdent, case_sensitivity: CaseSensitivity) -> bool {

@@ -1,0 +1,151 @@
+//! The network, as seen by the page.
+//!
+//! `catpaw-web` does no I/O itself. The embedder supplies a [`NetHost`];
+//! requests started through it complete later, and the event loop delivers
+//! each result to the callback registered for it.
+
+use std::time::Duration;
+
+use url::Url;
+
+use crate::page::{Cx, PageState};
+
+/// What a request is for. Hosts may use it for prioritisation and policy.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RequestKind {
+    Script,
+    Xhr,
+    Fetch,
+    Other,
+}
+
+#[derive(Clone, Debug)]
+pub struct NetRequest {
+    pub method: String,
+    pub url: Url,
+    /// Extra request headers. The host adds its own (User-Agent, cookies, ...).
+    pub headers: Vec<(String, String)>,
+    pub body: Option<Vec<u8>>,
+    pub kind: RequestKind,
+    /// The URL of the document making the request.
+    pub referrer: Option<Url>,
+}
+
+impl NetRequest {
+    pub fn get(url: Url, kind: RequestKind) -> Self {
+        Self {
+            method: "GET".to_string(),
+            url,
+            headers: Vec::new(),
+            body: None,
+            kind,
+            referrer: None,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct NetResponse {
+    /// The final URL, after redirects.
+    pub url: Url,
+    pub status: u16,
+    pub status_text: String,
+    pub headers: Vec<(String, String)>,
+    /// The decoded (content-encoding removed) body.
+    pub body: Vec<u8>,
+    pub redirected: bool,
+}
+
+impl NetResponse {
+    /// The first header named `name` (ASCII case-insensitive).
+    pub fn header(&self, name: &str) -> Option<&str> {
+        self.headers
+            .iter()
+            .find(|(n, _)| n.eq_ignore_ascii_case(name))
+            .map(|(_, v)| v.as_str())
+    }
+
+    pub fn is_success(&self) -> bool {
+        (200..300).contains(&self.status)
+    }
+}
+
+/// A network failure (no response): a human-readable reason.
+pub type NetResult = Result<NetResponse, String>;
+
+/// Receives the outcome of a request started with [`start_request`].
+pub type NetCallback = Box<dyn FnOnce(&mut Cx<'_>, NetResult)>;
+
+/// The embedder's network implementation.
+pub trait NetHost {
+    /// Performs a request and waits for it (parser-blocking scripts,
+    /// synchronous XHR).
+    fn fetch_blocking(&self, request: NetRequest) -> NetResult;
+
+    /// Starts a request and returns a token identifying it. The result is
+    /// later returned by [`NetHost::poll`].
+    fn start(&self, request: NetRequest) -> u64;
+
+    /// Returns the requests that have completed since the last call. With a
+    /// `wait`, blocks up to that long for at least one to complete.
+    fn poll(&self, wait: Option<Duration>) -> Vec<(u64, NetResult)>;
+
+    /// Abandons a request; its result is never delivered.
+    fn abort(&self, token: u64);
+
+    /// Number of started requests that have not been delivered or aborted.
+    fn inflight(&self) -> usize;
+
+    /// The `Cookie` header value script may see for `url` (`document.cookie`).
+    fn cookies_for(&self, url: &Url) -> String;
+
+    /// Stores a cookie set through `document.cookie`.
+    fn set_cookie(&self, url: &Url, cookie: &str);
+}
+
+/// Starts a request whose result is passed to `callback` by the event loop.
+/// Returns `None` (and never calls `callback`) when the page has no network.
+pub fn start_request(
+    page: &PageState,
+    request: NetRequest,
+    callback: impl FnOnce(&mut Cx<'_>, NetResult) + 'static,
+) -> Option<u64> {
+    let net = page.net()?;
+    let token = net.start(request);
+    page.net_callbacks
+        .borrow_mut()
+        .insert(token, Box::new(callback));
+    Some(token)
+}
+
+/// Abandons a request started with [`start_request`].
+pub fn abort_request(page: &PageState, token: u64) {
+    if page.net_callbacks.borrow_mut().remove(&token).is_some()
+        && let Some(net) = page.net()
+    {
+        net.abort(token);
+    }
+}
+
+/// Number of requests whose results are still awaited.
+pub fn inflight(page: &PageState) -> usize {
+    page.net_callbacks.borrow().len()
+}
+
+/// Delivers completed requests to their callbacks. Returns how many were
+/// delivered.
+pub fn deliver(cx: &mut Cx<'_>, wait: Option<Duration>) -> usize {
+    let Some(net) = cx.page.net() else {
+        return 0;
+    };
+    let mut delivered = 0;
+    for (token, result) in net.poll(wait) {
+        let callback = cx.page.net_callbacks.borrow_mut().remove(&token);
+        if let Some(callback) = callback {
+            callback(cx, result);
+            cx.checkpoint();
+            delivered += 1;
+        }
+    }
+    delivered
+}

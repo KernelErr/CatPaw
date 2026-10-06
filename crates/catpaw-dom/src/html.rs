@@ -1,18 +1,24 @@
 //! HTML parsing: an html5ever [`TreeSink`] over the arena.
 //!
 //! The tree builder calls the sink through `&self`, so the arena sits behind
-//! a `RefCell` for the duration of a parse and is handed back by
-//! [`TreeSink::finish`]. Streaming parses (M1: parser tasks interleaved with
-//! script execution) will drive the same sink chunk by chunk.
+//! a shared `RefCell`. One-shot parses ([`parse_html`]) own the arena and get
+//! it back from [`TreeSink::finish`]. A page that runs scripts shares its
+//! arena with the parser instead and drives it through [`HtmlStream`], which
+//! pauses at every `</script>` so the script can run before parsing resumes.
 
 use std::borrow::Cow;
 use std::cell::{Cell, RefCell};
 use std::fmt;
+use std::rc::Rc;
 
+use html5ever::driver::parse_fragment_for_element;
 use html5ever::tendril::{StrTendril, TendrilSink};
-use html5ever::tree_builder::TreeBuilderOpts;
+use html5ever::tokenizer::{BufferQueue, Tokenizer};
+use html5ever::tree_builder::{TreeBuilder, TreeBuilderOpts};
 use html5ever::{ParseOpts, parse_document, parse_fragment};
-use markup5ever::interface::{ElemName, ElementFlags, NodeOrText, QuirksMode, TreeSink};
+use markup5ever::interface::{
+    ElemName, ElementFlags, NodeOrText, QuirksMode, TokenizerResult, TreeSink,
+};
 use markup5ever::{Attribute, LocalName, Namespace, QualName, ns};
 use url::Url;
 
@@ -72,18 +78,52 @@ impl ElemName for OwnedElemName {
 
 /// The html5ever tree sink.
 pub struct Sink {
-    dom: RefCell<Dom>,
+    dom: Rc<RefCell<Dom>>,
+    /// The node the tree builder treats as the document: the Document node,
+    /// or a scratch fragment when parsing a fragment into a shared arena.
+    document: NodeId,
+    scratch: bool,
     errors: RefCell<Vec<Cow<'static, str>>>,
     current_line: Cell<u64>,
 }
 
 impl Sink {
+    /// A sink that owns its arena.
     pub fn new(dom: Dom) -> Self {
+        Self::shared(Rc::new(RefCell::new(dom)))
+    }
+
+    /// A sink that parses into an arena shared with the caller.
+    pub fn shared(dom: Rc<RefCell<Dom>>) -> Self {
+        let document = dom.borrow().document();
         Self {
-            dom: RefCell::new(dom),
+            dom,
+            document,
+            scratch: false,
             errors: RefCell::new(Vec::new()),
             current_line: Cell::new(1),
         }
+    }
+
+    /// A sink whose "document" is `root`, a detached scratch node in a
+    /// shared arena (fragment parsing).
+    fn scratch(dom: Rc<RefCell<Dom>>, root: NodeId) -> Self {
+        Self {
+            dom,
+            document: root,
+            scratch: true,
+            errors: RefCell::new(Vec::new()),
+            current_line: Cell::new(1),
+        }
+    }
+
+    /// The line of the token being processed (1-based).
+    pub fn current_line(&self) -> u64 {
+        self.current_line.get()
+    }
+
+    pub fn take_errors(&self) -> Vec<Cow<'static, str>> {
+        std::mem::take(&mut *self.errors.borrow_mut())
     }
 
     fn with<R>(&self, f: impl FnOnce(&mut Dom) -> R) -> R {
@@ -118,8 +158,14 @@ impl TreeSink for Sink {
         Self: 'a;
 
     fn finish(self) -> ParseResult {
+        // A shared arena stays with its other owners; the caller of a shared
+        // parse ignores the (empty) arena returned here.
+        let dom = match Rc::try_unwrap(self.dom) {
+            Ok(cell) => cell.into_inner(),
+            Err(_) => Dom::new(),
+        };
         ParseResult {
-            dom: self.dom.into_inner(),
+            dom,
             errors: self.errors.into_inner(),
         }
     }
@@ -129,7 +175,7 @@ impl TreeSink for Sink {
     }
 
     fn get_document(&self) -> NodeId {
-        self.dom.borrow().document()
+        self.document
     }
 
     fn elem_name<'a>(&'a self, target: &'a NodeId) -> OwnedElemName {
@@ -199,8 +245,8 @@ impl TreeSink for Sink {
         public_id: StrTendril,
         system_id: StrTendril,
     ) {
+        let doc = self.document;
         self.with(|dom| {
-            let doc = dom.document();
             let n = dom.create(NodeKind::Doctype(DoctypeData {
                 name: String::from(&*name),
                 public_id: String::from(&*public_id),
@@ -231,7 +277,9 @@ impl TreeSink for Sink {
     }
 
     fn set_quirks_mode(&self, mode: QuirksMode) {
-        self.with(|dom| dom.document_data_mut().quirks_mode = mode);
+        if !self.scratch {
+            self.with(|dom| dom.document_data_mut().quirks_mode = mode);
+        }
     }
 
     fn append_before_sibling(&self, sibling: &NodeId, new_node: NodeOrText<NodeId>) {
@@ -398,6 +446,131 @@ pub fn parse_html_fragment(input: &str, context: &str, options: &HtmlParseOption
     .one(StrTendril::from(input))
 }
 
+/// Parses `input` as a fragment directly into a shared arena, with the
+/// element `context` as the context element (the `innerHTML` algorithm).
+/// Returns a new detached `DocumentFragment` holding the parsed nodes.
+pub fn parse_fragment_into(
+    dom: &Rc<RefCell<Dom>>,
+    input: &str,
+    context: NodeId,
+    scripting_enabled: bool,
+) -> NodeId {
+    let (root, form) = {
+        let mut d = dom.borrow_mut();
+        let form = std::iter::once(context)
+            .chain(d.ancestors(context))
+            .find(|&n| d.is_html_element(n, "form"));
+        (d.create_fragment(FragmentKind::Plain), form)
+    };
+    let options = HtmlParseOptions {
+        scripting_enabled,
+        ..HtmlParseOptions::default()
+    };
+    let sink = Sink::scratch(dom.clone(), root);
+    let _ =
+        parse_fragment_for_element(sink, parse_opts(&options), context, scripting_enabled, form)
+            .one(StrTendril::from(input));
+
+    // The tree builder put the nodes under a synthetic <html> root.
+    let mut d = dom.borrow_mut();
+    if let Some(html) = d.first_child(root) {
+        d.reparent_children(html, root);
+        d.remove_subtree(html);
+    }
+    root
+}
+
+/// Text waiting to be parsed at the insertion point (`document.write`).
+pub struct WriteQueue(BufferQueue);
+
+impl WriteQueue {
+    pub fn new(text: &str) -> Self {
+        let queue = BufferQueue::default();
+        if !text.is_empty() {
+            queue.push_back(StrTendril::from(text));
+        }
+        Self(queue)
+    }
+}
+
+/// A document parse that pauses whenever a script is ready to run.
+///
+/// The caller owns the loop: [`HtmlStream::push`] source text, then call
+/// [`HtmlStream::pump`] until it returns `None`, executing each returned
+/// `<script>` element in between. Scripts may mutate the shared arena freely
+/// while the stream is paused.
+pub struct HtmlStream {
+    tokenizer: Tokenizer<TreeBuilder<NodeId, Sink>>,
+    input: BufferQueue,
+    finished: Cell<bool>,
+}
+
+impl HtmlStream {
+    pub fn new(dom: Rc<RefCell<Dom>>, options: &HtmlParseOptions) -> Self {
+        let opts = parse_opts(options);
+        let tree_builder = TreeBuilder::new(Sink::shared(dom), opts.tree_builder);
+        Self {
+            tokenizer: Tokenizer::new(tree_builder, opts.tokenizer),
+            input: BufferQueue::default(),
+            finished: Cell::new(false),
+        }
+    }
+
+    /// Appends source text (from the network).
+    pub fn push(&self, text: &str) {
+        if !text.is_empty() {
+            self.input.push_back(StrTendril::from(text));
+        }
+    }
+
+    /// Parses buffered input until a `<script>` element is complete (returned
+    /// so the caller can run it) or the input is exhausted (`None`).
+    pub fn pump(&self) -> Option<NodeId> {
+        self.feed(&self.input)
+    }
+
+    /// Like [`HtmlStream::pump`], for text inserted by `document.write`: it
+    /// is tokenized ahead of the remaining network input.
+    pub fn pump_write(&self, queue: &WriteQueue) -> Option<NodeId> {
+        self.feed(&queue.0)
+    }
+
+    fn feed(&self, queue: &BufferQueue) -> Option<NodeId> {
+        if self.finished.get() {
+            return None;
+        }
+        loop {
+            match self.tokenizer.feed(queue) {
+                TokenizerResult::Script(node) => return Some(node),
+                TokenizerResult::Done => return None,
+                // A `<meta charset>`: the input was decoded before it got
+                // here, so there is nothing to switch.
+                TokenizerResult::EncodingIndicator(_) => {}
+            }
+        }
+    }
+
+    /// Signals the end of the input.
+    pub fn finish(&self) {
+        if !self.finished.replace(true) {
+            self.tokenizer.end();
+        }
+    }
+
+    pub fn is_finished(&self) -> bool {
+        self.finished.get()
+    }
+
+    /// The source line of the token being processed (1-based).
+    pub fn current_line(&self) -> u64 {
+        self.tokenizer.sink.sink.current_line()
+    }
+
+    pub fn take_errors(&self) -> Vec<Cow<'static, str>> {
+        self.tokenizer.sink.sink.take_errors()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -509,5 +682,87 @@ mod tests {
             .find(|&n| r.dom.is_html_element(n, "p"))
             .unwrap();
         assert_eq!(r.dom.text_content(body), "café \u{FFFD}");
+    }
+
+    #[test]
+    fn stream_pauses_at_scripts_and_accepts_written_text() {
+        let dom = Rc::new(RefCell::new(Dom::new()));
+        let stream = HtmlStream::new(dom.clone(), &HtmlParseOptions::default());
+        stream.push("<!DOCTYPE html><p>a</p><script>one()</scr");
+        assert_eq!(stream.pump(), None, "the script is not complete yet");
+        stream.push("ipt><p>b</p><script>two()</script><p>c</p>");
+
+        let first = stream.pump().expect("first script");
+        assert_eq!(dom.borrow().text_content(first), "one()");
+        // Paused right after </script>: the following markup is not in the tree yet.
+        let count = |local: &str| {
+            let d = dom.borrow();
+            d.descendants(d.document())
+                .filter(|&n| d.is_html_element(n, local))
+                .count()
+        };
+        assert_eq!(count("p"), 1);
+
+        // document.write: text goes in ahead of the remaining input, and may
+        // itself contain a script.
+        let written = WriteQueue::new("<i>w</i><script>inner()</script><b>x</b>");
+        let inner = stream.pump_write(&written).expect("written script");
+        assert_eq!(dom.borrow().text_content(inner), "inner()");
+        assert_eq!(stream.pump_write(&written), None);
+        assert_eq!(count("b"), 1);
+        assert_eq!(count("p"), 1);
+
+        let second = stream.pump().expect("second script");
+        assert_eq!(dom.borrow().text_content(second), "two()");
+        assert_eq!(stream.pump(), None);
+        stream.finish();
+        assert!(stream.is_finished());
+
+        let d = dom.borrow();
+        let body = d
+            .descendants(d.document())
+            .find(|&n| d.is_html_element(n, "body"))
+            .unwrap();
+        assert_eq!(
+            to_html(&d, body, true),
+            "<p>a</p><script>one()</script><i>w</i><script>inner()</script><b>x</b><p>b</p><script>two()</script><p>c</p>"
+        );
+    }
+
+    #[test]
+    fn fragments_parse_into_a_shared_arena() {
+        let dom = Rc::new(RefCell::new(
+            parse("<table><tbody id=t></tbody></table><div id=d></div>").dom,
+        ));
+        let find = |id: &str| {
+            let d = dom.borrow();
+            d.descendants(d.document())
+                .find(|&n| d.attr(n, "id") == Some(id))
+                .unwrap()
+        };
+        let (tbody, div) = (find("t"), find("d"));
+        let before = dom.borrow().len();
+
+        let rows = parse_fragment_into(&dom, "<tr><td>1</td></tr><tr><td>2</td></tr>", tbody, true);
+        {
+            let d = dom.borrow();
+            assert!(matches!(
+                d.kind(rows),
+                NodeKind::DocumentFragment(FragmentKind::Plain)
+            ));
+            assert_eq!(d.parent(rows), None);
+            assert_eq!(
+                to_html(&d, rows, true),
+                "<tr><td>1</td></tr><tr><td>2</td></tr>"
+            );
+            // Only the fragment and the parsed nodes were added.
+            assert_eq!(d.len(), before + 1 + 6);
+            // The document itself is untouched.
+            assert_eq!(d.child_elements(d.document()).count(), 1);
+        }
+
+        // In a div context, table rows are not allowed and collapse to text.
+        let text = parse_fragment_into(&dom, "<tr><td>x</td></tr><b>y</b>", div, true);
+        assert_eq!(to_html(&dom.borrow(), text, true), "x<b>y</b>");
     }
 }

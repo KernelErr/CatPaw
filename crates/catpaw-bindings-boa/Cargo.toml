@@ -8,3 +8,13 @@ publish = false
 description = "CatPaw browser engine: bindings-boa"
 
 [dependencies]
+boa_engine = { workspace = true, features = ["annex-b", "intl_bundled"] }
+boa_gc.workspace = true
+catpaw-dom = { path = "../catpaw-dom", version = "0.0.1" }
+catpaw-js = { path = "../catpaw-js", version = "0.0.1" }
+catpaw-js-boa = { path = "../catpaw-js-boa", version = "0.0.1" }
+catpaw-web = { path = "../catpaw-web", version = "0.0.1" }
+url.workspace = true
+
+[dev-dependencies]
+catpaw-dom = { path = "../catpaw-dom", version = "0.0.1" }

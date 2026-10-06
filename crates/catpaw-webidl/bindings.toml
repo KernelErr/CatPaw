@@ -1,0 +1,333 @@
+# The binding manifest: which interfaces get JavaScript bindings and which of
+# their members are implemented.
+#
+# - `members`: implemented natively. `cargo xtask bindgen` generates a trait
+#   method for each one; `catpaw-web` must implement it.
+# - `stubs`: defined, but a no-op returning `undefined`. Use sparingly, for
+#   methods pages call unconditionally.
+# - `constructor = true`: `new Interface(...)` works (needs a `constructor`
+#   implementation).
+# - `exotic = true`: the interface's indexed/named special operations are
+#   wired up (the wrapper becomes a proxy).
+#
+# Anything not listed is simply absent, so feature detection stays honest.
+# Two kinds of members need no entry: attributes annotated `[Reflect*]` in the
+# HTML IDL (generated as content-attribute reflection) and `on*` event handler
+# attributes.
+#
+# `cargo xtask bindgen --list <Interface>` shows what an interface offers.
+
+# ---------------------------------------------------------------- DOM: events
+
+[interfaces.EventTarget]
+constructor = true
+members = ["addEventListener", "removeEventListener", "dispatchEvent"]
+
+[interfaces.Event]
+constructor = true
+members = [
+  "type", "target", "srcElement", "currentTarget", "composedPath", "eventPhase",
+  "stopPropagation", "cancelBubble", "stopImmediatePropagation", "bubbles", "cancelable",
+  "returnValue", "preventDefault", "defaultPrevented", "composed", "isTrusted", "timeStamp",
+  "initEvent",
+]
+
+[interfaces.CustomEvent]
+constructor = true
+members = ["detail", "initCustomEvent"]
+
+# ----------------------------------------------------------------- DOM: nodes
+
+[interfaces.Node]
+members = [
+  "nodeType", "nodeName", "baseURI", "isConnected", "ownerDocument", "getRootNode",
+  "parentNode", "parentElement", "hasChildNodes", "childNodes", "firstChild", "lastChild",
+  "previousSibling", "nextSibling", "nodeValue", "textContent", "normalize", "cloneNode",
+  "isEqualNode", "isSameNode", "compareDocumentPosition", "contains", "insertBefore",
+  "appendChild", "replaceChild", "removeChild",
+]
+
+[interfaces.Document]
+members = [
+  "URL", "documentURI", "compatMode", "characterSet", "charset", "inputEncoding",
+  "contentType", "doctype", "documentElement", "getElementsByTagName",
+  "getElementsByClassName", "createElement", "createElementNS", "createDocumentFragment",
+  "createTextNode", "createComment", "importNode", "adoptNode", "createEvent",
+  "location", "referrer", "cookie", "readyState", "title", "body", "head",
+  "getElementsByName", "currentScript", "defaultView", "hasFocus", "hidden",
+  "visibilityState", "write", "writeln", "open", "close",
+]
+
+[interfaces.DocumentType]
+members = ["name", "publicId", "systemId"]
+
+[interfaces.DocumentFragment]
+constructor = true
+
+[interfaces.Element]
+members = [
+  "namespaceURI", "prefix", "localName", "tagName", "id", "className", "classList", "slot",
+  "hasAttributes", "getAttributeNames", "getAttribute", "getAttributeNS", "setAttribute",
+  "setAttributeNS", "removeAttribute", "removeAttributeNS", "toggleAttribute",
+  "hasAttribute", "hasAttributeNS", "closest", "matches", "webkitMatchesSelector",
+  "getElementsByTagName", "getElementsByClassName", "insertAdjacentElement",
+  "insertAdjacentText", "innerHTML", "outerHTML", "insertAdjacentHTML",
+  "getBoundingClientRect", "scrollIntoView", "scrollTop", "scrollLeft", "scrollWidth",
+  "scrollHeight", "clientTop", "clientLeft", "clientWidth", "clientHeight",
+]
+
+[interfaces.CharacterData]
+members = [
+  "data", "length", "substringData", "appendData", "insertData", "deleteData", "replaceData",
+]
+
+[interfaces.Text]
+constructor = true
+members = ["splitText", "wholeText"]
+
+[interfaces.Comment]
+constructor = true
+
+[mixins.NonElementParentNode]
+members = ["getElementById"]
+
+[mixins.ParentNode]
+members = [
+  "children", "firstElementChild", "lastElementChild", "childElementCount", "prepend",
+  "append", "replaceChildren", "querySelector", "querySelectorAll",
+]
+
+[mixins.ChildNode]
+members = ["before", "after", "replaceWith", "remove"]
+
+[mixins.NonDocumentTypeChildNode]
+members = ["previousElementSibling", "nextElementSibling"]
+
+[mixins.DocumentOrShadowRoot]
+members = ["activeElement"]
+
+# ---------------------------------------------------------- DOM: collections
+
+[interfaces.NodeList]
+exotic = true
+members = ["item", "length"]
+
+[interfaces.HTMLCollection]
+exotic = true
+members = ["length", "item", "namedItem"]
+
+[interfaces.DOMTokenList]
+exotic = true
+members = [
+  "length", "item", "contains", "add", "remove", "toggle", "replace", "supports", "value",
+]
+
+[interfaces.DOMStringMap]
+exotic = true
+
+[interfaces.DOMRectReadOnly]
+members = ["x", "y", "width", "height", "top", "right", "bottom", "left", "toJSON"]
+
+[interfaces.DOMRect]
+constructor = true
+members = ["x", "y", "width", "height"]
+
+# ------------------------------------------------------------- HTML elements
+
+[interfaces.HTMLElement]
+members = [
+  "innerText", "outerText", "click", "hidden", "offsetParent", "offsetTop", "offsetLeft",
+  "offsetWidth", "offsetHeight",
+]
+
+[mixins.HTMLOrSVGOrMathMLElement]
+members = ["dataset", "focus", "blur"]
+
+[interfaces.HTMLUnknownElement]
+[interfaces.HTMLHtmlElement]
+[interfaces.HTMLHeadElement]
+[interfaces.HTMLBodyElement]
+[interfaces.HTMLDivElement]
+[interfaces.HTMLSpanElement]
+[interfaces.HTMLParagraphElement]
+[interfaces.HTMLHeadingElement]
+[interfaces.HTMLAnchorElement]
+[interfaces.HTMLImageElement]
+[interfaces.HTMLStyleElement]
+[interfaces.HTMLLinkElement]
+[interfaces.HTMLMetaElement]
+[interfaces.HTMLButtonElement]
+[interfaces.HTMLFormElement]
+[interfaces.HTMLLabelElement]
+[interfaces.HTMLSelectElement]
+[interfaces.HTMLOptionElement]
+[interfaces.HTMLUListElement]
+[interfaces.HTMLOListElement]
+[interfaces.HTMLLIElement]
+[interfaces.HTMLPreElement]
+[interfaces.HTMLBRElement]
+[interfaces.HTMLHRElement]
+[interfaces.HTMLTableElement]
+[interfaces.HTMLTableSectionElement]
+[interfaces.HTMLTableRowElement]
+[interfaces.HTMLTableCellElement]
+[interfaces.HTMLIFrameElement]
+
+[interfaces.HTMLTitleElement]
+members = ["text"]
+
+[interfaces.HTMLScriptElement]
+members = ["text"]
+
+[interfaces.HTMLInputElement]
+members = ["value", "checked"]
+
+[interfaces.HTMLTextAreaElement]
+members = ["value"]
+
+[interfaces.HTMLTemplateElement]
+members = ["content"]
+
+# -------------------------------------------------------------------- Window
+
+[interfaces.Window]
+members = [
+  "window", "self", "document", "location", "navigator", "frames", "top", "parent",
+  "closed", "focus", "blur", "alert", "confirm", "prompt", "innerWidth", "innerHeight",
+  "scrollX", "scrollY", "pageXOffset", "pageYOffset", "scroll", "scrollTo", "scrollBy",
+  "devicePixelRatio", "event",
+]
+
+[mixins.WindowOrWorkerGlobalScope]
+members = [
+  "origin", "isSecureContext", "btoa", "atob", "setTimeout", "clearTimeout", "setInterval",
+  "clearInterval", "queueMicrotask", "structuredClone", "reportError", "performance",
+]
+
+[mixins.AnimationFrameProvider]
+members = ["requestAnimationFrame", "cancelAnimationFrame"]
+
+[mixins.WindowLocalStorage]
+members = ["localStorage"]
+
+[mixins.WindowSessionStorage]
+members = ["sessionStorage"]
+
+[interfaces.Location]
+members = [
+  "href", "origin", "protocol", "host", "hostname", "port", "pathname", "search", "hash",
+  "assign", "replace", "reload",
+]
+
+[interfaces.Navigator]
+
+[mixins.NavigatorID]
+members = [
+  "appCodeName", "appName", "appVersion", "platform", "product", "productSub", "userAgent",
+  "vendor", "vendorSub",
+]
+
+[mixins.NavigatorLanguage]
+members = ["language", "languages"]
+
+[mixins.NavigatorOnLine]
+members = ["onLine"]
+
+[mixins.NavigatorCookies]
+members = ["cookieEnabled"]
+
+[mixins.NavigatorConcurrentHardware]
+members = ["hardwareConcurrency"]
+
+[mixins.NavigatorAutomationInformation]
+members = ["webdriver"]
+
+[interfaces.Performance]
+members = ["now", "timeOrigin"]
+
+[interfaces.Storage]
+exotic = true
+members = ["length", "key", "getItem", "setItem", "removeItem", "clear"]
+
+# ------------------------------------------------------------ URL, encoding
+
+[interfaces.URL]
+constructor = true
+members = [
+  "href", "origin", "protocol", "username", "password", "host", "hostname", "port",
+  "pathname", "search", "searchParams", "hash", "toJSON", "canParse", "parse",
+]
+
+[interfaces.URLSearchParams]
+constructor = true
+members = ["size", "append", "delete", "get", "getAll", "has", "set", "sort"]
+
+[interfaces.TextEncoder]
+constructor = true
+members = ["encode"]
+
+[mixins.TextEncoderCommon]
+members = ["encoding"]
+
+[interfaces.TextDecoder]
+constructor = true
+members = ["decode"]
+
+[mixins.TextDecoderCommon]
+members = ["encoding", "fatal", "ignoreBOM"]
+
+# ------------------------------------------------------------------- console
+
+[namespaces.console]
+members = [
+  "assert", "clear", "debug", "error", "info", "log", "table", "trace", "warn", "dir",
+  "dirxml", "count", "countReset", "group", "groupCollapsed", "groupEnd", "time", "timeLog",
+  "timeEnd",
+]
+
+# --------------------------------------------------- HTML tag → interface map
+# Tags not listed here use HTMLElement (known elements without their own
+# interface) or HTMLUnknownElement (everything else).
+
+[tags]
+a = "HTMLAnchorElement"
+body = "HTMLBodyElement"
+br = "HTMLBRElement"
+button = "HTMLButtonElement"
+div = "HTMLDivElement"
+form = "HTMLFormElement"
+h1 = "HTMLHeadingElement"
+h2 = "HTMLHeadingElement"
+h3 = "HTMLHeadingElement"
+h4 = "HTMLHeadingElement"
+h5 = "HTMLHeadingElement"
+h6 = "HTMLHeadingElement"
+head = "HTMLHeadElement"
+hr = "HTMLHRElement"
+html = "HTMLHtmlElement"
+iframe = "HTMLIFrameElement"
+img = "HTMLImageElement"
+input = "HTMLInputElement"
+label = "HTMLLabelElement"
+li = "HTMLLIElement"
+link = "HTMLLinkElement"
+meta = "HTMLMetaElement"
+ol = "HTMLOListElement"
+option = "HTMLOptionElement"
+p = "HTMLParagraphElement"
+pre = "HTMLPreElement"
+script = "HTMLScriptElement"
+select = "HTMLSelectElement"
+span = "HTMLSpanElement"
+style = "HTMLStyleElement"
+table = "HTMLTableElement"
+tbody = "HTMLTableSectionElement"
+td = "HTMLTableCellElement"
+template = "HTMLTemplateElement"
+textarea = "HTMLTextAreaElement"
+tfoot = "HTMLTableSectionElement"
+th = "HTMLTableCellElement"
+thead = "HTMLTableSectionElement"
+title = "HTMLTitleElement"
+tr = "HTMLTableRowElement"
+ul = "HTMLUListElement"

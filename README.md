@@ -11,9 +11,16 @@ settled" signals, diffs instead of re-dumps, deterministic time, and cheap
 isolated contexts.
 
 > Status: **pre-alpha**. Milestone M0 ("fetch & read") is complete; M1
-> (JavaScript via Boa) is next. See the roadmap below.
+> (JavaScript via Boa) is in progress. See the roadmap below.
 >
-> What works today, with no JavaScript yet: HTTP/1.1 and HTTP/2 over rustls,
+> M1 so far, behind `catpaw fetch --js`: classic scripts (inline, external,
+> `defer`, `async`, script-inserted, `document.write`) run interleaved with
+> the parser on Boa, against bindings generated from Web IDL for the core DOM,
+> events, timers, `URL`, storage, encoding and console APIs, on an event loop
+> with virtual time. Not there yet: module scripts, `fetch`/XHR, layout,
+> and much of the HTML element API surface.
+>
+> What works without JavaScript: HTTP/1.1 and HTTP/2 over rustls,
 > redirects, cookies, gzip/brotli/zstd, encoding sniffing, Web Bot Auth
 > request signing (verified against Cloudflare's test endpoint), HTML parsing
 > into the arena DOM (1858 of 1968 WPT tree-construction tests; the rest are
@@ -46,13 +53,16 @@ isolated contexts.
 - **Pure Rust by default.** Boa is the default JavaScript engine; V8 is a
   planned optional backend ([ADR 0001](docs/adr/0001-js-engine-boa-default.md)).
 
-## Quick start (M0)
+## Quick start
 
 ```sh
 cargo install catpaw            # published on crates.io; from a checkout use `cargo run -p catpaw --`
 catpaw fetch https://example.com --snapshot
 catpaw fetch https://news.ycombinator.com --markdown
 catpaw fetch https://httpbin.org/forms/post --forms
+# From a checkout (not in the published 0.0.1 yet): run the page's scripts first
+cargo run -p catpaw -- fetch https://news.ycombinator.com --js --console
+cargo run -p catpaw -- fetch https://example.com --js --eval "document.title"
 catpaw keygen --out ./agent-key.json
 catpaw fetch https://crawltest.com/cdn-cgi/web-bot-auth \
     --bot-auth-key ./agent-key.json --signature-agent https://your-agent.example --text
@@ -64,6 +74,9 @@ The library crates are published too: `catpaw-net`, `catpaw-fetch`, `catpaw-dom`
 Developer tasks: `cargo xtask tree-construction` runs the html5lib
 tree-construction suite from a pinned, sparse web-platform-tests checkout
 (`tests/wpt.lock`) against `tests/tree-construction-expectations.txt`.
+`cargo xtask bindgen` regenerates the JavaScript bindings from the Web IDL
+corpus and `crates/catpaw-webidl/bindings.toml` (`--check` verifies the
+checked-in output, `--list <Interface>` shows what an interface offers).
 
 ## Roadmap
 

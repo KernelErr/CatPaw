@@ -70,6 +70,15 @@ Each node gets at most one JS wrapper; wrappers of one tree share a GC-managed
 *tree token* that keeps the tree alive while any wrapper is reachable
 (WebKit's opaque-root rule). JS-referencing state lives in wrapper data only.
 
+*Where M1 stands:* tree tokens are not implemented yet. A node's wrapper,
+once created, is kept for the life of the page, and detached nodes are not
+freed until the page goes away. Other platform objects (events, collections,
+`URL` objects, ...) live in a per-page arena; the runtime holds their
+wrappers weakly and frees an object once script has dropped its wrapper and
+nothing in Rust has it pinned. Listeners and other callbacks held by Rust are
+strong roots, so a callback that captures its own target keeps it alive
+until the page is dropped.
+
 **Bindings (ADR 0004).** `cargo xtask bindgen` turns a vendored WebIDL corpus
 into Boa glue plus one `XImpl` trait per interface. Prototype chains are built
 with `ObjectInitializer`/`ConstructorBuilder`; exotic objects are proxies.

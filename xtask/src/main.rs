@@ -1,5 +1,6 @@
 //! `cargo xtask`: developer tasks that need more than a shell one-liner.
 
+mod bindgen;
 mod tree_construction;
 mod wpt;
 
@@ -18,6 +19,8 @@ enum Cmd {
     /// Run the html5lib tree-construction suite (WPT html/syntax/parsing/resources)
     /// through the CatPaw HTML parser and compare against expectations.
     TreeConstruction(tree_construction::Args),
+    /// Regenerate the Web IDL bindings (or verify them with --check).
+    Bindgen(bindgen::Args),
     /// Fetch the pinned web-platform-tests commit into tests/wpt-src as a sparse,
     /// blobless checkout containing the given directories.
     WptFetch {
@@ -30,6 +33,7 @@ enum Cmd {
 fn main() -> Result<()> {
     match Cli::parse().cmd {
         Cmd::TreeConstruction(args) => tree_construction::run(args),
+        Cmd::Bindgen(args) => bindgen::run(args),
         Cmd::WptFetch { dirs } => {
             let root = wpt::workspace_root();
             let dirs: Vec<&str> = dirs.iter().map(String::as_str).collect();

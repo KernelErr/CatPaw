@@ -13,7 +13,10 @@ pub mod serialize;
 pub use arena::{
     Attr, DoctypeData, DocumentData, Dom, ElementData, FragmentKind, Node, NodeId, NodeKind,
 };
-pub use html::{HtmlParseOptions, ParseResult, parse_html, parse_html_bytes, parse_html_fragment};
+pub use html::{
+    HtmlParseOptions, HtmlStream, ParseResult, WriteQueue, parse_fragment_into, parse_html,
+    parse_html_bytes, parse_html_fragment,
+};
 pub use markup5ever::interface::QuirksMode;
 pub use markup5ever::{LocalName, Namespace, Prefix, QualName, local_name, namespace_url, ns};
 pub use serialize::{html5lib_dump, to_html};

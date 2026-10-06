@@ -65,6 +65,35 @@ impl CookieJar {
             .store_response_cookies(cookies, url);
     }
 
+    /// The cookies script may read for `url` (`document.cookie`): the
+    /// matching cookies that are not `HttpOnly`, as a `Cookie` header value.
+    pub fn script_header(&self, url: &Url) -> String {
+        let store = self.store.lock().expect("cookie jar poisoned");
+        store
+            .matches(url)
+            .into_iter()
+            .filter(|c| !c.http_only().unwrap_or(false))
+            .map(|c| format!("{}={}", c.name(), c.value()))
+            .collect::<Vec<_>>()
+            .join("; ")
+    }
+
+    /// Stores a cookie set by script (`document.cookie = "..."`). Script
+    /// cannot create `HttpOnly` cookies; such a string is ignored.
+    pub fn store_from_script(&self, url: &Url, cookie: &str) {
+        let Ok(parsed) = cookie::Cookie::parse(cookie.to_string()) else {
+            return;
+        };
+        if parsed.http_only().unwrap_or(false) {
+            return;
+        }
+        let _ = self
+            .store
+            .lock()
+            .expect("cookie jar poisoned")
+            .insert_raw(&parsed, url);
+    }
+
     pub fn len(&self) -> usize {
         self.store
             .lock()
@@ -127,5 +156,26 @@ mod tests {
             jar.request_header(&Url::parse("https://other.example/").unwrap()),
             None
         );
+    }
+
+    #[test]
+    fn script_access_excludes_http_only_cookies() {
+        let jar = CookieJar::new();
+        let url = Url::parse("https://example.com/").unwrap();
+        let mut headers = HeaderMap::new();
+        headers.append(SET_COOKIE, HeaderValue::from_static("seen=1"));
+        headers.append(SET_COOKIE, HeaderValue::from_static("secret=2; HttpOnly"));
+        jar.store_response(&url, &headers);
+        assert_eq!(jar.script_header(&url), "seen=1");
+
+        jar.store_from_script(&url, "mine=3; Path=/");
+        jar.store_from_script(&url, "forged=4; HttpOnly");
+        let visible = jar.script_header(&url);
+        assert!(
+            visible.contains("mine=3") && !visible.contains("forged"),
+            "{visible}"
+        );
+        // Script-set cookies are sent with requests like any other.
+        assert!(jar.request_header(&url).unwrap().contains("mine=3"));
     }
 }

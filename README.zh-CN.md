@@ -7,9 +7,14 @@ CatPaw 不是 Chromium 的封装，也不是"渲染引擎 + 自动化接口"。�
 agent 真正需要的东西——带稳定引用的紧凑语义快照、精确的"页面已稳定"信号、用 diff 代替
 重复输出、确定性的时间、廉价的隔离上下文。
 
-> 状态：**pre-alpha**。里程碑 M0（"抓取与阅读"）已完成，下一步是 M1（基于 Boa 的 JavaScript）。
+> 状态：**pre-alpha**。里程碑 M0（"抓取与阅读"）已完成，M1（基于 Boa 的 JavaScript）进行中。
 >
-> 目前可用（尚无 JavaScript）：基于 rustls 的 HTTP/1.1 与 HTTP/2、重定向、cookie、
+> M1 当前进展（通过 `catpaw fetch --js` 使用）：经典脚本（内联、外链、`defer`、`async`、
+> 脚本动态插入、`document.write`）在 Boa 上与解析器交错执行；核心 DOM、事件、定时器、`URL`、
+> storage、编码与 console 等 API 的绑定由 Web IDL 生成；事件循环支持虚拟时间。
+> 尚未支持：模块脚本、`fetch`/XHR、布局，以及大部分 HTML 元素接口。
+>
+> 不依赖 JavaScript 即可用的部分：基于 rustls 的 HTTP/1.1 与 HTTP/2、重定向、cookie、
 > gzip/brotli/zstd 解压、编码嗅探、Web Bot Auth 请求签名（已通过 Cloudflare 测试端点验证）、
 > HTML 解析进 arena DOM（WPT tree-construction 1968 例通过 1858 例，其余为已记录的上游差距）、
 > 由 Stylo 从 UA/外链/内联样式表解析出的 `display`/`visibility`、带稳定 ref 的 CST 快照，
@@ -34,13 +39,16 @@ agent 真正需要的东西——带稳定引用的紧凑语义快照、精确�
 - **默认纯 Rust。** 默认 JavaScript 引擎是 Boa；V8 作为计划中的可选后端
   （[ADR 0001](docs/adr/0001-js-engine-boa-default.md)）。
 
-## 快速开始（M0）
+## 快速开始
 
 ```sh
 cargo install catpaw            # 已发布到 crates.io；源码目录下可用 `cargo run -p catpaw --` 代替
 catpaw fetch https://example.com --snapshot
 catpaw fetch https://news.ycombinator.com --markdown
 catpaw fetch https://httpbin.org/forms/post --forms
+# 源码目录下（尚未包含在已发布的 0.0.1 中）：先执行页面脚本再读取
+cargo run -p catpaw -- fetch https://news.ycombinator.com --js --console
+cargo run -p catpaw -- fetch https://example.com --js --eval "document.title"
 catpaw keygen --out ./agent-key.json
 ```
 

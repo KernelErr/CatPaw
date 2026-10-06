@@ -317,7 +317,7 @@ fn make_stylesheet(
 
 /// Pseudo-class state from markup alone. The engine will extend this with
 /// live state (hover, focus, checkedness changed by script or the user).
-fn element_state(dom: &Dom, id: NodeId) -> ElementState {
+pub(crate) fn element_state(dom: &Dom, id: NodeId) -> ElementState {
     let mut state = ElementState::empty();
     let Some(el) = dom.element(id) else {
         return state;

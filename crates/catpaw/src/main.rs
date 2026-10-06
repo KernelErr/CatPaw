@@ -1,8 +1,9 @@
 //! The `catpaw` command line.
 //!
-//! M0 surface: `fetch` (retrieve a page, resolve its styles, and print a CST
-//! snapshot, markdown, text, HTML, links or forms) and `keygen` (Web Bot Auth
-//! key pair + key directory document).
+//! `fetch` retrieves a page (optionally running its scripts with `--js`),
+//! resolves its styles, and prints a CST snapshot, markdown, text, HTML,
+//! links or forms. `keygen` creates a Web Bot Auth key pair and its key
+//! directory document.
 
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
@@ -12,6 +13,7 @@ use catpaw_agent::{
     AttributeOracle, Filter, ReadOptions, RefTable, SnapshotOptions, Snapshotter, StyleOracle,
 };
 use catpaw_dom::{Dom, HtmlParseOptions, NodeId, parse_html, to_html};
+use catpaw_engine::{LoopLimits, PageOptions, StopReason};
 use catpaw_fetch::fetch_document;
 use catpaw_net::{BotAuthConfig, KeyPair, NetClient, NetConfig, Url};
 use catpaw_style::{StyleEngine, StyleOptions};
@@ -93,6 +95,20 @@ struct FetchArgs {
     /// Print response headers to stderr.
     #[arg(long)]
     show_headers: bool,
+    /// Run the page's scripts before reading it.
+    #[arg(long)]
+    js: bool,
+    /// With --js: how far (in milliseconds) timers may be fast-forwarded
+    /// while waiting for the page to settle.
+    #[arg(long, default_value_t = 10_000, requires = "js")]
+    time_budget: u64,
+    /// With --js: print the page's console output to stderr.
+    #[arg(long, requires = "js")]
+    console: bool,
+    /// With --js: evaluate this script once the page has settled and print
+    /// its result instead of a view of the page.
+    #[arg(long, requires = "js")]
+    eval: Option<String>,
 }
 
 #[derive(Args)]
@@ -108,6 +124,7 @@ struct KeygenArgs {
 fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.cmd {
+        Cmd::Fetch(args) if args.js => fetch_with_scripts(args),
         Cmd::Fetch(args) => {
             let runtime = tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
@@ -222,11 +239,13 @@ async fn style_document(client: &NetClient, dom: &Dom, url: &Url) -> (StyleEngin
     (engine, fetched)
 }
 
-async fn fetch(args: FetchArgs) -> Result<()> {
-    let url = Url::parse(&args.url)
-        .or_else(|_| Url::parse(&format!("https://{}", args.url)))
-        .with_context(|| format!("invalid URL {}", args.url))?;
+fn parse_url(input: &str) -> Result<Url> {
+    Url::parse(input)
+        .or_else(|_| Url::parse(&format!("https://{input}")))
+        .with_context(|| format!("invalid URL {input}"))
+}
 
+fn net_config(args: &FetchArgs) -> Result<NetConfig> {
     let mut config = NetConfig {
         timeout: Duration::from_secs(args.timeout),
         ..NetConfig::default()
@@ -240,7 +259,28 @@ async fn fetch(args: FetchArgs) -> Result<()> {
         let key = KeyPair::from_json(&json).context("parsing the key file")?;
         config.bot_auth = Some(BotAuthConfig::new(key, agent.clone()));
     }
-    let client = NetClient::new(config).context("building the HTTP client")?;
+    Ok(config)
+}
+
+fn chosen_view(args: &FetchArgs) -> View {
+    if args.markdown {
+        View::Markdown
+    } else if args.text {
+        View::Text
+    } else if args.html {
+        View::Html
+    } else if args.links {
+        View::Links
+    } else if args.forms {
+        View::Forms
+    } else {
+        args.view
+    }
+}
+
+async fn fetch(args: FetchArgs) -> Result<()> {
+    let url = parse_url(&args.url)?;
+    let client = NetClient::new(net_config(&args)?).context("building the HTTP client")?;
 
     let started = Instant::now();
     let doc = fetch_document(&client, &url)
@@ -273,19 +313,7 @@ async fn fetch(args: FetchArgs) -> Result<()> {
         }
     }
 
-    let view = if args.markdown {
-        View::Markdown
-    } else if args.text {
-        View::Text
-    } else if args.html {
-        View::Html
-    } else if args.links {
-        View::Links
-    } else if args.forms {
-        View::Forms
-    } else {
-        args.view
-    };
+    let view = chosen_view(&args);
 
     let parse_opts = HtmlParseOptions {
         url: Some(response.url.clone()),
@@ -311,8 +339,11 @@ async fn fetch(args: FetchArgs) -> Result<()> {
         );
         Box::new(EngineOracle(engine))
     };
-    let oracle: &dyn StyleOracle = oracle.as_ref();
+    render(&args, view, dom, oracle.as_ref())
+}
 
+/// Prints `view` of the document.
+fn render(args: &FetchArgs, view: View, dom: &Dom, oracle: &dyn StyleOracle) -> Result<()> {
     match view {
         View::Snapshot => {
             let filter = Filter::parse(&args.filter)
@@ -371,4 +402,111 @@ async fn fetch(args: FetchArgs) -> Result<()> {
         }
     }
     Ok(())
+}
+
+fn describe_stop(report: &catpaw_engine::LoopReport) -> String {
+    match report.stop {
+        StopReason::Idle => "settled".to_string(),
+        StopReason::VirtualBudget => format!(
+            "stopped at the time budget with {} timer(s) pending",
+            report.pending_timers
+        ),
+        StopReason::WallBudget => format!(
+            "stopped at the wall-clock limit with {} request(s) in flight",
+            report.inflight_requests
+        ),
+        StopReason::StepBudget => "stopped at the step limit".to_string(),
+        StopReason::Navigation => "stopped by a navigation".to_string(),
+    }
+}
+
+/// `fetch --js`: load the page in the engine, let its scripts run until it
+/// settles, then print the requested view of the resulting document.
+fn fetch_with_scripts(args: FetchArgs) -> Result<()> {
+    let url = parse_url(&args.url)?;
+    let options = PageOptions {
+        net: net_config(&args)?,
+        limits: LoopLimits {
+            virtual_ms: args.time_budget as f64,
+            ..LoopLimits::default()
+        },
+        ..PageOptions::default()
+    };
+    let started = Instant::now();
+    catpaw_engine::with_page(url.clone(), options, move |page| -> Result<()> {
+        let document = page.document().clone();
+        eprintln!(
+            "GET {} -> {} {} ({} bytes, {} redirect(s), {})",
+            document.url,
+            document.status,
+            document.mime.as_deref().unwrap_or_default(),
+            document.body_bytes,
+            document.redirects,
+            document.encoding,
+        );
+        if document.cloudflare_challenge {
+            eprintln!("note: the response is a Cloudflare challenge page (cf-mitigated: challenge)");
+        }
+        if args.show_headers {
+            for (name, value) in &document.headers {
+                eprintln!("  {name}: {value}");
+            }
+        }
+        for hop in page.navigations().iter().skip(1) {
+            eprintln!("script navigated to {hop}");
+        }
+
+        let requests = page.net().requests();
+        let failed = requests.iter().filter(|r| r.status.is_none()).count();
+        let state = page.state().clone();
+        eprintln!(
+            "scripts ran for {} ms: {} request(s) ({} failed), {} step(s), {} ms of timers skipped, {}; {} uncaught error(s)",
+            started.elapsed().as_millis(),
+            requests.len(),
+            failed,
+            page.report().steps,
+            page.report().virtual_advanced_ms.round(),
+            describe_stop(page.report()),
+            state.errors.borrow().len(),
+        );
+        if args.console {
+            for message in state.console_messages() {
+                eprintln!("[console.{}] {}", message.level.as_str(), message.text);
+            }
+        } else {
+            for error in state.errors.borrow().iter().take(5) {
+                eprintln!("[page error] {}", error.lines().next().unwrap_or_default());
+            }
+        }
+
+        if let Some(source) = &args.eval {
+            match page.eval(source) {
+                Ok(value) => println!("{value}"),
+                Err(e) => bail!("the script threw: {e}"),
+            }
+            return Ok(());
+        }
+
+        let view = chosen_view(&args);
+        let page_url = page.url();
+        let dom = page.dom();
+        let oracle: Box<dyn StyleOracle> = if args.no_css || view == View::Html {
+            Box::new(AttributeOracle)
+        } else {
+            let style_started = Instant::now();
+            let (engine, fetched) = page
+                .net()
+                .block_on(style_document(page.net().client(), &dom, &page_url));
+            eprintln!(
+                "{} nodes; styled with {} author sheet(s) ({} fetched) in {} ms",
+                dom.len(),
+                engine.author_sheet_count(),
+                fetched,
+                style_started.elapsed().as_millis()
+            );
+            Box::new(EngineOracle(engine))
+        };
+        render(&args, view, &dom, oracle.as_ref())
+    })
+    .with_context(|| format!("loading {url}"))?
 }

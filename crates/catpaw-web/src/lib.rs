@@ -1,1 +1,41 @@
-//! CatPaw web crate. See docs/architecture.md for its place in the crate map.
+//! CatPaw web platform: the DOM and Web APIs, implemented in plain Rust.
+//!
+//! This crate knows nothing about any JavaScript engine. It implements the
+//! traits `cargo xtask bindgen` generates from Web IDL ([`generated`]) on the
+//! unit type [`Web`], working on a page's DOM arena and its platform objects
+//! ([`PageState`]), and reaches script only through `catpaw_js::ScriptHost`
+//! ([`Cx::script`]). An engine backend (`catpaw-bindings-boa`) supplies that
+//! host and the glue that calls into these traits.
+//!
+//! Besides the APIs themselves, the crate owns the page's event loop
+//! ([`event_loop`]), event dispatch ([`events`]) and the HTML parser's
+//! interleaving with script execution ([`scripting`]).
+
+pub mod activation;
+pub mod clock;
+mod collections;
+mod console;
+mod document;
+pub mod element;
+mod encoding;
+pub mod event_loop;
+pub mod events;
+pub mod generated;
+pub mod html_names;
+pub mod net;
+mod node;
+pub mod page;
+pub mod reflect;
+pub mod scripting;
+mod url_api;
+mod window;
+
+pub use element::interface_for_node;
+pub use generated::InterfaceId;
+pub use page::{
+    ConsoleLevel, ConsoleMessage, Cx, DialogRecord, NavigationRequest, PageConfig, PageState,
+    PlatformObject,
+};
+
+/// The type every generated `XImpl` trait is implemented on.
+pub struct Web;
