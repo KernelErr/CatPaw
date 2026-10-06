@@ -49,13 +49,17 @@ isolated contexts.
 ## Quick start (M0)
 
 ```sh
-cargo run -p catpaw -- fetch https://example.com --snapshot
-cargo run -p catpaw -- fetch https://news.ycombinator.com --markdown
-cargo run -p catpaw -- fetch https://httpbin.org/forms/post --forms
-cargo run -p catpaw -- keygen --out ./agent-key.json
-cargo run -p catpaw -- fetch https://crawltest.com/cdn-cgi/web-bot-auth \
+cargo install catpaw            # published on crates.io; from a checkout use `cargo run -p catpaw --`
+catpaw fetch https://example.com --snapshot
+catpaw fetch https://news.ycombinator.com --markdown
+catpaw fetch https://httpbin.org/forms/post --forms
+catpaw keygen --out ./agent-key.json
+catpaw fetch https://crawltest.com/cdn-cgi/web-bot-auth \
     --bot-auth-key ./agent-key.json --signature-agent https://your-agent.example --text
 ```
+
+The library crates are published too: `catpaw-net`, `catpaw-fetch`, `catpaw-dom`,
+`catpaw-style`, `catpaw-agent`.
 
 Developer tasks: `cargo xtask tree-construction` runs the html5lib
 tree-construction suite from a pinned, sparse web-platform-tests checkout

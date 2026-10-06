@@ -37,10 +37,14 @@ agent 真正需要的东西——带稳定引用的紧凑语义快照、精确�
 ## 快速开始（M0）
 
 ```sh
-cargo run -p catpaw -- fetch https://example.com --snapshot
-cargo run -p catpaw -- fetch https://news.ycombinator.com --markdown
-cargo run -p catpaw -- keygen --out ./agent-key.json
+cargo install catpaw            # 已发布到 crates.io；源码目录下可用 `cargo run -p catpaw --` 代替
+catpaw fetch https://example.com --snapshot
+catpaw fetch https://news.ycombinator.com --markdown
+catpaw fetch https://httpbin.org/forms/post --forms
+catpaw keygen --out ./agent-key.json
 ```
+
+库 crate 同样已发布：`catpaw-net`、`catpaw-fetch`、`catpaw-dom`、`catpaw-style`、`catpaw-agent`。
 
 ## 路线图
 
