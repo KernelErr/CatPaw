@@ -303,7 +303,8 @@ pub fn set_event_handler(
     Ok(())
 }
 
-/// `addEventListener`.
+/// `addEventListener`. Returns the flag that marks the new listener as
+/// removed, or `None` if an identical listener was already registered.
 pub fn add_listener(
     cx: &mut Cx<'_>,
     target: EventTargetRef,
@@ -312,7 +313,7 @@ pub fn add_listener(
     capture: bool,
     once: bool,
     passive: bool,
-) {
+) -> Option<Rc<Cell<bool>>> {
     let existing: Vec<Callback> = cx
         .page
         .listeners
@@ -332,8 +333,9 @@ pub fn add_listener(
         .iter()
         .any(|c| cx.script.same_callback(c, &callback))
     {
-        return;
+        return None;
     }
+    let removed = Rc::new(Cell::new(false));
     push_listener(
         cx.page,
         target,
@@ -343,9 +345,10 @@ pub fn add_listener(
             capture,
             once,
             passive,
-            removed: Rc::new(Cell::new(false)),
+            removed: removed.clone(),
         },
     );
+    Some(removed)
 }
 
 /// `removeEventListener`.
@@ -596,13 +599,31 @@ impl web::EventTargetImpl for Web {
         let Some(callback) = callback else {
             return Ok(());
         };
-        let (capture, once, passive) = match options {
-            web::AddEventListenerOptionsOrBoolean::Boolean(capture) => (capture, false, false),
+        let (capture, once, passive, signal) = match options {
+            web::AddEventListenerOptionsOrBoolean::Boolean(capture) => {
+                (capture, false, false, None)
+            }
             web::AddEventListenerOptionsOrBoolean::AddEventListenerOptions(o) => {
-                (o.capture, o.once, o.passive.unwrap_or(false))
+                (o.capture, o.once, o.passive.unwrap_or(false), o.signal)
             }
         };
-        add_listener(cx, this, &type_, callback, capture, once, passive);
+        // A listener tied to an aborted signal is never added.
+        if signal.is_some_and(|s| crate::abort::abort_reason(cx.page, s).is_some()) {
+            return Ok(());
+        }
+        let removed = add_listener(cx, this, &type_, callback, capture, once, passive);
+        if let (Some(signal), Some(removed)) = (signal, removed) {
+            crate::abort::add_algorithm(
+                cx.page,
+                signal,
+                Rc::new(move |cx, _reason| {
+                    removed.set(true);
+                    if let Some(list) = cx.page.listeners.borrow_mut().get_mut(&this) {
+                        list.retain(|l| !l.removed.get());
+                    }
+                }),
+            );
+        }
         Ok(())
     }
 
@@ -873,6 +894,7 @@ pub fn report_exception(cx: &mut Cx<'_>, exception: &Exception) {
             colno: 0,
             error: match exception {
                 Exception::Thrown(root) => Value::Opaque(root.clone()),
+                Exception::Value(value) => value.clone(),
                 _ => Value::Undefined,
             },
         };

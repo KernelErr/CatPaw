@@ -17,9 +17,10 @@ isolated contexts.
 > `defer`, `async`, script-inserted, `document.write`) and module scripts
 > (static and dynamic imports, import maps) run interleaved with the parser
 > on Boa, against bindings generated from Web IDL for the core DOM,
-> events, timers, `URL`, storage, encoding and console APIs, on an event loop
-> with virtual time. Not there yet: `fetch`/XHR, layout,
-> and much of the HTML element API surface.
+> events, timers, history, inline styles, `fetch`/`XMLHttpRequest` (with CORS
+> enforced), `URL`, storage, encoding and console APIs, on an event loop
+> with virtual time. Not there yet: layout, streams, and much of the HTML
+> element API surface.
 >
 > What works without JavaScript: HTTP/1.1 and HTTP/2 over rustls,
 > redirects, cookies, gzip/brotli/zstd, encoding sniffing, Web Bot Auth

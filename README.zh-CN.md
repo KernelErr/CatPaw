@@ -11,8 +11,8 @@ agent 真正需要的东西——带稳定引用的紧凑语义快照、精确�
 >
 > M1 当前进展（通过 `catpaw fetch --js` 使用）：经典脚本（内联、外链、`defer`、`async`、
 > 脚本动态插入、`document.write`）与模块脚本（静态与动态 import、import map）在 Boa 上与解析器交错执行；核心 DOM、事件、定时器、`URL`、
-> storage、编码与 console 等 API 的绑定由 Web IDL 生成；事件循环支持虚拟时间。
-> 尚未支持：`fetch`/XHR、布局，以及大部分 HTML 元素接口。
+> history、内联样式、`fetch`/`XMLHttpRequest`（执行 CORS 检查）、storage、编码与 console 等 API 的绑定
+> 由 Web IDL 生成；事件循环支持虚拟时间。尚未支持：布局、流（Streams），以及大部分 HTML 元素接口。
 >
 > 不依赖 JavaScript 即可用的部分：基于 rustls 的 HTTP/1.1 与 HTTP/2、重定向、cookie、
 > gzip/brotli/zstd 解压、编码嗅探、Web Bot Auth 请求签名（已通过 Cloudflare 测试端点验证）、

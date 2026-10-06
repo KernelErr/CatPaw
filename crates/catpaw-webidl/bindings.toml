@@ -235,7 +235,7 @@ members = [
 [mixins.WindowOrWorkerGlobalScope]
 members = [
   "origin", "isSecureContext", "btoa", "atob", "setTimeout", "clearTimeout", "setInterval",
-  "clearInterval", "queueMicrotask", "structuredClone", "reportError", "performance",
+  "clearInterval", "queueMicrotask", "structuredClone", "reportError", "performance", "fetch",
 ]
 
 [mixins.AnimationFrameProvider]
@@ -287,6 +287,48 @@ members = ["now", "timeOrigin"]
 [interfaces.Storage]
 exotic = true
 members = ["length", "key", "getItem", "setItem", "removeItem", "clear"]
+
+# ------------------------------------------------------------- networking
+
+[interfaces.AbortController]
+constructor = true
+members = ["signal", "abort"]
+
+[interfaces.AbortSignal]
+members = ["abort", "timeout", "any", "aborted", "reason", "throwIfAborted"]
+
+[interfaces.Headers]
+constructor = true
+members = ["append", "delete", "get", "getSetCookie", "has", "set"]
+
+[interfaces.Request]
+constructor = true
+members = [
+  "method", "url", "headers", "destination", "referrer", "referrerPolicy", "mode",
+  "credentials", "cache", "redirect", "integrity", "keepalive", "signal", "clone",
+]
+
+[interfaces.Response]
+constructor = true
+members = [
+  "error", "redirect", "json", "type", "url", "redirected", "status", "ok", "statusText",
+  "headers", "clone",
+]
+
+[mixins.Body]
+members = ["bodyUsed", "arrayBuffer", "bytes", "json", "text"]
+
+[interfaces.XMLHttpRequestEventTarget]
+
+[interfaces.XMLHttpRequestUpload]
+
+[interfaces.XMLHttpRequest]
+constructor = true
+members = [
+  "readyState", "open", "setRequestHeader", "timeout", "withCredentials", "upload", "send",
+  "abort", "responseURL", "status", "statusText", "getResponseHeader",
+  "getAllResponseHeaders", "overrideMimeType", "responseType", "response", "responseText",
+]
 
 # ------------------------------------------------------------ URL, encoding
 

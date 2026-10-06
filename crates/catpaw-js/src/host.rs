@@ -42,6 +42,11 @@ pub trait ScriptHost {
     fn resolve_promise(&mut self, promise: &PromiseRef, value: Value);
     fn reject_promise(&mut self, promise: &PromiseRef, error: Exception);
 
+    /// The script value an exception is thrown as: the `DOMException` or
+    /// error object for exceptions raised by Rust, the thrown value itself
+    /// otherwise.
+    fn exception_value(&mut self, exception: &Exception) -> Value;
+
     /// A human-readable rendering of an exception (message and, when the
     /// engine has one, a stack).
     fn describe_exception(&mut self, exception: &Exception) -> String;

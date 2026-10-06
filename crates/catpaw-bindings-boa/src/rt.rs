@@ -559,6 +559,10 @@ pub fn exception_to_js(exception: Exception, ctx: &mut Context) -> JsError {
         Exception::Type(message) => JsNativeError::typ().with_message(message).into(),
         Exception::Range(message) => JsNativeError::range().with_message(message).into(),
         Exception::Thrown(root) => JsError::from_opaque(rooted(&root)),
+        Exception::Value(value) => match value.into_js(ctx) {
+            Ok(value) => JsError::from_opaque(value),
+            Err(e) => e,
+        },
     }
 }
 

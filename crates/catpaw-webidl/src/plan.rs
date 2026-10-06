@@ -400,8 +400,8 @@ impl<'a> Planner<'a> {
                         for d in chain {
                             for m in &d.members {
                                 let resolved = self.idl.resolve(&m.ty);
-                                if self.supported(&resolved) {
-                                    self.note(&resolved);
+                                if let Some(pruned) = self.prune(&resolved) {
+                                    self.note(&pruned);
                                 }
                             }
                         }
@@ -433,11 +433,35 @@ impl<'a> Planner<'a> {
         }
     }
 
-    fn arg(&mut self, a: &Argument) -> Option<PArg> {
-        let ty = self.idl.resolve(&a.ty);
-        if !self.supported(&ty) {
-            return None;
+    /// Drops the members of unions that cannot be converted (interfaces
+    /// without bindings), so that the rest of the union stays usable.
+    /// `None` if nothing convertible is left.
+    pub fn prune(&self, ty: &Type) -> Option<Type> {
+        match ty {
+            Type::Union(members) => {
+                let mut kept: Vec<Type> = members.iter().filter_map(|m| self.prune(m)).collect();
+                match kept.len() {
+                    0 => None,
+                    1 => kept.pop(),
+                    _ => Some(Type::Union(kept)),
+                }
+            }
+            Type::Nullable(inner) => self.prune(inner).map(|t| t.nullable(true)),
+            Type::Sequence(inner) => self.prune(inner).map(|t| Type::Sequence(Box::new(t))),
+            Type::FrozenArray(inner) => self.prune(inner).map(|t| Type::FrozenArray(Box::new(t))),
+            Type::Record(key, value) => {
+                Some(Type::Record(key.clone(), Box::new(self.prune(value)?)))
+            }
+            // A promise is passed along whatever it resolves to.
+            Type::Promise(inner) => Some(Type::Promise(Box::new(
+                self.prune(inner).unwrap_or(Type::Any),
+            ))),
+            other => self.supported(other).then(|| other.clone()),
         }
+    }
+
+    fn arg(&mut self, a: &Argument) -> Option<PArg> {
+        let ty = self.prune(&self.idl.resolve(&a.ty))?;
         self.note(&ty);
         Some(PArg {
             name: a.name.clone(),
@@ -451,10 +475,7 @@ impl<'a> Planner<'a> {
     }
 
     fn overload(&mut self, rust: String, args: &[Argument], ret: &Type) -> Option<POverload> {
-        let ret = self.idl.resolve(ret);
-        if !self.supported(&ret) {
-            return None;
-        }
+        let ret = self.prune(&self.idl.resolve(ret))?;
         self.note(&ret);
         let mut out = Vec::new();
         for a in args {
@@ -560,7 +581,8 @@ impl<'a> Planner<'a> {
             match m {
                 Member::Const { name, value, .. } => consts.push((name.clone(), value.clone())),
                 Member::Attribute(a) => {
-                    let ty = self.idl.resolve(&a.ty);
+                    let resolved = self.idl.resolve(&a.ty);
+                    let ty = self.prune(&resolved).unwrap_or(resolved);
                     let rust = snake(&a.name);
                     let kind = if native.contains(a.name.as_str()) {
                         if !self.supported(&ty) {

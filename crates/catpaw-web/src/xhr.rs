@@ -1,0 +1,580 @@
+//! `XMLHttpRequest` (<https://xhr.spec.whatwg.org/>).
+
+use std::rc::Rc;
+
+use catpaw_dom::to_html;
+use catpaw_js::{EventTargetRef, Exception, Fallible, ObjectId, Value};
+use encoding_rs::Encoding;
+use url::Url;
+
+use crate::cors::{self, Credentials, Mode, Outgoing, Pending, Readable};
+use crate::event_loop::{self, TimerAction};
+use crate::generated::{
+    self as web, DocumentOrBufferSourceOrURLSearchParamsOrString as XhrBody,
+    XMLHttpRequestResponseType as ResponseType,
+};
+use crate::net::{NetResponse, RequestKind};
+use crate::page::{ConsoleLevel, Cx};
+use crate::{Web, events, platform_object};
+
+const UNSENT: u16 = 0;
+const OPENED: u16 = 1;
+const HEADERS_RECEIVED: u16 = 2;
+const LOADING: u16 = 3;
+const DONE: u16 = 4;
+
+pub struct XhrObject {
+    state: u16,
+    /// `send()` has been called and the request has not finished.
+    sending: bool,
+    method: String,
+    url: Option<Url>,
+    is_async: bool,
+    request_headers: Vec<(String, String)>,
+    with_credentials: bool,
+    timeout_ms: u32,
+    response_type: ResponseType,
+    override_mime: Option<String>,
+    upload: Option<ObjectId>,
+    pending: Option<Pending>,
+    timer: Option<i32>,
+    response: Option<NetResponse>,
+    /// Bumped whenever the current request is abandoned, so that a late
+    /// completion can tell it is no longer wanted.
+    generation: u32,
+    pinned: bool,
+}
+platform_object!(XhrObject, XMLHttpRequest);
+
+pub struct XhrUploadObject;
+platform_object!(XhrUploadObject, XMLHttpRequestUpload);
+
+fn xhr<R>(cx: &Cx<'_>, this: ObjectId, f: impl FnOnce(&mut XhrObject) -> R) -> Fallible<R> {
+    cx.page.with::<XhrObject, _>(this, f)
+}
+
+fn invalid_state(message: &str) -> Exception {
+    Exception::invalid_state(message)
+}
+
+fn fire(cx: &mut Cx<'_>, this: ObjectId, type_: &str) {
+    events::fire(cx, EventTargetRef::Object(this), type_, false, false);
+}
+
+fn fire_progress(cx: &mut Cx<'_>, this: ObjectId, type_: &str, loaded: usize) {
+    let event = events::progress_event(cx, type_, loaded as f64, Some(loaded as f64));
+    events::dispatch(cx, EventTargetRef::Object(this), event);
+}
+
+/// Stops keeping the object alive for a request in flight.
+fn release(cx: &mut Cx<'_>, this: ObjectId) {
+    let (pinned, timer) = xhr(cx, this, |x| {
+        x.pending = None;
+        (std::mem::take(&mut x.pinned), x.timer.take())
+    })
+    .unwrap_or((false, None));
+    if let Some(timer) = timer {
+        event_loop::clear_timer(cx.page, timer);
+    }
+    if pinned {
+        cx.unpin(this);
+    }
+}
+
+/// The request finished without a usable response: `error`, `timeout` or
+/// `abort`, then `loadend`.
+fn fail(cx: &mut Cx<'_>, this: ObjectId, event: &str) {
+    let _ = xhr(cx, this, |x| {
+        x.state = DONE;
+        x.sending = false;
+        x.response = None;
+    });
+    release(cx, this);
+    fire(cx, this, "readystatechange");
+    fire_progress(cx, this, event, 0);
+    fire_progress(cx, this, "loadend", 0);
+}
+
+fn succeed(cx: &mut Cx<'_>, this: ObjectId, response: NetResponse) {
+    let loaded = response.body.len();
+    let _ = xhr(cx, this, |x| {
+        x.response = Some(response);
+        x.state = HEADERS_RECEIVED;
+    });
+    fire(cx, this, "readystatechange");
+    let _ = xhr(cx, this, |x| x.state = LOADING);
+    fire(cx, this, "readystatechange");
+    fire_progress(cx, this, "progress", loaded);
+    let _ = xhr(cx, this, |x| {
+        x.state = DONE;
+        x.sending = false;
+    });
+    release(cx, this);
+    fire(cx, this, "readystatechange");
+    fire_progress(cx, this, "load", loaded);
+    fire_progress(cx, this, "loadend", loaded);
+}
+
+fn finish(cx: &mut Cx<'_>, this: ObjectId, generation: u32, result: Result<Readable, String>) {
+    let current = xhr(cx, this, |x| x.generation == generation && x.sending).unwrap_or(false);
+    if !current {
+        return;
+    }
+    match result {
+        Ok(readable) => succeed(cx, this, readable.response),
+        Err(reason) => {
+            let url = xhr(cx, this, |x| x.url.as_ref().map(Url::to_string))
+                .ok()
+                .flatten()
+                .unwrap_or_default();
+            cx.page.log(
+                ConsoleLevel::Error,
+                format!("Failed to load {url}: {reason}"),
+            );
+            fail(cx, this, "error");
+        }
+    }
+}
+
+/// Abandons the request in flight, if any, without firing events.
+fn terminate(cx: &mut Cx<'_>, this: ObjectId) {
+    let pending = xhr(cx, this, |x| {
+        x.generation = x.generation.wrapping_add(1);
+        x.pending.take()
+    })
+    .ok()
+    .flatten();
+    if let Some(pending) = pending {
+        pending.abort(cx.page);
+    }
+    release(cx, this);
+}
+
+fn charset_of(content_type: Option<&str>) -> Option<&'static Encoding> {
+    content_type?.split(';').skip(1).find_map(|param| {
+        let (name, value) = param.split_once('=')?;
+        name.trim()
+            .eq_ignore_ascii_case("charset")
+            .then(|| Encoding::for_label(value.trim().trim_matches('"').as_bytes()))
+            .flatten()
+    })
+}
+
+/// The response body as text: BOM, then the declared charset, then UTF-8.
+fn response_text(x: &XhrObject) -> String {
+    let Some(response) = x.response.as_ref().filter(|_| x.state >= LOADING) else {
+        return String::new();
+    };
+    let declared = x
+        .override_mime
+        .as_deref()
+        .or_else(|| response.header("content-type"));
+    let encoding = charset_of(declared).unwrap_or(encoding_rs::UTF_8);
+    encoding.decode(&response.body).0.into_owned()
+}
+
+fn open(
+    cx: &mut Cx<'_>,
+    this: ObjectId,
+    method: String,
+    url: String,
+    is_async: bool,
+    credentials: Option<(Option<String>, Option<String>)>,
+) -> Fallible<()> {
+    if !cors::is_header_name(&method) {
+        return Err(Exception::syntax(format!(
+            "'{method}' is not a valid HTTP method"
+        )));
+    }
+    if cors::is_forbidden_method(&method) {
+        return Err(Exception::security(format!(
+            "'{method}' HTTP method is unsupported"
+        )));
+    }
+    let upper = method.to_ascii_uppercase();
+    let method = if matches!(
+        upper.as_str(),
+        "DELETE" | "GET" | "HEAD" | "OPTIONS" | "POST" | "PUT"
+    ) {
+        upper
+    } else {
+        method
+    };
+    let mut parsed = cx
+        .page
+        .resolve_url(&url)
+        .ok_or_else(|| Exception::syntax(format!("'{url}' is not a valid URL")))?;
+    if let Some((username, password)) = credentials {
+        if let Some(username) = username {
+            let _ = parsed.set_username(&username);
+        }
+        if let Some(password) = password {
+            let _ = parsed.set_password(Some(&password));
+        }
+    }
+
+    terminate(cx, this);
+    let changed = xhr(cx, this, |x| {
+        x.sending = false;
+        x.method = method;
+        x.url = Some(parsed);
+        x.is_async = is_async;
+        x.request_headers.clear();
+        x.response = None;
+        let changed = x.state != OPENED;
+        x.state = OPENED;
+        changed
+    })?;
+    if changed {
+        fire(cx, this, "readystatechange");
+    }
+    Ok(())
+}
+
+impl web::XMLHttpRequestImpl for Web {
+    fn ready_state(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u16> {
+        xhr(cx, this, |x| x.state)
+    }
+
+    fn open(cx: &mut Cx<'_>, this: ObjectId, method: String, url: String) -> Fallible<()> {
+        open(cx, this, method, url, true, None)
+    }
+
+    fn open_overload2(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        method: String,
+        url: String,
+        async_: bool,
+        username: Option<String>,
+        password: Option<String>,
+    ) -> Fallible<()> {
+        open(cx, this, method, url, async_, Some((username, password)))
+    }
+
+    fn set_request_header(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        name: String,
+        value: String,
+    ) -> Fallible<()> {
+        let value = cors::normalize_header_value(&value)
+            .filter(|_| cors::is_header_name(&name))
+            .ok_or_else(|| Exception::syntax("Invalid header name or value"))?;
+        xhr(cx, this, |x| {
+            if x.state != OPENED || x.sending {
+                return Err(invalid_state("The object's state must be OPENED"));
+            }
+            if cors::is_forbidden_request_header(&name) {
+                return Ok(());
+            }
+            let name = name.to_ascii_lowercase();
+            match x.request_headers.iter_mut().find(|(n, _)| *n == name) {
+                Some((_, existing)) => {
+                    existing.push_str(", ");
+                    existing.push_str(&value);
+                }
+                None => x.request_headers.push((name, value)),
+            }
+            Ok(())
+        })?
+    }
+
+    fn timeout(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32> {
+        xhr(cx, this, |x| x.timeout_ms)
+    }
+
+    fn set_timeout(cx: &mut Cx<'_>, this: ObjectId, value: u32) -> Fallible<()> {
+        xhr(cx, this, |x| x.timeout_ms = value)
+    }
+
+    fn with_credentials(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool> {
+        xhr(cx, this, |x| x.with_credentials)
+    }
+
+    fn set_with_credentials(cx: &mut Cx<'_>, this: ObjectId, value: bool) -> Fallible<()> {
+        xhr(cx, this, |x| {
+            if (x.state != UNSENT && x.state != OPENED) || x.sending {
+                return Err(invalid_state(
+                    "The value may only be set before the request is sent",
+                ));
+            }
+            x.with_credentials = value;
+            Ok(())
+        })?
+    }
+
+    fn upload(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId> {
+        let existing = xhr(cx, this, |x| x.upload)?;
+        if let Some(upload) = existing.filter(|&id| cx.page.object_exists(id)) {
+            return Ok(upload);
+        }
+        let upload = cx.page.alloc(XhrUploadObject);
+        xhr(cx, this, |x| x.upload = Some(upload))?;
+        Ok(upload)
+    }
+
+    fn send(cx: &mut Cx<'_>, this: ObjectId, body: Option<XhrBody>) -> Fallible<()> {
+        let (method, url, mut headers, is_async, with_credentials, timeout_ms) =
+            xhr(cx, this, |x| {
+                if x.state != OPENED || x.sending {
+                    return Err(invalid_state("The object's state must be OPENED"));
+                }
+                let url = x.url.clone().ok_or_else(|| invalid_state("No URL"))?;
+                Ok((
+                    x.method.clone(),
+                    url,
+                    x.request_headers.clone(),
+                    x.is_async,
+                    x.with_credentials,
+                    x.timeout_ms,
+                ))
+            })??;
+
+        let body = match body.filter(|_| !matches!(method.as_str(), "GET" | "HEAD")) {
+            None => None,
+            Some(body) => {
+                let (bytes, content_type) = match body {
+                    XhrBody::BufferSource(bytes) => (bytes, None),
+                    XhrBody::String(text) => (text.into_bytes(), Some("text/plain;charset=UTF-8")),
+                    XhrBody::URLSearchParams(id) => (
+                        crate::url_api::serialized_params(cx, id)?.into_bytes(),
+                        Some("application/x-www-form-urlencoded;charset=UTF-8"),
+                    ),
+                    XhrBody::Document(node) => (
+                        to_html(&cx.dom(), node, true).into_bytes(),
+                        Some("text/html;charset=UTF-8"),
+                    ),
+                };
+                if let Some(content_type) = content_type
+                    && !headers.iter().any(|(n, _)| n == "content-type")
+                {
+                    headers.push(("content-type".to_string(), content_type.to_string()));
+                }
+                Some(bytes)
+            }
+        };
+        let out = Outgoing {
+            method,
+            url,
+            headers,
+            body,
+            mode: Mode::Cors,
+            credentials: if with_credentials {
+                Credentials::Include
+            } else {
+                Credentials::SameOrigin
+            },
+            kind: RequestKind::Xhr,
+        };
+
+        if !is_async {
+            let result = cors::send_blocking(cx.page, out);
+            return match result {
+                Ok(readable) => {
+                    let _ = xhr(cx, this, |x| {
+                        x.response = Some(readable.response);
+                        x.state = DONE;
+                    });
+                    fire(cx, this, "readystatechange");
+                    Ok(())
+                }
+                Err(reason) => {
+                    let _ = xhr(cx, this, |x| x.state = DONE);
+                    Err(Exception::network(format!("Failed to load: {reason}")))
+                }
+            };
+        }
+
+        let generation = xhr(cx, this, |x| {
+            x.sending = true;
+            x.pinned = true;
+            x.generation
+        })?;
+        cx.pin(this);
+        fire_progress(cx, this, "loadstart", 0);
+        // A loadstart listener may have aborted or reopened the request.
+        let still_wanted = xhr(cx, this, |x| x.generation == generation && x.sending)?;
+        if !still_wanted {
+            return Ok(());
+        }
+
+        let pending = cors::send(cx.page, out, move |cx, result| {
+            finish(cx, this, generation, result)
+        });
+        let timer = (timeout_ms > 0).then(|| {
+            event_loop::set_timer(
+                cx.page,
+                TimerAction::Native(Rc::new(move |cx| {
+                    let current =
+                        xhr(cx, this, |x| x.generation == generation && x.sending).unwrap_or(false);
+                    if current {
+                        terminate(cx, this);
+                        fail(cx, this, "timeout");
+                    }
+                })),
+                i32::try_from(timeout_ms).unwrap_or(i32::MAX),
+                false,
+            )
+        });
+        xhr(cx, this, |x| {
+            x.pending = Some(pending);
+            x.timer = timer;
+        })
+    }
+
+    fn abort(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()> {
+        let was_sending = xhr(cx, this, |x| {
+            (x.state == OPENED && x.sending) || x.state == HEADERS_RECEIVED || x.state == LOADING
+        })?;
+        terminate(cx, this);
+        if was_sending {
+            fail(cx, this, "abort");
+        }
+        // The object ends up UNSENT without a further readystatechange.
+        xhr(cx, this, |x| {
+            if x.state == DONE {
+                x.state = UNSENT;
+            }
+            x.sending = false;
+        })
+    }
+
+    fn response_url(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String> {
+        xhr(cx, this, |x| match &x.response {
+            Some(response) => {
+                let mut url = response.url.clone();
+                url.set_fragment(None);
+                url.to_string()
+            }
+            None => String::new(),
+        })
+    }
+
+    fn status(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u16> {
+        xhr(cx, this, |x| x.response.as_ref().map_or(0, |r| r.status))
+    }
+
+    fn status_text(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String> {
+        xhr(cx, this, |x| {
+            x.response
+                .as_ref()
+                .map(|r| r.status_text.clone())
+                .unwrap_or_default()
+        })
+    }
+
+    fn get_response_header(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        name: String,
+    ) -> Fallible<Option<String>> {
+        xhr(cx, this, |x| {
+            let response = x.response.as_ref()?;
+            let values: Vec<&str> = response
+                .headers
+                .iter()
+                .filter(|(n, _)| n.eq_ignore_ascii_case(&name))
+                .map(|(_, v)| v.as_str())
+                .collect();
+            (!values.is_empty()).then(|| values.join(", "))
+        })
+    }
+
+    fn get_all_response_headers(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String> {
+        xhr(cx, this, |x| {
+            let Some(response) = &x.response else {
+                return String::new();
+            };
+            let mut headers: Vec<(String, &str)> = response
+                .headers
+                .iter()
+                .map(|(n, v)| (n.to_ascii_lowercase(), v.as_str()))
+                .collect();
+            headers.sort_by(|a, b| a.0.cmp(&b.0));
+            headers
+                .into_iter()
+                .map(|(name, value)| format!("{name}: {value}\r\n"))
+                .collect()
+        })
+    }
+
+    fn override_mime_type(cx: &mut Cx<'_>, this: ObjectId, mime: String) -> Fallible<()> {
+        xhr(cx, this, |x| {
+            if x.state >= LOADING {
+                return Err(invalid_state(
+                    "The MIME type cannot be overridden once loading has started",
+                ));
+            }
+            x.override_mime = Some(mime);
+            Ok(())
+        })?
+    }
+
+    fn response_type(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ResponseType> {
+        xhr(cx, this, |x| x.response_type)
+    }
+
+    fn set_response_type(cx: &mut Cx<'_>, this: ObjectId, value: ResponseType) -> Fallible<()> {
+        xhr(cx, this, |x| {
+            if x.state >= LOADING {
+                return Err(invalid_state(
+                    "The response type cannot be changed once loading has started",
+                ));
+            }
+            x.response_type = value;
+            Ok(())
+        })?
+    }
+
+    fn response(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value> {
+        let (kind, done, text, bytes) = xhr(cx, this, |x| {
+            let done = x.state == DONE && x.response.is_some();
+            let bytes = match (&x.response, x.response_type) {
+                (Some(r), ResponseType::Arraybuffer) if done => Some(r.body.clone()),
+                _ => None,
+            };
+            (x.response_type, done, response_text(x), bytes)
+        })?;
+        Ok(match kind {
+            ResponseType::Empty | ResponseType::Text => Value::String(text),
+            _ if !done => Value::Null,
+            ResponseType::Arraybuffer => bytes.map_or(Value::Null, Value::ArrayBuffer),
+            ResponseType::Json => cx.script.parse_json(&text).unwrap_or(Value::Null),
+            // Blob and Document responses are not supported yet.
+            ResponseType::Blob | ResponseType::Document => Value::Null,
+        })
+    }
+
+    fn response_text(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String> {
+        xhr(cx, this, |x| {
+            if !matches!(x.response_type, ResponseType::Empty | ResponseType::Text) {
+                return Err(invalid_state(
+                    "responseText is only available if responseType is '' or 'text'",
+                ));
+            }
+            Ok(response_text(x))
+        })?
+    }
+
+    fn constructor(cx: &mut Cx<'_>) -> Fallible<ObjectId> {
+        Ok(cx.page.alloc(XhrObject {
+            state: UNSENT,
+            sending: false,
+            method: "GET".to_string(),
+            url: None,
+            is_async: true,
+            request_headers: Vec::new(),
+            with_credentials: false,
+            timeout_ms: 0,
+            response_type: ResponseType::Empty,
+            override_mime: None,
+            upload: None,
+            pending: None,
+            timer: None,
+            response: None,
+            generation: 0,
+            pinned: false,
+        }))
+    }
+}

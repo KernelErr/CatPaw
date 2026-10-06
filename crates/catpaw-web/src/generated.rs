@@ -22,6 +22,7 @@ use crate::Cx;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[repr(u16)]
 pub enum InterfaceId {
+    AbortController,
     CSSStyleDeclaration,
     CSSStyleProperties,
     DOMRectReadOnly,
@@ -31,6 +32,7 @@ pub enum InterfaceId {
     EventTarget,
     HTMLCollection,
     HashChangeEvent,
+    Headers,
     History,
     Location,
     Navigator,
@@ -40,12 +42,17 @@ pub enum InterfaceId {
     PopStateEvent,
     ProgressEvent,
     PromiseRejectionEvent,
+    Request,
+    Response,
     Storage,
     TextDecoder,
     TextEncoder,
     URL,
     URLSearchParams,
     Window,
+    XMLHttpRequestEventTarget,
+    XMLHttpRequestUpload,
+    AbortSignal,
     CharacterData,
     Comment,
     CustomEvent,
@@ -86,6 +93,7 @@ pub enum InterfaceId {
     HTMLUListElement,
     HTMLUnknownElement,
     Text,
+    XMLHttpRequest,
     HTMLAnchorElement,
     HTMLBRElement,
     HTMLBodyElement,
@@ -94,8 +102,9 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 69;
-    pub const ALL: [InterfaceId; 69] = [
+    pub const COUNT: usize = 77;
+    pub const ALL: [InterfaceId; 77] = [
+        InterfaceId::AbortController,
         InterfaceId::CSSStyleDeclaration,
         InterfaceId::CSSStyleProperties,
         InterfaceId::DOMRectReadOnly,
@@ -105,6 +114,7 @@ impl InterfaceId {
         InterfaceId::EventTarget,
         InterfaceId::HTMLCollection,
         InterfaceId::HashChangeEvent,
+        InterfaceId::Headers,
         InterfaceId::History,
         InterfaceId::Location,
         InterfaceId::Navigator,
@@ -114,12 +124,17 @@ impl InterfaceId {
         InterfaceId::PopStateEvent,
         InterfaceId::ProgressEvent,
         InterfaceId::PromiseRejectionEvent,
+        InterfaceId::Request,
+        InterfaceId::Response,
         InterfaceId::Storage,
         InterfaceId::TextDecoder,
         InterfaceId::TextEncoder,
         InterfaceId::URL,
         InterfaceId::URLSearchParams,
         InterfaceId::Window,
+        InterfaceId::XMLHttpRequestEventTarget,
+        InterfaceId::XMLHttpRequestUpload,
+        InterfaceId::AbortSignal,
         InterfaceId::CharacterData,
         InterfaceId::Comment,
         InterfaceId::CustomEvent,
@@ -160,6 +175,7 @@ impl InterfaceId {
         InterfaceId::HTMLUListElement,
         InterfaceId::HTMLUnknownElement,
         InterfaceId::Text,
+        InterfaceId::XMLHttpRequest,
         InterfaceId::HTMLAnchorElement,
         InterfaceId::HTMLBRElement,
         InterfaceId::HTMLBodyElement,
@@ -169,6 +185,7 @@ impl InterfaceId {
 
     pub fn name(self) -> &'static str {
         match self {
+            InterfaceId::AbortController => "AbortController",
             InterfaceId::CSSStyleDeclaration => "CSSStyleDeclaration",
             InterfaceId::CSSStyleProperties => "CSSStyleProperties",
             InterfaceId::DOMRectReadOnly => "DOMRectReadOnly",
@@ -178,6 +195,7 @@ impl InterfaceId {
             InterfaceId::EventTarget => "EventTarget",
             InterfaceId::HTMLCollection => "HTMLCollection",
             InterfaceId::HashChangeEvent => "HashChangeEvent",
+            InterfaceId::Headers => "Headers",
             InterfaceId::History => "History",
             InterfaceId::Location => "Location",
             InterfaceId::Navigator => "Navigator",
@@ -187,12 +205,17 @@ impl InterfaceId {
             InterfaceId::PopStateEvent => "PopStateEvent",
             InterfaceId::ProgressEvent => "ProgressEvent",
             InterfaceId::PromiseRejectionEvent => "PromiseRejectionEvent",
+            InterfaceId::Request => "Request",
+            InterfaceId::Response => "Response",
             InterfaceId::Storage => "Storage",
             InterfaceId::TextDecoder => "TextDecoder",
             InterfaceId::TextEncoder => "TextEncoder",
             InterfaceId::URL => "URL",
             InterfaceId::URLSearchParams => "URLSearchParams",
             InterfaceId::Window => "Window",
+            InterfaceId::XMLHttpRequestEventTarget => "XMLHttpRequestEventTarget",
+            InterfaceId::XMLHttpRequestUpload => "XMLHttpRequestUpload",
+            InterfaceId::AbortSignal => "AbortSignal",
             InterfaceId::CharacterData => "CharacterData",
             InterfaceId::Comment => "Comment",
             InterfaceId::CustomEvent => "CustomEvent",
@@ -233,6 +256,7 @@ impl InterfaceId {
             InterfaceId::HTMLUListElement => "HTMLUListElement",
             InterfaceId::HTMLUnknownElement => "HTMLUnknownElement",
             InterfaceId::Text => "Text",
+            InterfaceId::XMLHttpRequest => "XMLHttpRequest",
             InterfaceId::HTMLAnchorElement => "HTMLAnchorElement",
             InterfaceId::HTMLBRElement => "HTMLBRElement",
             InterfaceId::HTMLBodyElement => "HTMLBodyElement",
@@ -243,6 +267,7 @@ impl InterfaceId {
 
     pub fn from_name(name: &str) -> Option<InterfaceId> {
         Some(match name {
+            "AbortController" => InterfaceId::AbortController,
             "CSSStyleDeclaration" => InterfaceId::CSSStyleDeclaration,
             "CSSStyleProperties" => InterfaceId::CSSStyleProperties,
             "DOMRectReadOnly" => InterfaceId::DOMRectReadOnly,
@@ -252,6 +277,7 @@ impl InterfaceId {
             "EventTarget" => InterfaceId::EventTarget,
             "HTMLCollection" => InterfaceId::HTMLCollection,
             "HashChangeEvent" => InterfaceId::HashChangeEvent,
+            "Headers" => InterfaceId::Headers,
             "History" => InterfaceId::History,
             "Location" => InterfaceId::Location,
             "Navigator" => InterfaceId::Navigator,
@@ -261,12 +287,17 @@ impl InterfaceId {
             "PopStateEvent" => InterfaceId::PopStateEvent,
             "ProgressEvent" => InterfaceId::ProgressEvent,
             "PromiseRejectionEvent" => InterfaceId::PromiseRejectionEvent,
+            "Request" => InterfaceId::Request,
+            "Response" => InterfaceId::Response,
             "Storage" => InterfaceId::Storage,
             "TextDecoder" => InterfaceId::TextDecoder,
             "TextEncoder" => InterfaceId::TextEncoder,
             "URL" => InterfaceId::URL,
             "URLSearchParams" => InterfaceId::URLSearchParams,
             "Window" => InterfaceId::Window,
+            "XMLHttpRequestEventTarget" => InterfaceId::XMLHttpRequestEventTarget,
+            "XMLHttpRequestUpload" => InterfaceId::XMLHttpRequestUpload,
+            "AbortSignal" => InterfaceId::AbortSignal,
             "CharacterData" => InterfaceId::CharacterData,
             "Comment" => InterfaceId::Comment,
             "CustomEvent" => InterfaceId::CustomEvent,
@@ -307,6 +338,7 @@ impl InterfaceId {
             "HTMLUListElement" => InterfaceId::HTMLUListElement,
             "HTMLUnknownElement" => InterfaceId::HTMLUnknownElement,
             "Text" => InterfaceId::Text,
+            "XMLHttpRequest" => InterfaceId::XMLHttpRequest,
             "HTMLAnchorElement" => InterfaceId::HTMLAnchorElement,
             "HTMLBRElement" => InterfaceId::HTMLBRElement,
             "HTMLBodyElement" => InterfaceId::HTMLBodyElement,
@@ -318,6 +350,7 @@ impl InterfaceId {
 
     pub fn parent(self) -> Option<InterfaceId> {
         match self {
+            InterfaceId::AbortController => None,
             InterfaceId::CSSStyleDeclaration => None,
             InterfaceId::CSSStyleProperties => Some(InterfaceId::CSSStyleDeclaration),
             InterfaceId::DOMRectReadOnly => None,
@@ -327,6 +360,7 @@ impl InterfaceId {
             InterfaceId::EventTarget => None,
             InterfaceId::HTMLCollection => None,
             InterfaceId::HashChangeEvent => Some(InterfaceId::Event),
+            InterfaceId::Headers => None,
             InterfaceId::History => None,
             InterfaceId::Location => None,
             InterfaceId::Navigator => None,
@@ -336,12 +370,17 @@ impl InterfaceId {
             InterfaceId::PopStateEvent => Some(InterfaceId::Event),
             InterfaceId::ProgressEvent => Some(InterfaceId::Event),
             InterfaceId::PromiseRejectionEvent => Some(InterfaceId::Event),
+            InterfaceId::Request => None,
+            InterfaceId::Response => None,
             InterfaceId::Storage => None,
             InterfaceId::TextDecoder => None,
             InterfaceId::TextEncoder => None,
             InterfaceId::URL => None,
             InterfaceId::URLSearchParams => None,
             InterfaceId::Window => Some(InterfaceId::EventTarget),
+            InterfaceId::XMLHttpRequestEventTarget => Some(InterfaceId::EventTarget),
+            InterfaceId::XMLHttpRequestUpload => Some(InterfaceId::XMLHttpRequestEventTarget),
+            InterfaceId::AbortSignal => Some(InterfaceId::EventTarget),
             InterfaceId::CharacterData => Some(InterfaceId::Node),
             InterfaceId::Comment => Some(InterfaceId::CharacterData),
             InterfaceId::CustomEvent => Some(InterfaceId::Event),
@@ -382,6 +421,7 @@ impl InterfaceId {
             InterfaceId::HTMLUListElement => Some(InterfaceId::HTMLElement),
             InterfaceId::HTMLUnknownElement => Some(InterfaceId::HTMLElement),
             InterfaceId::Text => Some(InterfaceId::CharacterData),
+            InterfaceId::XMLHttpRequest => Some(InterfaceId::XMLHttpRequestEventTarget),
             InterfaceId::HTMLAnchorElement => Some(InterfaceId::HTMLElement),
             InterfaceId::HTMLBRElement => Some(InterfaceId::HTMLElement),
             InterfaceId::HTMLBodyElement => Some(InterfaceId::HTMLElement),
@@ -501,6 +541,330 @@ impl DocumentVisibilityState {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ReferrerPolicy {
+    Empty,
+    NoReferrer,
+    NoReferrerWhenDowngrade,
+    SameOrigin,
+    Origin,
+    StrictOrigin,
+    OriginWhenCrossOrigin,
+    StrictOriginWhenCrossOrigin,
+    UnsafeUrl,
+}
+
+impl ReferrerPolicy {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ReferrerPolicy::Empty => "",
+            ReferrerPolicy::NoReferrer => "no-referrer",
+            ReferrerPolicy::NoReferrerWhenDowngrade => "no-referrer-when-downgrade",
+            ReferrerPolicy::SameOrigin => "same-origin",
+            ReferrerPolicy::Origin => "origin",
+            ReferrerPolicy::StrictOrigin => "strict-origin",
+            ReferrerPolicy::OriginWhenCrossOrigin => "origin-when-cross-origin",
+            ReferrerPolicy::StrictOriginWhenCrossOrigin => "strict-origin-when-cross-origin",
+            ReferrerPolicy::UnsafeUrl => "unsafe-url",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "" => ReferrerPolicy::Empty,
+            "no-referrer" => ReferrerPolicy::NoReferrer,
+            "no-referrer-when-downgrade" => ReferrerPolicy::NoReferrerWhenDowngrade,
+            "same-origin" => ReferrerPolicy::SameOrigin,
+            "origin" => ReferrerPolicy::Origin,
+            "strict-origin" => ReferrerPolicy::StrictOrigin,
+            "origin-when-cross-origin" => ReferrerPolicy::OriginWhenCrossOrigin,
+            "strict-origin-when-cross-origin" => ReferrerPolicy::StrictOriginWhenCrossOrigin,
+            "unsafe-url" => ReferrerPolicy::UnsafeUrl,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum RequestCache {
+    Default,
+    NoStore,
+    Reload,
+    NoCache,
+    ForceCache,
+    OnlyIfCached,
+}
+
+impl RequestCache {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            RequestCache::Default => "default",
+            RequestCache::NoStore => "no-store",
+            RequestCache::Reload => "reload",
+            RequestCache::NoCache => "no-cache",
+            RequestCache::ForceCache => "force-cache",
+            RequestCache::OnlyIfCached => "only-if-cached",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "default" => RequestCache::Default,
+            "no-store" => RequestCache::NoStore,
+            "reload" => RequestCache::Reload,
+            "no-cache" => RequestCache::NoCache,
+            "force-cache" => RequestCache::ForceCache,
+            "only-if-cached" => RequestCache::OnlyIfCached,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum RequestCredentials {
+    Omit,
+    SameOrigin,
+    Include,
+}
+
+impl RequestCredentials {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            RequestCredentials::Omit => "omit",
+            RequestCredentials::SameOrigin => "same-origin",
+            RequestCredentials::Include => "include",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "omit" => RequestCredentials::Omit,
+            "same-origin" => RequestCredentials::SameOrigin,
+            "include" => RequestCredentials::Include,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum RequestDestination {
+    Empty,
+    Audio,
+    Audioworklet,
+    Document,
+    Embed,
+    Font,
+    Frame,
+    Iframe,
+    Image,
+    Json,
+    Manifest,
+    Object,
+    Paintworklet,
+    Report,
+    Script,
+    Sharedworker,
+    Style,
+    Text,
+    Track,
+    Video,
+    Worker,
+    Xslt,
+}
+
+impl RequestDestination {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            RequestDestination::Empty => "",
+            RequestDestination::Audio => "audio",
+            RequestDestination::Audioworklet => "audioworklet",
+            RequestDestination::Document => "document",
+            RequestDestination::Embed => "embed",
+            RequestDestination::Font => "font",
+            RequestDestination::Frame => "frame",
+            RequestDestination::Iframe => "iframe",
+            RequestDestination::Image => "image",
+            RequestDestination::Json => "json",
+            RequestDestination::Manifest => "manifest",
+            RequestDestination::Object => "object",
+            RequestDestination::Paintworklet => "paintworklet",
+            RequestDestination::Report => "report",
+            RequestDestination::Script => "script",
+            RequestDestination::Sharedworker => "sharedworker",
+            RequestDestination::Style => "style",
+            RequestDestination::Text => "text",
+            RequestDestination::Track => "track",
+            RequestDestination::Video => "video",
+            RequestDestination::Worker => "worker",
+            RequestDestination::Xslt => "xslt",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "" => RequestDestination::Empty,
+            "audio" => RequestDestination::Audio,
+            "audioworklet" => RequestDestination::Audioworklet,
+            "document" => RequestDestination::Document,
+            "embed" => RequestDestination::Embed,
+            "font" => RequestDestination::Font,
+            "frame" => RequestDestination::Frame,
+            "iframe" => RequestDestination::Iframe,
+            "image" => RequestDestination::Image,
+            "json" => RequestDestination::Json,
+            "manifest" => RequestDestination::Manifest,
+            "object" => RequestDestination::Object,
+            "paintworklet" => RequestDestination::Paintworklet,
+            "report" => RequestDestination::Report,
+            "script" => RequestDestination::Script,
+            "sharedworker" => RequestDestination::Sharedworker,
+            "style" => RequestDestination::Style,
+            "text" => RequestDestination::Text,
+            "track" => RequestDestination::Track,
+            "video" => RequestDestination::Video,
+            "worker" => RequestDestination::Worker,
+            "xslt" => RequestDestination::Xslt,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum RequestDuplex {
+    Half,
+}
+
+impl RequestDuplex {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            RequestDuplex::Half => "half",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "half" => RequestDuplex::Half,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum RequestMode {
+    Navigate,
+    SameOrigin,
+    NoCors,
+    Cors,
+}
+
+impl RequestMode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            RequestMode::Navigate => "navigate",
+            RequestMode::SameOrigin => "same-origin",
+            RequestMode::NoCors => "no-cors",
+            RequestMode::Cors => "cors",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "navigate" => RequestMode::Navigate,
+            "same-origin" => RequestMode::SameOrigin,
+            "no-cors" => RequestMode::NoCors,
+            "cors" => RequestMode::Cors,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum RequestPriority {
+    High,
+    Low,
+    Auto,
+}
+
+impl RequestPriority {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            RequestPriority::High => "high",
+            RequestPriority::Low => "low",
+            RequestPriority::Auto => "auto",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "high" => RequestPriority::High,
+            "low" => RequestPriority::Low,
+            "auto" => RequestPriority::Auto,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum RequestRedirect {
+    Follow,
+    Error,
+    Manual,
+}
+
+impl RequestRedirect {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            RequestRedirect::Follow => "follow",
+            RequestRedirect::Error => "error",
+            RequestRedirect::Manual => "manual",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "follow" => RequestRedirect::Follow,
+            "error" => RequestRedirect::Error,
+            "manual" => RequestRedirect::Manual,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ResponseType {
+    Basic,
+    Cors,
+    Default,
+    Error,
+    Opaque,
+    Opaqueredirect,
+}
+
+impl ResponseType {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ResponseType::Basic => "basic",
+            ResponseType::Cors => "cors",
+            ResponseType::Default => "default",
+            ResponseType::Error => "error",
+            ResponseType::Opaque => "opaque",
+            ResponseType::Opaqueredirect => "opaqueredirect",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "basic" => ResponseType::Basic,
+            "cors" => ResponseType::Cors,
+            "default" => ResponseType::Default,
+            "error" => ResponseType::Error,
+            "opaque" => ResponseType::Opaque,
+            "opaqueredirect" => ResponseType::Opaqueredirect,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ScrollBehavior {
     Auto,
     Instant,
@@ -601,11 +965,47 @@ impl ScrollRestoration {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum XMLHttpRequestResponseType {
+    Empty,
+    Arraybuffer,
+    Blob,
+    Document,
+    Json,
+    Text,
+}
+
+impl XMLHttpRequestResponseType {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            XMLHttpRequestResponseType::Empty => "",
+            XMLHttpRequestResponseType::Arraybuffer => "arraybuffer",
+            XMLHttpRequestResponseType::Blob => "blob",
+            XMLHttpRequestResponseType::Document => "document",
+            XMLHttpRequestResponseType::Json => "json",
+            XMLHttpRequestResponseType::Text => "text",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "" => XMLHttpRequestResponseType::Empty,
+            "arraybuffer" => XMLHttpRequestResponseType::Arraybuffer,
+            "blob" => XMLHttpRequestResponseType::Blob,
+            "document" => XMLHttpRequestResponseType::Document,
+            "json" => XMLHttpRequestResponseType::Json,
+            "text" => XMLHttpRequestResponseType::Text,
+            _ => return None,
+        })
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct AddEventListenerOptions {
     pub capture: bool,
     pub passive: Option<bool>,
     pub once: bool,
+    pub signal: Option<ObjectId>,
 }
 
 #[derive(Clone, Debug)]
@@ -699,6 +1099,32 @@ pub struct PromiseRejectionEventInit {
 }
 
 #[derive(Clone, Debug)]
+pub struct RequestInit {
+    pub method: Option<String>,
+    pub headers: Option<StringSequenceSequenceOrStringStringRecord>,
+    pub body: Option<BufferSourceOrURLSearchParamsOrString>,
+    pub referrer: Option<String>,
+    pub referrer_policy: Option<ReferrerPolicy>,
+    pub mode: Option<RequestMode>,
+    pub credentials: Option<RequestCredentials>,
+    pub cache: Option<RequestCache>,
+    pub redirect: Option<RequestRedirect>,
+    pub integrity: Option<String>,
+    pub keepalive: Option<bool>,
+    pub signal: Option<ObjectId>,
+    pub duplex: Option<RequestDuplex>,
+    pub priority: Option<RequestPriority>,
+    pub window: Value,
+}
+
+#[derive(Clone, Debug)]
+pub struct ResponseInit {
+    pub status: u16,
+    pub status_text: String,
+    pub headers: Option<StringSequenceSequenceOrStringStringRecord>,
+}
+
+#[derive(Clone, Debug)]
 pub struct ScrollIntoViewOptions {
     pub behavior: ScrollBehavior,
     pub block: ScrollLogicalPosition,
@@ -755,6 +1181,21 @@ pub enum BooleanOrScrollIntoViewOptions {
 }
 
 #[derive(Clone, Debug)]
+pub enum BufferSourceOrURLSearchParamsOrString {
+    BufferSource(Vec<u8>),
+    URLSearchParams(ObjectId),
+    String(String),
+}
+
+#[derive(Clone, Debug)]
+pub enum DocumentOrBufferSourceOrURLSearchParamsOrString {
+    Document(NodeId),
+    BufferSource(Vec<u8>),
+    URLSearchParams(ObjectId),
+    String(String),
+}
+
+#[derive(Clone, Debug)]
 pub enum EventListenerOptionsOrBoolean {
     EventListenerOptions(EventListenerOptions),
     Boolean(bool),
@@ -763,6 +1204,12 @@ pub enum EventListenerOptionsOrBoolean {
 #[derive(Clone, Debug)]
 pub enum NodeOrString {
     Node(NodeId),
+    String(String),
+}
+
+#[derive(Clone, Debug)]
+pub enum RequestOrString {
+    Request(ObjectId),
     String(String),
 }
 
@@ -779,6 +1226,12 @@ pub enum StringOrFunction {
 }
 
 #[derive(Clone, Debug)]
+pub enum StringSequenceSequenceOrStringStringRecord {
+    StringSequenceSequence(Vec<Vec<String>>),
+    StringStringRecord(Vec<(String, String)>),
+}
+
+#[derive(Clone, Debug)]
 pub enum StringSequenceSequenceOrStringStringRecordOrString {
     StringSequenceSequence(Vec<Vec<String>>),
     StringStringRecord(Vec<(String, String)>),
@@ -788,6 +1241,14 @@ pub enum StringSequenceSequenceOrStringStringRecordOrString {
 pub trait AnimationFrameProviderImpl {
     fn request_animation_frame(cx: &mut Cx<'_>, callback: Callback) -> Fallible<u32>;
     fn cancel_animation_frame(cx: &mut Cx<'_>, handle: u32) -> Fallible<()>;
+}
+
+pub trait BodyImpl {
+    fn body_used(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn array_buffer(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
+    fn bytes(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
+    fn json(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
+    fn text(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
 }
 
 pub trait ChildNodeImpl {
@@ -885,6 +1346,7 @@ pub trait WindowLocalStorageImpl {
 }
 
 pub trait WindowOrWorkerGlobalScopeImpl {
+    fn fetch(cx: &mut Cx<'_>, input: RequestOrString, init: RequestInit) -> Fallible<PromiseRef>;
     fn performance(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
     fn origin(cx: &mut Cx<'_>) -> Fallible<String>;
     fn is_secure_context(cx: &mut Cx<'_>) -> Fallible<bool>;
@@ -915,6 +1377,12 @@ pub trait WindowOrWorkerGlobalScopeImpl {
 
 pub trait WindowSessionStorageImpl {
     fn session_storage(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
+}
+
+pub trait AbortControllerImpl {
+    fn signal(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn abort(cx: &mut Cx<'_>, this: ObjectId, reason: Value) -> Fallible<()>;
+    fn constructor(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
 }
 
 pub trait CSSStyleDeclarationImpl {
@@ -1055,6 +1523,20 @@ pub trait HashChangeEventImpl {
     ) -> Fallible<ObjectId>;
 }
 
+pub trait HeadersImpl {
+    fn append(cx: &mut Cx<'_>, this: ObjectId, name: String, value: String) -> Fallible<()>;
+    fn delete(cx: &mut Cx<'_>, this: ObjectId, name: String) -> Fallible<()>;
+    fn get(cx: &mut Cx<'_>, this: ObjectId, name: String) -> Fallible<Option<String>>;
+    fn get_set_cookie(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<String>>;
+    fn has(cx: &mut Cx<'_>, this: ObjectId, name: String) -> Fallible<bool>;
+    fn set(cx: &mut Cx<'_>, this: ObjectId, name: String, value: String) -> Fallible<()>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        init: Option<StringSequenceSequenceOrStringStringRecord>,
+    ) -> Fallible<ObjectId>;
+    fn iterate(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<(String, String)>>;
+}
+
 pub trait HistoryImpl {
     fn length(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
     fn scroll_restoration(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ScrollRestoration>;
@@ -1193,6 +1675,47 @@ pub trait PromiseRejectionEventImpl {
     ) -> Fallible<ObjectId>;
 }
 
+pub trait RequestImpl {
+    fn method(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn url(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn headers(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn destination(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<RequestDestination>;
+    fn referrer(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn referrer_policy(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ReferrerPolicy>;
+    fn mode(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<RequestMode>;
+    fn credentials(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<RequestCredentials>;
+    fn cache(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<RequestCache>;
+    fn redirect(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<RequestRedirect>;
+    fn integrity(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn keepalive(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn signal(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn clone(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        input: RequestOrString,
+        init: RequestInit,
+    ) -> Fallible<ObjectId>;
+}
+
+pub trait ResponseImpl {
+    fn error(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
+    fn redirect(cx: &mut Cx<'_>, url: String, status: u16) -> Fallible<ObjectId>;
+    fn json(cx: &mut Cx<'_>, data: Value, init: ResponseInit) -> Fallible<ObjectId>;
+    fn type_(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ResponseType>;
+    fn url(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn redirected(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn status(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u16>;
+    fn ok(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn status_text(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn headers(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn clone(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        body: Option<BufferSourceOrURLSearchParamsOrString>,
+        init: ResponseInit,
+    ) -> Fallible<ObjectId>;
+}
+
 pub trait StorageImpl {
     fn length(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
     fn key(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<String>>;
@@ -1303,6 +1826,15 @@ pub trait WindowImpl {
     fn alert_overload2(cx: &mut Cx<'_>, message: String) -> Fallible<()>;
     fn confirm(cx: &mut Cx<'_>, message: String) -> Fallible<bool>;
     fn prompt(cx: &mut Cx<'_>, message: String, default: String) -> Fallible<Option<String>>;
+}
+
+pub trait AbortSignalImpl {
+    fn abort(cx: &mut Cx<'_>, reason: Value) -> Fallible<ObjectId>;
+    fn timeout(cx: &mut Cx<'_>, milliseconds: u64) -> Fallible<ObjectId>;
+    fn any(cx: &mut Cx<'_>, signals: Vec<ObjectId>) -> Fallible<ObjectId>;
+    fn aborted(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn reason(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
+    fn throw_if_aborted(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
 }
 
 pub trait CharacterDataImpl {
@@ -1620,6 +2152,56 @@ pub trait TextImpl {
     fn split_text(cx: &mut Cx<'_>, this: NodeId, offset: u32) -> Fallible<NodeId>;
     fn whole_text(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
     fn constructor(cx: &mut Cx<'_>, data: String) -> Fallible<NodeId>;
+}
+
+pub trait XMLHttpRequestImpl {
+    fn ready_state(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u16>;
+    fn open(cx: &mut Cx<'_>, this: ObjectId, method: String, url: String) -> Fallible<()>;
+    fn open_overload2(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        method: String,
+        url: String,
+        async_: bool,
+        username: Option<String>,
+        password: Option<String>,
+    ) -> Fallible<()>;
+    fn set_request_header(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        name: String,
+        value: String,
+    ) -> Fallible<()>;
+    fn timeout(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn set_timeout(cx: &mut Cx<'_>, this: ObjectId, value: u32) -> Fallible<()>;
+    fn with_credentials(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn set_with_credentials(cx: &mut Cx<'_>, this: ObjectId, value: bool) -> Fallible<()>;
+    fn upload(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn send(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        body: Option<DocumentOrBufferSourceOrURLSearchParamsOrString>,
+    ) -> Fallible<()>;
+    fn abort(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn response_url(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn status(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u16>;
+    fn status_text(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn get_response_header(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        name: String,
+    ) -> Fallible<Option<String>>;
+    fn get_all_response_headers(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn override_mime_type(cx: &mut Cx<'_>, this: ObjectId, mime: String) -> Fallible<()>;
+    fn response_type(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<XMLHttpRequestResponseType>;
+    fn set_response_type(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        value: XMLHttpRequestResponseType,
+    ) -> Fallible<()>;
+    fn response(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
+    fn response_text(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn constructor(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
 }
 
 pub trait consoleImpl {

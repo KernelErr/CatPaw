@@ -46,6 +46,132 @@ impl IntoJs for web::DocumentVisibilityState {
     }
 }
 
+impl FromJs for web::ReferrerPolicy {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::ReferrerPolicy::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid ReferrerPolicy")))
+    }
+}
+
+impl IntoJs for web::ReferrerPolicy {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
+impl FromJs for web::RequestCache {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::RequestCache::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid RequestCache")))
+    }
+}
+
+impl IntoJs for web::RequestCache {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
+impl FromJs for web::RequestCredentials {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::RequestCredentials::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid RequestCredentials")))
+    }
+}
+
+impl IntoJs for web::RequestCredentials {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
+impl FromJs for web::RequestDestination {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::RequestDestination::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid RequestDestination")))
+    }
+}
+
+impl IntoJs for web::RequestDestination {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
+impl FromJs for web::RequestDuplex {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::RequestDuplex::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid RequestDuplex")))
+    }
+}
+
+impl IntoJs for web::RequestDuplex {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
+impl FromJs for web::RequestMode {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::RequestMode::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid RequestMode")))
+    }
+}
+
+impl IntoJs for web::RequestMode {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
+impl FromJs for web::RequestPriority {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::RequestPriority::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid RequestPriority")))
+    }
+}
+
+impl IntoJs for web::RequestPriority {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
+impl FromJs for web::RequestRedirect {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::RequestRedirect::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid RequestRedirect")))
+    }
+}
+
+impl IntoJs for web::RequestRedirect {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
+impl FromJs for web::ResponseType {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::ResponseType::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid ResponseType")))
+    }
+}
+
+impl IntoJs for web::ResponseType {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
 impl FromJs for web::ScrollBehavior {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let s = rt::string_from_js(v, ctx)?;
@@ -102,6 +228,21 @@ impl IntoJs for web::ScrollRestoration {
     }
 }
 
+impl FromJs for web::XMLHttpRequestResponseType {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::XMLHttpRequestResponseType::parse(&s).ok_or_else(|| {
+            rt::type_error(&format!("'{s}' is not a valid XMLHttpRequestResponseType"))
+        })
+    }
+}
+
+impl IntoJs for web::XMLHttpRequestResponseType {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
 impl FromJs for web::AddEventListenerOptions {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let obj = rt::dictionary_object(v, "AddEventListenerOptions")?;
@@ -118,6 +259,10 @@ impl FromJs for web::AddEventListenerOptions {
                 Some(m) => (&m).to_boolean(),
                 None => false,
             },
+            signal: match rt::dictionary_member(&obj, "signal", ctx)? {
+                Some(m) => Some(rt::object_from_js((&m), I::AbortSignal, ctx)?),
+                None => None,
+            },
         })
     }
 }
@@ -128,6 +273,7 @@ impl IntoJs for web::AddEventListenerOptions {
         rt::set_member(&obj, "capture", self.capture, ctx)?;
         rt::set_member(&obj, "passive", self.passive, ctx)?;
         rt::set_member(&obj, "once", self.once, ctx)?;
+        rt::set_member(&obj, "signal", self.signal, ctx)?;
         Ok(obj.into())
     }
 }
@@ -535,6 +681,153 @@ impl IntoJs for web::PromiseRejectionEventInit {
     }
 }
 
+impl FromJs for web::RequestInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "RequestInit")?;
+        Ok(Self {
+            method: match rt::dictionary_member(&obj, "method", ctx)? {
+                Some(m) => Some(rt::string_from_js((&m), ctx)?),
+                None => None,
+            },
+            headers: match rt::dictionary_member(&obj, "headers", ctx)? {
+                Some(m) => Some(
+                    <web::StringSequenceSequenceOrStringStringRecord as FromJs>::from_js(
+                        (&m),
+                        ctx,
+                    )?,
+                ),
+                None => None,
+            },
+            body: match rt::dictionary_member(&obj, "body", ctx)? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(
+                            <web::BufferSourceOrURLSearchParamsOrString as FromJs>::from_js(
+                                (&m),
+                                ctx,
+                            )?,
+                        )
+                    }
+                }
+                None => None,
+            },
+            referrer: match rt::dictionary_member(&obj, "referrer", ctx)? {
+                Some(m) => Some(rt::string_from_js((&m), ctx)?),
+                None => None,
+            },
+            referrer_policy: match rt::dictionary_member(&obj, "referrerPolicy", ctx)? {
+                Some(m) => Some(<web::ReferrerPolicy as FromJs>::from_js((&m), ctx)?),
+                None => None,
+            },
+            mode: match rt::dictionary_member(&obj, "mode", ctx)? {
+                Some(m) => Some(<web::RequestMode as FromJs>::from_js((&m), ctx)?),
+                None => None,
+            },
+            credentials: match rt::dictionary_member(&obj, "credentials", ctx)? {
+                Some(m) => Some(<web::RequestCredentials as FromJs>::from_js((&m), ctx)?),
+                None => None,
+            },
+            cache: match rt::dictionary_member(&obj, "cache", ctx)? {
+                Some(m) => Some(<web::RequestCache as FromJs>::from_js((&m), ctx)?),
+                None => None,
+            },
+            redirect: match rt::dictionary_member(&obj, "redirect", ctx)? {
+                Some(m) => Some(<web::RequestRedirect as FromJs>::from_js((&m), ctx)?),
+                None => None,
+            },
+            integrity: match rt::dictionary_member(&obj, "integrity", ctx)? {
+                Some(m) => Some(rt::string_from_js((&m), ctx)?),
+                None => None,
+            },
+            keepalive: match rt::dictionary_member(&obj, "keepalive", ctx)? {
+                Some(m) => Some((&m).to_boolean()),
+                None => None,
+            },
+            signal: match rt::dictionary_member(&obj, "signal", ctx)? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(rt::object_from_js((&m), I::AbortSignal, ctx)?)
+                    }
+                }
+                None => None,
+            },
+            duplex: match rt::dictionary_member(&obj, "duplex", ctx)? {
+                Some(m) => Some(<web::RequestDuplex as FromJs>::from_js((&m), ctx)?),
+                None => None,
+            },
+            priority: match rt::dictionary_member(&obj, "priority", ctx)? {
+                Some(m) => Some(<web::RequestPriority as FromJs>::from_js((&m), ctx)?),
+                None => None,
+            },
+            window: match rt::dictionary_member(&obj, "window", ctx)? {
+                Some(m) => rt::value_from_js((&m), ctx)?,
+                None => Value::Undefined,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::RequestInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "method", self.method, ctx)?;
+        rt::set_member(&obj, "headers", self.headers, ctx)?;
+        rt::set_member(&obj, "body", self.body, ctx)?;
+        rt::set_member(&obj, "referrer", self.referrer, ctx)?;
+        rt::set_member(&obj, "referrerPolicy", self.referrer_policy, ctx)?;
+        rt::set_member(&obj, "mode", self.mode, ctx)?;
+        rt::set_member(&obj, "credentials", self.credentials, ctx)?;
+        rt::set_member(&obj, "cache", self.cache, ctx)?;
+        rt::set_member(&obj, "redirect", self.redirect, ctx)?;
+        rt::set_member(&obj, "integrity", self.integrity, ctx)?;
+        rt::set_member(&obj, "keepalive", self.keepalive, ctx)?;
+        rt::set_member(&obj, "signal", self.signal, ctx)?;
+        rt::set_member(&obj, "duplex", self.duplex, ctx)?;
+        rt::set_member(&obj, "priority", self.priority, ctx)?;
+        rt::set_member(&obj, "window", self.window, ctx)?;
+        Ok(obj.into())
+    }
+}
+
+impl FromJs for web::ResponseInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "ResponseInit")?;
+        Ok(Self {
+            status: match rt::dictionary_member(&obj, "status", ctx)? {
+                Some(m) => (&m).to_uint16(ctx)?,
+                None => (200) as u16,
+            },
+            status_text: match rt::dictionary_member(&obj, "statusText", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "".to_string(),
+            },
+            headers: match rt::dictionary_member(&obj, "headers", ctx)? {
+                Some(m) => Some(
+                    <web::StringSequenceSequenceOrStringStringRecord as FromJs>::from_js(
+                        (&m),
+                        ctx,
+                    )?,
+                ),
+                None => None,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::ResponseInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "status", self.status, ctx)?;
+        rt::set_member(&obj, "statusText", self.status_text, ctx)?;
+        rt::set_member(&obj, "headers", self.headers, ctx)?;
+        Ok(obj.into())
+    }
+}
+
 impl FromJs for web::ScrollIntoViewOptions {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let obj = rt::dictionary_object(v, "ScrollIntoViewOptions")?;
@@ -766,6 +1059,80 @@ impl IntoJs for web::BooleanOrScrollIntoViewOptions {
     }
 }
 
+impl FromJs for web::BufferSourceOrURLSearchParamsOrString {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if rt::is_instance(v, I::URLSearchParams, ctx) {
+            return Ok(web::BufferSourceOrURLSearchParamsOrString::URLSearchParams(
+                rt::object_from_js(v, I::URLSearchParams, ctx)?,
+            ));
+        }
+        if rt::is_buffer(v) {
+            return Ok(web::BufferSourceOrURLSearchParamsOrString::BufferSource(
+                rt::buffer_from_js(v, ctx)?,
+            ));
+        }
+        Ok(web::BufferSourceOrURLSearchParamsOrString::String(
+            rt::string_from_js(v, ctx)?,
+        ))
+    }
+}
+
+impl IntoJs for web::BufferSourceOrURLSearchParamsOrString {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+            web::BufferSourceOrURLSearchParamsOrString::BufferSource(v) => v.into_js(ctx),
+            web::BufferSourceOrURLSearchParamsOrString::URLSearchParams(v) => v.into_js(ctx),
+            web::BufferSourceOrURLSearchParamsOrString::String(v) => v.into_js(ctx),
+        }
+    }
+}
+
+impl FromJs for web::DocumentOrBufferSourceOrURLSearchParamsOrString {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if rt::is_instance(v, I::Document, ctx) {
+            return Ok(
+                web::DocumentOrBufferSourceOrURLSearchParamsOrString::Document(rt::node_from_js(
+                    v,
+                    I::Document,
+                    ctx,
+                )?),
+            );
+        }
+        if rt::is_instance(v, I::URLSearchParams, ctx) {
+            return Ok(
+                web::DocumentOrBufferSourceOrURLSearchParamsOrString::URLSearchParams(
+                    rt::object_from_js(v, I::URLSearchParams, ctx)?,
+                ),
+            );
+        }
+        if rt::is_buffer(v) {
+            return Ok(
+                web::DocumentOrBufferSourceOrURLSearchParamsOrString::BufferSource(
+                    rt::buffer_from_js(v, ctx)?,
+                ),
+            );
+        }
+        Ok(
+            web::DocumentOrBufferSourceOrURLSearchParamsOrString::String(rt::string_from_js(
+                v, ctx,
+            )?),
+        )
+    }
+}
+
+impl IntoJs for web::DocumentOrBufferSourceOrURLSearchParamsOrString {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+            web::DocumentOrBufferSourceOrURLSearchParamsOrString::Document(v) => v.into_js(ctx),
+            web::DocumentOrBufferSourceOrURLSearchParamsOrString::BufferSource(v) => v.into_js(ctx),
+            web::DocumentOrBufferSourceOrURLSearchParamsOrString::URLSearchParams(v) => {
+                v.into_js(ctx)
+            }
+            web::DocumentOrBufferSourceOrURLSearchParamsOrString::String(v) => v.into_js(ctx),
+        }
+    }
+}
+
 impl FromJs for web::EventListenerOptionsOrBoolean {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         if v.is_object() || v.is_null_or_undefined() {
@@ -803,6 +1170,28 @@ impl IntoJs for web::NodeOrString {
         match self {
             web::NodeOrString::Node(v) => v.into_js(ctx),
             web::NodeOrString::String(v) => v.into_js(ctx),
+        }
+    }
+}
+
+impl FromJs for web::RequestOrString {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if rt::is_instance(v, I::Request, ctx) {
+            return Ok(web::RequestOrString::Request(rt::object_from_js(
+                v,
+                I::Request,
+                ctx,
+            )?));
+        }
+        Ok(web::RequestOrString::String(rt::string_from_js(v, ctx)?))
+    }
+}
+
+impl IntoJs for web::RequestOrString {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+            web::RequestOrString::Request(v) => v.into_js(ctx),
+            web::RequestOrString::String(v) => v.into_js(ctx),
         }
     }
 }
@@ -851,6 +1240,45 @@ impl IntoJs for web::StringOrFunction {
     }
 }
 
+impl FromJs for web::StringSequenceSequenceOrStringStringRecord {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if rt::is_iterable(v, ctx)? {
+            return Ok(
+                web::StringSequenceSequenceOrStringStringRecord::StringSequenceSequence(
+                    rt::sequence_from_js(v, ctx, |v, ctx| {
+                        Ok(rt::sequence_from_js(v, ctx, |v, ctx| {
+                            Ok(rt::string_from_js(v, ctx)?)
+                        })?)
+                    })?,
+                ),
+            );
+        }
+        if v.is_object() || v.is_null_or_undefined() {
+            return Ok(
+                web::StringSequenceSequenceOrStringStringRecord::StringStringRecord(
+                    rt::record_from_js(v, ctx, |v, ctx| Ok(rt::string_from_js(v, ctx)?))?,
+                ),
+            );
+        }
+        Err(rt::type_error(
+            "value is not convertible to StringSequenceSequenceOrStringStringRecord",
+        ))
+    }
+}
+
+impl IntoJs for web::StringSequenceSequenceOrStringStringRecord {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+            web::StringSequenceSequenceOrStringStringRecord::StringSequenceSequence(v) => {
+                v.into_js(ctx)
+            }
+            web::StringSequenceSequenceOrStringStringRecord::StringStringRecord(v) => {
+                v.into_js(ctx)
+            }
+        }
+    }
+}
+
 impl FromJs for web::StringSequenceSequenceOrStringStringRecordOrString {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         if rt::is_iterable(v, ctx)? {
@@ -891,6 +1319,64 @@ impl IntoJs for web::StringSequenceSequenceOrStringStringRecordOrString {
             web::StringSequenceSequenceOrStringStringRecordOrString::String(v) => v.into_js(ctx),
         }
     }
+}
+
+pub mod abort_controller {
+    use super::*;
+
+    fn get_signal(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "signal", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_object(this_js, I::AbortController, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::AbortControllerImpl>::signal(cx, this)
+        });
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "signal", &v, ctx);
+        Ok(v)
+    }
+
+    fn op_abort(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::AbortController, ctx)?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::AbortControllerImpl>::abort(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "AbortController")?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::AbortControllerImpl>::constructor(cx));
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::AbortController, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::AbortController,
+        name: "AbortController",
+        parent: None,
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "signal",
+            getter: get_signal,
+            setter: None,
+        }],
+        ops: &[rt::OpDef {
+            name: "abort",
+            func: op_abort,
+            length: 0,
+        }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
 }
 
 pub mod css_style_declaration {
@@ -2203,6 +2689,142 @@ pub mod hash_change_event {
         static_ops: &[],
         consts: &[],
         iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod headers {
+    use super::*;
+
+    fn op_append(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Headers, ctx)?;
+        rt::require_args(args, 2, "Headers.append")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HeadersImpl>::append(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_delete(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Headers, ctx)?;
+        rt::require_args(args, 1, "Headers.delete")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::HeadersImpl>::delete(cx, this, a0));
+        rt::ret(r, ctx)
+    }
+
+    fn op_get(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Headers, ctx)?;
+        rt::require_args(args, 1, "Headers.get")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::HeadersImpl>::get(cx, this, a0));
+        rt::ret(r, ctx)
+    }
+
+    fn op_get_set_cookie(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Headers, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HeadersImpl>::get_set_cookie(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_has(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Headers, ctx)?;
+        rt::require_args(args, 1, "Headers.has")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::HeadersImpl>::has(cx, this, a0));
+        rt::ret(r, ctx)
+    }
+
+    fn op_set(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Headers, ctx)?;
+        rt::require_args(args, 2, "Headers.set")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::HeadersImpl>::set(cx, this, a0, a1));
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "Headers")?;
+        let a0 = if args.len() > 0 && !args[0].is_undefined() {
+            Some(
+                <web::StringSequenceSequenceOrStringStringRecord as FromJs>::from_js(
+                    rt::arg(args, 0),
+                    ctx,
+                )?,
+            )
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| <Web as web::HeadersImpl>::constructor(cx, a0));
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::Headers, ctx);
+    }
+
+    fn iterate(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Headers, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::HeadersImpl>::iterate(cx, this));
+        rt::ret_pairs(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::Headers,
+        name: "Headers",
+        parent: None,
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[
+            rt::OpDef {
+                name: "append",
+                func: op_append,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "delete",
+                func: op_delete,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "get",
+                func: op_get,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "getSetCookie",
+                func: op_get_set_cookie,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "has",
+                func: op_has,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "set",
+                func: op_set,
+                length: 2,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::Pairs(iterate),
         exotic: None,
     };
 }
@@ -3671,6 +4293,538 @@ pub mod promise_rejection_event {
     };
 }
 
+pub mod request {
+    use super::*;
+
+    fn get_method(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Request, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::RequestImpl>::method(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_url(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Request, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::RequestImpl>::url(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_headers(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "headers", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_object(this_js, I::Request, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::RequestImpl>::headers(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "headers", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_destination(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Request, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::RequestImpl>::destination(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_referrer(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Request, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::RequestImpl>::referrer(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_referrer_policy(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Request, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::RequestImpl>::referrer_policy(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_mode(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Request, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::RequestImpl>::mode(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_credentials(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Request, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::RequestImpl>::credentials(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_cache(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Request, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::RequestImpl>::cache(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_redirect(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Request, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::RequestImpl>::redirect(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_integrity(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Request, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::RequestImpl>::integrity(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_keepalive(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Request, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::RequestImpl>::keepalive(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_signal(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Request, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::RequestImpl>::signal(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_body_used(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Request, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::BodyImpl>::body_used(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_clone(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Request, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::RequestImpl>::clone(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_array_buffer(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Request, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::BodyImpl>::array_buffer(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_bytes(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Request, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::BodyImpl>::bytes(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_json(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Request, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::BodyImpl>::json(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_text(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Request, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::BodyImpl>::text(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "Request")?;
+        rt::require_args(args, 1, "Request constructor")?;
+        let a0 = <web::RequestOrString as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::RequestInit as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::RequestImpl>::constructor(cx, a0, a1));
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::Request, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::Request,
+        name: "Request",
+        parent: None,
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[
+            rt::AttrDef {
+                name: "method",
+                getter: get_method,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "url",
+                getter: get_url,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "headers",
+                getter: get_headers,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "destination",
+                getter: get_destination,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "referrer",
+                getter: get_referrer,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "referrerPolicy",
+                getter: get_referrer_policy,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "mode",
+                getter: get_mode,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "credentials",
+                getter: get_credentials,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "cache",
+                getter: get_cache,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "redirect",
+                getter: get_redirect,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "integrity",
+                getter: get_integrity,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "keepalive",
+                getter: get_keepalive,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "signal",
+                getter: get_signal,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "bodyUsed",
+                getter: get_body_used,
+                setter: None,
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "clone",
+                func: op_clone,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "arrayBuffer",
+                func: op_array_buffer,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "bytes",
+                func: op_bytes,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "json",
+                func: op_json,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "text",
+                func: op_text,
+                length: 0,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod response {
+    use super::*;
+
+    fn get_type(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Response, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ResponseImpl>::type_(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_url(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Response, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ResponseImpl>::url(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_redirected(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Response, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ResponseImpl>::redirected(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_status(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Response, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ResponseImpl>::status(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_ok(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Response, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ResponseImpl>::ok(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_status_text(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Response, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ResponseImpl>::status_text(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_headers(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "headers", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_object(this_js, I::Response, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ResponseImpl>::headers(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "headers", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_body_used(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Response, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::BodyImpl>::body_used(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn static_op_error(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let r = rt::with_cx(ctx, |cx| <Web as web::ResponseImpl>::error(cx));
+        rt::ret(r, ctx)
+    }
+
+    fn static_op_redirect(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::require_args(args, 1, "Response.redirect")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            rt::arg(args, 1).to_uint16(ctx)?
+        } else {
+            (302) as u16
+        };
+        let r = rt::with_cx(ctx, |cx| <Web as web::ResponseImpl>::redirect(cx, a0, a1));
+        rt::ret(r, ctx)
+    }
+
+    fn static_op_json(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::require_args(args, 1, "Response.json")?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::ResponseInit as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ResponseImpl>::json(cx, a0, a1));
+        rt::ret(r, ctx)
+    }
+
+    fn op_clone(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Response, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ResponseImpl>::clone(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_array_buffer(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Response, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::BodyImpl>::array_buffer(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_bytes(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Response, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::BodyImpl>::bytes(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_json(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Response, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::BodyImpl>::json(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_text(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Response, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::BodyImpl>::text(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "Response")?;
+        let a0 = if args.len() > 0 && !args[0].is_undefined() {
+            if rt::arg(args, 0).is_null_or_undefined() {
+                None
+            } else {
+                Some(
+                    <web::BufferSourceOrURLSearchParamsOrString as FromJs>::from_js(
+                        rt::arg(args, 0),
+                        ctx,
+                    )?,
+                )
+            }
+        } else {
+            None
+        };
+        let a1 = <web::ResponseInit as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ResponseImpl>::constructor(cx, a0, a1)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::Response, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::Response,
+        name: "Response",
+        parent: None,
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "type",
+                getter: get_type,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "url",
+                getter: get_url,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "redirected",
+                getter: get_redirected,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "status",
+                getter: get_status,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "ok",
+                getter: get_ok,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "statusText",
+                getter: get_status_text,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "headers",
+                getter: get_headers,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "bodyUsed",
+                getter: get_body_used,
+                setter: None,
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "clone",
+                func: op_clone,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "arrayBuffer",
+                func: op_array_buffer,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "bytes",
+                func: op_bytes,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "json",
+                func: op_json,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "text",
+                func: op_text,
+                length: 0,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[
+            rt::OpDef {
+                name: "error",
+                func: static_op_error,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "redirect",
+                func: static_op_redirect,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "json",
+                func: static_op_json,
+                length: 1,
+            },
+        ],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod storage {
     use super::*;
 
@@ -4141,7 +5295,11 @@ pub mod url {
         Ok(JsValue::undefined())
     }
 
-    fn op_parse(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+    fn static_op_parse(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         rt::require_args(args, 1, "URL.parse")?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
@@ -4154,7 +5312,11 @@ pub mod url {
         rt::ret(r, ctx)
     }
 
-    fn op_can_parse(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+    fn static_op_can_parse(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         rt::require_args(args, 1, "URL.canParse")?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
@@ -4273,12 +5435,12 @@ pub mod url {
         static_ops: &[
             rt::OpDef {
                 name: "parse",
-                func: op_parse,
+                func: static_op_parse,
                 length: 1,
             },
             rt::OpDef {
                 name: "canParse",
-                func: op_can_parse,
+                func: static_op_can_parse,
                 length: 1,
             },
         ],
@@ -6973,6 +8135,18 @@ pub mod window {
         rt::ret(r, ctx)
     }
 
+    fn op_fetch(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::this_window(this_js, ctx)?;
+        rt::require_args(args, 1, "Window.fetch")?;
+        let a0 = <web::RequestOrString as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::RequestInit as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WindowOrWorkerGlobalScopeImpl>::fetch(cx, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn op_report_error(
         this_js: &JsValue,
         args: &[JsValue],
@@ -7789,6 +8963,11 @@ pub mod window {
                 length: 0,
             },
             rt::OpDef {
+                name: "fetch",
+                func: op_fetch,
+                length: 1,
+            },
+            rt::OpDef {
                 name: "reportError",
                 func: op_report_error,
                 length: 1,
@@ -7846,6 +9025,352 @@ pub mod window {
         ],
         static_attrs: &[],
         static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod xml_http_request_event_target {
+    use super::*;
+
+    fn get_onloadstart(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequestEventTarget, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "loadstart")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onloadstart(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequestEventTarget, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "loadstart", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onprogress(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequestEventTarget, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "progress")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onprogress(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequestEventTarget, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "progress", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onabort(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequestEventTarget, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "abort")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onabort(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequestEventTarget, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "abort", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onerror(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequestEventTarget, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "error")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onerror(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequestEventTarget, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "error", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onload(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequestEventTarget, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "load")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onload(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequestEventTarget, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "load", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ontimeout(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequestEventTarget, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "timeout")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_ontimeout(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequestEventTarget, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "timeout", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onloadend(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequestEventTarget, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "loadend")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onloadend(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequestEventTarget, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "loadend", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::XMLHttpRequestEventTarget,
+        name: "XMLHttpRequestEventTarget",
+        parent: Some(I::EventTarget),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "onloadstart",
+                getter: get_onloadstart,
+                setter: Some(set_onloadstart),
+            },
+            rt::AttrDef {
+                name: "onprogress",
+                getter: get_onprogress,
+                setter: Some(set_onprogress),
+            },
+            rt::AttrDef {
+                name: "onabort",
+                getter: get_onabort,
+                setter: Some(set_onabort),
+            },
+            rt::AttrDef {
+                name: "onerror",
+                getter: get_onerror,
+                setter: Some(set_onerror),
+            },
+            rt::AttrDef {
+                name: "onload",
+                getter: get_onload,
+                setter: Some(set_onload),
+            },
+            rt::AttrDef {
+                name: "ontimeout",
+                getter: get_ontimeout,
+                setter: Some(set_ontimeout),
+            },
+            rt::AttrDef {
+                name: "onloadend",
+                getter: get_onloadend,
+                setter: Some(set_onloadend),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod xml_http_request_upload {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::XMLHttpRequestUpload,
+        name: "XMLHttpRequestUpload",
+        parent: Some(I::XMLHttpRequestEventTarget),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod abort_signal {
+    use super::*;
+
+    fn get_aborted(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::AbortSignal, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::AbortSignalImpl>::aborted(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_reason(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::AbortSignal, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::AbortSignalImpl>::reason(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_onabort(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::AbortSignal, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "abort")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onabort(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::AbortSignal, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "abort", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn static_op_abort(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::AbortSignalImpl>::abort(cx, a0));
+        rt::ret(r, ctx)
+    }
+
+    fn static_op_timeout(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::require_args(args, 1, "AbortSignal.timeout")?;
+        let a0 = rt::to_u64(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::AbortSignalImpl>::timeout(cx, a0));
+        rt::ret(r, ctx)
+    }
+
+    fn static_op_any(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::require_args(args, 1, "AbortSignal.any")?;
+        let a0 = rt::sequence_from_js(rt::arg(args, 0), ctx, |v, ctx| {
+            Ok(rt::object_from_js(v, I::AbortSignal, ctx)?)
+        })?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::AbortSignalImpl>::any(cx, a0));
+        rt::ret(r, ctx)
+    }
+
+    fn op_throw_if_aborted(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::AbortSignal, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::AbortSignalImpl>::throw_if_aborted(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::AbortSignal,
+        name: "AbortSignal",
+        parent: Some(I::EventTarget),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "aborted",
+                getter: get_aborted,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "reason",
+                getter: get_reason,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "onabort",
+                getter: get_onabort,
+                setter: Some(set_onabort),
+            },
+        ],
+        ops: &[rt::OpDef {
+            name: "throwIfAborted",
+            func: op_throw_if_aborted,
+            length: 0,
+        }],
+        static_attrs: &[],
+        static_ops: &[
+            rt::OpDef {
+                name: "abort",
+                func: static_op_abort,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "timeout",
+                func: static_op_timeout,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "any",
+                func: static_op_any,
+                length: 1,
+            },
+        ],
         consts: &[],
         iterable: rt::Iterable::None,
         exotic: None,
@@ -20280,6 +21805,442 @@ pub mod text {
     };
 }
 
+pub mod xml_http_request {
+    use super::*;
+
+    fn get_onreadystatechange(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequest, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "readystatechange")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onreadystatechange(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequest, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Object(this),
+                "readystatechange",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ready_state(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequest, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XMLHttpRequestImpl>::ready_state(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_timeout(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequest, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XMLHttpRequestImpl>::timeout(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_timeout(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequest, ctx)?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XMLHttpRequestImpl>::set_timeout(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_with_credentials(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequest, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XMLHttpRequestImpl>::with_credentials(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_with_credentials(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequest, ctx)?;
+        let a0 = rt::arg(args, 0).to_boolean();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XMLHttpRequestImpl>::set_with_credentials(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_upload(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "upload", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_object(this_js, I::XMLHttpRequest, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::XMLHttpRequestImpl>::upload(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "upload", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_response_url(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequest, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XMLHttpRequestImpl>::response_url(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_status(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequest, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::XMLHttpRequestImpl>::status(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_status_text(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequest, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XMLHttpRequestImpl>::status_text(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_response_type(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequest, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XMLHttpRequestImpl>::response_type(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_response_type(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequest, ctx)?;
+        let s = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let Some(a0) = web::XMLHttpRequestResponseType::parse(&s) else {
+            return Ok(JsValue::undefined());
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XMLHttpRequestImpl>::set_response_type(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_response(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequest, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XMLHttpRequestImpl>::response(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_response_text(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::XMLHttpRequest, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XMLHttpRequestImpl>::response_text(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_open(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::XMLHttpRequest, ctx)?;
+        if args.len() >= 3 && true {
+            rt::require_args(args, 3, "XMLHttpRequest.open")?;
+            let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+            let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
+            let a2 = rt::arg(args, 2).to_boolean();
+            let a3 = if args.len() > 3 && !args[3].is_undefined() {
+                if rt::arg(args, 3).is_null_or_undefined() {
+                    None
+                } else {
+                    Some(rt::string_from_js(rt::arg(args, 3), ctx)?)
+                }
+            } else {
+                None
+            };
+            let a4 = if args.len() > 4 && !args[4].is_undefined() {
+                if rt::arg(args, 4).is_null_or_undefined() {
+                    None
+                } else {
+                    Some(rt::string_from_js(rt::arg(args, 4), ctx)?)
+                }
+            } else {
+                None
+            };
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::XMLHttpRequestImpl>::open_overload2(cx, this, a0, a1, a2, a3, a4)
+            });
+            rt::ret(r, ctx)
+        } else if args.len() >= 2 && true {
+            rt::require_args(args, 2, "XMLHttpRequest.open")?;
+            let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+            let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::XMLHttpRequestImpl>::open(cx, this, a0, a1)
+            });
+            rt::ret(r, ctx)
+        } else {
+            Err(rt::type_error(
+                "XMLHttpRequest.open: no overload matches the arguments",
+            ))
+        }
+    }
+
+    fn op_set_request_header(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::XMLHttpRequest, ctx)?;
+        rt::require_args(args, 2, "XMLHttpRequest.setRequestHeader")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XMLHttpRequestImpl>::set_request_header(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_send(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::XMLHttpRequest, ctx)?;
+        let a0 = if args.len() > 0 && !args[0].is_undefined() {
+            if rt::arg(args, 0).is_null_or_undefined() {
+                None
+            } else {
+                Some(
+                    <web::DocumentOrBufferSourceOrURLSearchParamsOrString as FromJs>::from_js(
+                        rt::arg(args, 0),
+                        ctx,
+                    )?,
+                )
+            }
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XMLHttpRequestImpl>::send(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_abort(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::XMLHttpRequest, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::XMLHttpRequestImpl>::abort(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_get_response_header(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::XMLHttpRequest, ctx)?;
+        rt::require_args(args, 1, "XMLHttpRequest.getResponseHeader")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XMLHttpRequestImpl>::get_response_header(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_get_all_response_headers(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::XMLHttpRequest, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XMLHttpRequestImpl>::get_all_response_headers(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_override_mime_type(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::XMLHttpRequest, ctx)?;
+        rt::require_args(args, 1, "XMLHttpRequest.overrideMimeType")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XMLHttpRequestImpl>::override_mime_type(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "XMLHttpRequest")?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::XMLHttpRequestImpl>::constructor(cx));
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::XMLHttpRequest, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::XMLHttpRequest,
+        name: "XMLHttpRequest",
+        parent: Some(I::XMLHttpRequestEventTarget),
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "onreadystatechange",
+                getter: get_onreadystatechange,
+                setter: Some(set_onreadystatechange),
+            },
+            rt::AttrDef {
+                name: "readyState",
+                getter: get_ready_state,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "timeout",
+                getter: get_timeout,
+                setter: Some(set_timeout),
+            },
+            rt::AttrDef {
+                name: "withCredentials",
+                getter: get_with_credentials,
+                setter: Some(set_with_credentials),
+            },
+            rt::AttrDef {
+                name: "upload",
+                getter: get_upload,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "responseURL",
+                getter: get_response_url,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "status",
+                getter: get_status,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "statusText",
+                getter: get_status_text,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "responseType",
+                getter: get_response_type,
+                setter: Some(set_response_type),
+            },
+            rt::AttrDef {
+                name: "response",
+                getter: get_response,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "responseText",
+                getter: get_response_text,
+                setter: None,
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "open",
+                func: op_open,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "setRequestHeader",
+                func: op_set_request_header,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "send",
+                func: op_send,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "abort",
+                func: op_abort,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "getResponseHeader",
+                func: op_get_response_header,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "getAllResponseHeaders",
+                func: op_get_all_response_headers,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "overrideMimeType",
+                func: op_override_mime_type,
+                length: 1,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[
+            ("UNSENT", 0_f64),
+            ("OPENED", 1_f64),
+            ("HEADERS_RECEIVED", 2_f64),
+            ("LOADING", 3_f64),
+            ("DONE", 4_f64),
+        ],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod html_anchor_element {
     use super::*;
 
@@ -21895,6 +23856,7 @@ pub mod ns_console {
 
 /// Interface definitions, parents before children.
 pub static INTERFACES: &[&rt::InterfaceDef] = &[
+    &abort_controller::DEF,
     &css_style_declaration::DEF,
     &css_style_properties::DEF,
     &dom_rect_read_only::DEF,
@@ -21904,6 +23866,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &event_target::DEF,
     &html_collection::DEF,
     &hash_change_event::DEF,
+    &headers::DEF,
     &history::DEF,
     &location::DEF,
     &navigator::DEF,
@@ -21913,12 +23876,17 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &pop_state_event::DEF,
     &progress_event::DEF,
     &promise_rejection_event::DEF,
+    &request::DEF,
+    &response::DEF,
     &storage::DEF,
     &text_decoder::DEF,
     &text_encoder::DEF,
     &url::DEF,
     &url_search_params::DEF,
     &window::DEF,
+    &xml_http_request_event_target::DEF,
+    &xml_http_request_upload::DEF,
+    &abort_signal::DEF,
     &character_data::DEF,
     &comment::DEF,
     &custom_event::DEF,
@@ -21959,6 +23927,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &htmlu_list_element::DEF,
     &html_unknown_element::DEF,
     &text::DEF,
+    &xml_http_request::DEF,
     &html_anchor_element::DEF,
     &htmlbr_element::DEF,
     &html_body_element::DEF,

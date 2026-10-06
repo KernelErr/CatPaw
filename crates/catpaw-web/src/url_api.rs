@@ -220,6 +220,11 @@ impl web::URLImpl for Web {
     }
 }
 
+/// The `application/x-www-form-urlencoded` form of a `URLSearchParams`.
+pub(crate) fn serialized_params(cx: &Cx<'_>, this: ObjectId) -> Fallible<String> {
+    with_params(cx, this, |list| serialize_query(list))
+}
+
 fn with_params<R>(
     cx: &Cx<'_>,
     this: ObjectId,

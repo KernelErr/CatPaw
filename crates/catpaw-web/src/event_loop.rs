@@ -28,6 +28,8 @@ pub enum TimerAction {
     Call(Callback, Vec<Value>),
     /// A string handler, evaluated as a classic script.
     Eval(String),
+    /// Work scheduled by the platform itself (request timeouts and such).
+    Native(std::rc::Rc<dyn Fn(&mut Cx<'_>)>),
 }
 
 pub struct Timer {
@@ -149,6 +151,10 @@ fn run_timer(cx: &mut Cx<'_>, fired_at: f64, timer: Timer) {
         TimerAction::Eval(source) => {
             let url = cx.page.url.borrow().to_string();
             cx.script.eval_script(source, &url, 1).map(drop)
+        }
+        TimerAction::Native(run) => {
+            run(cx);
+            Ok(())
         }
     };
     cx.page.timer_nesting.set(0);
@@ -307,15 +313,19 @@ pub fn run(cx: &mut Cx<'_>, limits: &LoopLimits) -> LoopReport {
         let remaining = limits.wall.saturating_sub(started.elapsed());
 
         if net::inflight(cx.page) > 0 {
-            // The network runs in real time. Virtual time stands still
-            // meanwhile, so timers cannot overtake a response.
+            // The network runs in real time. While waiting for it, a virtual
+            // clock follows real time instead of jumping ahead: timers then
+            // neither overtake a response that is about to arrive nor stall
+            // behind one that never does.
             let mut wait = Duration::from_millis(50).min(remaining);
-            if !cx.page.clock.is_virtual()
-                && let Some(t) = next
-            {
+            if let Some(t) = next {
                 wait = wait.min(Duration::from_secs_f64(((t - now) / 1000.0).max(0.0)));
             }
-            net::deliver(cx, Some(wait));
+            let waiting_since = Instant::now();
+            if net::deliver(cx, Some(wait)) == 0 && cx.page.clock.is_virtual() {
+                let waited = waiting_since.elapsed().as_secs_f64() * 1000.0;
+                cx.page.clock.advance_to(now + waited.max(0.001));
+            }
             continue;
         }
 

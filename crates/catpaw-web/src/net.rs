@@ -29,6 +29,9 @@ pub struct NetRequest {
     pub kind: RequestKind,
     /// The URL of the document making the request.
     pub referrer: Option<Url>,
+    /// Whether cookies are sent with the request and stored from the
+    /// response.
+    pub credentials: bool,
 }
 
 impl NetRequest {
@@ -40,6 +43,7 @@ impl NetRequest {
             body: None,
             kind,
             referrer: None,
+            credentials: true,
         }
     }
 }
@@ -104,13 +108,19 @@ pub trait NetHost {
 }
 
 /// Starts a request whose result is passed to `callback` by the event loop.
-/// Returns `None` (and never calls `callback`) when the page has no network.
+/// Without a network the callback receives an error from a task, and no
+/// token is returned.
 pub fn start_request(
     page: &PageState,
     request: NetRequest,
     callback: impl FnOnce(&mut Cx<'_>, NetResult) + 'static,
 ) -> Option<u64> {
-    let net = page.net()?;
+    let Some(net) = page.net() else {
+        crate::event_loop::queue_task(page, "network unavailable", move |cx| {
+            callback(cx, Err("no network available".to_string()));
+        });
+        return None;
+    };
     let token = net.start(request);
     page.net_callbacks
         .borrow_mut()

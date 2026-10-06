@@ -11,15 +11,18 @@
 //! ([`event_loop`]), event dispatch ([`events`]) and the HTML parser's
 //! interleaving with script execution ([`scripting`]).
 
+mod abort;
 pub mod activation;
 pub mod clock;
 mod collections;
 mod console;
+mod cors;
 mod document;
 pub mod element;
 mod encoding;
 pub mod event_loop;
 pub mod events;
+mod fetch;
 pub mod generated;
 mod history;
 pub mod html_names;
@@ -31,6 +34,7 @@ pub mod scripting;
 mod style;
 mod url_api;
 mod window;
+mod xhr;
 
 pub use element::interface_for_node;
 pub use generated::InterfaceId;

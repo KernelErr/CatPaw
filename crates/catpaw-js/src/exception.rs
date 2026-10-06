@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use crate::value::Rooted;
+use crate::value::{Rooted, Value};
 
 /// An exception on its way to script. The backend turns each variant into
 /// the corresponding script object (`DOMException`, `TypeError`, ...).
@@ -17,6 +17,8 @@ pub enum Exception {
     Range(String),
     /// A value thrown by script that Rust is propagating unchanged.
     Thrown(Rooted),
+    /// A value Rust throws as is (an abort reason, for instance).
+    Value(Value),
 }
 
 pub type Fallible<T> = Result<T, Exception>;
@@ -81,7 +83,7 @@ impl fmt::Display for Exception {
             Exception::Dom { name, message } => write!(f, "{name}: {message}"),
             Exception::Type(m) => write!(f, "TypeError: {m}"),
             Exception::Range(m) => write!(f, "RangeError: {m}"),
-            Exception::Thrown(_) => write!(f, "uncaught script exception"),
+            Exception::Thrown(_) | Exception::Value(_) => write!(f, "uncaught script exception"),
         }
     }
 }

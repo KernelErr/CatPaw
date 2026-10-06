@@ -85,6 +85,7 @@ async fn perform(client: &NetClient, request: NetRequest) -> NetResult {
         }
     }
     options.body = request.body.map(Bytes::from);
+    options.credentials = request.credentials;
 
     let response = client
         .request(method, &request.url, options)

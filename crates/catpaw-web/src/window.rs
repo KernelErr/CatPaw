@@ -255,6 +255,14 @@ fn timer_action(handler: StringOrFunction, arguments: Vec<Value>) -> TimerAction
 }
 
 impl web::WindowOrWorkerGlobalScopeImpl for Web {
+    fn fetch(
+        cx: &mut Cx<'_>,
+        input: web::RequestOrString,
+        init: web::RequestInit,
+    ) -> Fallible<PromiseRef> {
+        Web::fetch_impl(cx, input, init)
+    }
+
     fn performance(cx: &mut Cx<'_>) -> Fallible<ObjectId> {
         Ok(singleton(
             cx,

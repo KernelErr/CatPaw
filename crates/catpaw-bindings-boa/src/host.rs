@@ -267,8 +267,25 @@ impl ScriptHost for BoaHost<'_> {
         }
     }
 
+    fn exception_value(&mut self, exception: &Exception) -> Value {
+        match exception {
+            Exception::Thrown(root) => Value::Opaque(root.clone()),
+            Exception::Value(value) => value.clone(),
+            other => {
+                let thrown = rt::exception_to_js(other.clone(), self.ctx)
+                    .into_opaque(self.ctx)
+                    .unwrap_or_default();
+                self.value_of(&thrown)
+            }
+        }
+    }
+
     fn describe_exception(&mut self, exception: &Exception) -> String {
         match exception {
+            Exception::Value(value) => {
+                let value = self.js_value(value);
+                inspect::describe_thrown(&value, self.ctx, &rt::describe_native)
+            }
             Exception::Thrown(root) => {
                 inspect::describe_thrown(&rt::rooted(root), self.ctx, &rt::describe_native)
             }

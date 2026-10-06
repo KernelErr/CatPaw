@@ -81,6 +81,9 @@ pub struct RequestOptions {
     pub headers: HeaderMap,
     pub body: Option<Bytes>,
     pub follow_redirects: bool,
+    /// Whether to send cookies with the request and store the ones the
+    /// response sets.
+    pub credentials: bool,
 }
 
 impl Default for RequestOptions {
@@ -89,6 +92,7 @@ impl Default for RequestOptions {
             headers: HeaderMap::new(),
             body: None,
             follow_redirects: true,
+            credentials: true,
         }
     }
 }
@@ -256,7 +260,13 @@ impl NetClient {
                 return Err(NetError::UnsupportedScheme(url.scheme().to_string()));
             }
             let hop = self
-                .send_once(&method, &url, &options.headers, body.clone())
+                .send_once(
+                    &method,
+                    &url,
+                    &options.headers,
+                    body.clone(),
+                    options.credentials,
+                )
                 .await?;
 
             if options.follow_redirects
@@ -299,6 +309,7 @@ impl NetClient {
         url: &Url,
         extra_headers: &HeaderMap,
         body: Option<Bytes>,
+        credentials: bool,
     ) -> Result<Hop, NetError> {
         let uri: Uri = url
             .as_str()
@@ -316,7 +327,7 @@ impl NetClient {
         for (name, value) in extra_headers {
             headers.insert(name.clone(), value.clone());
         }
-        if let Some(cookie) = self.cookies.request_header(url) {
+        if credentials && let Some(cookie) = self.cookies.request_header(url) {
             headers.insert(COOKIE, header_value(&cookie)?);
         }
         if let Some(signer) = &self.signer
@@ -356,7 +367,9 @@ impl NetClient {
             .await
             .map_err(|_| NetError::Timeout(timeout))??;
         let (parts, incoming) = response.into_parts();
-        self.cookies.store_response(url, &parts.headers);
+        if credentials {
+            self.cookies.store_response(url, &parts.headers);
+        }
 
         let collected = tokio::time::timeout(timeout, incoming.collect())
             .await

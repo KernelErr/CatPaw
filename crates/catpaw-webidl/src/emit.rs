@@ -292,8 +292,7 @@ impl<'a> Emitter<'a> {
         let mut out = Vec::new();
         for d in chain.into_iter().rev() {
             for m in &d.members {
-                let ty = self.idl.resolve(&m.ty);
-                if self.types.supported(&ty) {
+                if let Some(ty) = self.types.prune(&self.idl.resolve(&m.ty)) {
                     out.push((m.name.clone(), ty, m.required, m.default.clone()));
                 }
             }
@@ -739,7 +738,13 @@ impl<'a> Emitter<'a> {
     }
 
     fn emit_op(&self, out: &mut String, iface: &PInterface, op: &POp) {
-        let fn_name = format!("op_{}", snake(&op.name).trim_end_matches('_'));
+        // A static and a regular operation may share a name (`Response.json`).
+        let prefix = if op.is_static && iface.kind == InterfaceKind::Interface {
+            "static_op_"
+        } else {
+            "op_"
+        };
+        let fn_name = format!("{prefix}{}", snake(&op.name).trim_end_matches('_'));
         let label = format!("{}.{}", iface.name, op.name);
         w!(
             out,
@@ -1262,8 +1267,9 @@ impl<'a> Emitter<'a> {
                 .min()
                 .unwrap_or(0);
             format!(
-                "rt::OpDef {{ name: {}, func: op_{}, length: {length} }}",
+                "rt::OpDef {{ name: {}, func: {}op_{}, length: {length} }}",
                 lit(&o.name),
+                if o.is_static { "static_" } else { "" },
                 snake(&o.name).trim_end_matches('_')
             )
         };

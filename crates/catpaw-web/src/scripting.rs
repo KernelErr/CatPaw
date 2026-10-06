@@ -404,12 +404,9 @@ fn prepare(cx: &mut Cx<'_>, el: NodeId, parser_inserted: bool) {
         // Fetched while parsing continues; run in order when it ends.
         let result = Rc::new(RefCell::new(None));
         let slot = result.clone();
-        let started = net::start_request(cx.page, request, move |_cx, outcome| {
+        net::start_request(cx.page, request, move |_cx, outcome| {
             *slot.borrow_mut() = Some(outcome);
         });
-        if started.is_none() {
-            *result.borrow_mut() = Some(Err("no network available".to_string()));
-        }
         cx.page.scripts.deferred.borrow_mut().push(Deferred {
             element: el,
             url,
@@ -421,18 +418,10 @@ fn prepare(cx: &mut Cx<'_>, el: NodeId, parser_inserted: bool) {
 
     // Async (and every script-inserted external script): run when fetched.
     block_load(cx);
-    let callback_url = url.clone();
-    let started = net::start_request(cx.page, request, move |cx, outcome| {
-        execute_fetched(cx, el, &callback_url, outcome, false, module);
+    net::start_request(cx.page, request, move |cx, outcome| {
+        execute_fetched(cx, el, &url, outcome, false, module);
         unblock_load(cx);
     });
-    if started.is_none() {
-        queue_task(cx.page, "script error", move |cx| {
-            let failure = Err("no network available".to_string());
-            execute_fetched(cx, el, &url, failure, false, module);
-            unblock_load(cx);
-        });
-    }
 }
 
 fn run_parser_script(cx: &mut Cx<'_>, el: NodeId) {
@@ -491,6 +480,10 @@ fn finish_parsing(cx: &mut Cx<'_>) {
                 // meanwhile.
                 while slot.borrow().is_none() && net::inflight(cx.page) > 0 {
                     net::deliver(cx, Some(Duration::from_millis(50)));
+                }
+                // Without a network the failure arrives as a task instead.
+                if slot.borrow().is_none() && cx.page.net().is_none() {
+                    *slot.borrow_mut() = Some(Err("no network available".to_string()));
                 }
                 let result = slot
                     .borrow_mut()
