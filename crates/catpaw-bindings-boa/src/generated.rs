@@ -13298,6 +13298,22 @@ pub mod document {
         Ok(JsValue::undefined())
     }
 
+    fn get_domain(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::DocumentImpl>::domain(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn set_domain(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DocumentImpl>::set_domain(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
     fn get_referrer(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::Document, ctx)?;
         let r = rt::with_cx(ctx, |cx| <Web as web::DocumentImpl>::referrer(cx, this));
@@ -15815,6 +15831,11 @@ pub mod document {
                 name: "location",
                 getter: get_location,
                 setter: Some(set_location),
+            },
+            rt::AttrDef {
+                name: "domain",
+                getter: get_domain,
+                setter: Some(set_domain),
             },
             rt::AttrDef {
                 name: "referrer",

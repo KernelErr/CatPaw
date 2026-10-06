@@ -311,6 +311,29 @@ impl web::DocumentImpl for Web {
         Ok(has_window(cx, this).then(|| window::location(cx)))
     }
 
+    fn domain(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {
+        if !has_window(cx, this) {
+            return Ok(String::new());
+        }
+        Ok(cx
+            .page
+            .url
+            .borrow()
+            .host_str()
+            .unwrap_or_default()
+            .to_string())
+    }
+
+    fn set_domain(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()> {
+        // Relaxing the same-origin policy is not on offer; the one value
+        // that changes nothing is let through.
+        let current = <Web as web::DocumentImpl>::domain(cx, this)?;
+        if value == current && !value.is_empty() {
+            return Ok(());
+        }
+        Err(Exception::security("document.domain cannot be changed"))
+    }
+
     fn referrer(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {
         if !has_window(cx, this) {
             return Ok(String::new());

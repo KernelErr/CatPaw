@@ -1159,3 +1159,24 @@ fn every_html_element_has_its_interface() {
         assert_eq!(eval(&mut page, source), expected, "{source}");
     }
 }
+
+#[test]
+fn document_domain_is_the_host() {
+    let mut page = load(
+        "<script>function attempt(f) { try { return String(f()); } catch (e) { return e.name; } }</script>",
+    );
+    for (source, expected) in [
+        ("document.domain", "example.test"),
+        (
+            "attempt(function () { document.domain = 'example.test'; return document.domain; })",
+            "example.test",
+        ),
+        (
+            "attempt(function () { document.domain = 'test'; })",
+            "SecurityError",
+        ),
+        ("document.implementation.createHTMLDocument('').domain", ""),
+    ] {
+        assert_eq!(eval(&mut page, source), expected, "{source}");
+    }
+}

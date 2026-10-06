@@ -107,7 +107,7 @@ members = [
   "location", "referrer", "cookie", "readyState", "title", "body", "head",
   "getElementsByName", "currentScript", "defaultView", "hasFocus", "hidden",
   "visibilityState", "write", "writeln", "open", "close", "implementation",
-  "createAttribute", "createAttributeNS", "createNodeIterator", "createTreeWalker",
+  "createAttribute", "createAttributeNS", "createNodeIterator", "createTreeWalker", "domain",
 ]
 
 [interfaces.XMLDocument]

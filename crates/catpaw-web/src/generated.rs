@@ -2974,6 +2974,8 @@ pub trait DocumentImpl {
         filter: Option<Callback>,
     ) -> Fallible<ObjectId>;
     fn location(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<ObjectId>>;
+    fn domain(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_domain(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
     fn referrer(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
     fn cookie(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
     fn set_cookie(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;

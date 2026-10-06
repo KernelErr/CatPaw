@@ -310,8 +310,11 @@ impl MdWriter<'_> {
             "a" => {
                 let text_before = self.inline.len();
                 self.block_children(id);
-                let text = collapse_whitespace(&self.inline[text_before..]);
-                self.inline.truncate(text_before);
+                // Block content inside the link has been flushed already;
+                // what is left of the inline text is the link's.
+                let start = text_before.min(self.inline.len());
+                let text = collapse_whitespace(&self.inline[start..]);
+                self.inline.truncate(start);
                 if let Some(href) = el.attr("href").filter(|_| !self.plain) {
                     let target = self.link_target(id, href);
                     // Image-only or icon links: fall back to the accessible
@@ -808,5 +811,29 @@ let y = 2;</code></pre>
         assert_eq!(f[0].fields[2].options, vec!["A", "B"]);
         assert_eq!(f[0].fields[3].kind, "submit");
         assert_eq!(f[1].fields[0].name.as_deref(), Some("loose"));
+    }
+}
+
+#[cfg(test)]
+mod block_link_tests {
+    use super::*;
+    use crate::visibility::AttributeOracle;
+    use catpaw_dom::{HtmlParseOptions, parse_html};
+
+    #[test]
+    fn links_around_block_content_do_not_lose_their_place() {
+        let opts = HtmlParseOptions {
+            url: Some(Url::parse("https://example.com/").unwrap()),
+            ..Default::default()
+        };
+        let dom = parse_html(
+            r#"<p>before <a href="/x">lead <div><p>inner block</p></div> tail</a> after</p>"#,
+            &opts,
+        )
+        .dom;
+        let md = markdown(&dom, &AttributeOracle, None, &ReadOptions::default());
+        assert!(md.contains("inner block"), "{md}");
+        assert!(md.contains("https://example.com/x"), "{md}");
+        assert!(md.contains("after"), "{md}");
     }
 }
