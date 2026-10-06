@@ -8,7 +8,7 @@ use boa_engine::builtins::promise::PromiseState;
 use boa_engine::job::PromiseJob;
 use boa_engine::module::Module;
 use boa_engine::object::builtins::JsPromise;
-use boa_engine::{Context, JsError, JsString, JsValue, Source};
+use boa_engine::{Context, JsError, JsString, JsValue, NativeFunction, Source};
 use catpaw_js::{
     Callback, CallbackKind, Exception, Fallible, ObjectId, PromiseRef, ScriptHost, Value,
 };
@@ -202,6 +202,34 @@ impl ScriptHost for BoaHost<'_> {
         let target = self.js_value(value);
         let result = rt::sequence_from_js(&target, self.ctx, rt::string_from_js);
         result.map_err(|e| rt::exception_from_js(e, self.ctx))
+    }
+
+    fn react(&mut self, value: &Value, token: u64) {
+        let value = self.js_value(value);
+        let Ok(promise) = JsPromise::resolve(value, self.ctx) else {
+            return;
+        };
+        // Each reaction tells the page which closure to run, and with what.
+        let reaction = |fulfilled: bool, ctx: &mut Context| {
+            NativeFunction::from_copy_closure_with_captures(
+                |_this, args, (token, fulfilled), ctx| {
+                    let settlement = rt::value_from_js(rt::arg(args, 0), ctx)?;
+                    let outcome = if *fulfilled {
+                        Ok(settlement)
+                    } else {
+                        Err(settlement)
+                    };
+                    let token = *token;
+                    rt::with_cx(ctx, |cx| catpaw_web::promises::settled(cx, token, outcome));
+                    Ok(JsValue::undefined())
+                },
+                (token, fulfilled),
+            )
+            .to_js_function(ctx.realm())
+        };
+        let on_fulfilled = reaction(true, self.ctx);
+        let on_rejected = reaction(false, self.ctx);
+        let _ = promise.then(Some(on_fulfilled), Some(on_rejected), self.ctx);
     }
 
     fn eval_script(&mut self, source: &str, url: &str, _line: u32) -> Fallible<Value> {

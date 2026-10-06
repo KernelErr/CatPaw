@@ -58,6 +58,9 @@ pub enum InterfaceId {
     PopStateEvent,
     ProgressEvent,
     PromiseRejectionEvent,
+    ReadableStream,
+    ReadableStreamDefaultController,
+    ReadableStreamDefaultReader,
     Request,
     ResizeObserver,
     Response,
@@ -66,10 +69,15 @@ pub enum InterfaceId {
     Storage,
     TextDecoder,
     TextEncoder,
+    TransformStream,
+    TransformStreamDefaultController,
     TreeWalker,
     URL,
     URLSearchParams,
     Window,
+    WritableStream,
+    WritableStreamDefaultController,
+    WritableStreamDefaultWriter,
     XMLHttpRequestEventTarget,
     XMLHttpRequestUpload,
     AbortSignal,
@@ -196,8 +204,8 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 171;
-    pub const ALL: [InterfaceId; 171] = [
+    pub const COUNT: usize = 179;
+    pub const ALL: [InterfaceId; 179] = [
         InterfaceId::AbortController,
         InterfaceId::CSSStyleDeclaration,
         InterfaceId::CSSStyleProperties,
@@ -234,6 +242,9 @@ impl InterfaceId {
         InterfaceId::PopStateEvent,
         InterfaceId::ProgressEvent,
         InterfaceId::PromiseRejectionEvent,
+        InterfaceId::ReadableStream,
+        InterfaceId::ReadableStreamDefaultController,
+        InterfaceId::ReadableStreamDefaultReader,
         InterfaceId::Request,
         InterfaceId::ResizeObserver,
         InterfaceId::Response,
@@ -242,10 +253,15 @@ impl InterfaceId {
         InterfaceId::Storage,
         InterfaceId::TextDecoder,
         InterfaceId::TextEncoder,
+        InterfaceId::TransformStream,
+        InterfaceId::TransformStreamDefaultController,
         InterfaceId::TreeWalker,
         InterfaceId::URL,
         InterfaceId::URLSearchParams,
         InterfaceId::Window,
+        InterfaceId::WritableStream,
+        InterfaceId::WritableStreamDefaultController,
+        InterfaceId::WritableStreamDefaultWriter,
         InterfaceId::XMLHttpRequestEventTarget,
         InterfaceId::XMLHttpRequestUpload,
         InterfaceId::AbortSignal,
@@ -409,6 +425,9 @@ impl InterfaceId {
             InterfaceId::PopStateEvent => "PopStateEvent",
             InterfaceId::ProgressEvent => "ProgressEvent",
             InterfaceId::PromiseRejectionEvent => "PromiseRejectionEvent",
+            InterfaceId::ReadableStream => "ReadableStream",
+            InterfaceId::ReadableStreamDefaultController => "ReadableStreamDefaultController",
+            InterfaceId::ReadableStreamDefaultReader => "ReadableStreamDefaultReader",
             InterfaceId::Request => "Request",
             InterfaceId::ResizeObserver => "ResizeObserver",
             InterfaceId::Response => "Response",
@@ -417,10 +436,15 @@ impl InterfaceId {
             InterfaceId::Storage => "Storage",
             InterfaceId::TextDecoder => "TextDecoder",
             InterfaceId::TextEncoder => "TextEncoder",
+            InterfaceId::TransformStream => "TransformStream",
+            InterfaceId::TransformStreamDefaultController => "TransformStreamDefaultController",
             InterfaceId::TreeWalker => "TreeWalker",
             InterfaceId::URL => "URL",
             InterfaceId::URLSearchParams => "URLSearchParams",
             InterfaceId::Window => "Window",
+            InterfaceId::WritableStream => "WritableStream",
+            InterfaceId::WritableStreamDefaultController => "WritableStreamDefaultController",
+            InterfaceId::WritableStreamDefaultWriter => "WritableStreamDefaultWriter",
             InterfaceId::XMLHttpRequestEventTarget => "XMLHttpRequestEventTarget",
             InterfaceId::XMLHttpRequestUpload => "XMLHttpRequestUpload",
             InterfaceId::AbortSignal => "AbortSignal",
@@ -585,6 +609,9 @@ impl InterfaceId {
             "PopStateEvent" => InterfaceId::PopStateEvent,
             "ProgressEvent" => InterfaceId::ProgressEvent,
             "PromiseRejectionEvent" => InterfaceId::PromiseRejectionEvent,
+            "ReadableStream" => InterfaceId::ReadableStream,
+            "ReadableStreamDefaultController" => InterfaceId::ReadableStreamDefaultController,
+            "ReadableStreamDefaultReader" => InterfaceId::ReadableStreamDefaultReader,
             "Request" => InterfaceId::Request,
             "ResizeObserver" => InterfaceId::ResizeObserver,
             "Response" => InterfaceId::Response,
@@ -593,10 +620,15 @@ impl InterfaceId {
             "Storage" => InterfaceId::Storage,
             "TextDecoder" => InterfaceId::TextDecoder,
             "TextEncoder" => InterfaceId::TextEncoder,
+            "TransformStream" => InterfaceId::TransformStream,
+            "TransformStreamDefaultController" => InterfaceId::TransformStreamDefaultController,
             "TreeWalker" => InterfaceId::TreeWalker,
             "URL" => InterfaceId::URL,
             "URLSearchParams" => InterfaceId::URLSearchParams,
             "Window" => InterfaceId::Window,
+            "WritableStream" => InterfaceId::WritableStream,
+            "WritableStreamDefaultController" => InterfaceId::WritableStreamDefaultController,
+            "WritableStreamDefaultWriter" => InterfaceId::WritableStreamDefaultWriter,
             "XMLHttpRequestEventTarget" => InterfaceId::XMLHttpRequestEventTarget,
             "XMLHttpRequestUpload" => InterfaceId::XMLHttpRequestUpload,
             "AbortSignal" => InterfaceId::AbortSignal,
@@ -762,6 +794,9 @@ impl InterfaceId {
             InterfaceId::PopStateEvent => Some(InterfaceId::Event),
             InterfaceId::ProgressEvent => Some(InterfaceId::Event),
             InterfaceId::PromiseRejectionEvent => Some(InterfaceId::Event),
+            InterfaceId::ReadableStream => None,
+            InterfaceId::ReadableStreamDefaultController => None,
+            InterfaceId::ReadableStreamDefaultReader => None,
             InterfaceId::Request => None,
             InterfaceId::ResizeObserver => None,
             InterfaceId::Response => None,
@@ -770,10 +805,15 @@ impl InterfaceId {
             InterfaceId::Storage => None,
             InterfaceId::TextDecoder => None,
             InterfaceId::TextEncoder => None,
+            InterfaceId::TransformStream => None,
+            InterfaceId::TransformStreamDefaultController => None,
             InterfaceId::TreeWalker => None,
             InterfaceId::URL => None,
             InterfaceId::URLSearchParams => None,
             InterfaceId::Window => Some(InterfaceId::EventTarget),
+            InterfaceId::WritableStream => None,
+            InterfaceId::WritableStreamDefaultController => None,
+            InterfaceId::WritableStreamDefaultWriter => None,
             InterfaceId::XMLHttpRequestEventTarget => Some(InterfaceId::EventTarget),
             InterfaceId::XMLHttpRequestUpload => Some(InterfaceId::XMLHttpRequestEventTarget),
             InterfaceId::AbortSignal => Some(InterfaceId::EventTarget),
@@ -1114,6 +1154,26 @@ impl DocumentVisibilityState {
         Some(match s {
             "visible" => DocumentVisibilityState::Visible,
             "hidden" => DocumentVisibilityState::Hidden,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ReadableStreamReaderMode {
+    Byob,
+}
+
+impl ReadableStreamReaderMode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ReadableStreamReaderMode::Byob => "byob",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "byob" => ReadableStreamReaderMode::Byob,
             _ => return None,
         })
     }
@@ -1753,10 +1813,33 @@ pub struct PromiseRejectionEventInit {
 }
 
 #[derive(Clone, Debug)]
+pub struct QueuingStrategy {
+    pub high_water_mark: Option<f64>,
+    pub size: Option<Callback>,
+}
+
+#[derive(Clone, Debug)]
+pub struct ReadableStreamGetReaderOptions {
+    pub mode: Option<ReadableStreamReaderMode>,
+}
+
+#[derive(Clone, Debug)]
+pub struct ReadableStreamReadResult {
+    pub value: Value,
+    pub done: Option<bool>,
+}
+
+#[derive(Clone, Debug)]
+pub struct ReadableWritablePair {
+    pub readable: ObjectId,
+    pub writable: ObjectId,
+}
+
+#[derive(Clone, Debug)]
 pub struct RequestInit {
     pub method: Option<String>,
     pub headers: Option<StringSequenceSequenceOrStringStringRecord>,
-    pub body: Option<BufferSourceOrURLSearchParamsOrString>,
+    pub body: Option<ReadableStreamOrBufferSourceOrURLSearchParamsOrString>,
     pub referrer: Option<String>,
     pub referrer_policy: Option<ReferrerPolicy>,
     pub mode: Option<RequestMode>,
@@ -1796,6 +1879,14 @@ pub struct ScrollToOptions {
     pub behavior: ScrollBehavior,
     pub left: Option<f64>,
     pub top: Option<f64>,
+}
+
+#[derive(Clone, Debug)]
+pub struct StreamPipeOptions {
+    pub prevent_close: bool,
+    pub prevent_abort: bool,
+    pub prevent_cancel: bool,
+    pub signal: Option<ObjectId>,
 }
 
 #[derive(Clone, Debug)]
@@ -1840,13 +1931,6 @@ pub enum BooleanOrScrollIntoViewOptions {
 }
 
 #[derive(Clone, Debug)]
-pub enum BufferSourceOrURLSearchParamsOrString {
-    BufferSource(Vec<u8>),
-    URLSearchParams(ObjectId),
-    String(String),
-}
-
-#[derive(Clone, Debug)]
 pub enum DocumentOrBufferSourceOrURLSearchParamsOrString {
     Document(NodeId),
     BufferSource(Vec<u8>),
@@ -1875,6 +1959,14 @@ pub enum EventListenerOptionsOrBoolean {
 #[derive(Clone, Debug)]
 pub enum NodeOrString {
     Node(NodeId),
+    String(String),
+}
+
+#[derive(Clone, Debug)]
+pub enum ReadableStreamOrBufferSourceOrURLSearchParamsOrString {
+    ReadableStream(ObjectId),
+    BufferSource(Vec<u8>),
+    URLSearchParams(ObjectId),
     String(String),
 }
 
@@ -1927,6 +2019,7 @@ pub trait AnimationFrameProviderImpl {
 }
 
 pub trait BodyImpl {
+    fn body(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<ObjectId>>;
     fn body_used(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
     fn array_buffer(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
     fn bytes(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
@@ -2034,6 +2127,11 @@ pub trait ParentNodeImpl {
     fn query_selector(cx: &mut Cx<'_>, this: NodeId, selectors: String)
     -> Fallible<Option<NodeId>>;
     fn query_selector_all(cx: &mut Cx<'_>, this: NodeId, selectors: String) -> Fallible<ObjectId>;
+}
+
+pub trait ReadableStreamGenericReaderImpl {
+    fn closed(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
+    fn cancel(cx: &mut Cx<'_>, this: ObjectId, reason: Value) -> Fallible<PromiseRef>;
 }
 
 pub trait SVGURIReferenceImpl {
@@ -2619,6 +2717,47 @@ pub trait PromiseRejectionEventImpl {
     ) -> Fallible<ObjectId>;
 }
 
+pub trait ReadableStreamImpl {
+    fn locked(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn cancel(cx: &mut Cx<'_>, this: ObjectId, reason: Value) -> Fallible<PromiseRef>;
+    fn get_reader(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        options: ReadableStreamGetReaderOptions,
+    ) -> Fallible<ObjectId>;
+    fn pipe_through(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        transform: ReadableWritablePair,
+        options: StreamPipeOptions,
+    ) -> Fallible<ObjectId>;
+    fn pipe_to(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        destination: ObjectId,
+        options: StreamPipeOptions,
+    ) -> Fallible<PromiseRef>;
+    fn tee(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<ObjectId>>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        underlying_source: Value,
+        strategy: QueuingStrategy,
+    ) -> Fallible<ObjectId>;
+}
+
+pub trait ReadableStreamDefaultControllerImpl {
+    fn desired_size(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<f64>>;
+    fn close(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn enqueue(cx: &mut Cx<'_>, this: ObjectId, chunk: Value) -> Fallible<()>;
+    fn error(cx: &mut Cx<'_>, this: ObjectId, e: Value) -> Fallible<()>;
+}
+
+pub trait ReadableStreamDefaultReaderImpl {
+    fn read(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
+    fn release_lock(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn constructor(cx: &mut Cx<'_>, stream: ObjectId) -> Fallible<ObjectId>;
+}
+
 pub trait RequestImpl {
     fn method(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
     fn url(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
@@ -2667,7 +2806,7 @@ pub trait ResponseImpl {
     fn clone(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
     fn constructor(
         cx: &mut Cx<'_>,
-        body: Option<BufferSourceOrURLSearchParamsOrString>,
+        body: Option<ReadableStreamOrBufferSourceOrURLSearchParamsOrString>,
         init: ResponseInit,
     ) -> Fallible<ObjectId>;
 }
@@ -2717,6 +2856,24 @@ pub trait TextDecoderImpl {
 pub trait TextEncoderImpl {
     fn encode(cx: &mut Cx<'_>, this: ObjectId, input: String) -> Fallible<Uint8ArrayData>;
     fn constructor(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
+}
+
+pub trait TransformStreamImpl {
+    fn readable(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn writable(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        transformer: Value,
+        writable_strategy: QueuingStrategy,
+        readable_strategy: QueuingStrategy,
+    ) -> Fallible<ObjectId>;
+}
+
+pub trait TransformStreamDefaultControllerImpl {
+    fn desired_size(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<f64>>;
+    fn enqueue(cx: &mut Cx<'_>, this: ObjectId, chunk: Value) -> Fallible<()>;
+    fn error(cx: &mut Cx<'_>, this: ObjectId, reason: Value) -> Fallible<()>;
+    fn terminate(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
 }
 
 pub trait TreeWalkerImpl {
@@ -2826,6 +2983,33 @@ pub trait WindowImpl {
     fn alert_overload2(cx: &mut Cx<'_>, message: String) -> Fallible<()>;
     fn confirm(cx: &mut Cx<'_>, message: String) -> Fallible<bool>;
     fn prompt(cx: &mut Cx<'_>, message: String, default: String) -> Fallible<Option<String>>;
+}
+
+pub trait WritableStreamImpl {
+    fn locked(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn abort(cx: &mut Cx<'_>, this: ObjectId, reason: Value) -> Fallible<PromiseRef>;
+    fn close(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
+    fn get_writer(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        underlying_sink: Value,
+        strategy: QueuingStrategy,
+    ) -> Fallible<ObjectId>;
+}
+
+pub trait WritableStreamDefaultControllerImpl {
+    fn error(cx: &mut Cx<'_>, this: ObjectId, e: Value) -> Fallible<()>;
+}
+
+pub trait WritableStreamDefaultWriterImpl {
+    fn closed(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
+    fn desired_size(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<f64>>;
+    fn ready(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
+    fn abort(cx: &mut Cx<'_>, this: ObjectId, reason: Value) -> Fallible<PromiseRef>;
+    fn close(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
+    fn release_lock(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn write(cx: &mut Cx<'_>, this: ObjectId, chunk: Value) -> Fallible<PromiseRef>;
+    fn constructor(cx: &mut Cx<'_>, stream: ObjectId) -> Fallible<ObjectId>;
 }
 
 pub trait AbortSignalImpl {

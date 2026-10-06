@@ -439,6 +439,41 @@ members = ["getEntries", "getEntriesByType", "getEntriesByName"]
 [interfaces.Crypto]
 members = ["randomUUID"]
 
+# ------------------------------------------------------------------ Streams
+# Default (non-byte) streams. Byte streams and BYOB readers are not there yet.
+
+[interfaces.ReadableStream]
+constructor = true
+members = ["locked", "cancel", "getReader", "pipeThrough", "pipeTo", "tee"]
+
+[mixins.ReadableStreamGenericReader]
+members = ["closed", "cancel"]
+
+[interfaces.ReadableStreamDefaultReader]
+constructor = true
+members = ["read", "releaseLock"]
+
+[interfaces.ReadableStreamDefaultController]
+members = ["desiredSize", "close", "enqueue", "error"]
+
+[interfaces.WritableStream]
+constructor = true
+members = ["locked", "abort", "close", "getWriter"]
+
+[interfaces.WritableStreamDefaultWriter]
+constructor = true
+members = ["closed", "desiredSize", "ready", "abort", "close", "releaseLock", "write"]
+
+[interfaces.WritableStreamDefaultController]
+members = ["error"]
+
+[interfaces.TransformStream]
+constructor = true
+members = ["readable", "writable"]
+
+[interfaces.TransformStreamDefaultController]
+members = ["desiredSize", "enqueue", "error", "terminate"]
+
 [interfaces.Storage]
 exotic = true
 members = ["length", "key", "getItem", "setItem", "removeItem", "clear"]
@@ -471,7 +506,7 @@ members = [
 ]
 
 [mixins.Body]
-members = ["bodyUsed", "arrayBuffer", "bytes", "json", "text"]
+members = ["body", "bodyUsed", "arrayBuffer", "bytes", "json", "text"]
 
 [interfaces.XMLHttpRequestEventTarget]
 

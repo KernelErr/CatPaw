@@ -218,6 +218,89 @@
     configurable: true,
   });
 
+  // The queuing strategies are plain script: their `size` is a function.
+  const countSize = () => 1;
+  Object.defineProperty(countSize, "name", { value: "size" });
+  const byteLengthSize = (chunk) => chunk.byteLength;
+  Object.defineProperty(byteLengthSize, "name", { value: "size" });
+  function strategyClass(name, size) {
+    const marks = new WeakMap();
+    class Strategy {
+      constructor(init) {
+        if (typeof init !== "object" || init === null) {
+          throw new TypeError(`Failed to construct '${name}': 1 argument required.`);
+        }
+        if (!("highWaterMark" in init)) {
+          throw new TypeError(`Failed to construct '${name}': required member highWaterMark is undefined.`);
+        }
+        marks.set(this, Number(init.highWaterMark));
+      }
+      get highWaterMark() {
+        if (!marks.has(this)) throw new TypeError("Illegal invocation");
+        return marks.get(this);
+      }
+      get size() {
+        if (!marks.has(this)) throw new TypeError("Illegal invocation");
+        return size;
+      }
+    }
+    Object.defineProperty(Strategy, "name", { value: name });
+    Object.defineProperty(Strategy.prototype, Symbol.toStringTag, { value: name, configurable: true });
+    return Strategy;
+  }
+  for (const [name, size] of [
+    ["CountQueuingStrategy", countSize],
+    ["ByteLengthQueuingStrategy", byteLengthSize],
+  ]) {
+    Object.defineProperty(global, name, {
+      value: strategyClass(name, size),
+      writable: true,
+      configurable: true,
+    });
+  }
+
+  // Asynchronous iteration of readable streams, over a reader.
+  const streamPrototype = global.ReadableStream && global.ReadableStream.prototype;
+  if (streamPrototype) {
+    const values = function values(options) {
+      const reader = this.getReader();
+      const preventCancel = options != null && Boolean(options.preventCancel);
+      let finished = false;
+      return {
+        next() {
+          if (finished) return Promise.resolve({ value: undefined, done: true });
+          return reader.read().then(
+            (result) => {
+              if (result.done) {
+                finished = true;
+                reader.releaseLock();
+              }
+              return result;
+            },
+            (error) => {
+              finished = true;
+              reader.releaseLock();
+              throw error;
+            },
+          );
+        },
+        return(value) {
+          finished = true;
+          const cancelled = preventCancel ? Promise.resolve() : reader.cancel(value);
+          return cancelled.then(() => {
+            reader.releaseLock();
+            return { value, done: true };
+          });
+        },
+        [Symbol.asyncIterator]() {
+          return this;
+        },
+      };
+    };
+    Object.defineProperty(streamPrototype, "values", { value: values, writable: true, configurable: true });
+    Object.defineProperty(streamPrototype, Symbol.asyncIterator, { value: values, writable: true, configurable: true });
+  }
+
   return {
     DOMException,
     structuredClone,

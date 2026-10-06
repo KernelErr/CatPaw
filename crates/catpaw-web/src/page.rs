@@ -253,6 +253,7 @@ pub struct PageState {
     pub(crate) timeline: crate::performance::Timeline,
     pub(crate) traversers: crate::traversal::Traversers,
     pub(crate) custom_elements: crate::custom_elements::Registry,
+    pub(crate) reactions: crate::promises::Reactions,
     microtask_queue: RefCell<Option<MicrotaskQueue>>,
     /// An uncaught exception is being reported (reports do not nest).
     pub(crate) reporting_error: Cell<bool>,
@@ -316,6 +317,7 @@ impl PageState {
             timeline: Default::default(),
             traversers: Default::default(),
             custom_elements: Default::default(),
+            reactions: Default::default(),
             microtask_queue: RefCell::new(None),
             reporting_error: Cell::new(false),
             errors: RefCell::new(Vec::new()),

@@ -34,6 +34,11 @@ pub trait ScriptHost {
     /// WebIDL `sequence<DOMString>` conversion.
     fn to_string_sequence(&mut self, value: &Value) -> Fallible<Vec<String>>;
 
+    /// Arranges for the page's settlement handler to be called with
+    /// `token` once `value` settles: at once (as a microtask) for a value
+    /// that is not a promise, with the value as the fulfillment.
+    fn react(&mut self, value: &Value, token: u64);
+
     /// Evaluates a classic script. `url` and `line` label the source in
     /// stack traces.
     fn eval_script(&mut self, source: &str, url: &str, line: u32) -> Fallible<Value>;

@@ -316,6 +316,23 @@ pub fn preprocess(text: &str) -> String {
         "(HTMLScriptElement or SVGScriptElement)",
         "HTMLScriptElement",
     );
+    // Asynchronous iteration is newer than the parser: `async_iterable`
+    // declarations are dropped (an async iterator can be provided in
+    // script), and an `async_sequence<T>` argument is taken as `any`.
+    text = text
+        .lines()
+        .filter(|line| !line.trim_start().starts_with("async_iterable<"))
+        .collect::<Vec<_>>()
+        .join(
+            "
+",
+        );
+    while let Some(start) = text.find("async_sequence<") {
+        let end = text[start..]
+            .find('>')
+            .map_or(text.len(), |e| start + e + 1);
+        text.replace_range(start..end, "any");
+    }
     let text = text.as_str();
     let mut out = String::with_capacity(text.len() + 64);
     let bytes = text.as_bytes();

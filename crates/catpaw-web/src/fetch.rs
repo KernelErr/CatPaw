@@ -12,9 +12,9 @@ use url::Url;
 use crate::abort::{self, AbortAlgorithm};
 use crate::cors::{self, Credentials, Exposure, Mode, Outgoing, Readable};
 use crate::generated::{
-    self as web, BufferSourceOrURLSearchParamsOrString as BodyInit, ReferrerPolicy, RequestCache,
-    RequestCredentials, RequestDestination, RequestInit, RequestMode, RequestOrString,
-    RequestRedirect, ResponseInit, ResponseType,
+    self as web, ReadableStreamOrBufferSourceOrURLSearchParamsOrString as BodyInit, ReferrerPolicy,
+    RequestCache, RequestCredentials, RequestDestination, RequestInit, RequestMode,
+    RequestOrString, RequestRedirect, ResponseInit, ResponseType,
     StringSequenceSequenceOrStringStringRecord as HeadersInit,
 };
 use crate::net::RequestKind;
@@ -212,6 +212,12 @@ impl web::HeadersImpl for Web {
 /// The bytes of a body given by script, and the Content-Type it implies.
 fn extract_body(cx: &Cx<'_>, body: BodyInit) -> Fallible<(Vec<u8>, Option<&'static str>)> {
     Ok(match body {
+        // Bodies are kept as bytes: a stream would have to be read first.
+        BodyInit::ReadableStream(_) => {
+            return Err(Exception::type_error(
+                "A ReadableStream body is not supported yet",
+            ));
+        }
         BodyInit::BufferSource(bytes) => (bytes, None),
         BodyInit::String(text) => (text.into_bytes(), Some("text/plain;charset=UTF-8")),
         BodyInit::URLSearchParams(id) => (
@@ -226,25 +232,46 @@ fn decode_utf8(bytes: &[u8]) -> String {
     text.strip_prefix('\u{FEFF}').unwrap_or(&text).to_string()
 }
 
+/// The body's fields, whichever of the two objects `this` is.
+fn with_body<R>(
+    cx: &Cx<'_>,
+    this: ObjectId,
+    f: impl FnOnce(&mut Option<Vec<u8>>, &mut bool, &mut Option<ObjectId>) -> R,
+) -> Fallible<R> {
+    let mut f = Some(f);
+    if let Some(result) = cx.page.try_with::<ResponseObject, _>(this, |r| {
+        (f.take().expect("called once"))(&mut r.body, &mut r.body_used, &mut r.body_stream)
+    }) {
+        return Ok(result);
+    }
+    cx.page.with::<RequestObject, _>(this, |r| {
+        (f.take().expect("called once"))(&mut r.body, &mut r.body_used, &mut r.body_stream)
+    })
+}
+
+/// Whether the body was used: read here, or read or locked through its
+/// stream.
+fn body_is_used(cx: &Cx<'_>, this: ObjectId) -> Fallible<bool> {
+    let (used, stream) = with_body(cx, this, |_, used, stream| (*used, *stream))?;
+    Ok(used || stream.is_some_and(|s| crate::streams::is_disturbed_or_locked(cx, s)))
+}
+
 /// Takes the body of a `Request` or `Response`, marking it used.
 fn consume_body(cx: &Cx<'_>, this: ObjectId) -> Fallible<Vec<u8>> {
-    fn take(body: &mut Option<Vec<u8>>, used: &mut bool) -> Fallible<Vec<u8>> {
-        if *used {
-            return Err(Exception::type_error("The body has already been read"));
-        }
+    if body_is_used(cx, this)? {
+        return Err(Exception::type_error("The body has already been read"));
+    }
+    let (bytes, stream) = with_body(cx, this, |body, used, stream| {
         if body.is_some() {
             *used = true;
         }
-        Ok(body.take().unwrap_or_default())
+        (body.take().unwrap_or_default(), *stream)
+    })?;
+    // Reading here reads the stream handed out, as far as it is concerned.
+    if let Some(stream) = stream {
+        crate::streams::mark_disturbed(cx, stream);
     }
-    if let Some(result) = cx
-        .page
-        .try_with::<ResponseObject, _>(this, |r| take(&mut r.body, &mut r.body_used))
-    {
-        return result;
-    }
-    cx.page
-        .with::<RequestObject, _>(this, |r| take(&mut r.body, &mut r.body_used))?
+    Ok(bytes)
 }
 
 /// A promise for the consumed body, converted by `convert`.
@@ -263,11 +290,24 @@ fn body_promise(
 }
 
 impl web::BodyImpl for Web {
-    fn body_used(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool> {
-        if let Some(used) = cx.page.try_with::<ResponseObject, _>(this, |r| r.body_used) {
-            return Ok(used);
+    fn body(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<ObjectId>> {
+        let (bytes, used, stream) = with_body(cx, this, |body, used, stream| {
+            (body.clone(), *used, *stream)
+        })?;
+        if let Some(stream) = stream {
+            return Ok(Some(stream));
         }
-        cx.page.with::<RequestObject, _>(this, |r| r.body_used)
+        // No body, or one read already: nothing to stream.
+        let Some(bytes) = bytes.filter(|_| !used) else {
+            return Ok(None);
+        };
+        let stream = crate::streams::readable_from_bytes(cx, bytes)?;
+        with_body(cx, this, |_, _, slot| *slot = Some(stream))?;
+        Ok(Some(stream))
+    }
+
+    fn body_used(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool> {
+        body_is_used(cx, this)
     }
 
     fn array_buffer(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef> {
@@ -297,6 +337,8 @@ pub struct RequestObject {
     headers: HeaderList,
     body: Option<Vec<u8>>,
     body_used: bool,
+    /// The stream `body` handed out, if it was asked for.
+    body_stream: Option<ObjectId>,
     mode: RequestMode,
     credentials: RequestCredentials,
     cache: RequestCache,
@@ -359,6 +401,7 @@ fn build_request(
                 headers: Vec::new(),
                 body: None,
                 body_used: false,
+                body_stream: None,
                 mode: RequestMode::Cors,
                 credentials: RequestCredentials::SameOrigin,
                 cache: RequestCache::Default,
@@ -387,6 +430,7 @@ fn build_request(
                 headers: source.headers.clone(),
                 body,
                 body_used: false,
+                body_stream: None,
                 mode: source.mode,
                 credentials: source.credentials,
                 cache: source.cache,
@@ -550,6 +594,7 @@ impl web::RequestImpl for Web {
                 headers: r.headers.clone(),
                 body: r.body.clone(),
                 body_used: false,
+                body_stream: None,
                 mode: r.mode,
                 credentials: r.credentials,
                 cache: r.cache,
@@ -586,6 +631,8 @@ pub struct ResponseObject {
     headers: HeaderList,
     body: Option<Vec<u8>>,
     body_used: bool,
+    /// The stream `body` handed out, if it was asked for.
+    body_stream: Option<ObjectId>,
     /// Came from the network: its headers cannot be changed.
     from_network: bool,
     headers_object: Option<ObjectId>,
@@ -637,6 +684,7 @@ fn synthetic_response(
         headers,
         body,
         body_used: false,
+        body_stream: None,
         from_network: false,
         headers_object: None,
     })
@@ -661,6 +709,7 @@ impl web::ResponseImpl for Web {
             headers: Vec::new(),
             body: None,
             body_used: false,
+            body_stream: None,
             from_network: true,
             headers_object: None,
         }))
@@ -683,6 +732,7 @@ impl web::ResponseImpl for Web {
             headers: vec![("location".to_string(), target.to_string())],
             body: None,
             body_used: false,
+            body_stream: None,
             from_network: true,
             headers_object: None,
         }))
@@ -753,6 +803,7 @@ impl web::ResponseImpl for Web {
                 headers: r.headers.clone(),
                 body: r.body.clone(),
                 body_used: false,
+                body_stream: None,
                 from_network: r.from_network,
                 headers_object: None,
             })
@@ -797,6 +848,7 @@ fn response_from_network(readable: Readable) -> ResponseObject {
         body: (!is_null_body_status(response.status) && exposure != Exposure::Opaque)
             .then_some(response.body),
         body_used: false,
+        body_stream: None,
         from_network: true,
         headers_object: None,
     }

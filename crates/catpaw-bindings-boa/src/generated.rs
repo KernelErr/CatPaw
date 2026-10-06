@@ -60,6 +60,21 @@ impl IntoJs for web::DocumentVisibilityState {
     }
 }
 
+impl FromJs for web::ReadableStreamReaderMode {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::ReadableStreamReaderMode::parse(&s).ok_or_else(|| {
+            rt::type_error(&format!("'{s}' is not a valid ReadableStreamReaderMode"))
+        })
+    }
+}
+
+impl IntoJs for web::ReadableStreamReaderMode {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
 impl FromJs for web::ReferrerPolicy {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let s = rt::string_from_js(v, ctx)?;
@@ -968,6 +983,104 @@ impl IntoJs for web::PromiseRejectionEventInit {
     }
 }
 
+impl FromJs for web::QueuingStrategy {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "QueuingStrategy")?;
+        Ok(Self {
+            high_water_mark: match rt::dictionary_member(&obj, "highWaterMark", ctx)? {
+                Some(m) => Some((&m).to_number(ctx)?),
+                None => None,
+            },
+            size: match rt::dictionary_member(&obj, "size", ctx)? {
+                Some(m) => Some(rt::callback_from_js((&m), CallbackKind::Function, ctx)?),
+                None => None,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::QueuingStrategy {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "highWaterMark", self.high_water_mark, ctx)?;
+        rt::set_member(&obj, "size", self.size, ctx)?;
+        Ok(obj.into())
+    }
+}
+
+impl FromJs for web::ReadableStreamGetReaderOptions {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "ReadableStreamGetReaderOptions")?;
+        Ok(Self {
+            mode: match rt::dictionary_member(&obj, "mode", ctx)? {
+                Some(m) => Some(<web::ReadableStreamReaderMode as FromJs>::from_js(
+                    (&m),
+                    ctx,
+                )?),
+                None => None,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::ReadableStreamGetReaderOptions {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "mode", self.mode, ctx)?;
+        Ok(obj.into())
+    }
+}
+
+impl FromJs for web::ReadableStreamReadResult {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "ReadableStreamReadResult")?;
+        Ok(Self {
+            value: match rt::dictionary_member(&obj, "value", ctx)? {
+                Some(m) => rt::value_from_js((&m), ctx)?,
+                None => Value::Undefined,
+            },
+            done: match rt::dictionary_member(&obj, "done", ctx)? {
+                Some(m) => Some((&m).to_boolean()),
+                None => None,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::ReadableStreamReadResult {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "value", self.value, ctx)?;
+        rt::set_member(&obj, "done", self.done, ctx)?;
+        Ok(obj.into())
+    }
+}
+
+impl FromJs for web::ReadableWritablePair {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "ReadableWritablePair")?;
+        Ok(Self {
+            readable: match rt::dictionary_member(&obj, "readable", ctx)? {
+                Some(m) => rt::object_from_js((&m), I::ReadableStream, ctx)?,
+                None => return Err(rt::type_error("ReadableWritablePair.readable is required")),
+            },
+            writable: match rt::dictionary_member(&obj, "writable", ctx)? {
+                Some(m) => rt::object_from_js((&m), I::WritableStream, ctx)?,
+                None => return Err(rt::type_error("ReadableWritablePair.writable is required")),
+            },
+        })
+    }
+}
+
+impl IntoJs for web::ReadableWritablePair {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "readable", self.readable, ctx)?;
+        rt::set_member(&obj, "writable", self.writable, ctx)?;
+        Ok(obj.into())
+    }
+}
+
 impl FromJs for web::RequestInit {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let obj = rt::dictionary_object(v, "RequestInit")?;
@@ -990,12 +1103,7 @@ impl FromJs for web::RequestInit {
                     if (&m).is_null_or_undefined() {
                         None
                     } else {
-                        Some(
-                            <web::BufferSourceOrURLSearchParamsOrString as FromJs>::from_js(
-                                (&m),
-                                ctx,
-                            )?,
-                        )
+                        Some(<web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString as FromJs>::from_js((&m), ctx)?)
                     }
                 }
                 None => None,
@@ -1200,6 +1308,41 @@ impl IntoJs for web::ScrollToOptions {
     }
 }
 
+impl FromJs for web::StreamPipeOptions {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "StreamPipeOptions")?;
+        Ok(Self {
+            prevent_close: match rt::dictionary_member(&obj, "preventClose", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            prevent_abort: match rt::dictionary_member(&obj, "preventAbort", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            prevent_cancel: match rt::dictionary_member(&obj, "preventCancel", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            signal: match rt::dictionary_member(&obj, "signal", ctx)? {
+                Some(m) => Some(rt::object_from_js((&m), I::AbortSignal, ctx)?),
+                None => None,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::StreamPipeOptions {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "preventClose", self.prevent_close, ctx)?;
+        rt::set_member(&obj, "preventAbort", self.prevent_abort, ctx)?;
+        rt::set_member(&obj, "preventCancel", self.prevent_cancel, ctx)?;
+        rt::set_member(&obj, "signal", self.signal, ctx)?;
+        Ok(obj.into())
+    }
+}
+
 impl FromJs for web::StructuredSerializeOptions {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let obj = rt::dictionary_object(v, "StructuredSerializeOptions")?;
@@ -1366,34 +1509,6 @@ impl IntoJs for web::BooleanOrScrollIntoViewOptions {
     }
 }
 
-impl FromJs for web::BufferSourceOrURLSearchParamsOrString {
-    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
-        if rt::is_instance(v, I::URLSearchParams, ctx) {
-            return Ok(web::BufferSourceOrURLSearchParamsOrString::URLSearchParams(
-                rt::object_from_js(v, I::URLSearchParams, ctx)?,
-            ));
-        }
-        if rt::is_buffer(v) {
-            return Ok(web::BufferSourceOrURLSearchParamsOrString::BufferSource(
-                rt::buffer_from_js(v, ctx)?,
-            ));
-        }
-        Ok(web::BufferSourceOrURLSearchParamsOrString::String(
-            rt::string_from_js(v, ctx)?,
-        ))
-    }
-}
-
-impl IntoJs for web::BufferSourceOrURLSearchParamsOrString {
-    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
-        match self {
-            web::BufferSourceOrURLSearchParamsOrString::BufferSource(v) => v.into_js(ctx),
-            web::BufferSourceOrURLSearchParamsOrString::URLSearchParams(v) => v.into_js(ctx),
-            web::BufferSourceOrURLSearchParamsOrString::String(v) => v.into_js(ctx),
-        }
-    }
-}
-
 impl FromJs for web::DocumentOrBufferSourceOrURLSearchParamsOrString {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         if rt::is_instance(v, I::Document, ctx) {
@@ -1531,6 +1646,54 @@ impl IntoJs for web::NodeOrString {
         match self {
             web::NodeOrString::Node(v) => v.into_js(ctx),
             web::NodeOrString::String(v) => v.into_js(ctx),
+        }
+    }
+}
+
+impl FromJs for web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if rt::is_instance(v, I::ReadableStream, ctx) {
+            return Ok(
+                web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString::ReadableStream(
+                    rt::object_from_js(v, I::ReadableStream, ctx)?,
+                ),
+            );
+        }
+        if rt::is_instance(v, I::URLSearchParams, ctx) {
+            return Ok(
+                web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString::URLSearchParams(
+                    rt::object_from_js(v, I::URLSearchParams, ctx)?,
+                ),
+            );
+        }
+        if rt::is_buffer(v) {
+            return Ok(
+                web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString::BufferSource(
+                    rt::buffer_from_js(v, ctx)?,
+                ),
+            );
+        }
+        Ok(
+            web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString::String(rt::string_from_js(
+                v, ctx,
+            )?),
+        )
+    }
+}
+
+impl IntoJs for web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+            web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString::ReadableStream(v) => {
+                v.into_js(ctx)
+            }
+            web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString::BufferSource(v) => {
+                v.into_js(ctx)
+            }
+            web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString::URLSearchParams(v) => {
+                v.into_js(ctx)
+            }
+            web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString::String(v) => v.into_js(ctx),
         }
     }
 }
@@ -6682,6 +6845,300 @@ pub mod promise_rejection_event {
     };
 }
 
+pub mod readable_stream {
+    use super::*;
+
+    fn get_locked(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::ReadableStream, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ReadableStreamImpl>::locked(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_cancel(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::ReadableStream, ctx)?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ReadableStreamImpl>::cancel(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_get_reader(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::ReadableStream, ctx)?;
+        let a0 = <web::ReadableStreamGetReaderOptions as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ReadableStreamImpl>::get_reader(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_pipe_through(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::ReadableStream, ctx)?;
+        rt::require_args(args, 1, "ReadableStream.pipeThrough")?;
+        let a0 = <web::ReadableWritablePair as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::StreamPipeOptions as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ReadableStreamImpl>::pipe_through(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_pipe_to(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::ReadableStream, ctx)?;
+        rt::require_args(args, 1, "ReadableStream.pipeTo")?;
+        let a0 = rt::object_from_js(rt::arg(args, 0), I::WritableStream, ctx)?;
+        let a1 = <web::StreamPipeOptions as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ReadableStreamImpl>::pipe_to(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_tee(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::ReadableStream, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ReadableStreamImpl>::tee(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "ReadableStream")?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::QueuingStrategy as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ReadableStreamImpl>::constructor(cx, a0, a1)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::ReadableStream, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::ReadableStream,
+        name: "ReadableStream",
+        parent: None,
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "locked",
+            getter: get_locked,
+            setter: None,
+        }],
+        ops: &[
+            rt::OpDef {
+                name: "cancel",
+                func: op_cancel,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "getReader",
+                func: op_get_reader,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "pipeThrough",
+                func: op_pipe_through,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "pipeTo",
+                func: op_pipe_to,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "tee",
+                func: op_tee,
+                length: 0,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod readable_stream_default_controller {
+    use super::*;
+
+    fn get_desired_size(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::ReadableStreamDefaultController, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ReadableStreamDefaultControllerImpl>::desired_size(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_close(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::ReadableStreamDefaultController, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ReadableStreamDefaultControllerImpl>::close(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_enqueue(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::ReadableStreamDefaultController, ctx)?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ReadableStreamDefaultControllerImpl>::enqueue(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_error(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::ReadableStreamDefaultController, ctx)?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ReadableStreamDefaultControllerImpl>::error(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::ReadableStreamDefaultController,
+        name: "ReadableStreamDefaultController",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "desiredSize",
+            getter: get_desired_size,
+            setter: None,
+        }],
+        ops: &[
+            rt::OpDef {
+                name: "close",
+                func: op_close,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "enqueue",
+                func: op_enqueue,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "error",
+                func: op_error,
+                length: 0,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod readable_stream_default_reader {
+    use super::*;
+
+    fn get_closed(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::ReadableStreamDefaultReader, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ReadableStreamGenericReaderImpl>::closed(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_read(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::ReadableStreamDefaultReader, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ReadableStreamDefaultReaderImpl>::read(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_release_lock(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::ReadableStreamDefaultReader, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ReadableStreamDefaultReaderImpl>::release_lock(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_cancel(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::ReadableStreamDefaultReader, ctx)?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ReadableStreamGenericReaderImpl>::cancel(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "ReadableStreamDefaultReader")?;
+        rt::require_args(args, 1, "ReadableStreamDefaultReader constructor")?;
+        let a0 = rt::object_from_js(rt::arg(args, 0), I::ReadableStream, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ReadableStreamDefaultReaderImpl>::constructor(cx, a0)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::ReadableStreamDefaultReader, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::ReadableStreamDefaultReader,
+        name: "ReadableStreamDefaultReader",
+        parent: None,
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[rt::AttrDef {
+            name: "closed",
+            getter: get_closed,
+            setter: None,
+        }],
+        ops: &[
+            rt::OpDef {
+                name: "read",
+                func: op_read,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "releaseLock",
+                func: op_release_lock,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "cancel",
+                func: op_cancel,
+                length: 0,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod request {
     use super::*;
 
@@ -6779,6 +7236,12 @@ pub mod request {
     fn get_signal(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_object(this_js, I::Request, ctx)?;
         let r = rt::with_cx(ctx, |cx| <Web as web::RequestImpl>::signal(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_body(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Request, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::BodyImpl>::body(cx, this));
         rt::ret(r, ctx)
     }
 
@@ -6908,6 +7371,11 @@ pub mod request {
             rt::AttrDef {
                 name: "signal",
                 getter: get_signal,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "body",
+                getter: get_body,
                 setter: None,
             },
             rt::AttrDef {
@@ -7088,6 +7556,12 @@ pub mod response {
         Ok(v)
     }
 
+    fn get_body(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Response, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::BodyImpl>::body(cx, this));
+        rt::ret(r, ctx)
+    }
+
     fn get_body_used(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_object(this_js, I::Response, ctx)?;
         let r = rt::with_cx(ctx, |cx| <Web as web::BodyImpl>::body_used(cx, this));
@@ -7175,12 +7649,7 @@ pub mod response {
             if rt::arg(args, 0).is_null_or_undefined() {
                 None
             } else {
-                Some(
-                    <web::BufferSourceOrURLSearchParamsOrString as FromJs>::from_js(
-                        rt::arg(args, 0),
-                        ctx,
-                    )?,
-                )
+                Some(<web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString as FromJs>::from_js(rt::arg(args, 0), ctx)?)
             }
         } else {
             None
@@ -7234,6 +7703,11 @@ pub mod response {
             rt::AttrDef {
                 name: "headers",
                 getter: get_headers,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "body",
+                getter: get_body,
                 setter: None,
             },
             rt::AttrDef {
@@ -7752,6 +8226,146 @@ pub mod text_encoder {
             func: op_encode,
             length: 0,
         }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod transform_stream {
+    use super::*;
+
+    fn get_readable(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TransformStream, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TransformStreamImpl>::readable(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_writable(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TransformStream, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TransformStreamImpl>::writable(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "TransformStream")?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::QueuingStrategy as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let a2 = <web::QueuingStrategy as FromJs>::from_js(rt::arg(args, 2), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TransformStreamImpl>::constructor(cx, a0, a1, a2)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::TransformStream, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::TransformStream,
+        name: "TransformStream",
+        parent: None,
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "readable",
+                getter: get_readable,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "writable",
+                getter: get_writable,
+                setter: None,
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod transform_stream_default_controller {
+    use super::*;
+
+    fn get_desired_size(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TransformStreamDefaultController, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TransformStreamDefaultControllerImpl>::desired_size(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_enqueue(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::TransformStreamDefaultController, ctx)?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TransformStreamDefaultControllerImpl>::enqueue(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_error(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::TransformStreamDefaultController, ctx)?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TransformStreamDefaultControllerImpl>::error(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_terminate(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::TransformStreamDefaultController, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TransformStreamDefaultControllerImpl>::terminate(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::TransformStreamDefaultController,
+        name: "TransformStreamDefaultController",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "desiredSize",
+            getter: get_desired_size,
+            setter: None,
+        }],
+        ops: &[
+            rt::OpDef {
+                name: "enqueue",
+                func: op_enqueue,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "error",
+                func: op_error,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "terminate",
+                func: op_terminate,
+                length: 0,
+            },
+        ],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -12074,6 +12688,261 @@ pub mod window {
                 name: "cancelAnimationFrame",
                 func: op_cancel_animation_frame,
                 length: 1,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod writable_stream {
+    use super::*;
+
+    fn get_locked(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WritableStream, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WritableStreamImpl>::locked(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_abort(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::WritableStream, ctx)?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WritableStreamImpl>::abort(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_close(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::WritableStream, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WritableStreamImpl>::close(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_get_writer(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::WritableStream, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WritableStreamImpl>::get_writer(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "WritableStream")?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::QueuingStrategy as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WritableStreamImpl>::constructor(cx, a0, a1)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::WritableStream, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::WritableStream,
+        name: "WritableStream",
+        parent: None,
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "locked",
+            getter: get_locked,
+            setter: None,
+        }],
+        ops: &[
+            rt::OpDef {
+                name: "abort",
+                func: op_abort,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "close",
+                func: op_close,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "getWriter",
+                func: op_get_writer,
+                length: 0,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod writable_stream_default_controller {
+    use super::*;
+
+    fn op_error(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::WritableStreamDefaultController, ctx)?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WritableStreamDefaultControllerImpl>::error(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::WritableStreamDefaultController,
+        name: "WritableStreamDefaultController",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[rt::OpDef {
+            name: "error",
+            func: op_error,
+            length: 0,
+        }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod writable_stream_default_writer {
+    use super::*;
+
+    fn get_closed(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WritableStreamDefaultWriter, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WritableStreamDefaultWriterImpl>::closed(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_desired_size(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WritableStreamDefaultWriter, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WritableStreamDefaultWriterImpl>::desired_size(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_ready(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WritableStreamDefaultWriter, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WritableStreamDefaultWriterImpl>::ready(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_abort(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::WritableStreamDefaultWriter, ctx)?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WritableStreamDefaultWriterImpl>::abort(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_close(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::WritableStreamDefaultWriter, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WritableStreamDefaultWriterImpl>::close(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_release_lock(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::WritableStreamDefaultWriter, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WritableStreamDefaultWriterImpl>::release_lock(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_write(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::WritableStreamDefaultWriter, ctx)?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WritableStreamDefaultWriterImpl>::write(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "WritableStreamDefaultWriter")?;
+        rt::require_args(args, 1, "WritableStreamDefaultWriter constructor")?;
+        let a0 = rt::object_from_js(rt::arg(args, 0), I::WritableStream, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WritableStreamDefaultWriterImpl>::constructor(cx, a0)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::WritableStreamDefaultWriter, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::WritableStreamDefaultWriter,
+        name: "WritableStreamDefaultWriter",
+        parent: None,
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[
+            rt::AttrDef {
+                name: "closed",
+                getter: get_closed,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "desiredSize",
+                getter: get_desired_size,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "ready",
+                getter: get_ready,
+                setter: None,
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "abort",
+                func: op_abort,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "close",
+                func: op_close,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "releaseLock",
+                func: op_release_lock,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "write",
+                func: op_write,
+                length: 0,
             },
         ],
         static_attrs: &[],
@@ -38841,6 +39710,9 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &pop_state_event::DEF,
     &progress_event::DEF,
     &promise_rejection_event::DEF,
+    &readable_stream::DEF,
+    &readable_stream_default_controller::DEF,
+    &readable_stream_default_reader::DEF,
     &request::DEF,
     &resize_observer::DEF,
     &response::DEF,
@@ -38849,10 +39721,15 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &storage::DEF,
     &text_decoder::DEF,
     &text_encoder::DEF,
+    &transform_stream::DEF,
+    &transform_stream_default_controller::DEF,
     &tree_walker::DEF,
     &url::DEF,
     &url_search_params::DEF,
     &window::DEF,
+    &writable_stream::DEF,
+    &writable_stream_default_controller::DEF,
+    &writable_stream_default_writer::DEF,
     &xml_http_request_event_target::DEF,
     &xml_http_request_upload::DEF,
     &abort_signal::DEF,
