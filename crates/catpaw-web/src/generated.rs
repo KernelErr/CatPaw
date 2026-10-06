@@ -3664,6 +3664,12 @@ pub trait HTMLCanvasElementImpl {
     fn set_height(cx: &mut Cx<'_>, this: NodeId, value: u32) -> Fallible<()>;
 }
 
+pub trait CSSImpl {
+    fn supports(cx: &mut Cx<'_>, property: String, value: String) -> Fallible<bool>;
+    fn supports_overload2(cx: &mut Cx<'_>, condition_text: String) -> Fallible<bool>;
+    fn escape(cx: &mut Cx<'_>, ident: String) -> Fallible<String>;
+}
+
 pub trait consoleImpl {
     fn assert(cx: &mut Cx<'_>, condition: bool, data: Vec<Value>) -> Fallible<()>;
     fn clear(cx: &mut Cx<'_>) -> Fallible<()>;

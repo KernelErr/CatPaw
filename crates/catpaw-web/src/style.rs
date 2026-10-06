@@ -260,3 +260,19 @@ impl web::CSSStylePropertiesImpl for Web {
         edit(cx, this, |s| (s.set(&property, &value, false), ()))
     }
 }
+
+impl web::CSSImpl for Web {
+    fn supports(_cx: &mut Cx<'_>, property: String, value: String) -> Fallible<bool> {
+        Ok(catpaw_style::supports::supports_declaration(
+            &property, &value,
+        ))
+    }
+
+    fn supports_overload2(_cx: &mut Cx<'_>, condition_text: String) -> Fallible<bool> {
+        Ok(catpaw_style::supports::supports(&condition_text))
+    }
+
+    fn escape(_cx: &mut Cx<'_>, ident: String) -> Fallible<String> {
+        Ok(catpaw_style::supports::escape(&ident))
+    }
+}

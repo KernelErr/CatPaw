@@ -1198,3 +1198,39 @@ fn data_urls_are_fetched_without_a_network() {
         "base64 script / plain script / module / fetched hi there / text/plain;charset=US-ASCII / bare"
     );
 }
+
+#[test]
+fn css_namespace_and_element_factories() {
+    let mut page = load(
+        "<script>function attempt(f) { try { return String(f()); } catch (e) { return e.name; } }</script>",
+    );
+    for (source, expected) in [
+        (
+            "CSS.supports('display', 'grid') + ' ' + CSS.supports('display', 'nope') + ' ' + CSS.supports('(display: flex) and (gap: 1px)') + ' ' + CSS.supports('nonsense')",
+            "true false true false",
+        ),
+        (
+            "CSS.escape('1a.b') + ' ' + String(CSS)",
+            r"\31 a\.b [object CSS]",
+        ),
+        (
+            "var img = new Image(10, 20); img instanceof HTMLImageElement && img.tagName + ' ' + img.getAttribute('width') + ' ' + img.getAttribute('height')",
+            "IMG 10 20",
+        ),
+        (
+            "new Image().hasAttribute('width') + ' ' + (Image.prototype === HTMLImageElement.prototype)",
+            "false true",
+        ),
+        ("attempt(function () { return Image(); })", "TypeError"),
+        (
+            "var a = new Audio('/s.mp3'); a instanceof HTMLAudioElement && a.getAttribute('src') + ' ' + a.getAttribute('preload')",
+            "/s.mp3 auto",
+        ),
+        (
+            "var o = new Option('Text', 'v', true); o instanceof HTMLOptionElement && o.textContent + ' ' + o.getAttribute('value') + ' ' + o.hasAttribute('selected')",
+            "Text v true",
+        ),
+    ] {
+        assert_eq!(eval(&mut page, source), expected, "{source}");
+    }
+}

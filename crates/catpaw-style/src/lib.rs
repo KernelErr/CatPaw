@@ -16,6 +16,7 @@ pub mod inline;
 pub mod media;
 pub mod node;
 pub mod query;
+pub mod supports;
 pub mod table;
 
 pub use computed::{ComputedStyle, Pseudo};

@@ -503,7 +503,7 @@ pub fn subtree_text(dom: &Dom, id: NodeId, oracle: &dyn StyleOracle) -> String {
 }
 
 fn collect_text(dom: &Dom, id: NodeId, oracle: &dyn StyleOracle, out: &mut String) {
-    for child in dom.children(id) {
+    for child in dom.rendered_children(id) {
         match dom.kind(child) {
             NodeKind::Text(t) => out.push_str(t),
             NodeKind::Element(el) => {

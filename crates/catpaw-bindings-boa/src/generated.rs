@@ -40757,6 +40757,54 @@ pub mod svg_ellipse_element {
     };
 }
 
+pub mod ns_css {
+    use super::*;
+
+    fn op_supports(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        if args.len() >= 2 && true {
+            rt::require_args(args, 2, "CSS.supports")?;
+            let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+            let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
+            let r = rt::with_cx(ctx, |cx| <Web as web::CSSImpl>::supports(cx, a0, a1));
+            rt::ret(r, ctx)
+        } else if args.len() >= 1 && true {
+            rt::require_args(args, 1, "CSS.supports")?;
+            let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+            let r = rt::with_cx(ctx, |cx| <Web as web::CSSImpl>::supports_overload2(cx, a0));
+            rt::ret(r, ctx)
+        } else {
+            Err(rt::type_error(
+                "CSS.supports: no overload matches the arguments",
+            ))
+        }
+    }
+
+    fn op_escape(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::require_args(args, 1, "CSS.escape")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::CSSImpl>::escape(cx, a0));
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::NamespaceDef = rt::NamespaceDef {
+        name: "CSS",
+        ops: &[
+            rt::OpDef {
+                name: "supports",
+                func: op_supports,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "escape",
+                func: op_escape,
+                length: 1,
+            },
+        ],
+    };
+}
+
 pub mod ns_console {
     use super::*;
 
@@ -41263,4 +41311,4 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &svg_ellipse_element::DEF,
 ];
 
-pub static NAMESPACES: &[&rt::NamespaceDef] = &[&ns_console::DEF];
+pub static NAMESPACES: &[&rt::NamespaceDef] = &[&ns_css::DEF, &ns_console::DEF];

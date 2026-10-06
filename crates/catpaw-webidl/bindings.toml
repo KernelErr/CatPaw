@@ -585,6 +585,9 @@ members = ["encoding", "fatal", "ignoreBOM"]
 
 # ------------------------------------------------------------------- console
 
+[namespaces.CSS]
+members = ["escape", "supports"]
+
 [namespaces.console]
 members = [
   "assert", "clear", "debug", "error", "info", "log", "table", "trace", "warn", "dir",

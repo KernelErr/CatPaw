@@ -635,6 +635,38 @@ impl Dom {
         self.shadow_including_root(id) == self.document
     }
 
+    /// The children an element is rendered with: those of its shadow tree
+    /// if it has one, where a `<slot>` stands for the host's children it is
+    /// assigned (by `slot` attribute, or all the unslotted ones for the
+    /// default slot) and falls back to its own; otherwise its own children.
+    pub fn rendered_children(&self, id: NodeId) -> Vec<NodeId> {
+        let Some(el) = self.element(id) else {
+            return self.children(id).collect();
+        };
+        if let Some(shadow) = el.shadow_root {
+            return self.children(shadow).collect();
+        }
+        if el.is_html() && &*el.name.local == "slot" {
+            let root = self.root_of(id);
+            if let NodeKind::DocumentFragment(FragmentKind::ShadowRoot { host, .. }) =
+                &self.nodes[root].kind
+            {
+                let name = el.attr("name").unwrap_or_default();
+                let assigned: Vec<NodeId> = self
+                    .children(*host)
+                    .filter(|&c| match self.element(c) {
+                        Some(child) => child.attr("slot").unwrap_or_default() == name,
+                        None => name.is_empty(),
+                    })
+                    .collect();
+                if !assigned.is_empty() {
+                    return assigned;
+                }
+            }
+        }
+        self.children(id).collect()
+    }
+
     /// `id` and its descendants in tree order, with the shadow trees of the
     /// elements among them visited after their hosts.
     pub fn shadow_including_descendants(&self, id: NodeId) -> Vec<NodeId> {

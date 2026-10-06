@@ -148,7 +148,7 @@ impl MdWriter<'_> {
     }
 
     fn block_children(&mut self, parent: NodeId) {
-        for child in self.dom.children(parent) {
+        for child in self.dom.rendered_children(parent) {
             self.node(child);
         }
     }
@@ -243,7 +243,7 @@ impl MdWriter<'_> {
                 };
                 self.list_stack.push(start);
                 self.ensure_blank_line();
-                for child in self.dom.children(id) {
+                for child in self.dom.rendered_children(id) {
                     if self.dom.is_html_element(child, "li") {
                         self.list_item(child);
                     } else {

@@ -905,3 +905,58 @@ mod other_document_tests {
         assert!(!parse("").1);
     }
 }
+
+#[cfg(test)]
+mod rendered_children_tests {
+    use super::*;
+    use crate::FragmentKind;
+
+    #[test]
+    fn shadow_trees_are_rendered_with_their_slots_filled() {
+        let r = parse_html(
+            r#"<x-card id=card><b slot=title>T</b><i>body one</i><u>body two</u></x-card><p id=plain>p</p>"#,
+            &Default::default(),
+        );
+        let mut dom = r.dom;
+        let find = |dom: &Dom, local: &str| {
+            dom.descendants(dom.document())
+                .find(|&n| dom.element(n).is_some_and(|e| &*e.name.local == local))
+                .unwrap()
+        };
+        let card = find(&dom, "x-card");
+        let plain = find(&dom, "p");
+        assert_eq!(
+            dom.rendered_children(plain),
+            dom.children(plain).collect::<Vec<_>>()
+        );
+
+        let shadow = dom.create_fragment(FragmentKind::ShadowRoot {
+            host: card,
+            open: true,
+            delegates_focus: false,
+            clonable: false,
+            serializable: false,
+        });
+        dom.element_mut(card).unwrap().shadow_root = Some(shadow);
+        let heading = dom.create_html_element("h1", Vec::new());
+        let title_slot = dom.create_html_element("slot", vec![crate::Attr::html("name", "title")]);
+        let default_slot = dom.create_html_element("slot", Vec::new());
+        let fallback = dom.create_text("nothing");
+        let empty_slot = dom.create_html_element("slot", vec![crate::Attr::html("name", "none")]);
+        dom.append_child(heading, title_slot);
+        dom.append_child(shadow, heading);
+        dom.append_child(shadow, default_slot);
+        dom.append_child(empty_slot, fallback);
+        dom.append_child(shadow, empty_slot);
+
+        assert_eq!(
+            dom.rendered_children(card),
+            vec![heading, default_slot, empty_slot]
+        );
+        let b = find(&dom, "b");
+        assert_eq!(dom.rendered_children(title_slot), vec![b]);
+        let light: Vec<NodeId> = dom.children(card).filter(|&c| c != b).collect();
+        assert_eq!(dom.rendered_children(default_slot), light);
+        assert_eq!(dom.rendered_children(empty_slot), vec![fallback]);
+    }
+}

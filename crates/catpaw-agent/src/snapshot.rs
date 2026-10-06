@@ -252,7 +252,7 @@ impl<'a> Snapshotter<'a> {
 
     fn build_children(&self, parent: NodeId, options: &SnapshotOptions) -> Vec<AxNode> {
         let mut out = Vec::new();
-        for child in self.dom.children(parent) {
+        for child in self.dom.rendered_children(parent) {
             match self.dom.kind(child) {
                 NodeKind::Text(t) => {
                     let t = collapse_whitespace(t);

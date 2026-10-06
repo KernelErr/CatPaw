@@ -259,6 +259,47 @@
     });
   }
 
+  // The legacy factory functions: constructors that make an element.
+  function factory(name, make) {
+    const prototypes = {
+      Image: global.HTMLImageElement,
+      Audio: global.HTMLAudioElement,
+      Option: global.HTMLOptionElement,
+    };
+    const Factory = function (...args) {
+      if (new.target === undefined) {
+        throw new TypeError(`Failed to construct '': Please use the 'new' operator.`);
+      }
+      return make(...args);
+    };
+    Object.defineProperty(Factory, "name", { value: name });
+    const interfaceObject = prototypes[name];
+    if (interfaceObject) {
+      Object.defineProperty(Factory, "prototype", { value: interfaceObject.prototype, writable: false });
+    }
+    Object.defineProperty(global, name, { value: Factory, writable: true, configurable: true });
+  }
+  factory("Image", (width, height) => {
+    const img = global.document.createElement("img");
+    if (width !== undefined) img.width = width;
+    if (height !== undefined) img.height = height;
+    return img;
+  });
+  factory("Audio", (src) => {
+    const audio = global.document.createElement("audio");
+    audio.setAttribute("preload", "auto");
+    if (src !== undefined) audio.setAttribute("src", String(src));
+    return audio;
+  });
+  factory("Option", (text, value, defaultSelected, selected) => {
+    const option = global.document.createElement("option");
+    if (text !== undefined && String(text) !== "") option.textContent = String(text);
+    if (value !== undefined) option.setAttribute("value", String(value));
+    if (defaultSelected) option.setAttribute("selected", "");
+    if (selected) option.selected = true;
+    return option;
+  });
+
   // Asynchronous iteration of readable streams, over a reader.
   const streamPrototype = global.ReadableStream && global.ReadableStream.prototype;
   if (streamPrototype) {
