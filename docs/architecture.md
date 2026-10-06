@@ -16,6 +16,28 @@ This is the engineering summary. The full design discussion (in Chinese) is in
 Non-goals for v1: WebGL/WebGPU, media playback, extensions, WebRTC, printing,
 bfcache, HTTP/3, SharedArrayBuffer.
 
+## Product principles
+
+CatPaw's first user is an LLM agent. Humans do two things: install with one
+sentence (`catpaw setup <host>` writes the host's MCP config, or the host
+connects to a hosted server) and occasionally take over.
+
+- One step, one round trip: an action returns the settled diff snapshot and
+  its consequences; batches run several actions per call.
+- Token-frugal and byte-stable output: compact CST, diffs, cursors, and
+  deterministic ordering so prompt caches hit.
+- Failures name their cause (in-flight requests, occluding elements,
+  blocking dialogs); nothing ever hangs, dialogs and downloads are events.
+- Persistent profiles: a human logs in once. The hand-off viewer shows the
+  agent's tab live in the human's own browser and relays input; keystrokes
+  are never logged and password values are always masked.
+- Auditability is enforced by the browser, not by the agent: an append-only
+  per-session journal (actions, consequences, snapshots, later screenshots)
+  with `catpaw log`/`catpaw replay`; a policy file that is conservative about
+  side effects by default (submissions, POST navigations, uploads, downloads
+  need confirmation unless a domain is allowed); confirmation through MCP
+  elicitation or the local viewer; attribution of host, model and task; and
+  rate/page quotas that stop runaway agents.
 ## Crate map
 
 ```

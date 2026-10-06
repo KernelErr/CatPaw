@@ -239,6 +239,40 @@ WebDriver BiDi 仍是 W3C Working Draft（2026-09-30 版）；Playwright 的 `co
 - MCP 工具：`catpaw_navigate / snapshot / click / type / press / select / check / hover / scroll / drag / upload / wait / read / screenshot / evaluate / tabs / dialog / challenge / logs / checkpoint`。
 - JSON-RPC 方法族：`browser.* context.* tab.* nav.* page.* act.* wait.* dialog.handle download.* challenge.* handoff.end checkpoint.* recording.* logs.query events.*`；事件：tab.opened/closed、nav.*、dialog、download、challenge、challenge.cleared、handoff.*、console、network.*、error、confirmation.required、resource.limit。
 
+## 产品原则：agent first 的具体含义
+
+CatPaw 的第一用户是 LLM agent；人类只做两件事：安装一句话、偶尔接管。以下原则来自 agent 使用浏览器工具的实际体验，并直接约束 API 设计。
+
+### agent 喜欢用的浏览器
+
+- 一步一往返：动作调用返回 settled 后的 diff 快照与后果（导航、对话框、新 tab、下载）；支持批量动作，逐步返回结果。
+- 省 token 且输出稳定：紧凑 CST、diff 模式、折叠游标；同一页面输出逐字一致（固定排序、稳定 ref），便于跨步骤比较，也让宿主的 prompt cache 命中。
+- 失败点名原因：超时诊断列出在途请求、遮挡元素、阻塞的对话框，而不是只报"超时"。
+- 工具少而自描述：十几个工具，schema 附一行示例；阅读给 markdown，操作给快照，搜索给 find。
+- 从不挂起：对话框、下载、弹窗都成为结果里的事件。
+- 登录一次复用：持久化 profile，cookie 跨会话保留。
+- 护栏也是帮助：浏览器明确告知"此动作需要确认"，agent 可放心执行低风险步骤。
+
+### 人类的角色
+
+- 安装：`catpaw setup <host>` 写入宿主的 MCP 配置；或宿主直接连接托管的 CatPaw server，零安装。
+- 接管（hand-off）：agent 调用 `handoff({reason})` 得到本地链接并转述给人类；人类在自己的日常浏览器里打开，看到 CatPaw 中该 tab 的实时画面（截图流 + 键鼠接力），完成登录后控制权返回，会话 cookie 留在 CatPaw 的 profile 中。登录发生在 CatPaw 自己的会话里，不存在从其他浏览器搬运 cookie 的设备绑定问题。接管只暴露该 tab、有超时和一次性 token，agent 看不到按键，密码框在快照里恒为 `***`。
+- passkey、硬件密钥等 CatPaw 无法完成的登录，v2 提供"在自己的浏览器登录后导入该站点会话"的路径。
+- hand-off 依赖 M2 的布局与截图，因此从 M4 提前到 M3。
+
+### 可审计
+
+审计与限制由浏览器执行，不依赖 agent 自觉；agent 没有任何工具可以关闭它们。
+
+- 飞行记录仪：每个会话一份只追加的日志（时间、tab、URL、动作、后果、动作前后的快照，M2 后加截图）；`catpaw log` / `catpaw replay <session>` 渲染成时间线，记录 agent 看到了什么与做了什么。
+- 策略文件，默认对副作用保守：新 profile 可自由读取，但表单提交、POST 导航、上传、下载、跨 origin 的写操作需要确认；可按域名放开；另有域名黑白名单、只读模式、私网地址默认拒绝、动作速率与页数上限。agent 只会收到 `needs_confirmation` 或 `blocked_by_policy`。
+- 确认通道：宿主支持 MCP elicitation 则走宿主，否则由同一个本地页面呈现"批准：POST https://shop/checkout？"。
+- 归因：日志记录宿主、模型（若宿主提供）与任务标签。
+- 配额熔断：超过每分钟动作数或每任务页数时浏览器停下并通知人类。
+
+### 对路线图的调整
+
+M3 的范围改为：MCP 一键接入（`catpaw setup`）、持久 profile、飞行记录仪与回放、策略文件与确认通道、hand-off 查看器；原 M3 的其余内容（JSON-RPC/WS、diff、settled、动作后果、checkpoint v1、HAR 回放、SDK）保留。
 ## 里程碑与退出标准
 
 | 里程碑 | 内容 | 退出标准 |
