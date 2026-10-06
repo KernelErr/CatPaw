@@ -312,6 +312,14 @@ impl web::WindowOrWorkerGlobalScopeImpl for Web {
         ))
     }
 
+    fn crypto(cx: &mut Cx<'_>) -> Fallible<ObjectId> {
+        Ok(singleton(
+            cx,
+            |s| &mut s.crypto,
+            |page| page.alloc(crate::crypto::CryptoObject),
+        ))
+    }
+
     fn origin(cx: &mut Cx<'_>) -> Fallible<String> {
         Ok(cx.page.url.borrow().origin().ascii_serialization())
     }

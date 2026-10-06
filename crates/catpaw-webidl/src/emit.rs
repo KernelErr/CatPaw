@@ -10,7 +10,7 @@
 
 use std::fmt::Write as _;
 
-use crate::model::{ConstValue, DefaultValue, Idl, InterfaceKind, Type};
+use crate::model::{ConstValue, DefaultValue, Idl, InterfaceKind, Member, Type};
 use crate::names::{lit, snake, variant};
 use crate::plan::{
     AttrKind, Handle, Manifest, Named, PArg, PAttr, PInterface, POp, POverload, Plan, Planner,
@@ -489,7 +489,23 @@ impl<'a> Emitter<'a> {
                     format!("rt::callback_from_js({v}, CallbackKind::Function, ctx)?")
                 }
                 Named::CallbackInterface => {
-                    format!("rt::callback_from_js({v}, CallbackKind::Interface, ctx)?")
+                    // The operation a callback interface object is called
+                    // through.
+                    let method = self
+                        .idl
+                        .interfaces
+                        .get(n.as_str())
+                        .and_then(|i| {
+                            i.members.iter().find_map(|m| match m {
+                                Member::Operation(op) => op.name.clone(),
+                                _ => None,
+                            })
+                        })
+                        .unwrap_or_else(|| "handleEvent".to_string());
+                    format!(
+                        "rt::callback_from_js({v}, CallbackKind::Interface({}), ctx)?",
+                        lit(&method)
+                    )
                 }
                 Named::Unknown => format!("rt::value_from_js({v}, ctx)?"),
             },

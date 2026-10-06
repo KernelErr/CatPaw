@@ -72,8 +72,9 @@ pub enum CallbackKind {
     /// A callback function.
     Function,
     /// A callback interface such as `EventListener`: either a function or an
-    /// object whose `handleEvent` method is looked up at call time.
-    Interface,
+    /// object whose method of this name (`handleEvent`) is looked up at
+    /// call time.
+    Interface(&'static str),
 }
 
 /// A script function (or callback-interface object) held by Rust.

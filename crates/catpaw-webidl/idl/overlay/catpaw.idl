@@ -35,3 +35,16 @@ partial interface Attr {
   readonly attribute Node? parentNode;
   readonly attribute Element? parentElement;
 };
+
+// https://w3c.github.io/webcrypto/#crypto-interface, without SubtleCrypto.
+// (The specification's IDL as a whole uses syntax the parser here does not
+// read yet, so it is not vendored.)
+partial interface mixin WindowOrWorkerGlobalScope {
+  [SameObject] readonly attribute Crypto crypto;
+};
+
+[Exposed=(Window,Worker)]
+interface Crypto {
+  ArrayBufferView getRandomValues(ArrayBufferView array);
+  DOMString randomUUID();
+};

@@ -2020,6 +2020,37 @@ pub mod css_style_properties {
     };
 }
 
+pub mod crypto {
+    use super::*;
+
+    fn op_random_uuid(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Crypto, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::CryptoImpl>::random_uuid(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::Crypto,
+        name: "Crypto",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[rt::OpDef {
+            name: "randomUUID",
+            func: op_random_uuid,
+            length: 0,
+        }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod dom_implementation {
     use super::*;
 
@@ -2939,7 +2970,7 @@ pub mod event_target {
         } else {
             Some(rt::callback_from_js(
                 rt::arg(args, 1),
-                CallbackKind::Interface,
+                CallbackKind::Interface("handleEvent"),
                 ctx,
             )?)
         };
@@ -2970,7 +3001,7 @@ pub mod event_target {
         } else {
             Some(rt::callback_from_js(
                 rt::arg(args, 1),
-                CallbackKind::Interface,
+                CallbackKind::Interface("handleEvent"),
                 ctx,
             )?)
         };
@@ -4099,7 +4130,7 @@ pub mod media_query_list {
         } else {
             Some(rt::callback_from_js(
                 rt::arg(args, 0),
-                CallbackKind::Interface,
+                CallbackKind::Interface("handleEvent"),
                 ctx,
             )?)
         };
@@ -4122,7 +4153,7 @@ pub mod media_query_list {
         } else {
             Some(rt::callback_from_js(
                 rt::arg(args, 0),
-                CallbackKind::Interface,
+                CallbackKind::Interface("handleEvent"),
                 ctx,
             )?)
         };
@@ -5386,6 +5417,150 @@ pub mod node {
             ("DOCUMENT_POSITION_CONTAINED_BY", 16_f64),
             ("DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC", 32_f64),
         ],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod node_iterator {
+    use super::*;
+
+    fn get_root(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "root", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_object(this_js, I::NodeIterator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::NodeIteratorImpl>::root(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "root", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_reference_node(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::NodeIterator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NodeIteratorImpl>::reference_node(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_pointer_before_reference_node(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::NodeIterator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NodeIteratorImpl>::pointer_before_reference_node(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_what_to_show(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::NodeIterator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NodeIteratorImpl>::what_to_show(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_filter(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::NodeIterator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::NodeIteratorImpl>::filter(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_next_node(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::NodeIterator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NodeIteratorImpl>::next_node(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_previous_node(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::NodeIterator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NodeIteratorImpl>::previous_node(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_detach(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::NodeIterator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::NodeIteratorImpl>::detach(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::NodeIterator,
+        name: "NodeIterator",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "root",
+                getter: get_root,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "referenceNode",
+                getter: get_reference_node,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "pointerBeforeReferenceNode",
+                getter: get_pointer_before_reference_node,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "whatToShow",
+                getter: get_what_to_show,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "filter",
+                getter: get_filter,
+                setter: None,
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "nextNode",
+                func: op_next_node,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "previousNode",
+                func: op_previous_node,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "detach",
+                func: op_detach,
+                length: 0,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
         iterable: rt::Iterable::None,
         exotic: None,
     };
@@ -7267,6 +7442,209 @@ pub mod text_encoder {
             func: op_encode,
             length: 0,
         }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod tree_walker {
+    use super::*;
+
+    fn get_root(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "root", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_object(this_js, I::TreeWalker, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::TreeWalkerImpl>::root(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "root", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_what_to_show(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TreeWalker, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TreeWalkerImpl>::what_to_show(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_filter(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TreeWalker, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::TreeWalkerImpl>::filter(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_current_node(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TreeWalker, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TreeWalkerImpl>::current_node(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_current_node(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TreeWalker, ctx)?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TreeWalkerImpl>::set_current_node(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn op_parent_node(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::TreeWalker, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TreeWalkerImpl>::parent_node(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_first_child(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::TreeWalker, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TreeWalkerImpl>::first_child(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_last_child(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::TreeWalker, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::TreeWalkerImpl>::last_child(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_previous_sibling(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::TreeWalker, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TreeWalkerImpl>::previous_sibling(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_next_sibling(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::TreeWalker, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TreeWalkerImpl>::next_sibling(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_previous_node(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::TreeWalker, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TreeWalkerImpl>::previous_node(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_next_node(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::TreeWalker, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::TreeWalkerImpl>::next_node(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::TreeWalker,
+        name: "TreeWalker",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "root",
+                getter: get_root,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "whatToShow",
+                getter: get_what_to_show,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "filter",
+                getter: get_filter,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "currentNode",
+                getter: get_current_node,
+                setter: Some(set_current_node),
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "parentNode",
+                func: op_parent_node,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "firstChild",
+                func: op_first_child,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "lastChild",
+                func: op_last_child,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "previousSibling",
+                func: op_previous_sibling,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "nextSibling",
+                func: op_next_sibling,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "previousNode",
+                func: op_previous_node,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "nextNode",
+                func: op_next_node,
+                length: 0,
+            },
+        ],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -10238,6 +10616,19 @@ pub mod window {
         rt::ret(r, ctx)
     }
 
+    fn get_crypto(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "crypto", ctx) {
+            return Ok(v);
+        }
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WindowOrWorkerGlobalScopeImpl>::crypto(cx)
+        });
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "crypto", &v, ctx);
+        Ok(v)
+    }
+
     fn get_session_storage(
         this_js: &JsValue,
         _args: &[JsValue],
@@ -11230,6 +11621,11 @@ pub mod window {
             rt::AttrDef {
                 name: "isSecureContext",
                 getter: get_is_secure_context,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "crypto",
+                getter: get_crypto,
                 setter: None,
             },
             rt::AttrDef {
@@ -14688,6 +15084,72 @@ pub mod document {
         rt::ret(r, ctx)
     }
 
+    fn op_create_node_iterator(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        rt::require_args(args, 1, "Document.createNodeIterator")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            rt::arg(args, 1).to_u32(ctx)?
+        } else {
+            (4294967295) as u32
+        };
+        let a2 = if args.len() > 2 && !args[2].is_undefined() {
+            if rt::arg(args, 2).is_null_or_undefined() {
+                None
+            } else {
+                Some(rt::callback_from_js(
+                    rt::arg(args, 2),
+                    CallbackKind::Interface("acceptNode"),
+                    ctx,
+                )?)
+            }
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DocumentImpl>::create_node_iterator(cx, this, a0, a1, a2)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_create_tree_walker(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        rt::require_args(args, 1, "Document.createTreeWalker")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            rt::arg(args, 1).to_u32(ctx)?
+        } else {
+            (4294967295) as u32
+        };
+        let a2 = if args.len() > 2 && !args[2].is_undefined() {
+            if rt::arg(args, 2).is_null_or_undefined() {
+                None
+            } else {
+                Some(rt::callback_from_js(
+                    rt::arg(args, 2),
+                    CallbackKind::Interface("acceptNode"),
+                    ctx,
+                )?)
+            }
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DocumentImpl>::create_tree_walker(cx, this, a0, a1, a2)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn op_get_elements_by_name(
         this_js: &JsValue,
         args: &[JsValue],
@@ -15450,6 +15912,16 @@ pub mod document {
             rt::OpDef {
                 name: "createEvent",
                 func: op_create_event,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "createNodeIterator",
+                func: op_create_node_iterator,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "createTreeWalker",
+                func: op_create_tree_walker,
                 length: 1,
             },
             rt::OpDef {
@@ -30966,6 +31438,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &abort_controller::DEF,
     &css_style_declaration::DEF,
     &css_style_properties::DEF,
+    &crypto::DEF,
     &dom_implementation::DEF,
     &dom_parser::DEF,
     &dom_rect_read_only::DEF,
@@ -30986,6 +31459,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &named_node_map::DEF,
     &navigator::DEF,
     &node::DEF,
+    &node_iterator::DEF,
     &node_list::DEF,
     &performance::DEF,
     &performance_entry::DEF,
@@ -31004,6 +31478,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &storage::DEF,
     &text_decoder::DEF,
     &text_encoder::DEF,
+    &tree_walker::DEF,
     &url::DEF,
     &url_search_params::DEF,
     &window::DEF,

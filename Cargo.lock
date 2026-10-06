@@ -623,6 +623,7 @@ dependencies = [
  "catpaw-js",
  "catpaw-style",
  "encoding_rs",
+ "getrandom 0.3.4",
  "indexmap",
  "serde_json",
  "slotmap",

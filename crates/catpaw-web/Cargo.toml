@@ -8,6 +8,7 @@ publish = false
 description = "CatPaw browser engine: web"
 
 [dependencies]
+getrandom.workspace = true
 catpaw-dom = { path = "../catpaw-dom", version = "0.0.1" }
 catpaw-js = { path = "../catpaw-js", version = "0.0.1" }
 catpaw-style = { path = "../catpaw-style", version = "0.0.1" }

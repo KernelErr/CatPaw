@@ -25,6 +25,7 @@ pub enum InterfaceId {
     AbortController,
     CSSStyleDeclaration,
     CSSStyleProperties,
+    Crypto,
     DOMImplementation,
     DOMParser,
     DOMRectReadOnly,
@@ -45,6 +46,7 @@ pub enum InterfaceId {
     NamedNodeMap,
     Navigator,
     Node,
+    NodeIterator,
     NodeList,
     Performance,
     PerformanceEntry,
@@ -63,6 +65,7 @@ pub enum InterfaceId {
     Storage,
     TextDecoder,
     TextEncoder,
+    TreeWalker,
     URL,
     URLSearchParams,
     Window,
@@ -156,11 +159,12 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 131;
-    pub const ALL: [InterfaceId; 131] = [
+    pub const COUNT: usize = 134;
+    pub const ALL: [InterfaceId; 134] = [
         InterfaceId::AbortController,
         InterfaceId::CSSStyleDeclaration,
         InterfaceId::CSSStyleProperties,
+        InterfaceId::Crypto,
         InterfaceId::DOMImplementation,
         InterfaceId::DOMParser,
         InterfaceId::DOMRectReadOnly,
@@ -181,6 +185,7 @@ impl InterfaceId {
         InterfaceId::NamedNodeMap,
         InterfaceId::Navigator,
         InterfaceId::Node,
+        InterfaceId::NodeIterator,
         InterfaceId::NodeList,
         InterfaceId::Performance,
         InterfaceId::PerformanceEntry,
@@ -199,6 +204,7 @@ impl InterfaceId {
         InterfaceId::Storage,
         InterfaceId::TextDecoder,
         InterfaceId::TextEncoder,
+        InterfaceId::TreeWalker,
         InterfaceId::URL,
         InterfaceId::URLSearchParams,
         InterfaceId::Window,
@@ -296,6 +302,7 @@ impl InterfaceId {
             InterfaceId::AbortController => "AbortController",
             InterfaceId::CSSStyleDeclaration => "CSSStyleDeclaration",
             InterfaceId::CSSStyleProperties => "CSSStyleProperties",
+            InterfaceId::Crypto => "Crypto",
             InterfaceId::DOMImplementation => "DOMImplementation",
             InterfaceId::DOMParser => "DOMParser",
             InterfaceId::DOMRectReadOnly => "DOMRectReadOnly",
@@ -316,6 +323,7 @@ impl InterfaceId {
             InterfaceId::NamedNodeMap => "NamedNodeMap",
             InterfaceId::Navigator => "Navigator",
             InterfaceId::Node => "Node",
+            InterfaceId::NodeIterator => "NodeIterator",
             InterfaceId::NodeList => "NodeList",
             InterfaceId::Performance => "Performance",
             InterfaceId::PerformanceEntry => "PerformanceEntry",
@@ -334,6 +342,7 @@ impl InterfaceId {
             InterfaceId::Storage => "Storage",
             InterfaceId::TextDecoder => "TextDecoder",
             InterfaceId::TextEncoder => "TextEncoder",
+            InterfaceId::TreeWalker => "TreeWalker",
             InterfaceId::URL => "URL",
             InterfaceId::URLSearchParams => "URLSearchParams",
             InterfaceId::Window => "Window",
@@ -432,6 +441,7 @@ impl InterfaceId {
             "AbortController" => InterfaceId::AbortController,
             "CSSStyleDeclaration" => InterfaceId::CSSStyleDeclaration,
             "CSSStyleProperties" => InterfaceId::CSSStyleProperties,
+            "Crypto" => InterfaceId::Crypto,
             "DOMImplementation" => InterfaceId::DOMImplementation,
             "DOMParser" => InterfaceId::DOMParser,
             "DOMRectReadOnly" => InterfaceId::DOMRectReadOnly,
@@ -452,6 +462,7 @@ impl InterfaceId {
             "NamedNodeMap" => InterfaceId::NamedNodeMap,
             "Navigator" => InterfaceId::Navigator,
             "Node" => InterfaceId::Node,
+            "NodeIterator" => InterfaceId::NodeIterator,
             "NodeList" => InterfaceId::NodeList,
             "Performance" => InterfaceId::Performance,
             "PerformanceEntry" => InterfaceId::PerformanceEntry,
@@ -470,6 +481,7 @@ impl InterfaceId {
             "Storage" => InterfaceId::Storage,
             "TextDecoder" => InterfaceId::TextDecoder,
             "TextEncoder" => InterfaceId::TextEncoder,
+            "TreeWalker" => InterfaceId::TreeWalker,
             "URL" => InterfaceId::URL,
             "URLSearchParams" => InterfaceId::URLSearchParams,
             "Window" => InterfaceId::Window,
@@ -569,6 +581,7 @@ impl InterfaceId {
             InterfaceId::AbortController => None,
             InterfaceId::CSSStyleDeclaration => None,
             InterfaceId::CSSStyleProperties => Some(InterfaceId::CSSStyleDeclaration),
+            InterfaceId::Crypto => None,
             InterfaceId::DOMImplementation => None,
             InterfaceId::DOMParser => None,
             InterfaceId::DOMRectReadOnly => None,
@@ -589,6 +602,7 @@ impl InterfaceId {
             InterfaceId::NamedNodeMap => None,
             InterfaceId::Navigator => None,
             InterfaceId::Node => Some(InterfaceId::EventTarget),
+            InterfaceId::NodeIterator => None,
             InterfaceId::NodeList => None,
             InterfaceId::Performance => Some(InterfaceId::EventTarget),
             InterfaceId::PerformanceEntry => None,
@@ -607,6 +621,7 @@ impl InterfaceId {
             InterfaceId::Storage => None,
             InterfaceId::TextDecoder => None,
             InterfaceId::TextEncoder => None,
+            InterfaceId::TreeWalker => None,
             InterfaceId::URL => None,
             InterfaceId::URLSearchParams => None,
             InterfaceId::Window => Some(InterfaceId::EventTarget),
@@ -1835,6 +1850,7 @@ pub trait WindowOrWorkerGlobalScopeImpl {
         value: Value,
         options: StructuredSerializeOptions,
     ) -> Fallible<Value>;
+    fn crypto(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
 }
 
 pub trait WindowSessionStorageImpl {
@@ -1872,6 +1888,10 @@ pub trait CSSStylePropertiesImpl {
     fn named_get(cx: &mut Cx<'_>, this: ObjectId, name: &str) -> Fallible<Option<String>>;
     fn named_properties(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<String>>;
     fn named_set(cx: &mut Cx<'_>, this: ObjectId, name: &str, value: String) -> Fallible<()>;
+}
+
+pub trait CryptoImpl {
+    fn random_uuid(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
 }
 
 pub trait DOMImplementationImpl {
@@ -2226,6 +2246,17 @@ pub trait NodeImpl {
     fn remove_child(cx: &mut Cx<'_>, this: NodeId, child: NodeId) -> Fallible<NodeId>;
 }
 
+pub trait NodeIteratorImpl {
+    fn root(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<NodeId>;
+    fn reference_node(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<NodeId>;
+    fn pointer_before_reference_node(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn what_to_show(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn filter(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<Callback>>;
+    fn next_node(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
+    fn previous_node(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
+    fn detach(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+}
+
 pub trait NodeListImpl {
     fn item(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<NodeId>>;
     fn length(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
@@ -2441,6 +2472,21 @@ pub trait TextDecoderImpl {
 pub trait TextEncoderImpl {
     fn encode(cx: &mut Cx<'_>, this: ObjectId, input: String) -> Fallible<Uint8ArrayData>;
     fn constructor(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
+}
+
+pub trait TreeWalkerImpl {
+    fn root(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<NodeId>;
+    fn what_to_show(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn filter(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<Callback>>;
+    fn current_node(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<NodeId>;
+    fn set_current_node(cx: &mut Cx<'_>, this: ObjectId, value: NodeId) -> Fallible<()>;
+    fn parent_node(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
+    fn first_child(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
+    fn last_child(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
+    fn previous_sibling(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
+    fn next_sibling(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
+    fn previous_node(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
+    fn next_node(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
 }
 
 pub trait URLImpl {
@@ -2667,6 +2713,20 @@ pub trait DocumentImpl {
         qualified_name: String,
     ) -> Fallible<ObjectId>;
     fn create_event(cx: &mut Cx<'_>, this: NodeId, interface: String) -> Fallible<ObjectId>;
+    fn create_node_iterator(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        root: NodeId,
+        what_to_show: u32,
+        filter: Option<Callback>,
+    ) -> Fallible<ObjectId>;
+    fn create_tree_walker(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        root: NodeId,
+        what_to_show: u32,
+        filter: Option<Callback>,
+    ) -> Fallible<ObjectId>;
     fn location(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<ObjectId>>;
     fn referrer(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
     fn cookie(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;

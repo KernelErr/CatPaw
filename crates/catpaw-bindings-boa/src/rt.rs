@@ -978,7 +978,7 @@ pub fn callback_from_js(v: &JsValue, kind: CallbackKind, _ctx: &mut Context) -> 
                 "The callback provided as parameter is not a function.",
             ));
         }
-        CallbackKind::Interface if !v.is_object() => {
+        CallbackKind::Interface(_) if !v.is_object() => {
             return Err(type_error(
                 "The callback provided as parameter is not an object.",
             ));
@@ -1897,6 +1897,15 @@ pub(crate) fn install(ctx: &mut Context, rt: &Runtime) -> JsResult<()> {
     }
     for def in crate::generated::NAMESPACES {
         install_namespace(ctx, def);
+    }
+    // Members whose glue is written by hand.
+    if let Some(crypto) = rt.proto(I::Crypto) {
+        let op = OpDef {
+            name: "getRandomValues",
+            length: 1,
+            func: crate::crypto::get_random_values,
+        };
+        define_op(ctx, &crypto, &op);
     }
     Ok(())
 }

@@ -5,7 +5,7 @@
 //! nothing else, and answer accordingly.
 
 use catpaw_dom::{Dom, FragmentKind, LocalName, Namespace, NodeId, NodeKind, QualName, QuirksMode};
-use catpaw_js::{Exception, Fallible, ObjectId, WindowRef};
+use catpaw_js::{Callback, Exception, Fallible, ObjectId, WindowRef};
 
 use crate::collections::{self, ListSource};
 use crate::element::{child_text_content, is_valid_element_name, validate_and_extract};
@@ -250,6 +250,26 @@ impl web::DocumentImpl for Web {
         qualified_name: String,
     ) -> Fallible<ObjectId> {
         crate::attributes::create_ns(cx, this, namespace, &qualified_name)
+    }
+
+    fn create_node_iterator(
+        cx: &mut Cx<'_>,
+        _this: NodeId,
+        root: NodeId,
+        what_to_show: u32,
+        filter: Option<Callback>,
+    ) -> Fallible<ObjectId> {
+        crate::traversal::node_iterator(cx, root, what_to_show, filter)
+    }
+
+    fn create_tree_walker(
+        cx: &mut Cx<'_>,
+        _this: NodeId,
+        root: NodeId,
+        what_to_show: u32,
+        filter: Option<Callback>,
+    ) -> Fallible<ObjectId> {
+        crate::traversal::tree_walker(cx, root, what_to_show, filter)
     }
 
     fn create_event(cx: &mut Cx<'_>, _this: NodeId, interface: String) -> Fallible<ObjectId> {

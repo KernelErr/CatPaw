@@ -1078,3 +1078,41 @@ fn hyperlinks_take_their_urls_apart() {
         assert_eq!(eval(&mut page, source), expected, "{source}");
     }
 }
+
+#[test]
+fn crypto_hands_out_random_values() {
+    let mut page = load(
+        r#"<script>
+  function attempt(f) { try { return String(f()); } catch (e) { return e.name; } }
+</script>"#,
+    );
+    for (source, expected) in [
+        ("crypto instanceof Crypto && crypto === window.crypto && typeof crypto.subtle", "undefined"),
+        (
+            "var bytes = new Uint8Array(32), same = crypto.getRandomValues(bytes); same === bytes && bytes.some(function (b) { return b !== 0; })",
+            "true",
+        ),
+        // Only the part of the buffer the array covers is filled.
+        (
+            "var whole = new Uint8Array(64), part = new Uint16Array(whole.buffer, 16, 8); crypto.getRandomValues(part);
+             whole.slice(0, 16).every(function (b) { return b === 0; }) && whole.slice(32).every(function (b) { return b === 0; }) &&
+             whole.slice(16, 32).some(function (b) { return b !== 0; })",
+            "true",
+        ),
+        ("crypto.getRandomValues(new Uint8Array(0)).length", "0"),
+        ("crypto.getRandomValues(new BigUint64Array(2)).length + ' ' + crypto.getRandomValues(new Int32Array(4)).length", "2 4"),
+        ("crypto.getRandomValues(new Uint8Array(65536)).length", "65536"),
+        ("attempt(function () { crypto.getRandomValues(new Uint8Array(65537)); })", "QuotaExceededError"),
+        ("attempt(function () { crypto.getRandomValues(new Float32Array(4)); })", "TypeMismatchError"),
+        ("attempt(function () { crypto.getRandomValues(new DataView(new ArrayBuffer(4))); })", "TypeError"),
+        ("attempt(function () { crypto.getRandomValues([1, 2]); })", "TypeError"),
+        ("attempt(function () { crypto.getRandomValues(); })", "TypeError"),
+        ("attempt(function () { Crypto.prototype.getRandomValues.call({}, new Uint8Array(1)); })", "TypeError"),
+        (
+            "var id = crypto.randomUUID(); /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id) && id !== crypto.randomUUID()",
+            "true",
+        ),
+    ] {
+        assert_eq!(eval(&mut page, source), expected, "{source}");
+    }
+}

@@ -353,6 +353,9 @@ pub(crate) fn append(cx: &mut Cx<'_>, node: NodeId, parent: NodeId) -> Fallible<
 /// `suppress_observers` the caller reports the removal to mutation
 /// observers itself.
 pub(crate) fn remove(cx: &mut Cx<'_>, node: NodeId, suppress_observers: bool) {
+    if cx.dom().contains(node) && cx.dom().parent(node).is_some() {
+        crate::traversal::before_removal(cx.page, node);
+    }
     let (parent, previous, next) = {
         let mut dom = cx.dom_mut();
         if !dom.contains(node) {

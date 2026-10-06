@@ -8,7 +8,7 @@ use boa_engine::builtins::promise::PromiseState;
 use boa_engine::job::PromiseJob;
 use boa_engine::module::Module;
 use boa_engine::object::builtins::JsPromise;
-use boa_engine::{Context, JsError, JsString, JsValue, Source, js_string};
+use boa_engine::{Context, JsError, JsString, JsValue, Source};
 use catpaw_js::{
     Callback, CallbackKind, Exception, Fallible, ObjectId, PromiseRef, ScriptHost, Value,
 };
@@ -129,13 +129,15 @@ impl ScriptHost for BoaHost<'_> {
         let args_js: Vec<JsValue> = args.iter().map(|a| self.js_value(a)).collect();
 
         let mut function = target.clone();
-        if callback.kind == CallbackKind::Interface && !target.is_callable() {
-            // A callback interface object: call its `handleEvent` method.
+        if let CallbackKind::Interface(method) = callback.kind
+            && !target.is_callable()
+        {
+            // A callback interface object: call its method.
             let Some(object) = target.as_object() else {
                 return Ok(Value::Undefined);
             };
             function = object
-                .get(js_string!("handleEvent"), self.ctx)
+                .get(JsString::from(method), self.ctx)
                 .map_err(|e| rt::exception_from_js(e, self.ctx))?;
             this_js = target;
         }

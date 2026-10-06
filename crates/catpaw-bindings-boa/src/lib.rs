@@ -10,6 +10,7 @@
 //!   conversions, and the installation of interfaces into a realm.
 //! - [`BoaPage`] owns a Boa context set up for one page.
 
+mod crypto;
 pub mod generated;
 mod host;
 mod modules;

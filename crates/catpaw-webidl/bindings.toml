@@ -107,7 +107,7 @@ members = [
   "location", "referrer", "cookie", "readyState", "title", "body", "head",
   "getElementsByName", "currentScript", "defaultView", "hasFocus", "hidden",
   "visibilityState", "write", "writeln", "open", "close", "implementation",
-  "createAttribute", "createAttributeNS",
+  "createAttribute", "createAttributeNS", "createNodeIterator", "createTreeWalker",
 ]
 
 [interfaces.XMLDocument]
@@ -121,6 +121,18 @@ members = ["parseFromString"]
 
 [interfaces.DocumentType]
 members = ["name", "publicId", "systemId"]
+
+[interfaces.NodeIterator]
+members = [
+  "root", "referenceNode", "pointerBeforeReferenceNode", "whatToShow", "filter", "nextNode",
+  "previousNode", "detach",
+]
+
+[interfaces.TreeWalker]
+members = [
+  "root", "whatToShow", "filter", "currentNode", "parentNode", "firstChild", "lastChild",
+  "previousSibling", "nextSibling", "previousNode", "nextNode",
+]
 
 [interfaces.NamedNodeMap]
 exotic = true
@@ -302,6 +314,7 @@ members = [
 members = [
   "origin", "isSecureContext", "btoa", "atob", "setTimeout", "clearTimeout", "setInterval",
   "clearInterval", "queueMicrotask", "structuredClone", "reportError", "performance", "fetch",
+  "crypto",
 ]
 
 [mixins.AnimationFrameProvider]
@@ -377,6 +390,11 @@ members = ["observe", "disconnect", "takeRecords", "supportedEntryTypes"]
 
 [interfaces.PerformanceObserverEntryList]
 members = ["getEntries", "getEntriesByType", "getEntriesByName"]
+
+# `getRandomValues` is written by hand in the bindings: it fills the array it
+# is given. `subtle` is absent until SubtleCrypto is there.
+[interfaces.Crypto]
+members = ["randomUUID"]
 
 [interfaces.Storage]
 exotic = true
