@@ -1,0 +1,33 @@
+[package]
+name = "catpaw-net"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "CatPaw browser engine: net"
+
+[dependencies]
+hyper.workspace = true
+hyper-util.workspace = true
+hyper-rustls.workspace = true
+rustls.workspace = true
+webpki-roots.workspace = true
+tokio.workspace = true
+http.workspace = true
+http-body-util.workspace = true
+bytes.workspace = true
+cookie_store.workspace = true
+cookie.workspace = true
+web-bot-auth.workspace = true
+flate2.workspace = true
+brotli.workspace = true
+zstd.workspace = true
+url.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+indexmap.workspace = true
+base64.workspace = true
+getrandom.workspace = true
+ed25519-dalek.workspace = true

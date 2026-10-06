@@ -1,0 +1,9 @@
+[package]
+name = "catpaw-paint"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "CatPaw browser engine: paint"
+
+[dependencies]

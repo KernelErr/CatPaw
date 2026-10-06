@@ -1,0 +1,22 @@
+[package]
+name = "catpaw"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "CatPaw: a headless-first browser for AI agents"
+
+[[bin]]
+name = "catpaw"
+path = "src/main.rs"
+
+[dependencies]
+catpaw-net = { path = "../catpaw-net" }
+catpaw-fetch = { path = "../catpaw-fetch" }
+catpaw-dom = { path = "../catpaw-dom" }
+catpaw-agent = { path = "../catpaw-agent" }
+clap.workspace = true
+tokio.workspace = true
+anyhow.workspace = true
+url.workspace = true
+catpaw-style = { path = "../catpaw-style" }

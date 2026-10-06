@@ -1,0 +1,13 @@
+[package]
+name = "catpaw-dom"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "CatPaw browser engine: dom"
+
+[dependencies]
+html5ever.workspace = true
+markup5ever.workspace = true
+slotmap.workspace = true
+url.workspace = true

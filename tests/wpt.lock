@@ -1,0 +1,3 @@
+# Pinned web-platform-tests commit. `cargo xtask wpt-fetch <dirs>` and the test
+# runners materialise a sparse, blobless checkout of it under tests/wpt-src.
+d0d69b7dadfe16dd26a4c4792526aa2cee4a5ce6

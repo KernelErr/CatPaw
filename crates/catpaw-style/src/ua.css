@@ -1,0 +1,77 @@
+/* CatPaw user-agent stylesheet.
+ *
+ * A compact rendering of the HTML specification's "Rendering" section. The
+ * priority is correct `display` and visibility semantics (what exists), then
+ * the margins and fonts that layout will need; decoration is secondary. */
+
+[hidden]:not([hidden=until-found i]):not(embed) { display: none; }
+area, base, basefont, datalist, head, link, meta, noembed, noframes, param, rp,
+script, style, template, title { display: none; }
+noscript { display: none; }
+input[type=hidden i] { display: none !important; }
+dialog:not([open]) { display: none; }
+details:not([open]) > *:not(summary) { display: none; }
+select > option, select > optgroup { display: none; }
+
+html, body { display: block; }
+body { margin: 8px; }
+
+address, blockquote, center, dialog, div, figure, figcaption, footer, form,
+header, hr, legend, listing, main, p, plaintext, pre, search, xmp, article,
+aside, h1, h2, h3, h4, h5, h6, hgroup, nav, section, dir, dd, dl, dt, menu, ol,
+ul, details, summary, fieldset, optgroup, option, frameset, frame { display: block; }
+
+li { display: list-item; }
+ul, ol, menu, dir { padding-inline-start: 40px; }
+blockquote, figure, dd { margin-inline: 40px; }
+p, blockquote, figure, dl, ul, ol, menu, dir, pre, listing, plaintext, xmp,
+h1, h2, h3, h4, h5, h6 { margin-block: 1em; }
+
+table { display: table; border-spacing: 2px; border-collapse: separate; box-sizing: border-box; }
+caption { display: table-caption; text-align: center; }
+colgroup, colgroup[hidden] { display: table-column-group; }
+col, col[hidden] { display: table-column; }
+thead, thead[hidden] { display: table-header-group; }
+tbody, tbody[hidden] { display: table-row-group; }
+tfoot, tfoot[hidden] { display: table-footer-group; }
+tr, tr[hidden] { display: table-row; }
+td, th { display: table-cell; padding: 1px; vertical-align: inherit; }
+th { font-weight: bold; text-align: center; }
+
+ruby { display: ruby; }
+rt { display: ruby-text; }
+
+input, select, button, textarea, meter, progress, img, video, audio, iframe,
+embed, object, canvas, svg, math { display: inline-block; }
+img { overflow: clip; }
+iframe { border: 2px inset; }
+br::before { content: "\A"; white-space: pre; }
+hr { color: gray; border-style: inset; border-width: 1px; margin-block: 0.5em; margin-inline: auto; overflow: hidden; }
+
+h1 { font-size: 2em; font-weight: bold; margin-block: 0.67em; }
+h2 { font-size: 1.5em; font-weight: bold; margin-block: 0.83em; }
+h3 { font-size: 1.17em; font-weight: bold; }
+h4 { font-weight: bold; }
+h5 { font-size: 0.83em; font-weight: bold; }
+h6 { font-size: 0.67em; font-weight: bold; }
+b, strong { font-weight: bolder; }
+i, cite, em, var, address, dfn { font-style: italic; }
+code, kbd, samp, tt, pre, listing, plaintext, xmp { font-family: monospace; }
+pre, listing, plaintext, xmp { white-space: pre; }
+small { font-size: smaller; }
+sub, sup { font-size: smaller; line-height: normal; }
+sub { vertical-align: sub; }
+sup { vertical-align: super; }
+s, strike, del { text-decoration: line-through; }
+u, ins { text-decoration: underline; }
+mark { background: yellow; color: black; }
+a:link { color: #0000EE; text-decoration: underline; cursor: pointer; }
+a:visited { color: #551A8B; text-decoration: underline; }
+a:active { color: #FF0000; }
+abbr[title], acronym[title] { text-decoration: dotted underline; }
+
+[dir=ltr i] { direction: ltr; }
+[dir=rtl i] { direction: rtl; }
+bdi, output, [dir=ltr i], [dir=rtl i], [dir=auto i] { unicode-bidi: isolate; }
+bdo, bdo[dir] { unicode-bidi: isolate-override; }
+textarea { white-space: pre-wrap; }

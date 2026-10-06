@@ -1,0 +1,101 @@
+//! Per-element style data kept beside the arena.
+
+use std::cell::Cell;
+use std::sync::atomic::AtomicBool;
+
+use catpaw_dom::NodeId;
+use selectors::matching::ElementSelectorFlags;
+use slotmap::SecondaryMap;
+use style::Atom;
+use style::data::ElementDataWrapper;
+use style::properties::PropertyDeclarationBlock;
+use style::servo_arc::Arc;
+use style::shared_lock::{Locked, SharedRwLock};
+use style_dom::ElementState;
+
+/// Everything Stylo wants to read or write on an element.
+pub struct StyleSlot {
+    pub data: ElementDataWrapper,
+    pub has_data: AtomicBool,
+    pub selector_flags: Cell<ElementSelectorFlags>,
+    pub dirty_descendants: AtomicBool,
+    pub has_snapshot: AtomicBool,
+    pub snapshot_handled: AtomicBool,
+    /// The parsed `style` attribute.
+    pub style_attribute: Option<Arc<Locked<PropertyDeclarationBlock>>>,
+    /// The `id` attribute interned for `:id` matching.
+    pub id_atom: Option<Atom>,
+    /// Pseudo-class state derived from attributes (and later, from the
+    /// engine's live state: hover, focus, checkedness...).
+    pub state: ElementState,
+}
+
+impl Default for StyleSlot {
+    fn default() -> Self {
+        Self {
+            data: ElementDataWrapper::default(),
+            has_data: AtomicBool::new(false),
+            selector_flags: Cell::new(ElementSelectorFlags::empty()),
+            dirty_descendants: AtomicBool::new(false),
+            has_snapshot: AtomicBool::new(false),
+            snapshot_handled: AtomicBool::new(false),
+            style_attribute: None,
+            id_atom: None,
+            state: ElementState::empty(),
+        }
+    }
+}
+
+/// The side table: one [`StyleSlot`] per element node, plus the document's
+/// shared lock for stylesheet data.
+pub struct StyleTable {
+    slots: SecondaryMap<NodeId, StyleSlot>,
+    lock: SharedRwLock,
+}
+
+impl StyleTable {
+    pub fn new(lock: SharedRwLock) -> Self {
+        Self {
+            slots: SecondaryMap::new(),
+            lock,
+        }
+    }
+
+    pub fn lock(&self) -> &SharedRwLock {
+        &self.lock
+    }
+
+    pub fn slot(&self, id: NodeId) -> Option<&StyleSlot> {
+        self.slots.get(id)
+    }
+
+    pub fn slot_mut(&mut self, id: NodeId) -> Option<&mut StyleSlot> {
+        self.slots.get_mut(id)
+    }
+
+    pub fn contains(&self, id: NodeId) -> bool {
+        self.slots.contains_key(id)
+    }
+
+    /// Returns the slot for `id`, creating an empty one if needed. The bool
+    /// tells whether it was just created.
+    pub fn ensure(&mut self, id: NodeId) -> (&mut StyleSlot, bool) {
+        let created = !self.slots.contains_key(id);
+        if created {
+            self.slots.insert(id, StyleSlot::default());
+        }
+        (self.slots.get_mut(id).expect("just inserted"), created)
+    }
+
+    pub fn remove(&mut self, id: NodeId) {
+        self.slots.remove(id);
+    }
+
+    pub fn len(&self) -> usize {
+        self.slots.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.slots.is_empty()
+    }
+}

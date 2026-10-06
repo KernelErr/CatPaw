@@ -1,0 +1,23 @@
+[package]
+name = "catpaw-style"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "CatPaw browser engine: style resolution over the arena DOM with Stylo"
+
+[dependencies]
+catpaw-dom = { path = "../catpaw-dom" }
+style = { package = "stylo", version = "0.22" }
+style_traits = { package = "stylo_traits", version = "0.22" }
+style_dom = { package = "stylo_dom", version = "0.22" }
+style_config = { package = "stylo_static_prefs", version = "0.22" }
+selectors.workspace = true
+cssparser.workspace = true
+markup5ever.workspace = true
+atomic_refcell.workspace = true
+euclid.workspace = true
+app_units.workspace = true
+smallvec.workspace = true
+slotmap.workspace = true
+url.workspace = true
