@@ -171,21 +171,31 @@ const FRAME_MS: f64 = 1000.0 / 60.0;
 pub struct RafState {
     next_id: u32,
     callbacks: Vec<(u32, Callback)>,
-    /// When the next frame runs, if any callback is waiting for it.
+    /// When the next frame runs, if anything is waiting for it.
     deadline: Option<f64>,
     /// Callbacks of the frame being run that were cancelled before their turn.
     cancelled: Vec<u32>,
 }
 
-pub fn request_animation_frame(page: &PageState, callback: Callback) -> u32 {
+/// Makes sure a frame is coming: animation frame callbacks, then the
+/// observers that look at the rendered document.
+pub(crate) fn request_frame(page: &PageState) {
     let mut raf = page.raf.borrow_mut();
-    raf.next_id += 1;
-    let id = raf.next_id;
-    raf.callbacks.push((id, callback));
     if raf.deadline.is_none() {
         let now = page.clock.peek();
         raf.deadline = Some(((now / FRAME_MS).floor() + 1.0) * FRAME_MS);
     }
+}
+
+pub fn request_animation_frame(page: &PageState, callback: Callback) -> u32 {
+    let id = {
+        let mut raf = page.raf.borrow_mut();
+        raf.next_id += 1;
+        let id = raf.next_id;
+        raf.callbacks.push((id, callback));
+        id
+    };
+    request_frame(page);
     id
 }
 
@@ -216,6 +226,7 @@ fn run_frame(cx: &mut Cx<'_>) {
         }
     }
     cx.checkpoint();
+    crate::intersection_observer::update(cx);
 }
 
 /// Bounds on one run of the event loop.
@@ -297,6 +308,7 @@ pub fn run(cx: &mut Cx<'_>, limits: &LoopLimits) -> LoopReport {
             continue;
         }
 
+        crate::intersection_observer::request_frame_if_stale(cx.page);
         let frame = cx.page.raf.borrow().deadline;
         if frame.is_some_and(|t| t <= now) {
             run_frame(cx);

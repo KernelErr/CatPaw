@@ -34,6 +34,8 @@ pub enum InterfaceId {
     HashChangeEvent,
     Headers,
     History,
+    IntersectionObserver,
+    IntersectionObserverEntry,
     Location,
     MediaQueryList,
     MutationObserver,
@@ -46,6 +48,7 @@ pub enum InterfaceId {
     ProgressEvent,
     PromiseRejectionEvent,
     Request,
+    ResizeObserver,
     Response,
     Screen,
     Storage,
@@ -106,8 +109,8 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 81;
-    pub const ALL: [InterfaceId; 81] = [
+    pub const COUNT: usize = 84;
+    pub const ALL: [InterfaceId; 84] = [
         InterfaceId::AbortController,
         InterfaceId::CSSStyleDeclaration,
         InterfaceId::CSSStyleProperties,
@@ -120,6 +123,8 @@ impl InterfaceId {
         InterfaceId::HashChangeEvent,
         InterfaceId::Headers,
         InterfaceId::History,
+        InterfaceId::IntersectionObserver,
+        InterfaceId::IntersectionObserverEntry,
         InterfaceId::Location,
         InterfaceId::MediaQueryList,
         InterfaceId::MutationObserver,
@@ -132,6 +137,7 @@ impl InterfaceId {
         InterfaceId::ProgressEvent,
         InterfaceId::PromiseRejectionEvent,
         InterfaceId::Request,
+        InterfaceId::ResizeObserver,
         InterfaceId::Response,
         InterfaceId::Screen,
         InterfaceId::Storage,
@@ -205,6 +211,8 @@ impl InterfaceId {
             InterfaceId::HashChangeEvent => "HashChangeEvent",
             InterfaceId::Headers => "Headers",
             InterfaceId::History => "History",
+            InterfaceId::IntersectionObserver => "IntersectionObserver",
+            InterfaceId::IntersectionObserverEntry => "IntersectionObserverEntry",
             InterfaceId::Location => "Location",
             InterfaceId::MediaQueryList => "MediaQueryList",
             InterfaceId::MutationObserver => "MutationObserver",
@@ -217,6 +225,7 @@ impl InterfaceId {
             InterfaceId::ProgressEvent => "ProgressEvent",
             InterfaceId::PromiseRejectionEvent => "PromiseRejectionEvent",
             InterfaceId::Request => "Request",
+            InterfaceId::ResizeObserver => "ResizeObserver",
             InterfaceId::Response => "Response",
             InterfaceId::Screen => "Screen",
             InterfaceId::Storage => "Storage",
@@ -291,6 +300,8 @@ impl InterfaceId {
             "HashChangeEvent" => InterfaceId::HashChangeEvent,
             "Headers" => InterfaceId::Headers,
             "History" => InterfaceId::History,
+            "IntersectionObserver" => InterfaceId::IntersectionObserver,
+            "IntersectionObserverEntry" => InterfaceId::IntersectionObserverEntry,
             "Location" => InterfaceId::Location,
             "MediaQueryList" => InterfaceId::MediaQueryList,
             "MutationObserver" => InterfaceId::MutationObserver,
@@ -303,6 +314,7 @@ impl InterfaceId {
             "ProgressEvent" => InterfaceId::ProgressEvent,
             "PromiseRejectionEvent" => InterfaceId::PromiseRejectionEvent,
             "Request" => InterfaceId::Request,
+            "ResizeObserver" => InterfaceId::ResizeObserver,
             "Response" => InterfaceId::Response,
             "Screen" => InterfaceId::Screen,
             "Storage" => InterfaceId::Storage,
@@ -378,6 +390,8 @@ impl InterfaceId {
             InterfaceId::HashChangeEvent => Some(InterfaceId::Event),
             InterfaceId::Headers => None,
             InterfaceId::History => None,
+            InterfaceId::IntersectionObserver => None,
+            InterfaceId::IntersectionObserverEntry => None,
             InterfaceId::Location => None,
             InterfaceId::MediaQueryList => Some(InterfaceId::EventTarget),
             InterfaceId::MutationObserver => None,
@@ -390,6 +404,7 @@ impl InterfaceId {
             InterfaceId::ProgressEvent => Some(InterfaceId::Event),
             InterfaceId::PromiseRejectionEvent => Some(InterfaceId::Event),
             InterfaceId::Request => None,
+            InterfaceId::ResizeObserver => None,
             InterfaceId::Response => None,
             InterfaceId::Screen => None,
             InterfaceId::Storage => None,
@@ -850,6 +865,32 @@ impl RequestRedirect {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ResizeObserverBoxOptions {
+    BorderBox,
+    ContentBox,
+    DevicePixelContentBox,
+}
+
+impl ResizeObserverBoxOptions {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ResizeObserverBoxOptions::BorderBox => "border-box",
+            ResizeObserverBoxOptions::ContentBox => "content-box",
+            ResizeObserverBoxOptions::DevicePixelContentBox => "device-pixel-content-box",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "border-box" => ResizeObserverBoxOptions::BorderBox,
+            "content-box" => ResizeObserverBoxOptions::ContentBox,
+            "device-pixel-content-box" => ResizeObserverBoxOptions::DevicePixelContentBox,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ResponseType {
     Basic,
     Cors,
@@ -1091,6 +1132,16 @@ pub struct ImportNodeOptions {
 }
 
 #[derive(Clone, Debug)]
+pub struct IntersectionObserverInit {
+    pub root: Option<ElementOrDocument>,
+    pub root_margin: String,
+    pub scroll_margin: String,
+    pub threshold: DoubleOrDoubleSequence,
+    pub delay: i32,
+    pub track_visibility: bool,
+}
+
+#[derive(Clone, Debug)]
 pub struct MutationObserverInit {
     pub child_list: bool,
     pub attributes: Option<bool>,
@@ -1146,6 +1197,11 @@ pub struct RequestInit {
     pub duplex: Option<RequestDuplex>,
     pub priority: Option<RequestPriority>,
     pub window: Value,
+}
+
+#[derive(Clone, Debug)]
+pub struct ResizeObserverOptions {
+    pub box_: ResizeObserverBoxOptions,
 }
 
 #[derive(Clone, Debug)]
@@ -1224,6 +1280,18 @@ pub enum DocumentOrBufferSourceOrURLSearchParamsOrString {
     BufferSource(Vec<u8>),
     URLSearchParams(ObjectId),
     String(String),
+}
+
+#[derive(Clone, Debug)]
+pub enum DoubleOrDoubleSequence {
+    Double(f64),
+    DoubleSequence(Vec<f64>),
+}
+
+#[derive(Clone, Debug)]
+pub enum ElementOrDocument {
+    Element(NodeId),
+    Document(NodeId),
 }
 
 #[derive(Clone, Debug)]
@@ -1596,6 +1664,32 @@ pub trait HistoryImpl {
     ) -> Fallible<()>;
 }
 
+pub trait IntersectionObserverImpl {
+    fn root(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<ElementOrDocument>>;
+    fn root_margin(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn scroll_margin(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn thresholds(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<f64>>;
+    fn observe(cx: &mut Cx<'_>, this: ObjectId, target: NodeId) -> Fallible<()>;
+    fn unobserve(cx: &mut Cx<'_>, this: ObjectId, target: NodeId) -> Fallible<()>;
+    fn disconnect(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn take_records(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<ObjectId>>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        callback: Callback,
+        options: IntersectionObserverInit,
+    ) -> Fallible<ObjectId>;
+}
+
+pub trait IntersectionObserverEntryImpl {
+    fn time(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn root_bounds(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<ObjectId>>;
+    fn bounding_client_rect(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn intersection_rect(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn is_intersecting(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn intersection_ratio(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn target(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<NodeId>;
+}
+
 pub trait LocationImpl {
     fn href(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
     fn set_href(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
@@ -1758,6 +1852,18 @@ pub trait RequestImpl {
         input: RequestOrString,
         init: RequestInit,
     ) -> Fallible<ObjectId>;
+}
+
+pub trait ResizeObserverImpl {
+    fn observe(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        target: NodeId,
+        options: ResizeObserverOptions,
+    ) -> Fallible<()>;
+    fn unobserve(cx: &mut Cx<'_>, this: ObjectId, target: NodeId) -> Fallible<()>;
+    fn disconnect(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn constructor(cx: &mut Cx<'_>, callback: Callback) -> Fallible<ObjectId>;
 }
 
 pub trait ResponseImpl {

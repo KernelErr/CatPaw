@@ -59,7 +59,9 @@ impl<'a> Emitter<'a> {
             Type::UnsignedLong => "u32".into(),
             Type::LongLong => "i64".into(),
             Type::UnsignedLongLong => "u64".into(),
-            Type::Float | Type::Double => "f64".into(),
+            Type::Float | Type::Double | Type::UnrestrictedFloat | Type::UnrestrictedDouble => {
+                "f64".into()
+            }
             Type::DomString | Type::UsvString | Type::ByteString => "String".into(),
             Type::ArrayBuffer => match pos {
                 Pos::Arg => "Vec<u8>".into(),
@@ -455,7 +457,8 @@ impl<'a> Emitter<'a> {
             Type::UnsignedLong => format!("{v}.to_u32(ctx)?"),
             Type::LongLong => format!("rt::to_i64({v}, ctx)?"),
             Type::UnsignedLongLong => format!("rt::to_u64({v}, ctx)?"),
-            Type::Float | Type::Double => format!("{v}.to_number(ctx)?"),
+            Type::Float | Type::Double => format!("rt::to_finite({v}, ctx)?"),
+            Type::UnrestrictedFloat | Type::UnrestrictedDouble => format!("{v}.to_number(ctx)?"),
             Type::DomString | Type::UsvString | Type::ByteString => {
                 if null_to_empty {
                     format!("rt::string_from_js_null_empty({v}, ctx)?")
@@ -523,6 +526,8 @@ impl<'a> Emitter<'a> {
                                 | Type::UnsignedLong
                                 | Type::Double
                                 | Type::Float
+                                | Type::UnrestrictedDouble
+                                | Type::UnrestrictedFloat
                                 | Type::Short
                                 | Type::UnsignedShort
                                 | Type::LongLong
@@ -549,7 +554,10 @@ impl<'a> Emitter<'a> {
                 }
             }
             (_, DefaultValue::Bool(b)) => b.to_string(),
-            (Type::Float | Type::Double, DefaultValue::Int(i)) => format!("{i}_f64"),
+            (
+                Type::Float | Type::Double | Type::UnrestrictedFloat | Type::UnrestrictedDouble,
+                DefaultValue::Int(i),
+            ) => format!("{i}_f64"),
             (_, DefaultValue::Int(i)) => format!("({i}) as {}", self.rust_type(ty, Pos::Arg)),
             (_, DefaultValue::Float(f)) => {
                 if f.is_nan() {
@@ -702,7 +710,9 @@ impl<'a> Emitter<'a> {
             | Type::LongLong
             | Type::UnsignedLongLong
             | Type::Float
-            | Type::Double => (3, format!("{v}.is_number()")),
+            | Type::Double
+            | Type::UnrestrictedFloat
+            | Type::UnrestrictedDouble => (3, format!("{v}.is_number()")),
             Type::DomString | Type::UsvString | Type::ByteString => (5, "true".into()),
             _ => (4, "true".into()),
         }
@@ -1548,6 +1558,8 @@ impl<'a> Emitter<'a> {
                     | Type::UnsignedLongLong
                     | Type::Float
                     | Type::Double
+                    | Type::UnrestrictedFloat
+                    | Type::UnrestrictedDouble
             )
         });
         if let Some(m) = numeric {

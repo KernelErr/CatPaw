@@ -78,8 +78,11 @@ pub enum Type {
     UnsignedLong,
     LongLong,
     UnsignedLongLong,
+    /// `float` and `double` reject NaN and the infinities.
     Float,
     Double,
+    UnrestrictedFloat,
+    UnrestrictedDouble,
     DomString,
     ByteString,
     UsvString,
@@ -434,7 +437,9 @@ fn integer_type(t: &IntegerType) -> Type {
 
 fn float_type(t: &FloatingPointType) -> Type {
     match t {
+        FloatingPointType::Float(f) if f.unrestricted.is_some() => Type::UnrestrictedFloat,
         FloatingPointType::Float(_) => Type::Float,
+        FloatingPointType::Double(d) if d.unrestricted.is_some() => Type::UnrestrictedDouble,
         FloatingPointType::Double(_) => Type::Double,
     }
 }

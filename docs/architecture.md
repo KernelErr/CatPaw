@@ -105,6 +105,11 @@ Painting goes through tiny-skia on the blocking pool with a bundled
 deterministic font set. Canvas 2D is backed by the same rasterizer. WebGL
 returns a null context.
 
+*Where M1 stands:* there is no layout yet. Geometry reads as empty boxes at
+the origin, and the observers of rendering follow from that by their own
+rules: an `IntersectionObserver` sees a target as intersecting whenever it
+is in its root's tree, and a `ResizeObserver` never has a size to report.
+
 **Network and identity (ADR 0003).** A Fetch-spec implementation over hyper +
 rustls with per-context cookie jars (including partitioned cookies), caches
 and proxies. Every request can be signed per Web Bot Auth. Challenge

@@ -839,6 +839,16 @@ pub fn string_from_js_null_empty(v: &JsValue, ctx: &mut Context) -> JsResult<Str
     string_from_js(v, ctx)
 }
 
+/// WebIDL `double` and `float`: a number that is neither NaN nor infinite.
+pub fn to_finite(v: &JsValue, ctx: &mut Context) -> JsResult<f64> {
+    let n = v.to_number(ctx)?;
+    if n.is_finite() {
+        Ok(n)
+    } else {
+        Err(type_error("The provided value is not a finite number"))
+    }
+}
+
 const TWO_POW_64: f64 = 18_446_744_073_709_551_616.0;
 
 pub fn to_u64(v: &JsValue, ctx: &mut Context) -> JsResult<u64> {

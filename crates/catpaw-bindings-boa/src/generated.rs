@@ -158,6 +158,21 @@ impl IntoJs for web::RequestRedirect {
     }
 }
 
+impl FromJs for web::ResizeObserverBoxOptions {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::ResizeObserverBoxOptions::parse(&s).ok_or_else(|| {
+            rt::type_error(&format!("'{s}' is not a valid ResizeObserverBoxOptions"))
+        })
+    }
+}
+
+impl IntoJs for web::ResizeObserverBoxOptions {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
 impl FromJs for web::ResponseType {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let s = rt::string_from_js(v, ctx)?;
@@ -543,6 +558,57 @@ impl IntoJs for web::ImportNodeOptions {
     }
 }
 
+impl FromJs for web::IntersectionObserverInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "IntersectionObserverInit")?;
+        Ok(Self {
+            root: match rt::dictionary_member(&obj, "root", ctx)? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(<web::ElementOrDocument as FromJs>::from_js((&m), ctx)?)
+                    }
+                }
+                None => None,
+            },
+            root_margin: match rt::dictionary_member(&obj, "rootMargin", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "0px".to_string(),
+            },
+            scroll_margin: match rt::dictionary_member(&obj, "scrollMargin", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "0px".to_string(),
+            },
+            threshold: match rt::dictionary_member(&obj, "threshold", ctx)? {
+                Some(m) => <web::DoubleOrDoubleSequence as FromJs>::from_js((&m), ctx)?,
+                None => web::DoubleOrDoubleSequence::Double(0_f64),
+            },
+            delay: match rt::dictionary_member(&obj, "delay", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            track_visibility: match rt::dictionary_member(&obj, "trackVisibility", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::IntersectionObserverInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "root", self.root, ctx)?;
+        rt::set_member(&obj, "rootMargin", self.root_margin, ctx)?;
+        rt::set_member(&obj, "scrollMargin", self.scroll_margin, ctx)?;
+        rt::set_member(&obj, "threshold", self.threshold, ctx)?;
+        rt::set_member(&obj, "delay", self.delay, ctx)?;
+        rt::set_member(&obj, "trackVisibility", self.track_visibility, ctx)?;
+        Ok(obj.into())
+    }
+}
+
 impl FromJs for web::MutationObserverInit {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let obj = rt::dictionary_object(v, "MutationObserverInit")?;
@@ -674,11 +740,11 @@ impl FromJs for web::ProgressEventInit {
                 None => false,
             },
             loaded: match rt::dictionary_member(&obj, "loaded", ctx)? {
-                Some(m) => (&m).to_number(ctx)?,
+                Some(m) => rt::to_finite((&m), ctx)?,
                 None => 0_f64,
             },
             total: match rt::dictionary_member(&obj, "total", ctx)? {
-                Some(m) => (&m).to_number(ctx)?,
+                Some(m) => rt::to_finite((&m), ctx)?,
                 None => 0_f64,
             },
         })
@@ -850,6 +916,26 @@ impl IntoJs for web::RequestInit {
         rt::set_member(&obj, "duplex", self.duplex, ctx)?;
         rt::set_member(&obj, "priority", self.priority, ctx)?;
         rt::set_member(&obj, "window", self.window, ctx)?;
+        Ok(obj.into())
+    }
+}
+
+impl FromJs for web::ResizeObserverOptions {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "ResizeObserverOptions")?;
+        Ok(Self {
+            box_: match rt::dictionary_member(&obj, "box", ctx)? {
+                Some(m) => <web::ResizeObserverBoxOptions as FromJs>::from_js((&m), ctx)?,
+                None => web::ResizeObserverBoxOptions::ContentBox,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::ResizeObserverOptions {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "box", self.box_, ctx)?;
         Ok(obj.into())
     }
 }
@@ -1190,6 +1276,60 @@ impl IntoJs for web::DocumentOrBufferSourceOrURLSearchParamsOrString {
                 v.into_js(ctx)
             }
             web::DocumentOrBufferSourceOrURLSearchParamsOrString::String(v) => v.into_js(ctx),
+        }
+    }
+}
+
+impl FromJs for web::DoubleOrDoubleSequence {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if rt::is_iterable(v, ctx)? {
+            return Ok(web::DoubleOrDoubleSequence::DoubleSequence(
+                rt::sequence_from_js(v, ctx, |v, ctx| Ok(rt::to_finite(v, ctx)?))?,
+            ));
+        }
+        if v.is_number() {
+            return Ok(web::DoubleOrDoubleSequence::Double(rt::to_finite(v, ctx)?));
+        }
+        Ok(web::DoubleOrDoubleSequence::Double(rt::to_finite(v, ctx)?))
+    }
+}
+
+impl IntoJs for web::DoubleOrDoubleSequence {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+            web::DoubleOrDoubleSequence::Double(v) => v.into_js(ctx),
+            web::DoubleOrDoubleSequence::DoubleSequence(v) => v.into_js(ctx),
+        }
+    }
+}
+
+impl FromJs for web::ElementOrDocument {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if rt::is_instance(v, I::Element, ctx) {
+            return Ok(web::ElementOrDocument::Element(rt::node_from_js(
+                v,
+                I::Element,
+                ctx,
+            )?));
+        }
+        if rt::is_instance(v, I::Document, ctx) {
+            return Ok(web::ElementOrDocument::Document(rt::node_from_js(
+                v,
+                I::Document,
+                ctx,
+            )?));
+        }
+        Err(rt::type_error(
+            "value is not convertible to ElementOrDocument",
+        ))
+    }
+}
+
+impl IntoJs for web::ElementOrDocument {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+            web::ElementOrDocument::Element(v) => v.into_js(ctx),
+            web::ElementOrDocument::Document(v) => v.into_js(ctx),
         }
     }
 }
@@ -3057,6 +3197,300 @@ pub mod history {
                 length: 2,
             },
         ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod intersection_observer {
+    use super::*;
+
+    fn get_root(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::IntersectionObserver, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::IntersectionObserverImpl>::root(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_root_margin(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::IntersectionObserver, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::IntersectionObserverImpl>::root_margin(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_scroll_margin(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::IntersectionObserver, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::IntersectionObserverImpl>::scroll_margin(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_thresholds(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::IntersectionObserver, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::IntersectionObserverImpl>::thresholds(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_observe(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::IntersectionObserver, ctx)?;
+        rt::require_args(args, 1, "IntersectionObserver.observe")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Element, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::IntersectionObserverImpl>::observe(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_unobserve(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::IntersectionObserver, ctx)?;
+        rt::require_args(args, 1, "IntersectionObserver.unobserve")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Element, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::IntersectionObserverImpl>::unobserve(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_disconnect(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::IntersectionObserver, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::IntersectionObserverImpl>::disconnect(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_take_records(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::IntersectionObserver, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::IntersectionObserverImpl>::take_records(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "IntersectionObserver")?;
+        rt::require_args(args, 1, "IntersectionObserver constructor")?;
+        let a0 = rt::callback_from_js(rt::arg(args, 0), CallbackKind::Function, ctx)?;
+        let a1 = <web::IntersectionObserverInit as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::IntersectionObserverImpl>::constructor(cx, a0, a1)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::IntersectionObserver, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::IntersectionObserver,
+        name: "IntersectionObserver",
+        parent: None,
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[
+            rt::AttrDef {
+                name: "root",
+                getter: get_root,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "rootMargin",
+                getter: get_root_margin,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "scrollMargin",
+                getter: get_scroll_margin,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "thresholds",
+                getter: get_thresholds,
+                setter: None,
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "observe",
+                func: op_observe,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "unobserve",
+                func: op_unobserve,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "disconnect",
+                func: op_disconnect,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "takeRecords",
+                func: op_take_records,
+                length: 0,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod intersection_observer_entry {
+    use super::*;
+
+    fn get_time(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::IntersectionObserverEntry, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::IntersectionObserverEntryImpl>::time(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_root_bounds(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::IntersectionObserverEntry, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::IntersectionObserverEntryImpl>::root_bounds(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_bounding_client_rect(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::IntersectionObserverEntry, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::IntersectionObserverEntryImpl>::bounding_client_rect(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_intersection_rect(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::IntersectionObserverEntry, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::IntersectionObserverEntryImpl>::intersection_rect(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_is_intersecting(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::IntersectionObserverEntry, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::IntersectionObserverEntryImpl>::is_intersecting(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_intersection_ratio(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::IntersectionObserverEntry, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::IntersectionObserverEntryImpl>::intersection_ratio(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_target(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::IntersectionObserverEntry, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::IntersectionObserverEntryImpl>::target(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::IntersectionObserverEntry,
+        name: "IntersectionObserverEntry",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "time",
+                getter: get_time,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "rootBounds",
+                getter: get_root_bounds,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "boundingClientRect",
+                getter: get_bounding_client_rect,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "intersectionRect",
+                getter: get_intersection_rect,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "isIntersecting",
+                getter: get_is_intersecting,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "intersectionRatio",
+                getter: get_intersection_ratio,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "target",
+                getter: get_target,
+                setter: None,
+            },
+        ],
+        ops: &[],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -4991,6 +5425,85 @@ pub mod request {
             rt::OpDef {
                 name: "text",
                 func: op_text,
+                length: 0,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod resize_observer {
+    use super::*;
+
+    fn op_observe(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::ResizeObserver, ctx)?;
+        rt::require_args(args, 1, "ResizeObserver.observe")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Element, ctx)?;
+        let a1 = <web::ResizeObserverOptions as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ResizeObserverImpl>::observe(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_unobserve(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::ResizeObserver, ctx)?;
+        rt::require_args(args, 1, "ResizeObserver.unobserve")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Element, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ResizeObserverImpl>::unobserve(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_disconnect(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::ResizeObserver, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ResizeObserverImpl>::disconnect(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "ResizeObserver")?;
+        rt::require_args(args, 1, "ResizeObserver constructor")?;
+        let a0 = rt::callback_from_js(rt::arg(args, 0), CallbackKind::Function, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ResizeObserverImpl>::constructor(cx, a0)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::ResizeObserver, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::ResizeObserver,
+        name: "ResizeObserver",
+        parent: None,
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[],
+        ops: &[
+            rt::OpDef {
+                name: "observe",
+                func: op_observe,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "unobserve",
+                func: op_unobserve,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "disconnect",
+                func: op_disconnect,
                 length: 0,
             },
         ],
@@ -24570,6 +25083,8 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &hash_change_event::DEF,
     &headers::DEF,
     &history::DEF,
+    &intersection_observer::DEF,
+    &intersection_observer_entry::DEF,
     &location::DEF,
     &media_query_list::DEF,
     &mutation_observer::DEF,
@@ -24582,6 +25097,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &progress_event::DEF,
     &promise_rejection_event::DEF,
     &request::DEF,
+    &resize_observer::DEF,
     &response::DEF,
     &screen::DEF,
     &storage::DEF,

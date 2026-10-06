@@ -66,6 +66,27 @@ members = [
   "attributeName", "attributeNamespace", "oldValue",
 ]
 
+# The observers that depend on rendering. Without layout (M1) every box is
+# empty and at the origin: connected targets intersect their root, and no
+# element ever has a size to report.
+
+[interfaces.IntersectionObserver]
+constructor = true
+members = [
+  "root", "rootMargin", "scrollMargin", "thresholds", "observe", "unobserve", "disconnect",
+  "takeRecords",
+]
+
+[interfaces.IntersectionObserverEntry]
+members = [
+  "time", "rootBounds", "boundingClientRect", "intersectionRect", "isIntersecting",
+  "intersectionRatio", "target",
+]
+
+[interfaces.ResizeObserver]
+constructor = true
+members = ["observe", "unobserve", "disconnect"]
+
 # ----------------------------------------------------------------- DOM: nodes
 
 [interfaces.Node]
