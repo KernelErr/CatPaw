@@ -14,5 +14,6 @@ description = "Arena DOM and html5ever integration for the CatPaw browser"
 [dependencies]
 html5ever.workspace = true
 markup5ever.workspace = true
+xml5ever.workspace = true
 slotmap.workspace = true
 url.workspace = true

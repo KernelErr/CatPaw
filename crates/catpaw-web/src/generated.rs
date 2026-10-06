@@ -25,6 +25,8 @@ pub enum InterfaceId {
     AbortController,
     CSSStyleDeclaration,
     CSSStyleProperties,
+    DOMImplementation,
+    DOMParser,
     DOMRectReadOnly,
     DOMStringMap,
     DOMTokenList,
@@ -122,6 +124,7 @@ pub enum InterfaceId {
     SVGUseElement,
     SVGViewElement,
     Text,
+    XMLDocument,
     XMLHttpRequest,
     HTMLAnchorElement,
     HTMLBRElement,
@@ -146,11 +149,13 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 121;
-    pub const ALL: [InterfaceId; 121] = [
+    pub const COUNT: usize = 124;
+    pub const ALL: [InterfaceId; 124] = [
         InterfaceId::AbortController,
         InterfaceId::CSSStyleDeclaration,
         InterfaceId::CSSStyleProperties,
+        InterfaceId::DOMImplementation,
+        InterfaceId::DOMParser,
         InterfaceId::DOMRectReadOnly,
         InterfaceId::DOMStringMap,
         InterfaceId::DOMTokenList,
@@ -248,6 +253,7 @@ impl InterfaceId {
         InterfaceId::SVGUseElement,
         InterfaceId::SVGViewElement,
         InterfaceId::Text,
+        InterfaceId::XMLDocument,
         InterfaceId::XMLHttpRequest,
         InterfaceId::HTMLAnchorElement,
         InterfaceId::HTMLBRElement,
@@ -276,6 +282,8 @@ impl InterfaceId {
             InterfaceId::AbortController => "AbortController",
             InterfaceId::CSSStyleDeclaration => "CSSStyleDeclaration",
             InterfaceId::CSSStyleProperties => "CSSStyleProperties",
+            InterfaceId::DOMImplementation => "DOMImplementation",
+            InterfaceId::DOMParser => "DOMParser",
             InterfaceId::DOMRectReadOnly => "DOMRectReadOnly",
             InterfaceId::DOMStringMap => "DOMStringMap",
             InterfaceId::DOMTokenList => "DOMTokenList",
@@ -373,6 +381,7 @@ impl InterfaceId {
             InterfaceId::SVGUseElement => "SVGUseElement",
             InterfaceId::SVGViewElement => "SVGViewElement",
             InterfaceId::Text => "Text",
+            InterfaceId::XMLDocument => "XMLDocument",
             InterfaceId::XMLHttpRequest => "XMLHttpRequest",
             InterfaceId::HTMLAnchorElement => "HTMLAnchorElement",
             InterfaceId::HTMLBRElement => "HTMLBRElement",
@@ -402,6 +411,8 @@ impl InterfaceId {
             "AbortController" => InterfaceId::AbortController,
             "CSSStyleDeclaration" => InterfaceId::CSSStyleDeclaration,
             "CSSStyleProperties" => InterfaceId::CSSStyleProperties,
+            "DOMImplementation" => InterfaceId::DOMImplementation,
+            "DOMParser" => InterfaceId::DOMParser,
             "DOMRectReadOnly" => InterfaceId::DOMRectReadOnly,
             "DOMStringMap" => InterfaceId::DOMStringMap,
             "DOMTokenList" => InterfaceId::DOMTokenList,
@@ -499,6 +510,7 @@ impl InterfaceId {
             "SVGUseElement" => InterfaceId::SVGUseElement,
             "SVGViewElement" => InterfaceId::SVGViewElement,
             "Text" => InterfaceId::Text,
+            "XMLDocument" => InterfaceId::XMLDocument,
             "XMLHttpRequest" => InterfaceId::XMLHttpRequest,
             "HTMLAnchorElement" => InterfaceId::HTMLAnchorElement,
             "HTMLBRElement" => InterfaceId::HTMLBRElement,
@@ -529,6 +541,8 @@ impl InterfaceId {
             InterfaceId::AbortController => None,
             InterfaceId::CSSStyleDeclaration => None,
             InterfaceId::CSSStyleProperties => Some(InterfaceId::CSSStyleDeclaration),
+            InterfaceId::DOMImplementation => None,
+            InterfaceId::DOMParser => None,
             InterfaceId::DOMRectReadOnly => None,
             InterfaceId::DOMStringMap => None,
             InterfaceId::DOMTokenList => None,
@@ -626,6 +640,7 @@ impl InterfaceId {
             InterfaceId::SVGUseElement => Some(InterfaceId::SVGGraphicsElement),
             InterfaceId::SVGViewElement => Some(InterfaceId::SVGElement),
             InterfaceId::Text => Some(InterfaceId::CharacterData),
+            InterfaceId::XMLDocument => Some(InterfaceId::Document),
             InterfaceId::XMLHttpRequest => Some(InterfaceId::XMLHttpRequestEventTarget),
             InterfaceId::HTMLAnchorElement => Some(InterfaceId::HTMLElement),
             InterfaceId::HTMLBRElement => Some(InterfaceId::HTMLElement),
@@ -743,6 +758,38 @@ impl InterfaceId {
             "tspan" => InterfaceId::SVGTSpanElement,
             "use" => InterfaceId::SVGUseElement,
             "view" => InterfaceId::SVGViewElement,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum DOMParserSupportedType {
+    TextHtml,
+    TextXml,
+    ApplicationXml,
+    ApplicationXhtmlXml,
+    ImageSvgXml,
+}
+
+impl DOMParserSupportedType {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            DOMParserSupportedType::TextHtml => "text/html",
+            DOMParserSupportedType::TextXml => "text/xml",
+            DOMParserSupportedType::ApplicationXml => "application/xml",
+            DOMParserSupportedType::ApplicationXhtmlXml => "application/xhtml+xml",
+            DOMParserSupportedType::ImageSvgXml => "image/svg+xml",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "text/html" => DOMParserSupportedType::TextHtml,
+            "text/xml" => DOMParserSupportedType::TextXml,
+            "application/xml" => DOMParserSupportedType::ApplicationXml,
+            "application/xhtml+xml" => DOMParserSupportedType::ApplicationXhtmlXml,
+            "image/svg+xml" => DOMParserSupportedType::ImageSvgXml,
             _ => return None,
         })
     }
@@ -1737,6 +1784,39 @@ pub trait CSSStylePropertiesImpl {
     fn named_set(cx: &mut Cx<'_>, this: ObjectId, name: &str, value: String) -> Fallible<()>;
 }
 
+pub trait DOMImplementationImpl {
+    fn create_document_type(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        name: String,
+        public_id: String,
+        system_id: String,
+    ) -> Fallible<NodeId>;
+    fn create_document(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        namespace: Option<String>,
+        qualified_name: String,
+        doctype: Option<NodeId>,
+    ) -> Fallible<NodeId>;
+    fn create_html_document(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        title: Option<String>,
+    ) -> Fallible<NodeId>;
+    fn has_feature(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+}
+
+pub trait DOMParserImpl {
+    fn parse_from_string(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        string: String,
+        type_: DOMParserSupportedType,
+    ) -> Fallible<NodeId>;
+    fn constructor(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
+}
+
 pub trait DOMRectReadOnlyImpl {
     fn x(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
     fn y(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
@@ -2311,6 +2391,7 @@ pub trait DOMRectImpl {
 }
 
 pub trait DocumentImpl {
+    fn implementation(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
     fn url(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
     fn document_uri(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
     fn compat_mode(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;

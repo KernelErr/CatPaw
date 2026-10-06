@@ -624,9 +624,10 @@ impl web::ElementImpl for Web {
     }
 
     fn tag_name(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {
+        let html_document = node::in_html_document(&cx.dom(), this);
         with_element(cx, this, |el| {
             let name = qualified_name(el);
-            if el.is_html() {
+            if el.is_html() && html_document {
                 name.to_ascii_uppercase()
             } else {
                 name
@@ -1550,6 +1551,7 @@ impl web::HTMLTemplateElementImpl for Web {
 /// The interface a node's script wrapper implements.
 pub fn interface_for_node(dom: &Dom, id: NodeId) -> InterfaceId {
     match dom.kind(id) {
+        NodeKind::Document(data) if data.is_xml => InterfaceId::XMLDocument,
         NodeKind::Document(_) => InterfaceId::Document,
         NodeKind::Doctype(_) => InterfaceId::DocumentType,
         NodeKind::Text(_) => InterfaceId::Text,

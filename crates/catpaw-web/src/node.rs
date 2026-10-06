@@ -28,6 +28,11 @@ const DOCUMENT_POSITION_CONTAINED_BY: u16 = 0x10;
 const DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC: u16 = 0x20;
 
 /// The qualified name of an element (`prefix:local`).
+/// Whether `node`'s document is an HTML document (rather than an XML one).
+pub(crate) fn in_html_document(dom: &Dom, node: NodeId) -> bool {
+    crate::document::is_html_document(dom, dom.owner_document(node))
+}
+
 pub fn qualified_name(el: &ElementData) -> String {
     match &el.name.prefix {
         Some(prefix) => format!("{}:{}", prefix, el.name.local),
@@ -292,8 +297,12 @@ pub(crate) fn insert(
             Some(child) => dom.prev_sibling(child),
             None => dom.last_child(parent),
         };
+        let document = dom.owner_document(parent);
         for &n in &nodes {
             dom.insert_before(parent, n, child);
+            if dom.owner_document(n) != document {
+                dom.adopt_subtree(n, document);
+            }
         }
         previous
     };
@@ -455,13 +464,12 @@ pub(crate) fn clone_node(cx: &Cx<'_>, node: NodeId, deep: bool) -> Fallible<Node
     if !dom.contains(node) {
         return Err(stale());
     }
-    if matches!(dom.kind(node), NodeKind::Document(_)) {
-        return Err(Exception::not_supported(
-            "Cloning a document is not supported",
-        ));
-    }
     if deep {
         return Ok(dom.clone_subtree(node));
+    }
+    if let NodeKind::Document(data) = dom.kind(node) {
+        let data = data.clone();
+        return Ok(dom.create_document(data));
     }
     let kind = match dom.kind(node) {
         NodeKind::Element(el) => {
@@ -482,6 +490,9 @@ pub(crate) fn clone_node(cx: &Cx<'_>, node: NodeId, deep: bool) -> Fallible<Node
             el.template_contents = Some(contents);
         }
     }
+    // A clone belongs to the document of its original.
+    let document = dom.owner_document(node);
+    dom.adopt_subtree(new, document);
     Ok(new)
 }
 
@@ -602,10 +613,11 @@ impl web::NodeImpl for Web {
 
     fn node_name(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {
         check(cx, this)?;
-        Ok(match cx.dom().kind(this) {
+        let dom = cx.dom();
+        Ok(match dom.kind(this) {
             NodeKind::Element(el) => {
                 let name = qualified_name(el);
-                if el.is_html() {
+                if el.is_html() && in_html_document(&dom, this) {
                     name.to_ascii_uppercase()
                 } else {
                     name
@@ -620,17 +632,25 @@ impl web::NodeImpl for Web {
         })
     }
 
-    fn base_uri(cx: &mut Cx<'_>, _this: NodeId) -> Fallible<String> {
-        Ok(cx.page.base_url().to_string())
+    fn base_uri(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {
+        check(cx, this)?;
+        let dom = cx.dom();
+        let document = dom.owner_document(this);
+        if document == dom.document() {
+            return Ok(cx.page.base_url().to_string());
+        }
+        let url = dom.document_data_of(document).and_then(|d| d.url.as_ref());
+        Ok(url.map_or_else(|| "about:blank".to_string(), ToString::to_string))
     }
 
     fn is_connected(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool> {
         check(cx, this)?;
-        Ok(cx.dom().is_connected(this))
+        Ok(cx.dom().in_document_tree(this))
     }
 
     fn owner_document(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>> {
-        let document = cx.document();
+        check(cx, this)?;
+        let document = cx.dom().owner_document(this);
         Ok((this != document).then_some(document))
     }
 

@@ -15,8 +15,8 @@ pub use arena::{
     TreeChange,
 };
 pub use html::{
-    HtmlParseOptions, HtmlStream, ParseResult, WriteQueue, parse_fragment_into, parse_html,
-    parse_html_bytes, parse_html_fragment,
+    HtmlParseOptions, HtmlStream, ParseResult, WriteQueue, parse_document_into,
+    parse_fragment_into, parse_html, parse_html_bytes, parse_html_fragment, parse_xml_into,
 };
 pub use markup5ever::interface::QuirksMode;
 pub use markup5ever::{LocalName, Namespace, Prefix, QualName, local_name, namespace_url, ns};

@@ -106,8 +106,17 @@ members = [
   "createTextNode", "createComment", "importNode", "adoptNode", "createEvent",
   "location", "referrer", "cookie", "readyState", "title", "body", "head",
   "getElementsByName", "currentScript", "defaultView", "hasFocus", "hidden",
-  "visibilityState", "write", "writeln", "open", "close",
+  "visibilityState", "write", "writeln", "open", "close", "implementation",
 ]
+
+[interfaces.XMLDocument]
+
+[interfaces.DOMImplementation]
+members = ["createDocumentType", "createDocument", "createHTMLDocument", "hasFeature"]
+
+[interfaces.DOMParser]
+constructor = true
+members = ["parseFromString"]
 
 [interfaces.DocumentType]
 members = ["name", "publicId", "systemId"]

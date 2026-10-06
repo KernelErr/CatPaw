@@ -138,6 +138,10 @@ impl ElementData {
 pub struct DocumentData {
     pub quirks_mode: QuirksMode,
     pub url: Option<Url>,
+    /// An XML document rather than an HTML document: names keep their case.
+    pub is_xml: bool,
+    /// The content type, where it is not `text/html`.
+    pub content_type: Option<String>,
 }
 
 impl Default for DocumentData {
@@ -145,6 +149,8 @@ impl Default for DocumentData {
         Self {
             quirks_mode: QuirksMode::NoQuirks,
             url: None,
+            is_xml: false,
+            content_type: None,
         }
     }
 }
@@ -186,6 +192,8 @@ pub struct Node {
     next_sibling: Option<NodeId>,
     first_child: Option<NodeId>,
     last_child: Option<NodeId>,
+    /// The node document. A document is its own.
+    owner: NodeId,
     pub kind: NodeKind,
 }
 
@@ -197,6 +205,7 @@ impl Node {
             next_sibling: None,
             first_child: None,
             last_child: None,
+            owner: NodeId::default(),
             kind,
         }
     }
@@ -286,6 +295,7 @@ impl Dom {
     pub fn new() -> Self {
         let mut nodes = SlotMap::with_key();
         let document = nodes.insert(Node::new(NodeKind::Document(DocumentData::default())));
+        nodes[document].owner = document;
         Self {
             nodes,
             document,
@@ -410,8 +420,65 @@ impl Dom {
 
     // ---- creation -------------------------------------------------------
 
+    /// Creates a detached node whose node document is the arena's own
+    /// document.
     pub fn create(&mut self, kind: NodeKind) -> NodeId {
-        self.nodes.insert(Node::new(kind))
+        let id = self.nodes.insert(Node::new(kind));
+        self.nodes[id].owner = self.document;
+        id
+    }
+
+    /// Creates another document in the arena, such as the one `DOMParser`
+    /// returns. Unlike the arena's own document it belongs to no page.
+    pub fn create_document(&mut self, data: DocumentData) -> NodeId {
+        let id = self.nodes.insert(Node::new(NodeKind::Document(data)));
+        self.nodes[id].owner = id;
+        id
+    }
+
+    /// The node document of `id`. A document is its own.
+    pub fn owner_document(&self, id: NodeId) -> NodeId {
+        self.nodes[id].owner
+    }
+
+    /// Makes `document` the node document of `id`, of its descendants and
+    /// of the contents of the templates among them.
+    pub fn adopt_subtree(&mut self, id: NodeId, document: NodeId) {
+        let mut stack = vec![id];
+        while let Some(n) = stack.pop() {
+            let node = &mut self.nodes[n];
+            match &node.kind {
+                NodeKind::Document(_) => {}
+                NodeKind::Element(el) => {
+                    node.owner = document;
+                    stack.extend(el.template_contents);
+                }
+                _ => node.owner = document,
+            }
+            stack.extend(self.children(n));
+        }
+    }
+
+    /// The data of the document `id`, if it is a document.
+    pub fn document_data_of(&self, id: NodeId) -> Option<&DocumentData> {
+        match &self.nodes.get(id)?.kind {
+            NodeKind::Document(d) => Some(d),
+            _ => None,
+        }
+    }
+
+    pub fn document_data_of_mut(&mut self, id: NodeId) -> Option<&mut DocumentData> {
+        self.version += 1;
+        match &mut self.nodes.get_mut(id)?.kind {
+            NodeKind::Document(d) => Some(d),
+            _ => None,
+        }
+    }
+
+    /// Whether `id` is in a document tree: that of the arena's own document
+    /// or of another one. See [`Dom::is_connected`] for the former alone.
+    pub fn in_document_tree(&self, id: NodeId) -> bool {
+        matches!(self.nodes[self.root_of(id)].kind, NodeKind::Document(_))
     }
 
     pub fn create_element(&mut self, name: QualName, attrs: Vec<Attr>) -> NodeId {
@@ -681,9 +748,15 @@ impl Dom {
             }
             other => (other.clone(), None),
         };
+        // A clone belongs to the document of its original; a cloned
+        // document is its own.
+        let is_document = matches!(kind, NodeKind::Document(_));
+        let owner = self.nodes[id].owner;
         let new = self.create(kind);
+        self.nodes[new].owner = if is_document { new } else { owner };
         if let Some(contents) = template_contents {
             let new_contents = self.create_fragment(FragmentKind::TemplateContents { host: new });
+            self.nodes[new_contents].owner = owner;
             let kids: Vec<NodeId> = self.children(contents).collect();
             for c in kids {
                 let cc = self.clone_subtree(c);
@@ -695,6 +768,9 @@ impl Dom {
         for c in kids {
             let cc = self.clone_subtree(c);
             self.append_child(new, cc);
+        }
+        if is_document {
+            self.adopt_subtree(new, new);
         }
         new
     }

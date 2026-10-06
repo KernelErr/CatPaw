@@ -96,6 +96,12 @@ impl Sink {
     /// A sink that parses into an arena shared with the caller.
     pub fn shared(dom: Rc<RefCell<Dom>>) -> Self {
         let document = dom.borrow().document();
+        Self::for_document(dom, document)
+    }
+
+    /// A sink that parses into `document`, one of the documents of an arena
+    /// shared with the caller.
+    pub fn for_document(dom: Rc<RefCell<Dom>>, document: NodeId) -> Self {
         Self {
             dom,
             document,
@@ -278,7 +284,11 @@ impl TreeSink for Sink {
 
     fn set_quirks_mode(&self, mode: QuirksMode) {
         if !self.scratch {
-            self.with(|dom| dom.document_data_mut().quirks_mode = mode);
+            self.with(|dom| {
+                if let Some(data) = dom.document_data_of_mut(self.document) {
+                    data.quirks_mode = mode;
+                }
+            });
         }
     }
 
@@ -478,6 +488,35 @@ pub fn parse_fragment_into(
         d.remove_subtree(html);
     }
     root
+}
+
+/// Parses `input` as a complete HTML document into `document`, a document
+/// created in the shared arena for the purpose (see
+/// [`Dom::create_document`]). Scripts are parsed, not run.
+pub fn parse_document_into(
+    dom: &Rc<RefCell<Dom>>,
+    document: NodeId,
+    input: &str,
+    options: &HtmlParseOptions,
+) {
+    let sink = Sink::for_document(dom.clone(), document);
+    let _ = parse_document(sink, parse_opts(options)).one(StrTendril::from(input));
+    dom.borrow_mut().adopt_subtree(document, document);
+}
+
+/// Parses `input` as XML into `document`, a document created in the shared
+/// arena for the purpose. Returns the errors the parser reported; it is
+/// lenient, and builds a tree whatever the input.
+pub fn parse_xml_into(
+    dom: &Rc<RefCell<Dom>>,
+    document: NodeId,
+    input: &str,
+) -> Vec<Cow<'static, str>> {
+    let sink = Sink::for_document(dom.clone(), document);
+    let result =
+        xml5ever::driver::parse_document(sink, Default::default()).one(StrTendril::from(input));
+    dom.borrow_mut().adopt_subtree(document, document);
+    result.errors
 }
 
 /// Text waiting to be parsed at the insertion point (`document.write`).
@@ -764,5 +803,105 @@ mod tests {
         // In a div context, table rows are not allowed and collapse to text.
         let text = parse_fragment_into(&dom, "<tr><td>x</td></tr><b>y</b>", div, true);
         assert_eq!(to_html(&dom.borrow(), text, true), "x<b>y</b>");
+    }
+}
+
+#[cfg(test)]
+mod other_document_tests {
+    use super::*;
+    use crate::DocumentData;
+
+    fn find(dom: &Dom, root: NodeId, local: &str) -> NodeId {
+        dom.descendants(root)
+            .find(|&n| dom.element(n).is_some_and(|e| &*e.name.local == local))
+            .unwrap_or_else(|| panic!("no <{local}>"))
+    }
+
+    #[test]
+    fn other_documents_live_in_the_same_arena() {
+        let dom = Rc::new(RefCell::new(Dom::new()));
+        let main = dom.borrow().document();
+        let (page, data) = {
+            let mut d = dom.borrow_mut();
+            let xml = DocumentData {
+                is_xml: true,
+                ..DocumentData::default()
+            };
+            (
+                d.create_document(DocumentData::default()),
+                d.create_document(xml),
+            )
+        };
+        parse_document_into(
+            &dom,
+            page,
+            "<title>t</title><p id=a>x</p><template><b></b></template>",
+            &HtmlParseOptions::default(),
+        );
+        let errors = parse_xml_into(
+            &dom,
+            data,
+            r#"<root xmlns:x="urn:x" a="1"><x:Item>t &amp; u<![CDATA[<c>]]></x:Item><empty/></root>"#,
+        );
+        assert!(errors.is_empty(), "{errors:?}");
+
+        let mut d = dom.borrow_mut();
+        // The arena's own document is untouched.
+        assert!(!d.has_children(main));
+        assert_eq!(d.quirks_mode(), QuirksMode::NoQuirks);
+        assert_eq!(
+            d.document_data_of(page).unwrap().quirks_mode,
+            QuirksMode::Quirks
+        );
+        assert!(d.document_data_of(find(&d, page, "p")).is_none());
+
+        // Nodes belong to the document they were parsed into.
+        let p = find(&d, page, "p");
+        assert_eq!(d.owner_document(p), page);
+        assert_eq!(d.owner_document(page), page);
+        assert!(d.in_document_tree(p) && !d.is_connected(p));
+        let template = find(&d, page, "template");
+        let contents = d.element(template).unwrap().template_contents.unwrap();
+        assert_eq!(d.owner_document(contents), page);
+        assert_eq!(d.owner_document(d.first_child(contents).unwrap()), page);
+
+        let item = find(&d, data, "Item");
+        assert_eq!(&*d.element(item).unwrap().name.ns, "urn:x");
+        assert_eq!(d.text_content(item), "t & u<c>");
+        assert_eq!(d.owner_document(item), data);
+        assert_eq!(d.child_elements(find(&d, data, "root")).count(), 2);
+
+        // A new node belongs to the arena's document until it is adopted.
+        let fresh = d.create_html_element("i", Vec::new());
+        assert_eq!(d.owner_document(fresh), main);
+        assert!(!d.in_document_tree(fresh));
+        d.append_child(p, fresh);
+        d.adopt_subtree(fresh, page);
+        assert_eq!(d.owner_document(fresh), page);
+
+        // Clones belong where their originals do; a cloned document is its
+        // own, with everything in it.
+        let copy = d.clone_subtree(p);
+        assert_eq!(d.owner_document(copy), page);
+        assert_eq!(d.owner_document(d.last_child(copy).unwrap()), page);
+        let twin = d.clone_subtree(page);
+        assert_eq!(d.owner_document(twin), twin);
+        assert_eq!(d.owner_document(find(&d, twin, "p")), twin);
+    }
+
+    #[test]
+    fn the_xml_parser_reports_what_is_not_well_formed() {
+        let parse = |input: &str| {
+            let dom = Rc::new(RefCell::new(Dom::new()));
+            let document = dom.borrow_mut().create_document(DocumentData::default());
+            let errors = parse_xml_into(&dom, document, input);
+            let has_root = dom.borrow().child_elements(document).next().is_some();
+            (errors, has_root)
+        };
+        assert_eq!(parse("<a><b/></a>"), (Vec::new(), true));
+        assert!(!parse("<a><b></a>").0.is_empty());
+        assert!(!parse("<a></a><b></b>").0.is_empty());
+        assert!(!parse("just text").1);
+        assert!(!parse("").1);
     }
 }

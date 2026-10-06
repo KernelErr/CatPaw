@@ -4,7 +4,6 @@
 use std::cell::Cell;
 use std::rc::Rc;
 
-use catpaw_dom::NodeKind;
 use catpaw_js::{Callback, EventTargetRef, Exception, Fallible, ObjectId, Value};
 
 use crate::generated::{self as web, InterfaceId};
@@ -408,8 +407,9 @@ fn event_path(page: &PageState, target: EventTargetRef, type_: &str) -> Vec<Even
         path.push(EventTargetRef::Node(ancestor));
         root = ancestor;
     }
-    // The window is the document's parent for events, except for `load`.
-    if matches!(dom.kind(root), NodeKind::Document(_)) && type_ != "load" {
+    // The window is the parent of its document for events, except for
+    // `load`.
+    if root == dom.document() && type_ != "load" {
         path.push(EventTargetRef::Window);
     }
     path

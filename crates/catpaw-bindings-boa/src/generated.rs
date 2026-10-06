@@ -18,6 +18,20 @@ use catpaw_web::generated::InterfaceId as I;
 
 use crate::rt::{self, FromJs, IntoJs};
 
+impl FromJs for web::DOMParserSupportedType {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::DOMParserSupportedType::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid DOMParserSupportedType")))
+    }
+}
+
+impl IntoJs for web::DOMParserSupportedType {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
 impl FromJs for web::DocumentReadyState {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let s = rt::string_from_js(v, ctx)?;
@@ -1867,6 +1881,167 @@ pub mod css_style_properties {
             override_builtins: false,
             attribute_like: true,
         }),
+    };
+}
+
+pub mod dom_implementation {
+    use super::*;
+
+    fn op_create_document_type(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::DOMImplementation, ctx)?;
+        rt::require_args(args, 3, "DOMImplementation.createDocumentType")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
+        let a2 = rt::string_from_js(rt::arg(args, 2), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DOMImplementationImpl>::create_document_type(cx, this, a0, a1, a2)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_create_document(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::DOMImplementation, ctx)?;
+        rt::require_args(args, 2, "DOMImplementation.createDocument")?;
+        let a0 = if rt::arg(args, 0).is_null_or_undefined() {
+            None
+        } else {
+            Some(rt::string_from_js(rt::arg(args, 0), ctx)?)
+        };
+        let a1 = rt::string_from_js_null_empty(rt::arg(args, 1), ctx)?;
+        let a2 = if args.len() > 2 && !args[2].is_undefined() {
+            if rt::arg(args, 2).is_null_or_undefined() {
+                None
+            } else {
+                Some(rt::node_from_js(rt::arg(args, 2), I::DocumentType, ctx)?)
+            }
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DOMImplementationImpl>::create_document(cx, this, a0, a1, a2)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_create_html_document(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::DOMImplementation, ctx)?;
+        let a0 = if args.len() > 0 && !args[0].is_undefined() {
+            Some(rt::string_from_js(rt::arg(args, 0), ctx)?)
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DOMImplementationImpl>::create_html_document(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_has_feature(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::DOMImplementation, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DOMImplementationImpl>::has_feature(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::DOMImplementation,
+        name: "DOMImplementation",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[
+            rt::OpDef {
+                name: "createDocumentType",
+                func: op_create_document_type,
+                length: 3,
+            },
+            rt::OpDef {
+                name: "createDocument",
+                func: op_create_document,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "createHTMLDocument",
+                func: op_create_html_document,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "hasFeature",
+                func: op_has_feature,
+                length: 0,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod dom_parser {
+    use super::*;
+
+    fn op_parse_from_string(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::DOMParser, ctx)?;
+        rt::require_args(args, 2, "DOMParser.parseFromString")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::DOMParserSupportedType as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DOMParserImpl>::parse_from_string(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "DOMParser")?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::DOMParserImpl>::constructor(cx));
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::DOMParser, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::DOMParser,
+        name: "DOMParser",
+        parent: None,
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[rt::OpDef {
+            name: "parseFromString",
+            func: op_parse_from_string,
+            length: 2,
+        }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
     };
 }
 
@@ -11163,6 +11338,23 @@ pub mod dom_rect {
 pub mod document {
     use super::*;
 
+    fn get_implementation(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "implementation", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DocumentImpl>::implementation(cx, this)
+        });
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "implementation", &v, ctx);
+        Ok(v)
+    }
+
     fn get_url(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::Document, ctx)?;
         let r = rt::with_cx(ctx, |cx| <Web as web::DocumentImpl>::url(cx, this));
@@ -13540,6 +13732,11 @@ pub mod document {
         constructor: None,
         constructor_length: 0,
         attrs: &[
+            rt::AttrDef {
+                name: "implementation",
+                getter: get_implementation,
+                setter: None,
+            },
             rt::AttrDef {
                 name: "URL",
                 getter: get_url,
@@ -26510,6 +26707,26 @@ pub mod text {
     };
 }
 
+pub mod xml_document {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::XMLDocument,
+        name: "XMLDocument",
+        parent: Some(I::Document),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod xml_http_request {
     use super::*;
 
@@ -29013,6 +29230,8 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &abort_controller::DEF,
     &css_style_declaration::DEF,
     &css_style_properties::DEF,
+    &dom_implementation::DEF,
+    &dom_parser::DEF,
     &dom_rect_read_only::DEF,
     &dom_string_map::DEF,
     &dom_token_list::DEF,
@@ -29110,6 +29329,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &svg_use_element::DEF,
     &svg_view_element::DEF,
     &text::DEF,
+    &xml_document::DEF,
     &xml_http_request::DEF,
     &html_anchor_element::DEF,
     &htmlbr_element::DEF,
