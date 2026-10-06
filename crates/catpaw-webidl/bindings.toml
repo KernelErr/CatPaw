@@ -417,7 +417,7 @@ members = ["webdriver"]
 [interfaces.Performance]
 members = [
   "now", "timeOrigin", "mark", "measure", "clearMarks", "clearMeasures", "getEntries",
-  "getEntriesByType", "getEntriesByName",
+  "getEntriesByType", "getEntriesByName", "timing", "navigation",
 ]
 
 # Marks and measures are the entries there are: nothing else is timed yet.
@@ -431,6 +431,37 @@ members = ["detail"]
 
 [interfaces.PerformanceMeasure]
 members = ["detail"]
+
+# The navigation entry records the document's own loading; nothing else
+# is timed (no resource entries). The legacy `timing` and `navigation` say
+# the same in epoch milliseconds.
+
+[interfaces.PerformanceResourceTiming]
+members = [
+  "initiatorType", "deliveryType", "nextHopProtocol", "workerStart", "redirectStart", "redirectEnd",
+  "fetchStart", "domainLookupStart", "domainLookupEnd", "connectStart", "connectEnd",
+  "secureConnectionStart", "requestStart", "responseStart", "responseEnd", "transferSize",
+  "encodedBodySize", "decodedBodySize", "toJSON",
+]
+
+[interfaces.PerformanceNavigationTiming]
+members = [
+  "unloadEventStart", "unloadEventEnd", "domInteractive", "domContentLoadedEventStart",
+  "domContentLoadedEventEnd", "domComplete", "loadEventStart", "loadEventEnd", "type",
+  "redirectCount", "toJSON",
+]
+
+[interfaces.PerformanceTiming]
+members = [
+  "navigationStart", "unloadEventStart", "unloadEventEnd", "redirectStart", "redirectEnd",
+  "fetchStart", "domainLookupStart", "domainLookupEnd", "connectStart", "connectEnd",
+  "secureConnectionStart", "requestStart", "responseStart", "responseEnd", "domLoading",
+  "domInteractive", "domContentLoadedEventStart", "domContentLoadedEventEnd", "domComplete",
+  "loadEventStart", "loadEventEnd", "toJSON",
+]
+
+[interfaces.PerformanceNavigation]
+members = ["type", "redirectCount", "toJSON"]
 
 [interfaces.PerformanceObserver]
 constructor = true

@@ -12,7 +12,9 @@ const FIXTURE: &str = r#"<!doctype html><body>
 <script>
   var log = [];
   function attempt(f) { try { return String(f()); } catch (e) { return e.name; } }
-  function names(entries) { return entries.map(function (e) { return e.entryType + ':' + e.name; }).join('+'); }
+  // The navigation entry is always there; these tests look past it.
+  function names(entries) { return entries.filter(function (e) { return e.entryType !== 'navigation'; }).map(function (e) { return e.entryType + ':' + e.name; }).join('+'); }
+  function count() { return performance.getEntries().length - 1; }
 </script>"#;
 
 fn settle(page: &mut BoaPage) {
@@ -63,8 +65,8 @@ fn marks_and_measures_are_recorded() {
                  [m instanceof PerformanceMark, m instanceof PerformanceEntry, m.name, m.entryType, m.duration, m.startTime >= now, m.detail].join()",
                 "true,true,first,mark,0,true,",
             ),
-            ("performance.getEntriesByName('first')[0] === m && performance.getEntries()[0] === m", "true"),
-            ("performance.clearMarks('first'); performance.getEntries().length", "0"),
+            ("performance.getEntriesByName('first')[0] === m && performance.getEntries()[1] === m", "true"),
+            ("performance.clearMarks('first'); count()", "0"),
             // Entries come back in the order they started.
             (
                 "performance.mark('a', { startTime: 10 }); performance.mark('b', { startTime: 5 }); performance.mark('c', { startTime: 7 });
@@ -96,8 +98,8 @@ fn marks_and_measures_are_recorded() {
             // A mark made by hand is not on the timeline.
             ("new PerformanceMark('free', { startTime: 1 }).startTime + ' ' + performance.getEntriesByName('free').length", "1 0"),
             ("performance.clearMarks('c'); names(performance.getEntriesByType('mark'))", "mark:b+mark:a"),
-            ("performance.clearMarks(); performance.clearMeasures('ab'); performance.getEntries().length", "6"),
-            ("performance.clearMeasures(); performance.getEntries().length", "0"),
+            ("performance.clearMarks(); performance.clearMeasures('ab'); count()", "6"),
+            ("performance.clearMeasures(); count()", "0"),
         ],
     );
 }
@@ -150,7 +152,7 @@ fn what_cannot_be_timed_is_refused() {
                 "InvalidAccessError",
             ),
             ("attempt(function () { performance.mark(); })", "TypeError"),
-            ("performance.getEntries().length", "1"),
+            ("count()", "1"),
         ],
     );
 }
@@ -160,7 +162,7 @@ fn observers_hear_of_new_entries() {
     let mut page = load(FIXTURE);
     assert_eq!(
         eval(&mut page, "PerformanceObserver.supportedEntryTypes.join()"),
-        "mark,measure"
+        "mark,measure,navigation"
     );
     assert_eq!(
         step(
@@ -246,5 +248,67 @@ fn observers_can_ask_for_what_is_already_there() {
                 "TypeError",
             ),
         ],
+    );
+}
+
+#[test]
+fn the_navigation_is_timed() {
+    let mut page = load(FIXTURE);
+    check(
+        &mut page,
+        &[
+            (
+                "var nav = performance.getEntriesByType('navigation')[0]; nav instanceof PerformanceNavigationTiming && nav instanceof PerformanceResourceTiming && nav instanceof PerformanceEntry",
+                "true",
+            ),
+            (
+                "[nav.name, nav.entryType, nav.startTime, nav.initiatorType, nav.type, nav.redirectCount].join()",
+                "https://example.test/,navigation,0,navigation,navigate,0",
+            ),
+            (
+                "nav.domInteractive > 0 && nav.domContentLoadedEventStart >= nav.domInteractive && nav.domContentLoadedEventEnd >= nav.domContentLoadedEventStart && nav.domComplete >= nav.domContentLoadedEventEnd && nav.loadEventEnd >= nav.loadEventStart && nav.loadEventStart >= nav.domComplete && nav.duration === nav.loadEventEnd",
+                "true",
+            ),
+            (
+                "performance.getEntries()[0] === nav && performance.getEntriesByName(location.href)[0] === nav && nav === performance.getEntriesByType('navigation')[0]",
+                "true",
+            ),
+            (
+                "Object.keys(nav.toJSON()).indexOf('domComplete') >= 0 && JSON.stringify(nav).indexOf('\"type\":\"navigate\"') >= 0",
+                "true",
+            ),
+            (
+                "PerformanceObserver.supportedEntryTypes.join()",
+                "mark,measure,navigation",
+            ),
+            // The legacy view says the same in epoch milliseconds.
+            (
+                "var t = performance.timing; t instanceof PerformanceTiming && t === performance.timing && t.navigationStart === Math.round(performance.timeOrigin)",
+                "true",
+            ),
+            (
+                "t.domInteractive - t.navigationStart === Math.round(nav.domInteractive) && t.loadEventEnd >= t.loadEventStart && t.unloadEventStart === 0 && t.responseEnd >= 0",
+                "true",
+            ),
+            (
+                "Object.keys(t.toJSON()).length + ' ' + typeof t.toJSON().navigationStart",
+                "21 number",
+            ),
+            (
+                "performance.navigation.type + ' ' + performance.navigation.redirectCount + ' ' + PerformanceNavigation.TYPE_RELOAD + ' ' + JSON.stringify(performance.navigation)",
+                "0 0 1 {\"type\":0,\"redirectCount\":0}",
+            ),
+            (
+                "performance.clearMarks(); performance.getEntriesByType('navigation').length",
+                "1",
+            ),
+        ],
+    );
+    assert_eq!(
+        step(
+            &mut page,
+            "new PerformanceObserver(function (list) { log.push(list.getEntries().map(function (e) { return e.entryType; }).join()); }).observe({ type: 'navigation', buffered: true })"
+        ),
+        "navigation"
     );
 }

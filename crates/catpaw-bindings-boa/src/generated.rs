@@ -60,6 +60,20 @@ impl IntoJs for web::DocumentVisibilityState {
     }
 }
 
+impl FromJs for web::NavigationTimingType {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::NavigationTimingType::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid NavigationTimingType")))
+    }
+}
+
+impl IntoJs for web::NavigationTimingType {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
 impl FromJs for web::ReadableStreamReaderMode {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let s = rt::string_from_js(v, ctx)?;
@@ -6213,6 +6227,69 @@ pub mod performance {
         rt::ret(r, ctx)
     }
 
+    fn get_timing(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "timing", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_object(this_js, I::Performance, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::PerformanceImpl>::timing(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "timing", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_navigation(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "navigation", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_object(this_js, I::Performance, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceImpl>::navigation(cx, this)
+        });
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "navigation", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_onresourcetimingbufferfull(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Performance, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(
+                cx,
+                EventTargetRef::Object(this),
+                "resourcetimingbufferfull",
+            )
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onresourcetimingbufferfull(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Performance, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Object(this),
+                "resourcetimingbufferfull",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
     fn op_now(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_object(this_js, I::Performance, ctx)?;
@@ -6338,11 +6415,28 @@ pub mod performance {
         global: false,
         constructor: None,
         constructor_length: 0,
-        attrs: &[rt::AttrDef {
-            name: "timeOrigin",
-            getter: get_time_origin,
-            setter: None,
-        }],
+        attrs: &[
+            rt::AttrDef {
+                name: "timeOrigin",
+                getter: get_time_origin,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "timing",
+                getter: get_timing,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "navigation",
+                getter: get_navigation,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "onresourcetimingbufferfull",
+                getter: get_onresourcetimingbufferfull,
+                setter: Some(set_onresourcetimingbufferfull),
+            },
+        ],
         ops: &[
             rt::OpDef {
                 name: "now",
@@ -6561,6 +6655,75 @@ pub mod performance_measure {
     };
 }
 
+pub mod performance_navigation {
+    use super::*;
+
+    fn get_type(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceNavigation, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceNavigationImpl>::type_(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_redirect_count(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceNavigation, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceNavigationImpl>::redirect_count(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_to_json(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::PerformanceNavigation, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceNavigationImpl>::to_json(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::PerformanceNavigation,
+        name: "PerformanceNavigation",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "type",
+                getter: get_type,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "redirectCount",
+                getter: get_redirect_count,
+                setter: None,
+            },
+        ],
+        ops: &[rt::OpDef {
+            name: "toJSON",
+            func: op_to_json,
+            length: 0,
+        }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[
+            ("TYPE_NAVIGATE", 0_f64),
+            ("TYPE_RELOAD", 1_f64),
+            ("TYPE_BACK_FORWARD", 2_f64),
+            ("TYPE_RESERVED", 255_f64),
+        ],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod performance_observer {
     use super::*;
 
@@ -6733,6 +6896,737 @@ pub mod performance_observer_entry_list {
                 length: 1,
             },
         ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod performance_resource_timing {
+    use super::*;
+
+    fn get_initiator_type(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceResourceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceResourceTimingImpl>::initiator_type(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_delivery_type(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceResourceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceResourceTimingImpl>::delivery_type(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_next_hop_protocol(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceResourceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceResourceTimingImpl>::next_hop_protocol(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_worker_start(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceResourceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceResourceTimingImpl>::worker_start(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_redirect_start(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceResourceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceResourceTimingImpl>::redirect_start(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_redirect_end(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceResourceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceResourceTimingImpl>::redirect_end(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_fetch_start(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceResourceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceResourceTimingImpl>::fetch_start(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_domain_lookup_start(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceResourceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceResourceTimingImpl>::domain_lookup_start(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_domain_lookup_end(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceResourceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceResourceTimingImpl>::domain_lookup_end(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_connect_start(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceResourceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceResourceTimingImpl>::connect_start(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_connect_end(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceResourceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceResourceTimingImpl>::connect_end(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_secure_connection_start(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceResourceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceResourceTimingImpl>::secure_connection_start(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_request_start(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceResourceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceResourceTimingImpl>::request_start(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_response_start(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceResourceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceResourceTimingImpl>::response_start(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_response_end(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceResourceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceResourceTimingImpl>::response_end(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_transfer_size(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceResourceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceResourceTimingImpl>::transfer_size(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_encoded_body_size(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceResourceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceResourceTimingImpl>::encoded_body_size(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_decoded_body_size(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceResourceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceResourceTimingImpl>::decoded_body_size(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_to_json(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::PerformanceResourceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceResourceTimingImpl>::to_json(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::PerformanceResourceTiming,
+        name: "PerformanceResourceTiming",
+        parent: Some(I::PerformanceEntry),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "initiatorType",
+                getter: get_initiator_type,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "deliveryType",
+                getter: get_delivery_type,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "nextHopProtocol",
+                getter: get_next_hop_protocol,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "workerStart",
+                getter: get_worker_start,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "redirectStart",
+                getter: get_redirect_start,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "redirectEnd",
+                getter: get_redirect_end,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "fetchStart",
+                getter: get_fetch_start,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "domainLookupStart",
+                getter: get_domain_lookup_start,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "domainLookupEnd",
+                getter: get_domain_lookup_end,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "connectStart",
+                getter: get_connect_start,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "connectEnd",
+                getter: get_connect_end,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "secureConnectionStart",
+                getter: get_secure_connection_start,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "requestStart",
+                getter: get_request_start,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "responseStart",
+                getter: get_response_start,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "responseEnd",
+                getter: get_response_end,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "transferSize",
+                getter: get_transfer_size,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "encodedBodySize",
+                getter: get_encoded_body_size,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "decodedBodySize",
+                getter: get_decoded_body_size,
+                setter: None,
+            },
+        ],
+        ops: &[rt::OpDef {
+            name: "toJSON",
+            func: op_to_json,
+            length: 0,
+        }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod performance_timing {
+    use super::*;
+
+    fn get_navigation_start(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceTimingImpl>::navigation_start(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_unload_event_start(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceTimingImpl>::unload_event_start(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_unload_event_end(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceTimingImpl>::unload_event_end(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_redirect_start(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceTimingImpl>::redirect_start(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_redirect_end(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceTimingImpl>::redirect_end(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_fetch_start(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceTimingImpl>::fetch_start(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_domain_lookup_start(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceTimingImpl>::domain_lookup_start(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_domain_lookup_end(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceTimingImpl>::domain_lookup_end(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_connect_start(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceTimingImpl>::connect_start(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_connect_end(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceTimingImpl>::connect_end(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_secure_connection_start(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceTimingImpl>::secure_connection_start(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_request_start(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceTimingImpl>::request_start(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_response_start(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceTimingImpl>::response_start(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_response_end(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceTimingImpl>::response_end(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_dom_loading(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceTimingImpl>::dom_loading(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_dom_interactive(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceTimingImpl>::dom_interactive(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_dom_content_loaded_event_start(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceTimingImpl>::dom_content_loaded_event_start(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_dom_content_loaded_event_end(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceTimingImpl>::dom_content_loaded_event_end(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_dom_complete(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceTimingImpl>::dom_complete(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_load_event_start(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceTimingImpl>::load_event_start(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_load_event_end(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceTimingImpl>::load_event_end(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_to_json(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::PerformanceTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceTimingImpl>::to_json(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::PerformanceTiming,
+        name: "PerformanceTiming",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "navigationStart",
+                getter: get_navigation_start,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "unloadEventStart",
+                getter: get_unload_event_start,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "unloadEventEnd",
+                getter: get_unload_event_end,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "redirectStart",
+                getter: get_redirect_start,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "redirectEnd",
+                getter: get_redirect_end,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "fetchStart",
+                getter: get_fetch_start,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "domainLookupStart",
+                getter: get_domain_lookup_start,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "domainLookupEnd",
+                getter: get_domain_lookup_end,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "connectStart",
+                getter: get_connect_start,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "connectEnd",
+                getter: get_connect_end,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "secureConnectionStart",
+                getter: get_secure_connection_start,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "requestStart",
+                getter: get_request_start,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "responseStart",
+                getter: get_response_start,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "responseEnd",
+                getter: get_response_end,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "domLoading",
+                getter: get_dom_loading,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "domInteractive",
+                getter: get_dom_interactive,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "domContentLoadedEventStart",
+                getter: get_dom_content_loaded_event_start,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "domContentLoadedEventEnd",
+                getter: get_dom_content_loaded_event_end,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "domComplete",
+                getter: get_dom_complete,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "loadEventStart",
+                getter: get_load_event_start,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "loadEventEnd",
+                getter: get_load_event_end,
+                setter: None,
+            },
+        ],
+        ops: &[rt::OpDef {
+            name: "toJSON",
+            func: op_to_json,
+            length: 0,
+        }],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -31856,6 +32750,206 @@ pub mod html_video_element {
     };
 }
 
+pub mod performance_navigation_timing {
+    use super::*;
+
+    fn get_unload_event_start(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceNavigationTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceNavigationTimingImpl>::unload_event_start(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_unload_event_end(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceNavigationTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceNavigationTimingImpl>::unload_event_end(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_dom_interactive(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceNavigationTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceNavigationTimingImpl>::dom_interactive(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_dom_content_loaded_event_start(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceNavigationTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceNavigationTimingImpl>::dom_content_loaded_event_start(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_dom_content_loaded_event_end(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceNavigationTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceNavigationTimingImpl>::dom_content_loaded_event_end(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_dom_complete(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceNavigationTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceNavigationTimingImpl>::dom_complete(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_load_event_start(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceNavigationTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceNavigationTimingImpl>::load_event_start(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_load_event_end(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceNavigationTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceNavigationTimingImpl>::load_event_end(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_type(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceNavigationTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceNavigationTimingImpl>::type_(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_redirect_count(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PerformanceNavigationTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceNavigationTimingImpl>::redirect_count(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_to_json(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::PerformanceNavigationTiming, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PerformanceNavigationTimingImpl>::to_json(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::PerformanceNavigationTiming,
+        name: "PerformanceNavigationTiming",
+        parent: Some(I::PerformanceResourceTiming),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "unloadEventStart",
+                getter: get_unload_event_start,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "unloadEventEnd",
+                getter: get_unload_event_end,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "domInteractive",
+                getter: get_dom_interactive,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "domContentLoadedEventStart",
+                getter: get_dom_content_loaded_event_start,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "domContentLoadedEventEnd",
+                getter: get_dom_content_loaded_event_end,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "domComplete",
+                getter: get_dom_complete,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "loadEventStart",
+                getter: get_load_event_start,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "loadEventEnd",
+                getter: get_load_event_end,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "type",
+                getter: get_type,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "redirectCount",
+                getter: get_redirect_count,
+                setter: None,
+            },
+        ],
+        ops: &[rt::OpDef {
+            name: "toJSON",
+            func: op_to_json,
+            length: 0,
+        }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod svg_element {
     use super::*;
 
@@ -40014,8 +41108,11 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &performance_entry::DEF,
     &performance_mark::DEF,
     &performance_measure::DEF,
+    &performance_navigation::DEF,
     &performance_observer::DEF,
     &performance_observer_entry_list::DEF,
+    &performance_resource_timing::DEF,
+    &performance_timing::DEF,
     &pop_state_event::DEF,
     &progress_event::DEF,
     &promise_rejection_event::DEF,
@@ -40108,6 +41205,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &htmlu_list_element::DEF,
     &html_unknown_element::DEF,
     &html_video_element::DEF,
+    &performance_navigation_timing::DEF,
     &svg_element::DEF,
     &svg_gradient_element::DEF,
     &svg_graphics_element::DEF,

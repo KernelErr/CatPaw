@@ -20,6 +20,7 @@ use crate::event_loop::queue_task;
 use crate::events;
 use crate::generated::DocumentReadyState;
 use crate::mutation_observer;
+use crate::navigation_timing;
 use crate::net::{self, NetRequest, NetResult, RequestKind};
 use crate::page::{ConsoleLevel, Cx, PageState};
 use crate::stylesheets;
@@ -466,6 +467,14 @@ fn pump(cx: &mut Cx<'_>, stream: &HtmlStream) {
 
 fn set_ready_state(cx: &mut Cx<'_>, state: DocumentReadyState) {
     cx.page.document_state.borrow_mut().ready_state = state;
+    let timing = &cx.page.timing;
+    match state {
+        DocumentReadyState::Interactive => {
+            navigation_timing::reached(cx.page, &timing.dom_interactive)
+        }
+        DocumentReadyState::Complete => navigation_timing::reached(cx.page, &timing.dom_complete),
+        DocumentReadyState::Loading => {}
+    }
     let document = cx.document();
     events::fire(
         cx,
@@ -484,7 +493,9 @@ fn maybe_fire_load(page: &PageState) {
     scripts.load_pending.set(false);
     queue_task(page, "load", |cx| {
         set_ready_state(cx, DocumentReadyState::Complete);
+        navigation_timing::reached(cx.page, &cx.page.timing.load_start);
         events::fire(cx, EventTargetRef::Window, "load", false, false);
+        navigation_timing::reached(cx.page, &cx.page.timing.load_end);
         events::fire(cx, EventTargetRef::Window, "pageshow", false, false);
     });
 }
@@ -537,6 +548,7 @@ fn finish_parsing(cx: &mut Cx<'_>) {
     }
 
     let document = cx.document();
+    navigation_timing::reached(cx.page, &cx.page.timing.dom_content_loaded_start);
     events::fire(
         cx,
         EventTargetRef::Node(document),
@@ -544,6 +556,7 @@ fn finish_parsing(cx: &mut Cx<'_>) {
         true,
         false,
     );
+    navigation_timing::reached(cx.page, &cx.page.timing.dom_content_loaded_end);
     cx.page.scripts.load_pending.set(true);
     maybe_fire_load(cx.page);
 }

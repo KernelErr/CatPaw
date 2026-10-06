@@ -716,6 +716,22 @@ impl web::PerformanceImpl for Web {
         Ok(())
     }
 
+    fn timing(cx: &mut Cx<'_>, _this: ObjectId) -> Fallible<ObjectId> {
+        Ok(singleton(
+            cx,
+            |s| &mut s.timing,
+            |page| page.alloc(crate::navigation_timing::TimingObject),
+        ))
+    }
+
+    fn navigation(cx: &mut Cx<'_>, _this: ObjectId) -> Fallible<ObjectId> {
+        Ok(singleton(
+            cx,
+            |s| &mut s.navigation,
+            |page| page.alloc(crate::navigation_timing::NavigationObject),
+        ))
+    }
+
     fn get_entries(cx: &mut Cx<'_>, _this: ObjectId) -> Fallible<Vec<ObjectId>> {
         Ok(performance::entries(cx.page, None, None))
     }

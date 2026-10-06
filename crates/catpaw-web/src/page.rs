@@ -187,6 +187,8 @@ pub struct Singletons {
     pub performance: Option<ObjectId>,
     pub crypto: Option<ObjectId>,
     pub custom_elements: Option<ObjectId>,
+    pub timing: Option<ObjectId>,
+    pub navigation: Option<ObjectId>,
     pub local_storage: Option<ObjectId>,
     pub session_storage: Option<ObjectId>,
 }
@@ -254,6 +256,8 @@ pub struct PageState {
     pub(crate) traversers: crate::traversal::Traversers,
     pub(crate) custom_elements: crate::custom_elements::Registry,
     pub(crate) reactions: crate::promises::Reactions,
+    /// When the document's loading reached its milestones.
+    pub timing: crate::navigation_timing::DocumentTiming,
     microtask_queue: RefCell<Option<MicrotaskQueue>>,
     /// An uncaught exception is being reported (reports do not nest).
     pub(crate) reporting_error: Cell<bool>,
@@ -318,6 +322,7 @@ impl PageState {
             traversers: Default::default(),
             custom_elements: Default::default(),
             reactions: Default::default(),
+            timing: Default::default(),
             microtask_queue: RefCell::new(None),
             reporting_error: Cell::new(false),
             errors: RefCell::new(Vec::new()),

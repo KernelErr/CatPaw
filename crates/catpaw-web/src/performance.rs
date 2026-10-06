@@ -1,9 +1,9 @@
 //! User timing and the performance timeline: `performance.mark()` and
 //! `measure()`, the entries they leave, and `PerformanceObserver`.
 //!
-//! Marks and measures are the only entries there are. The page does not
-//! time its loading, its resources or its rendering yet, and says so
-//! through `PerformanceObserver.supportedEntryTypes`.
+//! Marks, measures and the one navigation entry are the entries there
+//! are. Resources and rendering are not timed, and
+//! `PerformanceObserver.supportedEntryTypes` says so.
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -20,6 +20,8 @@ use crate::{Web, platform_object};
 enum Kind {
     Mark,
     Measure,
+    /// The document's own loading; see `navigation_timing`.
+    Navigation,
 }
 
 impl Kind {
@@ -27,6 +29,7 @@ impl Kind {
         match self {
             Kind::Mark => "mark",
             Kind::Measure => "measure",
+            Kind::Navigation => "navigation",
         }
     }
 
@@ -34,6 +37,7 @@ impl Kind {
         match entry_type {
             "mark" => Some(Kind::Mark),
             "measure" => Some(Kind::Measure),
+            "navigation" => Some(Kind::Navigation),
             _ => None,
         }
     }
@@ -55,7 +59,36 @@ pub struct EntryObject {
 platform_object!(EntryObject, |e| match e.entry.kind {
     Kind::Mark => InterfaceId::PerformanceMark,
     Kind::Measure => InterfaceId::PerformanceMeasure,
+    Kind::Navigation => InterfaceId::PerformanceNavigationTiming,
 });
+
+/// Checks that `this` is the navigation entry.
+pub(crate) fn is_navigation_entry(cx: &Cx<'_>, this: ObjectId) -> Fallible<()> {
+    let is = cx
+        .page
+        .with::<EntryObject, _>(this, |e| e.entry.kind == Kind::Navigation)?;
+    if is {
+        Ok(())
+    } else {
+        Err(Exception::type_error("Illegal invocation"))
+    }
+}
+
+/// Puts the navigation entry on the timeline, the first time it is needed.
+fn ensure_navigation(page: &PageState) {
+    let timeline = &page.timeline;
+    if timeline.has_navigation.replace(true) {
+        return;
+    }
+    let entry = Rc::new(Entry {
+        kind: Kind::Navigation,
+        name: page.url.borrow().to_string(),
+        start: 0.0,
+        duration: 0.0,
+        detail: Value::Null,
+    });
+    timeline.entries.borrow_mut().insert(0, entry);
+}
 
 pub struct ObserverObject {
     callback: Callback,
@@ -87,6 +120,8 @@ pub(crate) struct Timeline {
     observers: RefCell<Vec<ObjectId>>,
     /// The task that notifies them is queued.
     task_queued: Cell<bool>,
+    /// The navigation entry is on the timeline.
+    has_navigation: Cell<bool>,
 }
 
 /// The script object for `entry`: the same one for as long as script holds
@@ -382,6 +417,7 @@ pub(crate) fn entries(
     name: Option<&str>,
     entry_type: Option<&str>,
 ) -> Vec<ObjectId> {
+    ensure_navigation(page);
     let entries = page.timeline.entries.borrow().clone();
     select(page, &entries, name, entry_type)
 }
@@ -404,7 +440,12 @@ impl web::PerformanceEntryImpl for Web {
     }
 
     fn duration(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64> {
-        entry(cx, this, |e| e.duration)
+        let page = cx.page;
+        entry(cx, this, |e| match e.kind {
+            // The navigation lasts until its load event is done.
+            Kind::Navigation => page.timing.load_end.get(),
+            _ => e.duration,
+        })
     }
 
     fn to_json(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value> {
@@ -512,6 +553,7 @@ impl web::PerformanceObserverImpl for Web {
                 }
             })?;
             if options.buffered == Some(true) {
+                ensure_navigation(page);
                 let entries = page.timeline.entries.borrow();
                 entries.iter().filter(|e| e.kind == kind).cloned().collect()
             } else {
@@ -568,6 +610,7 @@ impl web::PerformanceObserverImpl for Web {
         Ok(vec![
             Kind::Mark.as_str().to_string(),
             Kind::Measure.as_str().to_string(),
+            Kind::Navigation.as_str().to_string(),
         ])
     }
 }

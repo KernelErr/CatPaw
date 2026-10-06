@@ -34,6 +34,7 @@ mod implementation;
 mod intersection_observer;
 mod media;
 mod mutation_observer;
+pub mod navigation_timing;
 pub mod net;
 mod node;
 pub mod page;

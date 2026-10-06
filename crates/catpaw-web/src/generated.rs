@@ -53,8 +53,11 @@ pub enum InterfaceId {
     PerformanceEntry,
     PerformanceMark,
     PerformanceMeasure,
+    PerformanceNavigation,
     PerformanceObserver,
     PerformanceObserverEntryList,
+    PerformanceResourceTiming,
+    PerformanceTiming,
     PopStateEvent,
     ProgressEvent,
     PromiseRejectionEvent,
@@ -147,6 +150,7 @@ pub enum InterfaceId {
     HTMLUListElement,
     HTMLUnknownElement,
     HTMLVideoElement,
+    PerformanceNavigationTiming,
     SVGElement,
     SVGGradientElement,
     SVGGraphicsElement,
@@ -205,8 +209,8 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 180;
-    pub const ALL: [InterfaceId; 180] = [
+    pub const COUNT: usize = 184;
+    pub const ALL: [InterfaceId; 184] = [
         InterfaceId::AbortController,
         InterfaceId::CSSStyleDeclaration,
         InterfaceId::CSSStyleProperties,
@@ -238,8 +242,11 @@ impl InterfaceId {
         InterfaceId::PerformanceEntry,
         InterfaceId::PerformanceMark,
         InterfaceId::PerformanceMeasure,
+        InterfaceId::PerformanceNavigation,
         InterfaceId::PerformanceObserver,
         InterfaceId::PerformanceObserverEntryList,
+        InterfaceId::PerformanceResourceTiming,
+        InterfaceId::PerformanceTiming,
         InterfaceId::PopStateEvent,
         InterfaceId::ProgressEvent,
         InterfaceId::PromiseRejectionEvent,
@@ -332,6 +339,7 @@ impl InterfaceId {
         InterfaceId::HTMLUListElement,
         InterfaceId::HTMLUnknownElement,
         InterfaceId::HTMLVideoElement,
+        InterfaceId::PerformanceNavigationTiming,
         InterfaceId::SVGElement,
         InterfaceId::SVGGradientElement,
         InterfaceId::SVGGraphicsElement,
@@ -422,8 +430,11 @@ impl InterfaceId {
             InterfaceId::PerformanceEntry => "PerformanceEntry",
             InterfaceId::PerformanceMark => "PerformanceMark",
             InterfaceId::PerformanceMeasure => "PerformanceMeasure",
+            InterfaceId::PerformanceNavigation => "PerformanceNavigation",
             InterfaceId::PerformanceObserver => "PerformanceObserver",
             InterfaceId::PerformanceObserverEntryList => "PerformanceObserverEntryList",
+            InterfaceId::PerformanceResourceTiming => "PerformanceResourceTiming",
+            InterfaceId::PerformanceTiming => "PerformanceTiming",
             InterfaceId::PopStateEvent => "PopStateEvent",
             InterfaceId::ProgressEvent => "ProgressEvent",
             InterfaceId::PromiseRejectionEvent => "PromiseRejectionEvent",
@@ -516,6 +527,7 @@ impl InterfaceId {
             InterfaceId::HTMLUListElement => "HTMLUListElement",
             InterfaceId::HTMLUnknownElement => "HTMLUnknownElement",
             InterfaceId::HTMLVideoElement => "HTMLVideoElement",
+            InterfaceId::PerformanceNavigationTiming => "PerformanceNavigationTiming",
             InterfaceId::SVGElement => "SVGElement",
             InterfaceId::SVGGradientElement => "SVGGradientElement",
             InterfaceId::SVGGraphicsElement => "SVGGraphicsElement",
@@ -607,8 +619,11 @@ impl InterfaceId {
             "PerformanceEntry" => InterfaceId::PerformanceEntry,
             "PerformanceMark" => InterfaceId::PerformanceMark,
             "PerformanceMeasure" => InterfaceId::PerformanceMeasure,
+            "PerformanceNavigation" => InterfaceId::PerformanceNavigation,
             "PerformanceObserver" => InterfaceId::PerformanceObserver,
             "PerformanceObserverEntryList" => InterfaceId::PerformanceObserverEntryList,
+            "PerformanceResourceTiming" => InterfaceId::PerformanceResourceTiming,
+            "PerformanceTiming" => InterfaceId::PerformanceTiming,
             "PopStateEvent" => InterfaceId::PopStateEvent,
             "ProgressEvent" => InterfaceId::ProgressEvent,
             "PromiseRejectionEvent" => InterfaceId::PromiseRejectionEvent,
@@ -701,6 +716,7 @@ impl InterfaceId {
             "HTMLUListElement" => InterfaceId::HTMLUListElement,
             "HTMLUnknownElement" => InterfaceId::HTMLUnknownElement,
             "HTMLVideoElement" => InterfaceId::HTMLVideoElement,
+            "PerformanceNavigationTiming" => InterfaceId::PerformanceNavigationTiming,
             "SVGElement" => InterfaceId::SVGElement,
             "SVGGradientElement" => InterfaceId::SVGGradientElement,
             "SVGGraphicsElement" => InterfaceId::SVGGraphicsElement,
@@ -793,8 +809,11 @@ impl InterfaceId {
             InterfaceId::PerformanceEntry => None,
             InterfaceId::PerformanceMark => Some(InterfaceId::PerformanceEntry),
             InterfaceId::PerformanceMeasure => Some(InterfaceId::PerformanceEntry),
+            InterfaceId::PerformanceNavigation => None,
             InterfaceId::PerformanceObserver => None,
             InterfaceId::PerformanceObserverEntryList => None,
+            InterfaceId::PerformanceResourceTiming => Some(InterfaceId::PerformanceEntry),
+            InterfaceId::PerformanceTiming => None,
             InterfaceId::PopStateEvent => Some(InterfaceId::Event),
             InterfaceId::ProgressEvent => Some(InterfaceId::Event),
             InterfaceId::PromiseRejectionEvent => Some(InterfaceId::Event),
@@ -887,6 +906,9 @@ impl InterfaceId {
             InterfaceId::HTMLUListElement => Some(InterfaceId::HTMLElement),
             InterfaceId::HTMLUnknownElement => Some(InterfaceId::HTMLElement),
             InterfaceId::HTMLVideoElement => Some(InterfaceId::HTMLMediaElement),
+            InterfaceId::PerformanceNavigationTiming => {
+                Some(InterfaceId::PerformanceResourceTiming)
+            }
             InterfaceId::SVGElement => Some(InterfaceId::Element),
             InterfaceId::SVGGradientElement => Some(InterfaceId::SVGElement),
             InterfaceId::SVGGraphicsElement => Some(InterfaceId::SVGElement),
@@ -1159,6 +1181,32 @@ impl DocumentVisibilityState {
         Some(match s {
             "visible" => DocumentVisibilityState::Visible,
             "hidden" => DocumentVisibilityState::Hidden,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum NavigationTimingType {
+    Navigate,
+    Reload,
+    BackForward,
+}
+
+impl NavigationTimingType {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            NavigationTimingType::Navigate => "navigate",
+            NavigationTimingType::Reload => "reload",
+            NavigationTimingType::BackForward => "back_forward",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "navigate" => NavigationTimingType::Navigate,
+            "reload" => NavigationTimingType::Reload,
+            "back_forward" => NavigationTimingType::BackForward,
             _ => return None,
         })
     }
@@ -2670,6 +2718,8 @@ pub trait NodeListImpl {
 pub trait PerformanceImpl {
     fn now(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
     fn time_origin(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn timing(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn navigation(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
     fn get_entries(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<ObjectId>>;
     fn get_entries_by_type(
         cx: &mut Cx<'_>,
@@ -2724,6 +2774,12 @@ pub trait PerformanceMeasureImpl {
     fn detail(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
 }
 
+pub trait PerformanceNavigationImpl {
+    fn type_(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u16>;
+    fn redirect_count(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u16>;
+    fn to_json(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
+}
+
 pub trait PerformanceObserverImpl {
     fn observe(cx: &mut Cx<'_>, this: ObjectId, options: PerformanceObserverInit) -> Fallible<()>;
     fn disconnect(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
@@ -2745,6 +2801,53 @@ pub trait PerformanceObserverEntryListImpl {
         name: String,
         type_: Option<String>,
     ) -> Fallible<Vec<ObjectId>>;
+}
+
+pub trait PerformanceResourceTimingImpl {
+    fn initiator_type(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn delivery_type(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn next_hop_protocol(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn worker_start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn redirect_start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn redirect_end(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn fetch_start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn domain_lookup_start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn domain_lookup_end(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn connect_start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn connect_end(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn secure_connection_start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn request_start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn response_start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn response_end(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn transfer_size(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn encoded_body_size(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn decoded_body_size(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn to_json(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
+}
+
+pub trait PerformanceTimingImpl {
+    fn navigation_start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn unload_event_start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn unload_event_end(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn redirect_start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn redirect_end(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn fetch_start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn domain_lookup_start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn domain_lookup_end(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn connect_start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn connect_end(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn secure_connection_start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn request_start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn response_start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn response_end(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn dom_loading(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn dom_interactive(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn dom_content_loaded_event_start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn dom_content_loaded_event_end(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn dom_complete(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn load_event_start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn load_event_end(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn to_json(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
 }
 
 pub trait PopStateEventImpl {
@@ -3460,6 +3563,20 @@ pub trait HTMLTextAreaElementImpl {
 pub trait HTMLTitleElementImpl {
     fn text(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
     fn set_text(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+}
+
+pub trait PerformanceNavigationTimingImpl {
+    fn unload_event_start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn unload_event_end(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn dom_interactive(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn dom_content_loaded_event_start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn dom_content_loaded_event_end(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn dom_complete(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn load_event_start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn load_event_end(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn type_(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<NavigationTimingType>;
+    fn redirect_count(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u16>;
+    fn to_json(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
 }
 
 pub trait SVGElementImpl {
