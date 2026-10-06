@@ -200,7 +200,7 @@ impl ScriptHost for BoaHost<'_> {
 
     fn to_string_sequence(&mut self, value: &Value) -> Fallible<Vec<String>> {
         let target = self.js_value(value);
-        let result = rt::sequence_from_js(&target, self.ctx, |v, ctx| rt::string_from_js(v, ctx));
+        let result = rt::sequence_from_js(&target, self.ctx, rt::string_from_js);
         result.map_err(|e| rt::exception_from_js(e, self.ctx))
     }
 
