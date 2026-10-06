@@ -221,7 +221,7 @@ members = ["before", "after", "replaceWith", "remove"]
 members = ["previousElementSibling", "nextElementSibling"]
 
 [mixins.DocumentOrShadowRoot]
-members = ["activeElement"]
+members = ["activeElement", "styleSheets", "adoptedStyleSheets"]
 
 # ---------------------------------------------------------- DOM: collections
 
@@ -310,6 +310,10 @@ members = ["width", "height"]
 [interfaces.HTMLProgressElement]
 [interfaces.HTMLQuoteElement]
 [interfaces.HTMLSlotElement]
+members = ["assignedNodes", "assignedElements"]
+
+[mixins.Slottable]
+members = ["assignedSlot"]
 [interfaces.HTMLSourceElement]
 [interfaces.HTMLTableCaptionElement]
 [interfaces.HTMLTableColElement]
@@ -498,6 +502,43 @@ members = ["getEntries", "getEntriesByType", "getEntriesByName"]
 # is given. `subtle` is absent until SubtleCrypto is there.
 [interfaces.Crypto]
 members = ["randomUUID"]
+
+# ------------------------------------------------------------------- CSSOM
+# Sheets as lists of top-level rules (`catpaw_style::cssom`); edits reach the
+# style engine. Sheets adopted by shadow roots are kept but, without style
+# scoping, do not apply. No `CSSStyleRule.style`, nested rules or `@import`.
+[interfaces.MediaList]
+exotic = true
+members = ["mediaText", "length", "item", "appendMedium", "deleteMedium"]
+
+[interfaces.StyleSheet]
+members = ["type", "href", "ownerNode", "parentStyleSheet", "title", "media", "disabled"]
+
+[interfaces.CSSStyleSheet]
+constructor = true
+members = [
+  "ownerRule", "cssRules", "insertRule", "deleteRule", "replace", "replaceSync", "rules",
+  "addRule", "removeRule",
+]
+
+[interfaces.StyleSheetList]
+exotic = true
+members = ["item", "length"]
+
+[interfaces.CSSRuleList]
+exotic = true
+members = ["item", "length"]
+
+[interfaces.CSSRule]
+members = ["cssText", "parentRule", "parentStyleSheet", "type"]
+
+[interfaces.CSSGroupingRule]
+
+[interfaces.CSSStyleRule]
+members = ["selectorText"]
+
+[mixins.LinkStyle]
+members = ["sheet"]
 
 # ------------------------------------------------------------ font loading
 # No fonts are fetched or shaped: faces count as loaded once asked for.

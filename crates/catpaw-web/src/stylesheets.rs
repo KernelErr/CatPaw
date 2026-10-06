@@ -6,8 +6,9 @@
 //! parser inserted them, the scripts that follow. Styles are resolved on
 //! demand, for the elements script asks about.
 //!
-//! Not there yet: `@import`, alternate style sheets, and the CSSOM view of
-//! sheets (`sheet`, `document.styleSheets`).
+//! The CSSOM view of sheets lives in `cssom`; once script has a sheet
+//! object for an element, the engine sees that object's rules, so edits
+//! apply. Not there yet: `@import` and alternate style sheets.
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -17,13 +18,13 @@ use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use catpaw_dom::{Dom, NodeId};
-use catpaw_js::EventTargetRef;
+use catpaw_js::{EventTargetRef, ObjectId};
 use catpaw_style::{MediaQueryList, Pseudo, StyleEngine};
 
 use crate::element::child_text_content;
 use crate::net::{self, NetRequest, NetResponse, NetResult, RequestKind};
 use crate::page::{Cx, PageState};
-use crate::{events, media, scripting};
+use crate::{cssom, events, media, scripting};
 use url::Url;
 
 /// How long scripts wait for the style sheets ahead of them.
@@ -48,11 +49,34 @@ struct Link {
 #[derive(Default)]
 pub(crate) struct Styles {
     engine: RefCell<Option<StyleEngine>>,
-    /// The DOM version the engine's sheets and resolved styles belong to.
-    version: Cell<Option<u64>>,
+    /// The DOM version and CSSOM edit count the engine's sheets and
+    /// resolved styles belong to.
+    version: Cell<Option<(u64, u64)>>,
     links: RefCell<HashMap<NodeId, Link>>,
     /// The number of loading sheets that hold up scripts.
     blocking: Cell<u32>,
+    /// The sheet objects script has for `style` and `link` elements.
+    pub(crate) sheet_objects: RefCell<HashMap<NodeId, ObjectId>>,
+    /// `adoptedStyleSheets` of the document and of shadow roots.
+    pub(crate) adopted: RefCell<HashMap<NodeId, Vec<ObjectId>>>,
+    /// Bumped by every edit made through the CSSOM.
+    pub(crate) edits: Cell<u64>,
+}
+
+/// The text of a `link` element's sheet, once it has loaded.
+pub(crate) fn loaded_link_text(page: &PageState, el: NodeId) -> Option<Rc<str>> {
+    match page.styles.links.borrow().get(&el) {
+        Some(Link {
+            state: LinkState::Loaded(text),
+            ..
+        }) => Some(text.clone()),
+        _ => None,
+    }
+}
+
+/// The URL a `link` element's sheet is fetched from.
+pub(crate) fn link_url(page: &PageState, el: NodeId) -> Option<Url> {
+    page.styles.links.borrow().get(&el).map(|l| l.url.clone())
 }
 
 fn media_applies(page: &PageState, media: Option<&str>) -> bool {
@@ -259,9 +283,9 @@ fn sheet_key(owner: NodeId, text: &str) -> u64 {
     hasher.finish()
 }
 
-/// The document's style sheets in tree order: each owner with its text.
-fn collect_sheets(page: &PageState, dom: &Dom) -> Vec<(NodeId, Rc<str>)> {
-    let links = page.styles.links.borrow();
+/// The document's style sheets in tree order, then the ones it adopted:
+/// a key for each with its text.
+fn collect_sheets(page: &PageState, dom: &Dom) -> Vec<(u64, Rc<str>)> {
     let mut sheets = Vec::new();
     for node in dom.descendants(dom.document()) {
         let Some(el) = dom.element(node) else {
@@ -281,17 +305,33 @@ fn collect_sheets(page: &PageState, dom: &Dom) -> Vec<(NodeId, Rc<str>)> {
                 }
                 child_text_content(dom, node).into()
             }
-            "link" => match links.get(&node) {
-                Some(Link {
-                    state: LinkState::Loaded(text),
-                    ..
-                }) => text.clone(),
-                _ => continue,
+            "link" => match loaded_link_text(page, node) {
+                Some(text) => text,
+                None => continue,
             },
             _ => continue,
         };
-        if media_applies(page, el.attr("media")) {
-            sheets.push((node, text));
+        // Script's view of the sheet, where it has one, is what applies.
+        let object = page.styles.sheet_objects.borrow().get(&node).copied();
+        match object {
+            Some(id) => {
+                cssom::sync_element_sheet(page, id, &text);
+                if let Some((media, edited)) = cssom::engine_view(page, id)
+                    && media_applies(page, Some(&media.join(", ")))
+                {
+                    sheets.push((sheet_key(node, &edited), edited.into()));
+                }
+            }
+            None => {
+                if media_applies(page, el.attr("media")) {
+                    sheets.push((sheet_key(node, &text), text));
+                }
+            }
+        }
+    }
+    for (key, media, text) in cssom::adopted_for_engine(page, dom.document()) {
+        if media_applies(page, Some(&media.join(", "))) {
+            sheets.push((key, text.into()));
         }
     }
     sheets
@@ -302,14 +342,11 @@ fn with_engine<R>(page: &PageState, f: impl FnOnce(&mut StyleEngine, &Dom) -> R)
     let dom = page.dom.borrow();
     let mut engine = page.styles.engine.borrow_mut();
     let engine = engine.get_or_insert_with(|| StyleEngine::new(&media::device(page)));
-    let version = dom.version();
+    let version = (dom.version(), page.styles.edits.get());
     if page.styles.version.get() != Some(version) {
         engine.set_quirks_mode(dom.quirks_mode());
         let sheets = collect_sheets(page, &dom);
-        let keyed: Vec<(u64, &str)> = sheets
-            .iter()
-            .map(|(owner, text)| (sheet_key(*owner, text), &**text))
-            .collect();
+        let keyed: Vec<(u64, &str)> = sheets.iter().map(|(key, text)| (*key, &**text)).collect();
         engine.set_author_stylesheets(&keyed);
         engine.invalidate();
         page.styles.version.set(Some(version));

@@ -569,6 +569,22 @@ fn writable(cx: &Cx<'_>, document: NodeId) -> Fallible<bool> {
 }
 
 impl web::DocumentOrShadowRootImpl for Web {
+    fn style_sheets(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId> {
+        Ok(crate::cssom::style_sheets(cx, this))
+    }
+
+    fn adopted_style_sheets(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Vec<ObjectId>> {
+        Ok(crate::cssom::adopted_style_sheets(cx, this))
+    }
+
+    fn set_adopted_style_sheets(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        value: Vec<ObjectId>,
+    ) -> Fallible<()> {
+        crate::cssom::set_adopted_style_sheets(cx, this, value)
+    }
+
     fn active_element(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>> {
         let focused = if has_window(cx, this) {
             cx.page.document_state.borrow().focused

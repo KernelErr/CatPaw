@@ -20,6 +20,7 @@ mod collections;
 mod console;
 mod cors;
 pub mod crypto;
+mod cssom;
 pub mod custom_elements;
 mod document;
 pub mod element;

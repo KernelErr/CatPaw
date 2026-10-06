@@ -11,6 +11,7 @@
 //! for using Stylo outside Servo.
 
 pub mod computed;
+pub mod cssom;
 pub mod engine;
 pub mod inline;
 pub mod media;

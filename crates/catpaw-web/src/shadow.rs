@@ -151,3 +151,67 @@ impl web::ShadowRootImpl for Web {
         Ok(())
     }
 }
+
+/// <https://dom.spec.whatwg.org/#find-flattened-slottables>: the nodes a
+/// slot shows, with nested slots replaced by what they show, and the
+/// slot's own children when nothing is assigned.
+fn flattened(dom: &catpaw_dom::Dom, slot: NodeId) -> Vec<NodeId> {
+    let mut assigned = dom.assigned_nodes(slot);
+    if assigned.is_empty() {
+        assigned = dom.children(slot).collect();
+    }
+    let mut out = Vec::new();
+    for node in assigned {
+        let is_slot = dom
+            .element(node)
+            .is_some_and(|el| el.is_html() && &*el.name.local == "slot");
+        if is_slot {
+            out.extend(flattened(dom, node));
+        } else {
+            out.push(node);
+        }
+    }
+    out
+}
+
+impl web::HTMLSlotElementImpl for Web {
+    fn assigned_nodes(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        options: web::AssignedNodesOptions,
+    ) -> Fallible<Vec<NodeId>> {
+        node::check(cx, this)?;
+        let dom = cx.dom();
+        Ok(if options.flatten {
+            flattened(&dom, this)
+        } else {
+            dom.assigned_nodes(this)
+        })
+    }
+
+    fn assigned_elements(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        options: web::AssignedNodesOptions,
+    ) -> Fallible<Vec<NodeId>> {
+        let nodes = Self::assigned_nodes(cx, this, options)?;
+        let dom = cx.dom();
+        Ok(nodes.into_iter().filter(|&n| dom.is_element(n)).collect())
+    }
+}
+
+impl web::SlottableImpl for Web {
+    fn assigned_slot(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>> {
+        node::check(cx, this)?;
+        // A closed shadow tree keeps its slots to itself.
+        let dom = cx.dom();
+        let Some(slot) = dom.assigned_slot(this) else {
+            return Ok(None);
+        };
+        let open = matches!(
+            dom.kind(dom.root_of(slot)),
+            NodeKind::DocumentFragment(FragmentKind::ShadowRoot { open: true, .. })
+        );
+        Ok(open.then_some(slot))
+    }
+}

@@ -647,24 +647,57 @@ impl Dom {
             return self.children(shadow).collect();
         }
         if el.is_html() && &*el.name.local == "slot" {
-            let root = self.root_of(id);
-            if let NodeKind::DocumentFragment(FragmentKind::ShadowRoot { host, .. }) =
-                &self.nodes[root].kind
-            {
-                let name = el.attr("name").unwrap_or_default();
-                let assigned: Vec<NodeId> = self
-                    .children(*host)
-                    .filter(|&c| match self.element(c) {
-                        Some(child) => child.attr("slot").unwrap_or_default() == name,
-                        None => name.is_empty(),
-                    })
-                    .collect();
-                if !assigned.is_empty() {
-                    return assigned;
-                }
+            let assigned = self.assigned_nodes(id);
+            if !assigned.is_empty() {
+                return assigned;
             }
         }
         self.children(id).collect()
+    }
+
+    /// The host's children assigned to a `slot` element in a shadow tree:
+    /// elements whose `slot` attribute names it, and for the default slot
+    /// the elements without one and the text nodes. Empty for a slot
+    /// outside a shadow tree.
+    pub fn assigned_nodes(&self, slot: NodeId) -> Vec<NodeId> {
+        let Some(el) = self.element(slot) else {
+            return Vec::new();
+        };
+        if !el.is_html() || &*el.name.local != "slot" {
+            return Vec::new();
+        }
+        let root = self.root_of(slot);
+        let NodeKind::DocumentFragment(FragmentKind::ShadowRoot { host, .. }) =
+            &self.nodes[root].kind
+        else {
+            return Vec::new();
+        };
+        let name = el.attr("name").unwrap_or_default();
+        self.children(*host)
+            .filter(|&c| match &self.nodes[c].kind {
+                NodeKind::Element(child) => child.attr("slot").unwrap_or_default() == name,
+                NodeKind::Text(_) => name.is_empty(),
+                _ => false,
+            })
+            .collect()
+    }
+
+    /// The slot in the parent's shadow tree that `node` is assigned to.
+    pub fn assigned_slot(&self, node: NodeId) -> Option<NodeId> {
+        let parent = self.parent(node)?;
+        let shadow = self.element(parent)?.shadow_root?;
+        let name = match &self.nodes[node].kind {
+            NodeKind::Element(el) => el.attr("slot").unwrap_or_default(),
+            NodeKind::Text(_) => "",
+            _ => return None,
+        };
+        self.descendants(shadow).find(|&n| {
+            self.element(n).is_some_and(|el| {
+                el.is_html()
+                    && &*el.name.local == "slot"
+                    && el.attr("name").unwrap_or_default() == name
+            })
+        })
     }
 
     /// `id` and its descendants in tree order, with the shadow trees of the

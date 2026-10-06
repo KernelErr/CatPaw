@@ -392,6 +392,62 @@ impl IntoJs for web::AddEventListenerOptions {
     }
 }
 
+impl FromJs for web::AssignedNodesOptions {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "AssignedNodesOptions")?;
+        Ok(Self {
+            flatten: match rt::dictionary_member(&obj, "flatten", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::AssignedNodesOptions {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "flatten", self.flatten, ctx)?;
+        Ok(obj.into())
+    }
+}
+
+impl FromJs for web::CSSStyleSheetInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "CSSStyleSheetInit")?;
+        Ok(Self {
+            base_url: match rt::dictionary_member(&obj, "baseURL", ctx)? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(rt::string_from_js((&m), ctx)?)
+                    }
+                }
+                None => None,
+            },
+            media: match rt::dictionary_member(&obj, "media", ctx)? {
+                Some(m) => <web::MediaListOrString as FromJs>::from_js((&m), ctx)?,
+                None => web::MediaListOrString::String("".to_string()),
+            },
+            disabled: match rt::dictionary_member(&obj, "disabled", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::CSSStyleSheetInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "baseURL", self.base_url, ctx)?;
+        rt::set_member(&obj, "media", self.media, ctx)?;
+        rt::set_member(&obj, "disabled", self.disabled, ctx)?;
+        Ok(obj.into())
+    }
+}
+
 impl FromJs for web::CustomEventInit {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let obj = rt::dictionary_object(v, "CustomEventInit")?;
@@ -1827,6 +1883,28 @@ impl IntoJs for web::EventListenerOptionsOrBoolean {
     }
 }
 
+impl FromJs for web::MediaListOrString {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if rt::is_instance(v, I::MediaList, ctx) {
+            return Ok(web::MediaListOrString::MediaList(rt::object_from_js(
+                v,
+                I::MediaList,
+                ctx,
+            )?));
+        }
+        Ok(web::MediaListOrString::String(rt::string_from_js(v, ctx)?))
+    }
+}
+
+impl IntoJs for web::MediaListOrString {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+            web::MediaListOrString::MediaList(v) => v.into_js(ctx),
+            web::MediaListOrString::String(v) => v.into_js(ctx),
+        }
+    }
+}
+
 impl FromJs for web::NodeOrString {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         if rt::is_instance(v, I::Node, ctx) {
@@ -2159,6 +2237,172 @@ pub mod abort_controller {
         consts: &[],
         iterable: rt::Iterable::None,
         exotic: None,
+    };
+}
+
+pub mod css_rule {
+    use super::*;
+
+    fn get_css_text(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CSSRule, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::CSSRuleImpl>::css_text(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn set_css_text(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CSSRule, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSRuleImpl>::set_css_text(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_parent_rule(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CSSRule, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::CSSRuleImpl>::parent_rule(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_parent_style_sheet(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CSSRule, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSRuleImpl>::parent_style_sheet(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_type(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CSSRule, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::CSSRuleImpl>::type_(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::CSSRule,
+        name: "CSSRule",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "cssText",
+                getter: get_css_text,
+                setter: Some(set_css_text),
+            },
+            rt::AttrDef {
+                name: "parentRule",
+                getter: get_parent_rule,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "parentStyleSheet",
+                getter: get_parent_style_sheet,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "type",
+                getter: get_type,
+                setter: None,
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[
+            ("SUPPORTS_RULE", 12_f64),
+            ("STYLE_RULE", 1_f64),
+            ("CHARSET_RULE", 2_f64),
+            ("IMPORT_RULE", 3_f64),
+            ("MEDIA_RULE", 4_f64),
+            ("FONT_FACE_RULE", 5_f64),
+            ("PAGE_RULE", 6_f64),
+            ("MARGIN_RULE", 9_f64),
+            ("NAMESPACE_RULE", 10_f64),
+        ],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod css_rule_list {
+    use super::*;
+
+    fn get_length(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CSSRuleList, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::CSSRuleListImpl>::length(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_item(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CSSRuleList, ctx)?;
+        rt::require_args(args, 1, "CSSRuleList.item")?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::CSSRuleListImpl>::item(cx, this, a0));
+        rt::ret(r, ctx)
+    }
+
+    fn exotic_length(h: rt::Handle, ctx: &mut Context) -> JsResult<u32> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| <Web as web::CSSRuleListImpl>::length(cx, this));
+        r.map_err(|e| rt::exception_to_js(e, ctx))
+    }
+
+    fn exotic_indexed_get(
+        h: rt::Handle,
+        index: u32,
+        ctx: &mut Context,
+    ) -> JsResult<Option<JsValue>> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSRuleListImpl>::indexed_get(cx, this, index)
+        });
+        rt::ret_opt(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::CSSRuleList,
+        name: "CSSRuleList",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "length",
+            getter: get_length,
+            setter: None,
+        }],
+        ops: &[rt::OpDef {
+            name: "item",
+            func: op_item,
+            length: 1,
+        }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: Some(rt::ExoticDef {
+            length: Some(exotic_length),
+            indexed_get: Some(exotic_indexed_get),
+            named_get: None,
+            named_properties: None,
+            named_set: None,
+            named_delete: None,
+            override_builtins: false,
+            attribute_like: false,
+            unenumerable_names: false,
+        }),
     };
 }
 
@@ -5262,6 +5506,151 @@ pub mod location {
         consts: &[],
         iterable: rt::Iterable::None,
         exotic: None,
+    };
+}
+
+pub mod media_list {
+    use super::*;
+
+    fn get_media_text(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MediaList, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MediaListImpl>::media_text(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn set_media_text(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MediaList, ctx)?;
+        let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MediaListImpl>::set_media_text(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_length(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MediaList, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MediaListImpl>::length(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_item(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::MediaList, ctx)?;
+        rt::require_args(args, 1, "MediaList.item")?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MediaListImpl>::item(cx, this, a0));
+        rt::ret(r, ctx)
+    }
+
+    fn op_append_medium(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::MediaList, ctx)?;
+        rt::require_args(args, 1, "MediaList.appendMedium")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MediaListImpl>::append_medium(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_delete_medium(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::MediaList, ctx)?;
+        rt::require_args(args, 1, "MediaList.deleteMedium")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MediaListImpl>::delete_medium(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn exotic_length(h: rt::Handle, ctx: &mut Context) -> JsResult<u32> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| <Web as web::MediaListImpl>::length(cx, this));
+        r.map_err(|e| rt::exception_to_js(e, ctx))
+    }
+
+    fn exotic_indexed_get(
+        h: rt::Handle,
+        index: u32,
+        ctx: &mut Context,
+    ) -> JsResult<Option<JsValue>> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MediaListImpl>::indexed_get(cx, this, index)
+        });
+        rt::ret_opt(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::MediaList,
+        name: "MediaList",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "mediaText",
+                getter: get_media_text,
+                setter: Some(set_media_text),
+            },
+            rt::AttrDef {
+                name: "length",
+                getter: get_length,
+                setter: None,
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "item",
+                func: op_item,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "appendMedium",
+                func: op_append_medium,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "deleteMedium",
+                func: op_delete_medium,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "toString",
+                func: get_media_text,
+                length: 0,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: Some(rt::ExoticDef {
+            length: Some(exotic_length),
+            indexed_get: Some(exotic_indexed_get),
+            named_get: None,
+            named_properties: None,
+            named_set: None,
+            named_delete: None,
+            override_builtins: false,
+            attribute_like: false,
+            unenumerable_names: false,
+        }),
     };
 }
 
@@ -9854,6 +10243,207 @@ pub mod storage {
             named_properties: Some(exotic_named_properties),
             named_set: Some(exotic_named_set),
             named_delete: Some(exotic_named_delete),
+            override_builtins: false,
+            attribute_like: false,
+            unenumerable_names: false,
+        }),
+    };
+}
+
+pub mod style_sheet {
+    use super::*;
+
+    fn get_type(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::StyleSheet, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::StyleSheetImpl>::type_(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_href(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::StyleSheet, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::StyleSheetImpl>::href(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_owner_node(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::StyleSheet, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::StyleSheetImpl>::owner_node(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_parent_style_sheet(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::StyleSheet, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::StyleSheetImpl>::parent_style_sheet(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_title(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::StyleSheet, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::StyleSheetImpl>::title(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_media(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "media", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_object(this_js, I::StyleSheet, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::StyleSheetImpl>::media(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "media", &v, ctx);
+        Ok(v)
+    }
+
+    fn set_media(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::put_forwards(this_js, "media", "mediaText", rt::arg(args, 0), ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_disabled(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::StyleSheet, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::StyleSheetImpl>::disabled(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn set_disabled(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::StyleSheet, ctx)?;
+        let a0 = rt::arg(args, 0).to_boolean();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::StyleSheetImpl>::set_disabled(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::StyleSheet,
+        name: "StyleSheet",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "type",
+                getter: get_type,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "href",
+                getter: get_href,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "ownerNode",
+                getter: get_owner_node,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "parentStyleSheet",
+                getter: get_parent_style_sheet,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "title",
+                getter: get_title,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "media",
+                getter: get_media,
+                setter: Some(set_media),
+            },
+            rt::AttrDef {
+                name: "disabled",
+                getter: get_disabled,
+                setter: Some(set_disabled),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod style_sheet_list {
+    use super::*;
+
+    fn get_length(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::StyleSheetList, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::StyleSheetListImpl>::length(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_item(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::StyleSheetList, ctx)?;
+        rt::require_args(args, 1, "StyleSheetList.item")?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::StyleSheetListImpl>::item(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn exotic_length(h: rt::Handle, ctx: &mut Context) -> JsResult<u32> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| <Web as web::StyleSheetListImpl>::length(cx, this));
+        r.map_err(|e| rt::exception_to_js(e, ctx))
+    }
+
+    fn exotic_indexed_get(
+        h: rt::Handle,
+        index: u32,
+        ctx: &mut Context,
+    ) -> JsResult<Option<JsValue>> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::StyleSheetListImpl>::indexed_get(cx, this, index)
+        });
+        rt::ret_opt(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::StyleSheetList,
+        name: "StyleSheetList",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "length",
+            getter: get_length,
+            setter: None,
+        }],
+        ops: &[rt::OpDef {
+            name: "item",
+            func: op_item,
+            length: 1,
+        }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: Some(rt::ExoticDef {
+            length: Some(exotic_length),
+            indexed_get: Some(exotic_indexed_get),
+            named_get: None,
+            named_properties: None,
+            named_set: None,
+            named_delete: None,
             override_builtins: false,
             attribute_like: false,
             unenumerable_names: false,
@@ -15696,6 +16286,280 @@ pub mod attr {
     };
 }
 
+pub mod css_grouping_rule {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::CSSGroupingRule,
+        name: "CSSGroupingRule",
+        parent: Some(I::CSSRule),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod css_style_rule {
+    use super::*;
+
+    fn get_selector_text(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CSSStyleRule, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStyleRuleImpl>::selector_text(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_selector_text(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CSSStyleRule, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStyleRuleImpl>::set_selector_text(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::CSSStyleRule,
+        name: "CSSStyleRule",
+        parent: Some(I::CSSGroupingRule),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "selectorText",
+            getter: get_selector_text,
+            setter: Some(set_selector_text),
+        }],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod css_style_sheet {
+    use super::*;
+
+    fn get_owner_rule(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CSSStyleSheet, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStyleSheetImpl>::owner_rule(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_css_rules(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "cssRules", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_object(this_js, I::CSSStyleSheet, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStyleSheetImpl>::css_rules(cx, this)
+        });
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "cssRules", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_rules(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "rules", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_object(this_js, I::CSSStyleSheet, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::CSSStyleSheetImpl>::rules(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "rules", &v, ctx);
+        Ok(v)
+    }
+
+    fn op_insert_rule(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CSSStyleSheet, ctx)?;
+        rt::require_args(args, 1, "CSSStyleSheet.insertRule")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            rt::arg(args, 1).to_u32(ctx)?
+        } else {
+            (0) as u32
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStyleSheetImpl>::insert_rule(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_delete_rule(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CSSStyleSheet, ctx)?;
+        rt::require_args(args, 1, "CSSStyleSheet.deleteRule")?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStyleSheetImpl>::delete_rule(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_replace(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CSSStyleSheet, ctx)?;
+        rt::require_args(args, 1, "CSSStyleSheet.replace")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStyleSheetImpl>::replace(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_replace_sync(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CSSStyleSheet, ctx)?;
+        rt::require_args(args, 1, "CSSStyleSheet.replaceSync")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStyleSheetImpl>::replace_sync(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_add_rule(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CSSStyleSheet, ctx)?;
+        let a0 = if args.len() > 0 && !args[0].is_undefined() {
+            rt::string_from_js(rt::arg(args, 0), ctx)?
+        } else {
+            "undefined".to_string()
+        };
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            rt::string_from_js(rt::arg(args, 1), ctx)?
+        } else {
+            "undefined".to_string()
+        };
+        let a2 = if args.len() > 2 && !args[2].is_undefined() {
+            Some(rt::arg(args, 2).to_u32(ctx)?)
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStyleSheetImpl>::add_rule(cx, this, a0, a1, a2)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_remove_rule(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CSSStyleSheet, ctx)?;
+        let a0 = if args.len() > 0 && !args[0].is_undefined() {
+            rt::arg(args, 0).to_u32(ctx)?
+        } else {
+            (0) as u32
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStyleSheetImpl>::remove_rule(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "CSSStyleSheet")?;
+        let a0 = <web::CSSStyleSheetInit as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStyleSheetImpl>::constructor(cx, a0)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::CSSStyleSheet, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::CSSStyleSheet,
+        name: "CSSStyleSheet",
+        parent: Some(I::StyleSheet),
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "ownerRule",
+                getter: get_owner_rule,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "cssRules",
+                getter: get_css_rules,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "rules",
+                getter: get_rules,
+                setter: None,
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "insertRule",
+                func: op_insert_rule,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "deleteRule",
+                func: op_delete_rule,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "replace",
+                func: op_replace,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "replaceSync",
+                func: op_replace_sync,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "addRule",
+                func: op_add_rule,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "removeRule",
+                func: op_remove_rule,
+                length: 0,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod character_data {
     use super::*;
 
@@ -16532,6 +17396,51 @@ pub mod document {
         let v = rt::ret(r, ctx)?;
         rt::cache(this_js, "fonts", &v, ctx);
         Ok(v)
+    }
+
+    fn get_style_sheets(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "styleSheets", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DocumentOrShadowRootImpl>::style_sheets(cx, this)
+        });
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "styleSheets", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_adopted_style_sheets(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DocumentOrShadowRootImpl>::adopted_style_sheets(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_adopted_style_sheets(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let a0 = rt::sequence_from_js(rt::arg(args, 0), ctx, |v, ctx| {
+            Ok(rt::object_from_js(v, I::CSSStyleSheet, ctx)?)
+        })?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DocumentOrShadowRootImpl>::set_adopted_style_sheets(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
     }
 
     fn get_active_element(
@@ -19028,6 +19937,16 @@ pub mod document {
                 setter: None,
             },
             rt::AttrDef {
+                name: "styleSheets",
+                getter: get_style_sheets,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "adoptedStyleSheets",
+                getter: get_adopted_style_sheets,
+                setter: Some(set_adopted_style_sheets),
+            },
+            rt::AttrDef {
                 name: "activeElement",
                 getter: get_active_element,
                 setter: None,
@@ -20348,6 +21267,18 @@ pub mod element {
         rt::ret(r, ctx)
     }
 
+    fn get_assigned_slot(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Element, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SlottableImpl>::assigned_slot(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn op_get_bounding_client_rect(
         this_js: &JsValue,
         args: &[JsValue],
@@ -21222,6 +22153,11 @@ pub mod element {
             rt::AttrDef {
                 name: "nextElementSibling",
                 getter: get_next_element_sibling,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "assignedSlot",
+                getter: get_assigned_slot,
                 setter: None,
             },
         ],
@@ -28371,6 +29307,12 @@ pub mod html_link_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_sheet(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLLinkElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::LinkStyleImpl>::sheet(cx, this));
+        rt::ret(r, ctx)
+    }
+
     fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         rt::html_constructor(new_target, I::HTMLLinkElement, ctx)
     }
@@ -28457,6 +29399,11 @@ pub mod html_link_element {
                 name: "target",
                 getter: get_target,
                 setter: Some(set_target),
+            },
+            rt::AttrDef {
+                name: "sheet",
+                getter: get_sheet,
+                setter: None,
             },
         ],
         ops: &[],
@@ -31371,6 +32318,34 @@ pub mod html_slot_element {
         Ok(JsValue::undefined())
     }
 
+    fn op_assigned_nodes(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::HTMLSlotElement, ctx)?;
+        let a0 = <web::AssignedNodesOptions as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLSlotElementImpl>::assigned_nodes(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_assigned_elements(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::HTMLSlotElement, ctx)?;
+        let a0 = <web::AssignedNodesOptions as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLSlotElementImpl>::assigned_elements(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         rt::html_constructor(new_target, I::HTMLSlotElement, ctx)
     }
@@ -31387,7 +32362,18 @@ pub mod html_slot_element {
             getter: get_name,
             setter: Some(set_name),
         }],
-        ops: &[],
+        ops: &[
+            rt::OpDef {
+                name: "assignedNodes",
+                func: op_assigned_nodes,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "assignedElements",
+                func: op_assigned_elements,
+                length: 0,
+            },
+        ],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -31695,6 +32681,12 @@ pub mod html_style_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_sheet(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLStyleElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::LinkStyleImpl>::sheet(cx, this));
+        rt::ret(r, ctx)
+    }
+
     fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         rt::html_constructor(new_target, I::HTMLStyleElement, ctx)
     }
@@ -31721,6 +32713,11 @@ pub mod html_style_element {
                 name: "type",
                 getter: get_type,
                 setter: Some(set_type),
+            },
+            rt::AttrDef {
+                name: "sheet",
+                getter: get_sheet,
+                setter: None,
             },
         ],
         ops: &[],
@@ -37511,6 +38508,12 @@ pub mod svg_style_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_sheet(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGStyleElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::LinkStyleImpl>::sheet(cx, this));
+        rt::ret(r, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::SVGStyleElement,
         name: "SVGStyleElement",
@@ -37533,6 +38536,11 @@ pub mod svg_style_element {
                 name: "title",
                 getter: get_title,
                 setter: Some(set_title),
+            },
+            rt::AttrDef {
+                name: "sheet",
+                getter: get_sheet,
+                setter: None,
             },
         ],
         ops: &[],
@@ -37856,6 +38864,51 @@ pub mod shadow_root {
         Ok(JsValue::undefined())
     }
 
+    fn get_style_sheets(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "styleSheets", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::ShadowRoot, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DocumentOrShadowRootImpl>::style_sheets(cx, this)
+        });
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "styleSheets", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_adopted_style_sheets(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::ShadowRoot, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DocumentOrShadowRootImpl>::adopted_style_sheets(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_adopted_style_sheets(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::ShadowRoot, ctx)?;
+        let a0 = rt::sequence_from_js(rt::arg(args, 0), ctx, |v, ctx| {
+            Ok(rt::object_from_js(v, I::CSSStyleSheet, ctx)?)
+        })?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DocumentOrShadowRootImpl>::set_adopted_style_sheets(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
     fn get_active_element(
         this_js: &JsValue,
         _args: &[JsValue],
@@ -37917,6 +38970,16 @@ pub mod shadow_root {
                 setter: Some(set_inner_html),
             },
             rt::AttrDef {
+                name: "styleSheets",
+                getter: get_style_sheets,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "adoptedStyleSheets",
+                getter: get_adopted_style_sheets,
+                setter: Some(set_adopted_style_sheets),
+            },
+            rt::AttrDef {
                 name: "activeElement",
                 getter: get_active_element,
                 setter: None,
@@ -37941,6 +39004,18 @@ pub mod text {
     ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::Text, ctx)?;
         let r = rt::with_cx(ctx, |cx| <Web as web::TextImpl>::whole_text(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_assigned_slot(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::Text, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SlottableImpl>::assigned_slot(cx, this)
+        });
         rt::ret(r, ctx)
     }
 
@@ -37972,11 +39047,18 @@ pub mod text {
         global: false,
         constructor: Some(ctor),
         constructor_length: 0,
-        attrs: &[rt::AttrDef {
-            name: "wholeText",
-            getter: get_whole_text,
-            setter: None,
-        }],
+        attrs: &[
+            rt::AttrDef {
+                name: "wholeText",
+                getter: get_whole_text,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "assignedSlot",
+                getter: get_assigned_slot,
+                setter: None,
+            },
+        ],
         ops: &[rt::OpDef {
             name: "splitText",
             func: op_split_text,
@@ -42501,6 +43583,8 @@ pub mod ns_console {
 /// Interface definitions, parents before children.
 pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &abort_controller::DEF,
+    &css_rule::DEF,
+    &css_rule_list::DEF,
     &css_style_declaration::DEF,
     &css_style_properties::DEF,
     &crypto::DEF,
@@ -42521,6 +43605,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &intersection_observer::DEF,
     &intersection_observer_entry::DEF,
     &location::DEF,
+    &media_list::DEF,
     &media_query_list::DEF,
     &mutation_observer::DEF,
     &mutation_record::DEF,
@@ -42550,6 +43635,8 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &svg_animated_string::DEF,
     &screen::DEF,
     &storage::DEF,
+    &style_sheet::DEF,
+    &style_sheet_list::DEF,
     &text_decoder::DEF,
     &text_encoder::DEF,
     &transform_stream::DEF,
@@ -42568,6 +43655,9 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &x_path_result::DEF,
     &abort_signal::DEF,
     &attr::DEF,
+    &css_grouping_rule::DEF,
+    &css_style_rule::DEF,
+    &css_style_sheet::DEF,
     &character_data::DEF,
     &comment::DEF,
     &custom_event::DEF,

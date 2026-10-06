@@ -159,3 +159,41 @@ fn custom_elements_and_observers_work_inside() {
     assert_eq!(report.stop, StopReason::Idle);
     check(&mut page, &[("seen.join()", "2")]);
 }
+
+#[test]
+fn slots_report_what_they_show() {
+    let mut page = load("<div id=h><b slot=x>B</b>text<i>I</i><u slot=none>U</u></div>");
+    check(
+        &mut page,
+        &[
+            (
+                "var h = document.getElementById('h'); var r = h.attachShadow({ mode: 'open' }); r.innerHTML = '<slot name=x></slot><section><slot><em>fallback</em></slot></section><slot name=y><slot name=x></slot></slot>'; var slots = r.querySelectorAll('slot'); slots.length",
+                "4",
+            ),
+            (
+                "slots[0].assignedNodes().map(function (n) { return n.nodeName; }).join() + ' | ' + slots[0].assignedElements().length",
+                "B | 1",
+            ),
+            (
+                "slots[1].assignedNodes().map(function (n) { return n.nodeName; }).join() + ' | ' + slots[1].assignedElements().map(function (n) { return n.nodeName; }).join()",
+                "#text,I | I",
+            ),
+            (
+                "slots[2].assignedNodes().length + ' ' + slots[2].assignedNodes({ flatten: true }).map(function (n) { return n.nodeName; }).join()",
+                "0 B",
+            ),
+            (
+                "r.innerHTML = '<slot name=z><em>fb</em></slot>'; var z = r.querySelector('slot'); z.assignedNodes().length + ' ' + z.assignedNodes({ flatten: true }).map(function (n) { return n.nodeName; }).join()",
+                "0 EM",
+            ),
+            (
+                "r.innerHTML = '<slot name=x></slot><slot></slot>'; [h.querySelector('b').assignedSlot === r.querySelector('slot'), h.querySelector('i').assignedSlot === r.querySelectorAll('slot')[1], h.childNodes[1].assignedSlot === r.querySelectorAll('slot')[1], h.querySelector('u').assignedSlot, document.body.assignedSlot].map(String).join()",
+                "true,true,true,null,null",
+            ),
+            (
+                "var c = document.createElement('div'); c.innerHTML = '<p>P</p>'; c.attachShadow({ mode: 'closed' }).innerHTML = '<slot></slot>'; String(c.querySelector('p').assignedSlot)",
+                "null",
+            ),
+        ],
+    );
+}

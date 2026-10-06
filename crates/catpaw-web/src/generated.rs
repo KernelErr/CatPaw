@@ -23,6 +23,8 @@ use crate::Cx;
 #[repr(u16)]
 pub enum InterfaceId {
     AbortController,
+    CSSRule,
+    CSSRuleList,
     CSSStyleDeclaration,
     CSSStyleProperties,
     Crypto,
@@ -43,6 +45,7 @@ pub enum InterfaceId {
     IntersectionObserver,
     IntersectionObserverEntry,
     Location,
+    MediaList,
     MediaQueryList,
     MutationObserver,
     MutationRecord,
@@ -72,6 +75,8 @@ pub enum InterfaceId {
     SVGAnimatedString,
     Screen,
     Storage,
+    StyleSheet,
+    StyleSheetList,
     TextDecoder,
     TextEncoder,
     TransformStream,
@@ -90,6 +95,9 @@ pub enum InterfaceId {
     XPathResult,
     AbortSignal,
     Attr,
+    CSSGroupingRule,
+    CSSStyleRule,
+    CSSStyleSheet,
     CharacterData,
     Comment,
     CustomEvent,
@@ -214,9 +222,11 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 189;
-    pub const ALL: [InterfaceId; 189] = [
+    pub const COUNT: usize = 197;
+    pub const ALL: [InterfaceId; 197] = [
         InterfaceId::AbortController,
+        InterfaceId::CSSRule,
+        InterfaceId::CSSRuleList,
         InterfaceId::CSSStyleDeclaration,
         InterfaceId::CSSStyleProperties,
         InterfaceId::Crypto,
@@ -237,6 +247,7 @@ impl InterfaceId {
         InterfaceId::IntersectionObserver,
         InterfaceId::IntersectionObserverEntry,
         InterfaceId::Location,
+        InterfaceId::MediaList,
         InterfaceId::MediaQueryList,
         InterfaceId::MutationObserver,
         InterfaceId::MutationRecord,
@@ -266,6 +277,8 @@ impl InterfaceId {
         InterfaceId::SVGAnimatedString,
         InterfaceId::Screen,
         InterfaceId::Storage,
+        InterfaceId::StyleSheet,
+        InterfaceId::StyleSheetList,
         InterfaceId::TextDecoder,
         InterfaceId::TextEncoder,
         InterfaceId::TransformStream,
@@ -284,6 +297,9 @@ impl InterfaceId {
         InterfaceId::XPathResult,
         InterfaceId::AbortSignal,
         InterfaceId::Attr,
+        InterfaceId::CSSGroupingRule,
+        InterfaceId::CSSStyleRule,
+        InterfaceId::CSSStyleSheet,
         InterfaceId::CharacterData,
         InterfaceId::Comment,
         InterfaceId::CustomEvent,
@@ -410,6 +426,8 @@ impl InterfaceId {
     pub fn name(self) -> &'static str {
         match self {
             InterfaceId::AbortController => "AbortController",
+            InterfaceId::CSSRule => "CSSRule",
+            InterfaceId::CSSRuleList => "CSSRuleList",
             InterfaceId::CSSStyleDeclaration => "CSSStyleDeclaration",
             InterfaceId::CSSStyleProperties => "CSSStyleProperties",
             InterfaceId::Crypto => "Crypto",
@@ -430,6 +448,7 @@ impl InterfaceId {
             InterfaceId::IntersectionObserver => "IntersectionObserver",
             InterfaceId::IntersectionObserverEntry => "IntersectionObserverEntry",
             InterfaceId::Location => "Location",
+            InterfaceId::MediaList => "MediaList",
             InterfaceId::MediaQueryList => "MediaQueryList",
             InterfaceId::MutationObserver => "MutationObserver",
             InterfaceId::MutationRecord => "MutationRecord",
@@ -459,6 +478,8 @@ impl InterfaceId {
             InterfaceId::SVGAnimatedString => "SVGAnimatedString",
             InterfaceId::Screen => "Screen",
             InterfaceId::Storage => "Storage",
+            InterfaceId::StyleSheet => "StyleSheet",
+            InterfaceId::StyleSheetList => "StyleSheetList",
             InterfaceId::TextDecoder => "TextDecoder",
             InterfaceId::TextEncoder => "TextEncoder",
             InterfaceId::TransformStream => "TransformStream",
@@ -477,6 +498,9 @@ impl InterfaceId {
             InterfaceId::XPathResult => "XPathResult",
             InterfaceId::AbortSignal => "AbortSignal",
             InterfaceId::Attr => "Attr",
+            InterfaceId::CSSGroupingRule => "CSSGroupingRule",
+            InterfaceId::CSSStyleRule => "CSSStyleRule",
+            InterfaceId::CSSStyleSheet => "CSSStyleSheet",
             InterfaceId::CharacterData => "CharacterData",
             InterfaceId::Comment => "Comment",
             InterfaceId::CustomEvent => "CustomEvent",
@@ -604,6 +628,8 @@ impl InterfaceId {
     pub fn from_name(name: &str) -> Option<InterfaceId> {
         Some(match name {
             "AbortController" => InterfaceId::AbortController,
+            "CSSRule" => InterfaceId::CSSRule,
+            "CSSRuleList" => InterfaceId::CSSRuleList,
             "CSSStyleDeclaration" => InterfaceId::CSSStyleDeclaration,
             "CSSStyleProperties" => InterfaceId::CSSStyleProperties,
             "Crypto" => InterfaceId::Crypto,
@@ -624,6 +650,7 @@ impl InterfaceId {
             "IntersectionObserver" => InterfaceId::IntersectionObserver,
             "IntersectionObserverEntry" => InterfaceId::IntersectionObserverEntry,
             "Location" => InterfaceId::Location,
+            "MediaList" => InterfaceId::MediaList,
             "MediaQueryList" => InterfaceId::MediaQueryList,
             "MutationObserver" => InterfaceId::MutationObserver,
             "MutationRecord" => InterfaceId::MutationRecord,
@@ -653,6 +680,8 @@ impl InterfaceId {
             "SVGAnimatedString" => InterfaceId::SVGAnimatedString,
             "Screen" => InterfaceId::Screen,
             "Storage" => InterfaceId::Storage,
+            "StyleSheet" => InterfaceId::StyleSheet,
+            "StyleSheetList" => InterfaceId::StyleSheetList,
             "TextDecoder" => InterfaceId::TextDecoder,
             "TextEncoder" => InterfaceId::TextEncoder,
             "TransformStream" => InterfaceId::TransformStream,
@@ -671,6 +700,9 @@ impl InterfaceId {
             "XPathResult" => InterfaceId::XPathResult,
             "AbortSignal" => InterfaceId::AbortSignal,
             "Attr" => InterfaceId::Attr,
+            "CSSGroupingRule" => InterfaceId::CSSGroupingRule,
+            "CSSStyleRule" => InterfaceId::CSSStyleRule,
+            "CSSStyleSheet" => InterfaceId::CSSStyleSheet,
             "CharacterData" => InterfaceId::CharacterData,
             "Comment" => InterfaceId::Comment,
             "CustomEvent" => InterfaceId::CustomEvent,
@@ -799,6 +831,8 @@ impl InterfaceId {
     pub fn parent(self) -> Option<InterfaceId> {
         match self {
             InterfaceId::AbortController => None,
+            InterfaceId::CSSRule => None,
+            InterfaceId::CSSRuleList => None,
             InterfaceId::CSSStyleDeclaration => None,
             InterfaceId::CSSStyleProperties => Some(InterfaceId::CSSStyleDeclaration),
             InterfaceId::Crypto => None,
@@ -819,6 +853,7 @@ impl InterfaceId {
             InterfaceId::IntersectionObserver => None,
             InterfaceId::IntersectionObserverEntry => None,
             InterfaceId::Location => None,
+            InterfaceId::MediaList => None,
             InterfaceId::MediaQueryList => Some(InterfaceId::EventTarget),
             InterfaceId::MutationObserver => None,
             InterfaceId::MutationRecord => None,
@@ -848,6 +883,8 @@ impl InterfaceId {
             InterfaceId::SVGAnimatedString => None,
             InterfaceId::Screen => None,
             InterfaceId::Storage => None,
+            InterfaceId::StyleSheet => None,
+            InterfaceId::StyleSheetList => None,
             InterfaceId::TextDecoder => None,
             InterfaceId::TextEncoder => None,
             InterfaceId::TransformStream => None,
@@ -866,6 +903,9 @@ impl InterfaceId {
             InterfaceId::XPathResult => None,
             InterfaceId::AbortSignal => Some(InterfaceId::EventTarget),
             InterfaceId::Attr => Some(InterfaceId::Node),
+            InterfaceId::CSSGroupingRule => Some(InterfaceId::CSSRule),
+            InterfaceId::CSSStyleRule => Some(InterfaceId::CSSGroupingRule),
+            InterfaceId::CSSStyleSheet => Some(InterfaceId::StyleSheet),
             InterfaceId::CharacterData => Some(InterfaceId::Node),
             InterfaceId::Comment => Some(InterfaceId::CharacterData),
             InterfaceId::CustomEvent => Some(InterfaceId::Event),
@@ -1850,6 +1890,18 @@ pub struct AddEventListenerOptions {
 }
 
 #[derive(Clone, Debug)]
+pub struct AssignedNodesOptions {
+    pub flatten: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct CSSStyleSheetInit {
+    pub base_url: Option<String>,
+    pub media: MediaListOrString,
+    pub disabled: bool,
+}
+
+#[derive(Clone, Debug)]
 pub struct CustomEventInit {
     pub bubbles: bool,
     pub cancelable: bool,
@@ -2157,6 +2209,12 @@ pub enum EventListenerOptionsOrBoolean {
 }
 
 #[derive(Clone, Debug)]
+pub enum MediaListOrString {
+    MediaList(ObjectId),
+    String(String),
+}
+
+#[derive(Clone, Debug)]
 pub enum NodeOrString {
     Node(NodeId),
     String(String),
@@ -2241,6 +2299,13 @@ pub trait ChildNodeImpl {
 }
 
 pub trait DocumentOrShadowRootImpl {
+    fn style_sheets(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
+    fn adopted_style_sheets(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Vec<ObjectId>>;
+    fn set_adopted_style_sheets(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        value: Vec<ObjectId>,
+    ) -> Fallible<()>;
     fn active_element(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
 }
 
@@ -2278,6 +2343,10 @@ pub trait HyperlinkElementUtilsImpl {
     fn set_search(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
     fn hash(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
     fn set_hash(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+}
+
+pub trait LinkStyleImpl {
+    fn sheet(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<ObjectId>>;
 }
 
 pub trait NavigatorAutomationInformationImpl {
@@ -2346,6 +2415,10 @@ pub trait ReadableStreamGenericReaderImpl {
 
 pub trait SVGURIReferenceImpl {
     fn href(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
+}
+
+pub trait SlottableImpl {
+    fn assigned_slot(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
 }
 
 pub trait TextDecoderCommonImpl {
@@ -2444,6 +2517,20 @@ pub trait AbortControllerImpl {
     fn signal(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
     fn abort(cx: &mut Cx<'_>, this: ObjectId, reason: Value) -> Fallible<()>;
     fn constructor(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
+}
+
+pub trait CSSRuleImpl {
+    fn css_text(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_css_text(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+    fn parent_rule(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<ObjectId>>;
+    fn parent_style_sheet(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<ObjectId>>;
+    fn type_(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u16>;
+}
+
+pub trait CSSRuleListImpl {
+    fn item(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<ObjectId>>;
+    fn length(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn indexed_get(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<ObjectId>>;
 }
 
 pub trait CSSStyleDeclarationImpl {
@@ -2768,6 +2855,16 @@ pub trait LocationImpl {
     fn assign(cx: &mut Cx<'_>, this: ObjectId, url: String) -> Fallible<()>;
     fn replace(cx: &mut Cx<'_>, this: ObjectId, url: String) -> Fallible<()>;
     fn reload(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+}
+
+pub trait MediaListImpl {
+    fn media_text(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_media_text(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+    fn length(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn item(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<String>>;
+    fn append_medium(cx: &mut Cx<'_>, this: ObjectId, medium: String) -> Fallible<()>;
+    fn delete_medium(cx: &mut Cx<'_>, this: ObjectId, medium: String) -> Fallible<()>;
+    fn indexed_get(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<String>>;
 }
 
 pub trait MediaQueryListImpl {
@@ -3216,6 +3313,23 @@ pub trait StorageImpl {
     fn named_delete(cx: &mut Cx<'_>, this: ObjectId, name: &str) -> Fallible<bool>;
 }
 
+pub trait StyleSheetImpl {
+    fn type_(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn href(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<String>>;
+    fn owner_node(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
+    fn parent_style_sheet(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<ObjectId>>;
+    fn title(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<String>>;
+    fn media(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn disabled(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn set_disabled(cx: &mut Cx<'_>, this: ObjectId, value: bool) -> Fallible<()>;
+}
+
+pub trait StyleSheetListImpl {
+    fn item(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<ObjectId>>;
+    fn length(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn indexed_get(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<ObjectId>>;
+}
+
 pub trait TextDecoderImpl {
     fn decode(
         cx: &mut Cx<'_>,
@@ -3442,6 +3556,30 @@ pub trait AttrImpl {
     fn owner_document(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
     fn parent_node(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
     fn parent_element(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
+}
+
+pub trait CSSStyleRuleImpl {
+    fn selector_text(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_selector_text(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+}
+
+pub trait CSSStyleSheetImpl {
+    fn owner_rule(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<ObjectId>>;
+    fn css_rules(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn insert_rule(cx: &mut Cx<'_>, this: ObjectId, rule: String, index: u32) -> Fallible<u32>;
+    fn delete_rule(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<()>;
+    fn replace(cx: &mut Cx<'_>, this: ObjectId, text: String) -> Fallible<PromiseRef>;
+    fn replace_sync(cx: &mut Cx<'_>, this: ObjectId, text: String) -> Fallible<()>;
+    fn rules(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn add_rule(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        selector: String,
+        style: String,
+        index: Option<u32>,
+    ) -> Fallible<i32>;
+    fn remove_rule(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<()>;
+    fn constructor(cx: &mut Cx<'_>, options: CSSStyleSheetInit) -> Fallible<ObjectId>;
 }
 
 pub trait CharacterDataImpl {
@@ -3795,6 +3933,19 @@ pub trait HTMLInputElementImpl {
 pub trait HTMLScriptElementImpl {
     fn text(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
     fn set_text(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+}
+
+pub trait HTMLSlotElementImpl {
+    fn assigned_nodes(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        options: AssignedNodesOptions,
+    ) -> Fallible<Vec<NodeId>>;
+    fn assigned_elements(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        options: AssignedNodesOptions,
+    ) -> Fallible<Vec<NodeId>>;
 }
 
 pub trait HTMLTemplateElementImpl {
