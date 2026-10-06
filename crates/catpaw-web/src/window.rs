@@ -122,6 +122,14 @@ impl web::WindowImpl for Web {
         Ok(cx.page.current_event.get())
     }
 
+    fn get_computed_style(
+        cx: &mut Cx<'_>,
+        elt: NodeId,
+        pseudo_elt: Option<String>,
+    ) -> Fallible<ObjectId> {
+        Ok(crate::style::computed_style(cx, elt, pseudo_elt.as_deref()))
+    }
+
     fn match_media(cx: &mut Cx<'_>, query: String) -> Fallible<ObjectId> {
         Ok(crate::media::match_media(cx.page, &query))
     }

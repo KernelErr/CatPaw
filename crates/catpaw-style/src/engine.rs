@@ -7,28 +7,30 @@ use catpaw_dom::{Dom, NodeId, NodeKind};
 use selectors::matching::QuirksMode;
 use style::context::{
     RegisteredSpeculativePainter, RegisteredSpeculativePainters, SharedStyleContext, StyleContext,
+    ThreadLocalStyleContext,
 };
 use style::device::Device;
 use style::dom::TNode;
 use style::global_style_data::GLOBAL_STYLE_DATA;
 use style::media_queries::{MediaList, MediaType};
 use style::properties::style_structs::Font;
-use style::properties::{ComputedValues, parse_style_attribute};
+use style::properties::{ComputedValues, StyleBuilder, parse_style_attribute};
 use style::queries::values::PrefersColorScheme;
-use style::selector_parser::SnapshotMap;
+use style::selector_parser::{PseudoElement, SnapshotMap};
 use style::servo::media_features::PointerCapabilities;
 use style::servo_arc::Arc;
 use style::shared_lock::{SharedRwLock, StylesheetGuards};
 use style::stylesheets::{
     AllowImportRules, CssRuleType, DocumentStyleSheet, Origin, Stylesheet, UrlExtraData,
 };
-use style::stylist::Stylist;
+use style::stylist::{RuleInclusion, Stylist};
 use style::thread_state::{self, ThreadState};
-use style::traversal::{DomTraversal, recalc_style_at};
+use style::traversal::{DomTraversal, UndisplayedStyleCache, recalc_style_at, resolve_style};
 use style::traversal_flags::TraversalFlags;
 use style_dom::ElementState;
 use url::Url;
 
+use crate::computed::{ComputedStyle, Pseudo};
 use crate::node::{CatNode, with_style_context};
 use crate::table::StyleTable;
 
@@ -132,7 +134,13 @@ pub struct StyleEngine {
     animations: style::animation::DocumentAnimationSet,
     url_data: UrlExtraData,
     quirks_mode: QuirksMode,
-    author_sheets: Vec<DocumentStyleSheet>,
+    /// The author stylesheets in cascade order, each with the key it was
+    /// set under.
+    author_sheets: Vec<(u64, DocumentStyleSheet)>,
+    /// Styles resolved on demand, until the document next changes.
+    resolved: UndisplayedStyleCache,
+    /// The slots reflect the document as it is.
+    slots_fresh: bool,
 }
 
 impl StyleEngine {
@@ -157,6 +165,8 @@ impl StyleEngine {
             url_data,
             quirks_mode: QuirksMode::NoQuirks,
             author_sheets: Vec::new(),
+            resolved: UndisplayedStyleCache::default(),
+            slots_fresh: false,
         }
     }
 
@@ -186,11 +196,147 @@ impl StyleEngine {
         );
         self.stylist
             .append_stylesheet(sheet.clone(), &self.table.lock().read());
-        self.author_sheets.push(sheet);
+        let key = self.author_sheets.len() as u64;
+        self.author_sheets.push((key, sheet));
+        self.invalidate();
+    }
+
+    /// Replaces the author stylesheets with `sheets`, given in cascade
+    /// order. Each comes with a key standing for its text: a sheet whose
+    /// key is already in use is kept as it is rather than parsed again.
+    /// Keys must be unique.
+    pub fn set_author_stylesheets(&mut self, sheets: &[(u64, &str)]) {
+        let unchanged = sheets.len() == self.author_sheets.len()
+            && sheets
+                .iter()
+                .zip(&self.author_sheets)
+                .all(|((key, _), (old, _))| key == old);
+        if unchanged {
+            return;
+        }
+        let lock = self.table.lock().clone();
+        let guard = lock.read();
+        let mut old: std::collections::HashMap<u64, DocumentStyleSheet> =
+            self.author_sheets.drain(..).collect();
+        for sheet in old.values() {
+            self.stylist.remove_stylesheet(sheet.clone(), &guard);
+        }
+        for &(key, css) in sheets {
+            let sheet = old.remove(&key).unwrap_or_else(|| {
+                make_stylesheet(css, Origin::Author, &lock, &self.url_data, self.quirks_mode)
+            });
+            self.stylist.append_stylesheet(sheet.clone(), &guard);
+            self.author_sheets.push((key, sheet));
+        }
+        drop(guard);
+        self.invalidate();
+    }
+
+    /// Tells the engine that the document changed: styles resolved on
+    /// demand are forgotten.
+    pub fn invalidate(&mut self) {
+        self.resolved.clear();
+        self.slots_fresh = false;
     }
 
     pub fn author_sheet_count(&self) -> usize {
         self.author_sheets.len()
+    }
+
+    /// The computed style of a connected element or one of its
+    /// pseudo-elements, resolved on demand: only the element and those of
+    /// its ancestors not resolved since the last [`StyleEngine::invalidate`]
+    /// are styled. `None` for nodes that are not elements in the document.
+    pub fn computed_style(
+        &mut self,
+        dom: &Dom,
+        id: NodeId,
+        pseudo: Option<Pseudo>,
+    ) -> Option<ComputedStyle> {
+        if !dom.contains(id) || !dom.is_element(id) || !dom.is_connected(id) {
+            return None;
+        }
+        // A full restyle has the answer already.
+        if let (None, Some(style)) = (pseudo, self.primary_style(id)) {
+            return Some(ComputedStyle(style));
+        }
+        if !self.slots_fresh {
+            self.ensure_slots(dom);
+            self.slots_fresh = true;
+        }
+        if let (None, Some(style)) = (pseudo, self.resolved.get(&CatNode::new(id).opaque_id())) {
+            return Some(ComputedStyle(style.clone()));
+        }
+        let root = dom.child_elements(dom.document()).next()?;
+
+        let Self {
+            table,
+            stylist,
+            snapshots,
+            animations,
+            resolved,
+            ..
+        } = self;
+        let style = with_style_context(dom, table, || {
+            thread_state::enter(ThreadState::LAYOUT);
+            let lock = table.lock().clone();
+            let guard = lock.read();
+            let guards = StylesheetGuards {
+                author: &guard,
+                ua_or_user: &guard,
+            };
+            stylist
+                .flush(&guards)
+                .process_style(CatNode::new(root), Some(&*snapshots));
+
+            let shared = SharedStyleContext {
+                stylist,
+                visited_styles_enabled: false,
+                options: GLOBAL_STYLE_DATA.options.clone(),
+                guards,
+                current_time_for_animations: 0.0,
+                traversal_flags: TraversalFlags::empty(),
+                snapshot_map: snapshots,
+                animations: animations.clone(),
+                registered_speculative_painters: &NoPainters,
+            };
+            // Dropped before the thread leaves the layout state.
+            let mut thread_local = ThreadLocalStyleContext::new();
+            let mut context = StyleContext {
+                shared: &shared,
+                thread_local: &mut thread_local,
+            };
+            let pseudo_element = pseudo.map(|pseudo| match pseudo {
+                Pseudo::Before => PseudoElement::Before,
+                Pseudo::After => PseudoElement::After,
+            });
+            let styles = resolve_style(
+                &mut context,
+                CatNode::new(id),
+                RuleInclusion::All,
+                pseudo_element.as_ref(),
+                Some(resolved),
+            );
+            let style = match &pseudo_element {
+                None => styles.primary().clone(),
+                Some(pseudo_element) => match styles.pseudos.get(pseudo_element) {
+                    Some(style) => style.clone(),
+                    // No rule gives the pseudo-element content: its style
+                    // is what it inherits.
+                    None => StyleBuilder::for_inheritance(
+                        stylist.device(),
+                        Some(stylist),
+                        Some(styles.primary()),
+                        Some(pseudo_element),
+                    )
+                    .build(),
+                },
+            };
+            drop(thread_local);
+            thread_state::exit(ThreadState::LAYOUT);
+            style
+        });
+        Some(ComputedStyle(style))
     }
 
     /// Creates slots for every connected element and refreshes the
@@ -455,5 +601,116 @@ mod tests {
         assert!(!engine.is_visibility_hidden(find(dom, "d")));
         let style = engine.primary_style(find(dom, "d")).unwrap();
         assert!(!style.get_box().display.is_none());
+    }
+
+    #[test]
+    fn resolves_styles_on_demand() {
+        let r = parse_html(
+            r#"<!doctype html><style>
+                 :root { --gap: 4px; color: rgb(1, 2, 3); }
+                 .box { margin: 1px 2px; display: flex; width: 50%; --own: red; }
+                 .box > p:nth-child(2) { color: blue; opacity: 0.5; }
+                 #b::before { content: "x"; color: green; }
+                 .gone { display: none; }
+                 .late { color: red; }
+               </style>
+               <div id=a class=box><p id=first>1</p><p id=second>2</p></div>
+               <div class=gone><span id=hidden>h</span></div>
+               <b id=b></b><i id=plain></i>"#,
+            &Default::default(),
+        );
+        let mut dom = r.dom;
+        let mut engine = StyleEngine::new(&StyleOptions::default());
+        engine.set_quirks_mode(dom.quirks_mode());
+        let sheets: Vec<String> = dom
+            .descendants(dom.document())
+            .filter(|&n| dom.is_html_element(n, "style"))
+            .map(|n| dom.text_content(n))
+            .collect();
+        let keyed: Vec<(u64, &str)> = sheets.iter().map(|css| (7, css.as_str())).collect();
+        engine.set_author_stylesheets(&keyed);
+
+        fn get(
+            engine: &mut StyleEngine,
+            dom: &Dom,
+            id: &str,
+            pseudo: Option<Pseudo>,
+            property: &str,
+        ) -> String {
+            engine
+                .computed_style(dom, find(dom, id), pseudo)
+                .expect("a connected element")
+                .get(property)
+        }
+
+        for (id, property, expected) in [
+            ("a", "display", "flex"),
+            ("a", "margin", "1px 2px"),
+            ("a", "margin-top", "1px"),
+            ("a", "width", "50%"),
+            ("a", "color", "rgb(1, 2, 3)"),
+            ("a", "--gap", "4px"),
+            ("a", "--own", "red"),
+            ("a", "BACKGROUND-COLOR", "rgba(0, 0, 0, 0)"),
+            ("a", "no-such-property", ""),
+            ("first", "color", "rgb(1, 2, 3)"),
+            ("second", "color", "rgb(0, 0, 255)"),
+            ("second", "opacity", "0.5"),
+            ("second", "--own", "red"),
+            // Elements inside a `display: none` subtree have styles too.
+            ("hidden", "display", "inline"),
+        ] {
+            assert_eq!(
+                get(&mut engine, &dom, id, None, property),
+                expected,
+                "{id} {property}"
+            );
+        }
+        let a = engine.computed_style(&dom, find(&dom, "a"), None).unwrap();
+        assert_eq!(a.custom_properties(), ["--gap", "--own"]);
+
+        for (id, pseudo, property, expected) in [
+            ("b", Pseudo::Before, "content", "\"x\""),
+            ("b", Pseudo::Before, "color", "rgb(0, 128, 0)"),
+            ("b", Pseudo::After, "color", "rgb(1, 2, 3)"),
+            ("plain", Pseudo::Before, "content", "none"),
+            ("plain", Pseudo::Before, "display", "inline"),
+        ] {
+            assert_eq!(
+                get(&mut engine, &dom, id, Some(pseudo), property),
+                expected,
+                "{id} {pseudo:?} {property}"
+            );
+        }
+
+        // Nodes outside the document have no style.
+        let text = dom.create_text("t");
+        assert!(engine.computed_style(&dom, text, None).is_none());
+        let detached = dom.create_html_element("p", Vec::new());
+        assert!(engine.computed_style(&dom, detached, None).is_none());
+
+        // After a change the engine is told, and resolves again.
+        let first = find(&dom, "first");
+        dom.element_mut(first)
+            .unwrap()
+            .attrs
+            .push(catpaw_dom::Attr::html("class", "late"));
+        engine.invalidate();
+        assert_eq!(
+            get(&mut engine, &dom, "first", None, "color"),
+            "rgb(255, 0, 0)"
+        );
+
+        // A sheet set under the same key is kept; a new key replaces it.
+        engine.set_author_stylesheets(&[(7, "ignored: the key is known")]);
+        assert_eq!(get(&mut engine, &dom, "a", None, "display"), "flex");
+        engine.set_author_stylesheets(&[(8, "#a { display: grid }")]);
+        assert_eq!(get(&mut engine, &dom, "a", None, "display"), "grid");
+        assert_eq!(get(&mut engine, &dom, "a", None, "margin-top"), "0px");
+
+        let names = crate::computed::longhand_names();
+        assert!(names.contains(&"display") && names.contains(&"margin-top"));
+        assert!(!names.contains(&"margin"), "shorthands are not listed");
+        assert!(names.windows(2).all(|pair| pair[0] < pair[1]));
     }
 }

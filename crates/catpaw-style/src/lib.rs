@@ -10,6 +10,7 @@
 //! The integration follows Blitz's `blitz-dom/src/stylo.rs`, the reference
 //! for using Stylo outside Servo.
 
+pub mod computed;
 pub mod engine;
 pub mod inline;
 pub mod media;
@@ -17,6 +18,7 @@ pub mod node;
 pub mod query;
 pub mod table;
 
+pub use computed::{ComputedStyle, Pseudo};
 pub use engine::{StyleEngine, StyleOptions};
 pub use inline::InlineStyle;
 pub use media::MediaQueryList;

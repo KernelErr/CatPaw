@@ -261,7 +261,7 @@ members = [
   "closed", "focus", "blur", "alert", "confirm", "prompt", "innerWidth", "innerHeight",
   "scrollX", "scrollY", "pageXOffset", "pageYOffset", "scroll", "scrollTo", "scrollBy",
   "devicePixelRatio", "event", "matchMedia", "screen", "outerWidth", "outerHeight", "screenX",
-  "screenY", "screenLeft", "screenTop",
+  "screenY", "screenLeft", "screenTop", "getComputedStyle",
 ]
 
 [mixins.WindowOrWorkerGlobalScope]

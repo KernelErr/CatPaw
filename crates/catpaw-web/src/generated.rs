@@ -1995,6 +1995,11 @@ pub trait WindowImpl {
     fn outer_width(cx: &mut Cx<'_>) -> Fallible<i32>;
     fn outer_height(cx: &mut Cx<'_>) -> Fallible<i32>;
     fn device_pixel_ratio(cx: &mut Cx<'_>) -> Fallible<f64>;
+    fn get_computed_style(
+        cx: &mut Cx<'_>,
+        elt: NodeId,
+        pseudo_elt: Option<String>,
+    ) -> Fallible<ObjectId>;
     fn event(cx: &mut Cx<'_>) -> Fallible<Option<ObjectId>>;
     fn window(cx: &mut Cx<'_>) -> Fallible<WindowRef>;
     fn self_(cx: &mut Cx<'_>) -> Fallible<WindowRef>;

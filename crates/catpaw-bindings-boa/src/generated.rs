@@ -9249,6 +9249,30 @@ pub mod window {
         }
     }
 
+    fn op_get_computed_style(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::this_window(this_js, ctx)?;
+        rt::require_args(args, 1, "Window.getComputedStyle")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Element, ctx)?;
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            if rt::arg(args, 1).is_null_or_undefined() {
+                None
+            } else {
+                Some(rt::string_from_js(rt::arg(args, 1), ctx)?)
+            }
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WindowImpl>::get_computed_style(cx, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn op_focus(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         rt::this_window(this_js, ctx)?;
@@ -10151,6 +10175,11 @@ pub mod window {
                 name: "scrollBy",
                 func: op_scroll_by,
                 length: 0,
+            },
+            rt::OpDef {
+                name: "getComputedStyle",
+                func: op_get_computed_style,
+                length: 1,
             },
             rt::OpDef {
                 name: "focus",

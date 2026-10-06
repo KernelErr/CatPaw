@@ -14,6 +14,7 @@ use crate::page::{Cx, PageState};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RequestKind {
     Script,
+    Style,
     Xhr,
     Fetch,
     Other,

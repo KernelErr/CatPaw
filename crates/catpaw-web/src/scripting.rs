@@ -10,7 +10,7 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::time::Duration;
 
-use catpaw_dom::{HtmlParseOptions, HtmlStream, NodeId, WriteQueue};
+use catpaw_dom::{HtmlParseOptions, HtmlStream, NodeId, TreeChange, WriteQueue};
 use catpaw_js::EventTargetRef;
 use encoding_rs::Encoding;
 use url::Url;
@@ -21,7 +21,8 @@ use crate::events;
 use crate::generated::DocumentReadyState;
 use crate::mutation_observer;
 use crate::net::{self, NetRequest, NetResult, RequestKind};
-use crate::page::{ConsoleLevel, Cx};
+use crate::page::{ConsoleLevel, Cx, PageState};
+use crate::stylesheets;
 
 /// Script-loading state of a page.
 #[derive(Default)]
@@ -199,9 +200,9 @@ pub fn resolve_module_specifier(
     as_url
 }
 
-/// Decodes a fetched script: the BOM wins, then the Content-Type charset,
-/// then UTF-8.
-fn decode_script(body: &[u8], content_type: Option<&str>) -> String {
+/// Decodes a fetched script or style sheet: the BOM wins, then the
+/// Content-Type charset, then UTF-8.
+pub(crate) fn decode_text(body: &[u8], content_type: Option<&str>) -> String {
     let charset = content_type.and_then(|ct| {
         ct.split(';').skip(1).find_map(|param| {
             let (name, value) = param.split_once('=')?;
@@ -284,7 +285,7 @@ fn execute_fetched(
             }
         }
         Ok(response) if response.is_success() => {
-            let source = decode_script(&response.body, response.header("content-type"));
+            let source = decode_text(&response.body, response.header("content-type"));
             execute(cx, el, &source, response.url.as_str(), parser_inserted);
             fire_simple(cx, el, "load");
         }
@@ -305,17 +306,18 @@ fn execute_fetched(
     }
 }
 
-fn block_load(cx: &Cx<'_>) {
-    let scripts = &cx.page.scripts;
+/// Delays the document's `load` event until a matching [`unblock_load`].
+pub(crate) fn block_load(page: &PageState) {
+    let scripts = &page.scripts;
     scripts.load_blockers.set(scripts.load_blockers.get() + 1);
 }
 
-fn unblock_load(cx: &mut Cx<'_>) {
-    let scripts = &cx.page.scripts;
+pub(crate) fn unblock_load(page: &PageState) {
+    let scripts = &page.scripts;
     scripts
         .load_blockers
         .set(scripts.load_blockers.get().saturating_sub(1));
-    maybe_fire_load(cx);
+    maybe_fire_load(page);
 }
 
 /// Prepares a script element: decides whether and when it runs.
@@ -370,10 +372,10 @@ fn prepare(cx: &mut Cx<'_>, el: NodeId, parser_inserted: bool) {
                 pending: Pending::Inline(source),
             });
         } else {
-            block_load(cx);
+            block_load(cx.page);
             queue_task(cx.page, "module script", move |cx| {
                 execute_module(cx, &source, url.as_str());
-                unblock_load(cx);
+                unblock_load(cx.page);
             });
         }
         return;
@@ -418,21 +420,43 @@ fn prepare(cx: &mut Cx<'_>, el: NodeId, parser_inserted: bool) {
     }
 
     // Async (and every script-inserted external script): run when fetched.
-    block_load(cx);
+    block_load(cx.page);
     net::start_request(cx.page, request, move |cx, outcome| {
         execute_fetched(cx, el, &url, outcome, false, module);
-        unblock_load(cx);
+        unblock_load(cx.page);
     });
 }
 
 fn run_parser_script(cx: &mut Cx<'_>, el: NodeId) {
+    // A script sees the styles of the sheets that come before it.
+    stylesheets::wait_for_blocking_sheets(cx);
     // Microtasks queued by earlier scripts run before the next one starts.
     cx.checkpoint();
     prepare(cx, el, true);
 }
 
+/// Runs the parser, then lets the rest of the page react to the tree
+/// changes it made. Scripts do not run inside `run`.
+fn parse<R>(page: &PageState, run: impl FnOnce() -> R) -> R {
+    page.dom.borrow_mut().log_changes(true);
+    let result = run();
+    let changes = {
+        let mut dom = page.dom.borrow_mut();
+        let changes = dom.take_changes();
+        dom.log_changes(false);
+        changes
+    };
+    for change in &changes {
+        if let TreeChange::Inserted { node, .. } = *change {
+            stylesheets::link_changed(page, node, true);
+        }
+    }
+    mutation_observer::parser_changed(page, &changes);
+    result
+}
+
 fn pump(cx: &mut Cx<'_>, stream: &HtmlStream) {
-    while let Some(script) = mutation_observer::during_parsing(cx.page, || stream.pump()) {
+    while let Some(script) = parse(cx.page, || stream.pump()) {
         run_parser_script(cx, script);
         if cx.page.navigation.borrow().is_some() {
             return;
@@ -452,13 +476,13 @@ fn set_ready_state(cx: &mut Cx<'_>, state: DocumentReadyState) {
     );
 }
 
-fn maybe_fire_load(cx: &mut Cx<'_>) {
-    let scripts = &cx.page.scripts;
+fn maybe_fire_load(page: &PageState) {
+    let scripts = &page.scripts;
     if !scripts.load_pending.get() || scripts.load_blockers.get() > 0 {
         return;
     }
     scripts.load_pending.set(false);
-    queue_task(cx.page, "load", |cx| {
+    queue_task(page, "load", |cx| {
         set_ready_state(cx, DocumentReadyState::Complete);
         events::fire(cx, EventTargetRef::Window, "load", false, false);
         events::fire(cx, EventTargetRef::Window, "pageshow", false, false);
@@ -469,6 +493,7 @@ fn maybe_fire_load(cx: &mut Cx<'_>) {
 fn finish_parsing(cx: &mut Cx<'_>) {
     set_ready_state(cx, DocumentReadyState::Interactive);
 
+    stylesheets::wait_for_blocking_sheets(cx);
     let deferred = std::mem::take(&mut *cx.page.scripts.deferred.borrow_mut());
     for script in deferred {
         match script.pending {
@@ -515,7 +540,7 @@ fn finish_parsing(cx: &mut Cx<'_>) {
         false,
     );
     cx.page.scripts.load_pending.set(true);
-    maybe_fire_load(cx);
+    maybe_fire_load(cx.page);
 }
 
 fn new_stream(cx: &Cx<'_>) -> Rc<HtmlStream> {
@@ -536,7 +561,7 @@ pub fn load_document(cx: &mut Cx<'_>, html: &str) {
     *cx.page.scripts.parser.borrow_mut() = Some(stream.clone());
     stream.push(html);
     pump(cx, &stream);
-    mutation_observer::during_parsing(cx.page, || stream.finish());
+    parse(cx.page, || stream.finish());
     *cx.page.scripts.parser.borrow_mut() = None;
     if cx.page.navigation.borrow().is_some() {
         return;
@@ -567,7 +592,7 @@ pub(crate) fn document_close(cx: &mut Cx<'_>) {
     let stream = cx.page.scripts.parser.borrow_mut().take();
     cx.page.scripts.script_created_parser.set(false);
     if let Some(stream) = stream {
-        mutation_observer::during_parsing(cx.page, || stream.finish());
+        parse(cx.page, || stream.finish());
         finish_parsing(cx);
     }
 }
@@ -591,9 +616,7 @@ pub(crate) fn document_write(cx: &mut Cx<'_>, text: &str) {
         return;
     };
     let queue = WriteQueue::new(text);
-    while let Some(script) =
-        mutation_observer::during_parsing(cx.page, || stream.pump_write(&queue))
-    {
+    while let Some(script) = parse(cx.page, || stream.pump_write(&queue)) {
         run_parser_script(cx, script);
     }
 }
@@ -602,24 +625,31 @@ pub(crate) fn document_write(cx: &mut Cx<'_>, text: &str) {
 
 /// Called after script inserted `inserted` under `parent`.
 pub(crate) fn nodes_inserted(cx: &mut Cx<'_>, parent: NodeId, inserted: &[NodeId]) {
-    let scripts: Vec<NodeId> = {
+    let (scripts, links): (Vec<NodeId>, Vec<NodeId>) = {
         let dom = cx.dom();
         if !dom.is_connected(parent) {
             return;
         }
-        let mut found = Vec::new();
+        let mut scripts = Vec::new();
+        let mut links = Vec::new();
         // Content added to a script element that has not run yet.
         if dom.is_html_element(parent, "script") {
-            found.push(parent);
+            scripts.push(parent);
         }
         for &node in inserted {
-            found.extend(
-                dom.traverse(node)
-                    .filter(|&n| dom.is_html_element(n, "script")),
-            );
+            for n in dom.traverse(node) {
+                if dom.is_html_element(n, "script") {
+                    scripts.push(n);
+                } else if dom.is_html_element(n, "link") {
+                    links.push(n);
+                }
+            }
         }
-        found
+        (scripts, links)
     };
+    for link in links {
+        stylesheets::link_changed(cx.page, link, false);
+    }
     for script in scripts {
         prepare(cx, script, false);
     }
@@ -671,12 +701,12 @@ mod tests {
     #[test]
     fn decodes_scripts_by_bom_then_charset() {
         assert_eq!(
-            decode_script(b"var a='\xE9'", Some("text/javascript; charset=latin1")),
+            decode_text(b"var a='\xE9'", Some("text/javascript; charset=latin1")),
             "var a='é'"
         );
-        assert_eq!(decode_script("x='é'".as_bytes(), None), "x='é'");
+        assert_eq!(decode_text("x='é'".as_bytes(), None), "x='é'");
         assert_eq!(
-            decode_script(b"\xEF\xBB\xBFx=1", Some("text/javascript; charset=latin1")),
+            decode_text(b"\xEF\xBB\xBFx=1", Some("text/javascript; charset=latin1")),
             "x=1"
         );
     }

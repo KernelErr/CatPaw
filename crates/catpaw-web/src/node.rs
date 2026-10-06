@@ -344,6 +344,7 @@ pub(crate) fn remove(cx: &mut Cx<'_>, node: NodeId, suppress_observers: bool) {
         dom.detach(node);
         (parent, siblings.0, siblings.1)
     };
+    crate::stylesheets::subtree_removed(cx.page, node);
     if mutation_observer::active(cx.page) {
         mutation_observer::node_removed(cx.page, node, parent);
         if !suppress_observers {

@@ -56,6 +56,9 @@ fn attribute_changed(
     if local == "src" && cx.dom().is_html_element(el, "script") {
         crate::scripting::src_attribute_set(cx, el);
     }
+    if matches!(local, "href" | "rel" | "disabled") {
+        crate::stylesheets::link_changed(cx.page, el, false);
+    }
 }
 
 /// Sets the null-namespace attribute `local`.

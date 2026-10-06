@@ -3,8 +3,8 @@
 //! Records are queued where the DOM Standard queues them: by the tree
 //! mutation algorithms in [`crate::node`], and by attribute and character
 //! data changes. What the parser inserts is read from the arena's change
-//! log, which is switched on while the parser runs. Observers are notified
-//! from a microtask.
+//! log, which is kept while the parser runs. Observers are notified from a
+//! microtask.
 //!
 //! Not reported: text the parser appends to an existing text node, and
 //! attributes it adds to an existing element.
@@ -323,21 +323,13 @@ pub(crate) fn node_removed(page: &PageState, node: NodeId, parent: NodeId) {
     registered.entry(node).or_default().extend(followers);
 }
 
-/// Runs the parser, reporting the tree changes it makes.
-pub(crate) fn during_parsing<R>(page: &PageState, parse: impl FnOnce() -> R) -> R {
+/// Reports the tree changes the parser made.
+pub(crate) fn parser_changed(page: &PageState, changes: &[TreeChange]) {
     if !active(page) {
-        return parse();
+        return;
     }
-    page.dom.borrow_mut().log_changes(true);
-    let result = parse();
-    let changes = {
-        let mut dom = page.dom.borrow_mut();
-        let changes = dom.take_changes();
-        dom.log_changes(false);
-        changes
-    };
     for change in changes {
-        match change {
+        match *change {
             TreeChange::Inserted {
                 parent,
                 node,
@@ -355,7 +347,6 @@ pub(crate) fn during_parsing<R>(page: &PageState, parse: impl FnOnce() -> R) -> 
             }
         }
     }
-    result
 }
 
 /// Removes the registrations of `observer` on `nodes` that `drop` selects.

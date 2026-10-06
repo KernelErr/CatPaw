@@ -19,7 +19,7 @@ pub struct ScreenObject;
 platform_object!(ScreenObject, Screen);
 
 /// The device media queries are evaluated against.
-fn device(page: &PageState) -> StyleOptions {
+pub(crate) fn device(page: &PageState) -> StyleOptions {
     StyleOptions {
         viewport_width: page.config.viewport_width as f32,
         viewport_height: page.config.viewport_height as f32,

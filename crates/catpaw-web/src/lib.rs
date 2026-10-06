@@ -36,6 +36,7 @@ pub mod reflect;
 mod resize_observer;
 pub mod scripting;
 mod style;
+mod stylesheets;
 mod url_api;
 mod window;
 mod xhr;

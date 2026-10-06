@@ -246,6 +246,7 @@ pub struct PageState {
     pub(crate) history: RefCell<crate::history::HistoryState>,
     pub(crate) mutation: crate::mutation_observer::Observers,
     pub(crate) intersection: crate::intersection_observer::Observers,
+    pub(crate) styles: crate::stylesheets::Styles,
     microtask_queue: RefCell<Option<MicrotaskQueue>>,
     /// An uncaught exception is being reported (reports do not nest).
     pub(crate) reporting_error: Cell<bool>,
@@ -304,6 +305,7 @@ impl PageState {
             history: RefCell::new(crate::history::HistoryState::new(url.clone())),
             mutation: Default::default(),
             intersection: Default::default(),
+            styles: Default::default(),
             microtask_queue: RefCell::new(None),
             reporting_error: Cell::new(false),
             errors: RefCell::new(Vec::new()),

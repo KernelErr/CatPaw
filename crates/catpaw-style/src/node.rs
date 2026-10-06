@@ -127,6 +127,11 @@ impl CatNode {
             .expect("style slot missing: StyleEngine::ensure_slots was not run")
     }
 
+    /// The token Stylo knows this element by.
+    pub(crate) fn opaque_id(&self) -> selectors::OpaqueElement {
+        selectors::Element::opaque(self)
+    }
+
     fn ffi(&self) -> u64 {
         self.id.data().as_ffi()
     }
