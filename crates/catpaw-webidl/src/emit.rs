@@ -1104,15 +1104,27 @@ impl<'a> Emitter<'a> {
             _ => "h.object()",
         };
         let name = &iface.name;
+        // A special operation may be inherited: its implementation is then
+        // on the trait of the interface that declares it.
+        let owner = |special: &Option<crate::plan::PSpecial>| {
+            special
+                .as_ref()
+                .map(|s| s.owner.clone())
+                .unwrap_or_else(|| name.clone())
+        };
+        let indexed_owner = owner(&e.indexed_getter);
+        let named_owner = owner(&e.named_getter);
+        let setter_owner = owner(&e.named_setter);
+        let deleter_owner = owner(&e.named_deleter);
         let mut fields = Vec::new();
         if e.indexed_getter.is_some() {
             w!(
                 out,
-                "fn exotic_length(h: rt::Handle, ctx: &mut Context) -> JsResult<u32> {{\nlet this = {handle};\nlet r = rt::with_cx(ctx, |cx| <Web as web::{name}Impl>::length(cx, this));\nr.map_err(|e| rt::exception_to_js(e, ctx))\n}}\n"
+                "fn exotic_length(h: rt::Handle, ctx: &mut Context) -> JsResult<u32> {{\nlet this = {handle};\nlet r = rt::with_cx(ctx, |cx| <Web as web::{indexed_owner}Impl>::length(cx, this));\nr.map_err(|e| rt::exception_to_js(e, ctx))\n}}\n"
             );
             w!(
                 out,
-                "fn exotic_indexed_get(h: rt::Handle, index: u32, ctx: &mut Context) -> JsResult<Option<JsValue>> {{\nlet this = {handle};\nlet r = rt::with_cx(ctx, |cx| <Web as web::{name}Impl>::indexed_get(cx, this, index));\nrt::ret_opt(r, ctx)\n}}\n"
+                "fn exotic_indexed_get(h: rt::Handle, index: u32, ctx: &mut Context) -> JsResult<Option<JsValue>> {{\nlet this = {handle};\nlet r = rt::with_cx(ctx, |cx| <Web as web::{indexed_owner}Impl>::indexed_get(cx, this, index));\nrt::ret_opt(r, ctx)\n}}\n"
             );
             fields.push(
                 "length: Some(exotic_length), indexed_get: Some(exotic_indexed_get)".to_string(),
@@ -1123,11 +1135,11 @@ impl<'a> Emitter<'a> {
         if e.named_getter.is_some() {
             w!(
                 out,
-                "fn exotic_named_get(h: rt::Handle, name: &str, ctx: &mut Context) -> JsResult<Option<JsValue>> {{\nlet this = {handle};\nlet r = rt::with_cx(ctx, |cx| <Web as web::{name}Impl>::named_get(cx, this, name));\nrt::ret_opt(r, ctx)\n}}\n"
+                "fn exotic_named_get(h: rt::Handle, name: &str, ctx: &mut Context) -> JsResult<Option<JsValue>> {{\nlet this = {handle};\nlet r = rt::with_cx(ctx, |cx| <Web as web::{named_owner}Impl>::named_get(cx, this, name));\nrt::ret_opt(r, ctx)\n}}\n"
             );
             w!(
                 out,
-                "fn exotic_named_properties(h: rt::Handle, ctx: &mut Context) -> JsResult<Vec<String>> {{\nlet this = {handle};\nlet r = rt::with_cx(ctx, |cx| <Web as web::{name}Impl>::named_properties(cx, this));\nr.map_err(|e| rt::exception_to_js(e, ctx))\n}}\n"
+                "fn exotic_named_properties(h: rt::Handle, ctx: &mut Context) -> JsResult<Vec<String>> {{\nlet this = {handle};\nlet r = rt::with_cx(ctx, |cx| <Web as web::{named_owner}Impl>::named_properties(cx, this));\nr.map_err(|e| rt::exception_to_js(e, ctx))\n}}\n"
             );
             fields.push("named_get: Some(exotic_named_get), named_properties: Some(exotic_named_properties)".to_string());
         } else {
@@ -1136,8 +1148,8 @@ impl<'a> Emitter<'a> {
         if let Some(s) = &e.named_setter {
             w!(
                 out,
-                "fn exotic_named_set(h: rt::Handle, name: &str, value: &JsValue, ctx: &mut Context) -> JsResult<()> {{\nlet this = {handle};\nlet a0 = {};\nlet r = rt::with_cx(ctx, |cx| <Web as web::{name}Impl>::named_set(cx, this, name, a0));\nr.map_err(|e| rt::exception_to_js(e, ctx))\n}}\n",
-                self.conv(&s.ty, "value", false)
+                "fn exotic_named_set(h: rt::Handle, name: &str, value: &JsValue, ctx: &mut Context) -> JsResult<()> {{\nlet this = {handle};\nlet a0 = {};\nlet r = rt::with_cx(ctx, |cx| <Web as web::{setter_owner}Impl>::named_set(cx, this, name, a0));\nr.map_err(|e| rt::exception_to_js(e, ctx))\n}}\n",
+                self.conv(&s.ty, "value", s.null_to_empty)
             );
             fields.push("named_set: Some(exotic_named_set)".to_string());
         } else {
@@ -1146,7 +1158,7 @@ impl<'a> Emitter<'a> {
         if e.named_deleter.is_some() {
             w!(
                 out,
-                "fn exotic_named_delete(h: rt::Handle, name: &str, ctx: &mut Context) -> JsResult<bool> {{\nlet this = {handle};\nlet r = rt::with_cx(ctx, |cx| <Web as web::{name}Impl>::named_delete(cx, this, name));\nr.map_err(|e| rt::exception_to_js(e, ctx))\n}}\n"
+                "fn exotic_named_delete(h: rt::Handle, name: &str, ctx: &mut Context) -> JsResult<bool> {{\nlet this = {handle};\nlet r = rt::with_cx(ctx, |cx| <Web as web::{deleter_owner}Impl>::named_delete(cx, this, name));\nr.map_err(|e| rt::exception_to_js(e, ctx))\n}}\n"
             );
             fields.push("named_delete: Some(exotic_named_delete)".to_string());
         } else {
@@ -1158,6 +1170,13 @@ impl<'a> Emitter<'a> {
                 .interfaces
                 .get(name)
                 .is_some_and(|i| i.ext.has("LegacyOverrideBuiltIns"))
+        ));
+        fields.push(format!(
+            "attribute_like: {}",
+            self.idl
+                .interfaces
+                .get(name)
+                .is_some_and(|i| i.ext.has("CatPawNamedPropertiesAreAttributes"))
         ));
         format!("Some(rt::ExoticDef {{ {} }})", fields.join(", "))
     }

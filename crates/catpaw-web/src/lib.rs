@@ -28,6 +28,7 @@ mod node;
 pub mod page;
 pub mod reflect;
 pub mod scripting;
+mod style;
 mod url_api;
 mod window;
 

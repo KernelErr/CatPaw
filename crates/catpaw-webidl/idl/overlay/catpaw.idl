@@ -6,3 +6,17 @@ interface mixin NavigatorAutomationInformation {
   readonly attribute boolean webdriver;
 };
 Navigator includes NavigatorAutomationInformation;
+
+// https://drafts.csswg.org/cssom/#cssomstring-type
+typedef USVString CSSOMString;
+
+// CSSOM defines one attribute on CSSStyleProperties per supported CSS
+// property (`style.color`, `style.backgroundColor`,
+// `style["background-color"]`), in prose rather than IDL. They are modelled
+// as named properties; the extended attribute tells the bindings that, like
+// real attributes, they never shadow members found on the prototype chain.
+[CatPawNamedPropertiesAreAttributes]
+partial interface CSSStyleProperties {
+  getter CSSOMString (CSSOMString property);
+  setter undefined (CSSOMString property, [LegacyNullToEmptyString] CSSOMString value);
+};

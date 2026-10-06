@@ -590,7 +590,13 @@ fn arguments(list: &[WArgument<'_>]) -> Vec<Argument> {
             WArgument::Single(s) => Argument {
                 name: s.identifier.0.to_string(),
                 ty: wtype(&s.type_.type_),
-                type_ext: ext_attrs(&s.type_.attributes),
+                // The parser attaches a leading `[...]` to the argument
+                // rather than to its type; both end up here.
+                type_ext: {
+                    let mut ext = ext_attrs(&s.type_.attributes);
+                    ext.merge(ext_attrs(&s.attributes));
+                    ext
+                },
                 optional: s.optional.is_some(),
                 variadic: false,
                 default: s.default.as_ref().map(|d| default_value(&d.value)),
@@ -776,6 +782,7 @@ impl Idl {
                 }
                 Definition::PartialInterface(i) => {
                     let e = self.interface_entry(i.identifier.0, InterfaceKind::Interface);
+                    e.ext.merge(ext_attrs(&i.attributes));
                     e.members.extend(interface_members(&i.members.body));
                 }
                 Definition::InterfaceMixin(i) => {

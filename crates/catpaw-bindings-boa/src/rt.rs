@@ -77,6 +77,10 @@ pub struct ExoticDef {
     pub named_delete: Option<NamedDeleteFn>,
     /// `[LegacyOverrideBuiltIns]`: named properties shadow the prototype chain.
     pub override_builtins: bool,
+    /// The named properties stand in for attributes the interface would
+    /// otherwise define one by one: members on the prototype chain take
+    /// precedence when setting, too.
+    pub attribute_like: bool,
 }
 
 pub enum Iterable {
@@ -1381,8 +1385,12 @@ fn trap_set(_this: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<Js
             return Ok(JsValue::new(false));
         }
         if let Some(named_set) = t.def.named_set {
-            named_set(t.handle, &name, value, ctx)?;
-            return Ok(JsValue::new(true));
+            let shadowed =
+                t.def.attribute_like && t.target.has_property(property_key(key, ctx)?, ctx)?;
+            if !shadowed {
+                named_set(t.handle, &name, value, ctx)?;
+                return Ok(JsValue::new(true));
+            }
         }
     }
     let ok = t

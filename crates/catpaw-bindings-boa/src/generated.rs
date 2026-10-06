@@ -893,6 +893,296 @@ impl IntoJs for web::StringSequenceSequenceOrStringStringRecordOrString {
     }
 }
 
+pub mod css_style_declaration {
+    use super::*;
+
+    fn get_css_text(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CSSStyleDeclaration, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStyleDeclarationImpl>::css_text(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_css_text(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CSSStyleDeclaration, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStyleDeclarationImpl>::set_css_text(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_length(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CSSStyleDeclaration, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStyleDeclarationImpl>::length(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_item(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CSSStyleDeclaration, ctx)?;
+        rt::require_args(args, 1, "CSSStyleDeclaration.item")?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStyleDeclarationImpl>::item(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_get_property_value(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CSSStyleDeclaration, ctx)?;
+        rt::require_args(args, 1, "CSSStyleDeclaration.getPropertyValue")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStyleDeclarationImpl>::get_property_value(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_get_property_priority(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CSSStyleDeclaration, ctx)?;
+        rt::require_args(args, 1, "CSSStyleDeclaration.getPropertyPriority")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStyleDeclarationImpl>::get_property_priority(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_set_property(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CSSStyleDeclaration, ctx)?;
+        rt::require_args(args, 2, "CSSStyleDeclaration.setProperty")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::string_from_js_null_empty(rt::arg(args, 1), ctx)?;
+        let a2 = if args.len() > 2 && !args[2].is_undefined() {
+            rt::string_from_js_null_empty(rt::arg(args, 2), ctx)?
+        } else {
+            "".to_string()
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStyleDeclarationImpl>::set_property(cx, this, a0, a1, a2)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_remove_property(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CSSStyleDeclaration, ctx)?;
+        rt::require_args(args, 1, "CSSStyleDeclaration.removeProperty")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStyleDeclarationImpl>::remove_property(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn exotic_length(h: rt::Handle, ctx: &mut Context) -> JsResult<u32> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStyleDeclarationImpl>::length(cx, this)
+        });
+        r.map_err(|e| rt::exception_to_js(e, ctx))
+    }
+
+    fn exotic_indexed_get(
+        h: rt::Handle,
+        index: u32,
+        ctx: &mut Context,
+    ) -> JsResult<Option<JsValue>> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStyleDeclarationImpl>::indexed_get(cx, this, index)
+        });
+        rt::ret_opt(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::CSSStyleDeclaration,
+        name: "CSSStyleDeclaration",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "cssText",
+                getter: get_css_text,
+                setter: Some(set_css_text),
+            },
+            rt::AttrDef {
+                name: "length",
+                getter: get_length,
+                setter: None,
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "item",
+                func: op_item,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "getPropertyValue",
+                func: op_get_property_value,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "getPropertyPriority",
+                func: op_get_property_priority,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "setProperty",
+                func: op_set_property,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "removeProperty",
+                func: op_remove_property,
+                length: 1,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: Some(rt::ExoticDef {
+            length: Some(exotic_length),
+            indexed_get: Some(exotic_indexed_get),
+            named_get: None,
+            named_properties: None,
+            named_set: None,
+            named_delete: None,
+            override_builtins: false,
+            attribute_like: false,
+        }),
+    };
+}
+
+pub mod css_style_properties {
+    use super::*;
+
+    fn get_css_float(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CSSStyleProperties, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStylePropertiesImpl>::css_float(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_css_float(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CSSStyleProperties, ctx)?;
+        let a0 = rt::string_from_js_null_empty(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStylePropertiesImpl>::set_css_float(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn exotic_length(h: rt::Handle, ctx: &mut Context) -> JsResult<u32> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStyleDeclarationImpl>::length(cx, this)
+        });
+        r.map_err(|e| rt::exception_to_js(e, ctx))
+    }
+
+    fn exotic_indexed_get(
+        h: rt::Handle,
+        index: u32,
+        ctx: &mut Context,
+    ) -> JsResult<Option<JsValue>> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStyleDeclarationImpl>::indexed_get(cx, this, index)
+        });
+        rt::ret_opt(r, ctx)
+    }
+
+    fn exotic_named_get(h: rt::Handle, name: &str, ctx: &mut Context) -> JsResult<Option<JsValue>> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStylePropertiesImpl>::named_get(cx, this, name)
+        });
+        rt::ret_opt(r, ctx)
+    }
+
+    fn exotic_named_properties(h: rt::Handle, ctx: &mut Context) -> JsResult<Vec<String>> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStylePropertiesImpl>::named_properties(cx, this)
+        });
+        r.map_err(|e| rt::exception_to_js(e, ctx))
+    }
+
+    fn exotic_named_set(
+        h: rt::Handle,
+        name: &str,
+        value: &JsValue,
+        ctx: &mut Context,
+    ) -> JsResult<()> {
+        let this = h.object();
+        let a0 = rt::string_from_js_null_empty(value, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CSSStylePropertiesImpl>::named_set(cx, this, name, a0)
+        });
+        r.map_err(|e| rt::exception_to_js(e, ctx))
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::CSSStyleProperties,
+        name: "CSSStyleProperties",
+        parent: Some(I::CSSStyleDeclaration),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "cssFloat",
+            getter: get_css_float,
+            setter: Some(set_css_float),
+        }],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: Some(rt::ExoticDef {
+            length: Some(exotic_length),
+            indexed_get: Some(exotic_indexed_get),
+            named_get: Some(exotic_named_get),
+            named_properties: Some(exotic_named_properties),
+            named_set: Some(exotic_named_set),
+            named_delete: None,
+            override_builtins: false,
+            attribute_like: true,
+        }),
+    };
+}
+
 pub mod dom_rect_read_only {
     use super::*;
 
@@ -1081,6 +1371,7 @@ pub mod dom_string_map {
             named_set: Some(exotic_named_set),
             named_delete: Some(exotic_named_delete),
             override_builtins: true,
+            attribute_like: false,
         }),
     };
 }
@@ -1286,6 +1577,7 @@ pub mod dom_token_list {
             named_set: None,
             named_delete: None,
             override_builtins: false,
+            attribute_like: false,
         }),
     };
 }
@@ -1851,6 +2143,7 @@ pub mod html_collection {
             named_set: None,
             named_delete: None,
             override_builtins: false,
+            attribute_like: false,
         }),
     };
 }
@@ -3134,6 +3427,7 @@ pub mod node_list {
             named_set: None,
             named_delete: None,
             override_builtins: false,
+            attribute_like: false,
         }),
     };
 }
@@ -3523,6 +3817,7 @@ pub mod storage {
             named_set: Some(exotic_named_set),
             named_delete: Some(exotic_named_delete),
             override_builtins: false,
+            attribute_like: false,
         }),
     };
 }
@@ -12854,6 +13149,24 @@ pub mod html_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_style(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "style", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ElementCSSInlineStyleImpl>::style(cx, this)
+        });
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "style", &v, ctx);
+        Ok(v)
+    }
+
+    fn set_style(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::put_forwards(this_js, "style", "cssText", rt::arg(args, 0), ctx)?;
+        Ok(JsValue::undefined())
+    }
+
     fn get_onabort(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLElement, ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -14719,6 +15032,11 @@ pub mod html_element {
                 name: "headingReset",
                 getter: get_heading_reset,
                 setter: Some(set_heading_reset),
+            },
+            rt::AttrDef {
+                name: "style",
+                getter: get_style,
+                setter: Some(set_style),
             },
             rt::AttrDef {
                 name: "onabort",
@@ -21577,6 +21895,8 @@ pub mod ns_console {
 
 /// Interface definitions, parents before children.
 pub static INTERFACES: &[&rt::InterfaceDef] = &[
+    &css_style_declaration::DEF,
+    &css_style_properties::DEF,
     &dom_rect_read_only::DEF,
     &dom_string_map::DEF,
     &dom_token_list::DEF,

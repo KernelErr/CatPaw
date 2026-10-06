@@ -22,6 +22,8 @@ use crate::Cx;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[repr(u16)]
 pub enum InterfaceId {
+    CSSStyleDeclaration,
+    CSSStyleProperties,
     DOMRectReadOnly,
     DOMStringMap,
     DOMTokenList,
@@ -92,8 +94,10 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 67;
-    pub const ALL: [InterfaceId; 67] = [
+    pub const COUNT: usize = 69;
+    pub const ALL: [InterfaceId; 69] = [
+        InterfaceId::CSSStyleDeclaration,
+        InterfaceId::CSSStyleProperties,
         InterfaceId::DOMRectReadOnly,
         InterfaceId::DOMStringMap,
         InterfaceId::DOMTokenList,
@@ -165,6 +169,8 @@ impl InterfaceId {
 
     pub fn name(self) -> &'static str {
         match self {
+            InterfaceId::CSSStyleDeclaration => "CSSStyleDeclaration",
+            InterfaceId::CSSStyleProperties => "CSSStyleProperties",
             InterfaceId::DOMRectReadOnly => "DOMRectReadOnly",
             InterfaceId::DOMStringMap => "DOMStringMap",
             InterfaceId::DOMTokenList => "DOMTokenList",
@@ -237,6 +243,8 @@ impl InterfaceId {
 
     pub fn from_name(name: &str) -> Option<InterfaceId> {
         Some(match name {
+            "CSSStyleDeclaration" => InterfaceId::CSSStyleDeclaration,
+            "CSSStyleProperties" => InterfaceId::CSSStyleProperties,
             "DOMRectReadOnly" => InterfaceId::DOMRectReadOnly,
             "DOMStringMap" => InterfaceId::DOMStringMap,
             "DOMTokenList" => InterfaceId::DOMTokenList,
@@ -310,6 +318,8 @@ impl InterfaceId {
 
     pub fn parent(self) -> Option<InterfaceId> {
         match self {
+            InterfaceId::CSSStyleDeclaration => None,
+            InterfaceId::CSSStyleProperties => Some(InterfaceId::CSSStyleDeclaration),
             InterfaceId::DOMRectReadOnly => None,
             InterfaceId::DOMStringMap => None,
             InterfaceId::DOMTokenList => None,
@@ -791,6 +801,10 @@ pub trait DocumentOrShadowRootImpl {
     fn active_element(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
 }
 
+pub trait ElementCSSInlineStyleImpl {
+    fn style(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
+}
+
 pub trait HTMLOrSVGOrMathMLElementImpl {
     fn dataset(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
     fn focus(cx: &mut Cx<'_>, this: NodeId, options: FocusOptions) -> Fallible<()>;
@@ -901,6 +915,33 @@ pub trait WindowOrWorkerGlobalScopeImpl {
 
 pub trait WindowSessionStorageImpl {
     fn session_storage(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
+}
+
+pub trait CSSStyleDeclarationImpl {
+    fn css_text(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_css_text(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+    fn length(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn item(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<String>;
+    fn get_property_value(cx: &mut Cx<'_>, this: ObjectId, property: String) -> Fallible<String>;
+    fn get_property_priority(cx: &mut Cx<'_>, this: ObjectId, property: String)
+    -> Fallible<String>;
+    fn set_property(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        property: String,
+        value: String,
+        priority: String,
+    ) -> Fallible<()>;
+    fn remove_property(cx: &mut Cx<'_>, this: ObjectId, property: String) -> Fallible<String>;
+    fn indexed_get(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<String>>;
+}
+
+pub trait CSSStylePropertiesImpl {
+    fn css_float(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_css_float(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+    fn named_get(cx: &mut Cx<'_>, this: ObjectId, name: &str) -> Fallible<Option<String>>;
+    fn named_properties(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<String>>;
+    fn named_set(cx: &mut Cx<'_>, this: ObjectId, name: &str, value: String) -> Fallible<()>;
 }
 
 pub trait DOMRectReadOnlyImpl {

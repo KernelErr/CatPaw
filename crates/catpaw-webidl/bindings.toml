@@ -145,6 +145,20 @@ members = [
 [interfaces.DOMStringMap]
 exotic = true
 
+[interfaces.CSSStyleDeclaration]
+exotic = true
+members = [
+  "cssText", "length", "item", "getPropertyValue", "getPropertyPriority", "setProperty",
+  "removeProperty",
+]
+
+[interfaces.CSSStyleProperties]
+exotic = true
+members = ["cssFloat"]
+
+[mixins.ElementCSSInlineStyle]
+members = ["style"]
+
 [interfaces.DOMRectReadOnly]
 members = ["x", "y", "width", "height", "top", "right", "bottom", "left", "toJSON"]
 

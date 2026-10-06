@@ -860,3 +860,71 @@ fn uncaught_errors_and_rejections_fire_events() {
     assert_eq!(errors[1], "Uncaught (in promise) unclaimed");
     assert_eq!(page.page().errors.borrow().len(), 4);
 }
+
+#[test]
+fn inline_styles_are_editable_through_the_cssom() {
+    let mut page = load(r#"<body><div id="d" style="color: red; MARGIN: 1px 2px">x</div>"#);
+    assert_eq!(
+        eval(
+            &mut page,
+            "var d = document.getElementById('d'), s = d.style; [s.color, s.marginLeft, s['margin-top'], s.length, s[0], s.cssText].join('|')"
+        ),
+        "red|2px|1px|5|color|color: red; margin: 1px 2px;"
+    );
+    // Assignments are validated and normalized; invalid values are ignored.
+    assert_eq!(
+        eval(
+            &mut page,
+            "s.display = 'none'; s.backgroundColor = 'BLUE'; s.width = 'bogus'; s.notAProperty = 'x'; d.getAttribute('style')"
+        ),
+        "color: red; margin: 1px 2px; display: none; background-color: blue;"
+    );
+    assert_eq!(
+        eval(
+            &mut page,
+            "s.setProperty('--x', ' 1 '); s.setProperty('height', '5px', 'important'); [s.getPropertyValue('--x'), s.getPropertyPriority('height'), s.removeProperty('color'), s.color].join('|')"
+        ),
+        "1|important|red|"
+    );
+    // Supported properties read as '' when unset; unknown names are absent.
+    assert_eq!(
+        eval(
+            &mut page,
+            "[('color' in s), ('nonsense' in s), s.nonsense === undefined, s.opacity === '', typeof s.setProperty, s === d.style, s instanceof CSSStyleDeclaration, Object.prototype.toString.call(s)].join(' ')"
+        ),
+        "true false true true function true true [object CSSStyleProperties]"
+    );
+    // The attribute is the source of truth, in both directions.
+    assert_eq!(
+        eval(
+            &mut page,
+            "d.setAttribute('style', 'color: green'); s.color + ' ' + s.length"
+        ),
+        "green 1"
+    );
+    assert_eq!(
+        eval(&mut page, "d.style = 'top: 1px'; d.style.cssText"),
+        "top: 1px;"
+    );
+    assert_eq!(
+        eval(
+            &mut page,
+            "s.cssText = 'left: 2px; junk'; s.cssFloat = 'left'; d.getAttribute('style') + '|' + s.float + '|' + Object.keys(s).join()"
+        ),
+        "left: 2px; float: left;|left|0,1"
+    );
+    assert_eq!(
+        eval(
+            &mut page,
+            "s.left = ''; s.float = null; d.getAttribute('style') + '|' + s.length"
+        ),
+        "|0"
+    );
+    assert_eq!(
+        eval(
+            &mut page,
+            "var made = document.createElement('p'); made.style.fontSize = '12px'; made.outerHTML"
+        ),
+        r#"<p style="font-size: 12px;"></p>"#
+    );
+}

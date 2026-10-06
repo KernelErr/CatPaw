@@ -153,7 +153,10 @@ pub struct POp {
 pub struct PSpecial {
     pub rust: String,
     pub ty: Type,
+    /// The interface whose trait declares the operation.
     pub owner: String,
+    /// A setter's value is `[LegacyNullToEmptyString]`.
+    pub null_to_empty: bool,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -814,61 +817,91 @@ impl<'a> Planner<'a> {
             let mut exotic = None;
             if cfg.exotic {
                 let mut e = Exotic::default();
-                for m in &def.members {
-                    let Member::Operation(Operation {
-                        special: Some(special),
-                        args,
-                        ret,
-                        ..
-                    }) = m
-                    else {
+                // Special operations are inherited: look at the interface,
+                // then at its ancestors that are exotic too, nearest first.
+                let mut chain = vec![name.clone()];
+                let mut cur = def.parent.clone();
+                while let Some(p) = cur {
+                    cur = self.idl.interfaces.get(&p).and_then(|i| i.parent.clone());
+                    if self.manifest.interfaces.get(&p).is_some_and(|c| c.exotic) {
+                        chain.push(p);
+                    }
+                }
+                for owner in &chain {
+                    let Some(owner_def) = self.idl.interfaces.get(owner).cloned() else {
                         continue;
                     };
-                    let ret = self.idl.resolve(ret);
-                    let first = args.first().map(|a| self.idl.resolve(&a.ty));
-                    let indexed = matches!(first, Some(Type::UnsignedLong));
-                    match (special, indexed) {
-                        (Special::Getter, true) => {
-                            self.note(&ret);
-                            traits.push(TraitMember::IndexedGet { ty: ret.clone() });
-                            e.indexed_getter = Some(PSpecial {
-                                rust: "indexed_get".into(),
-                                ty: ret,
-                                owner: name.clone(),
-                            });
+                    let own = owner == name;
+                    for m in &owner_def.members {
+                        let Member::Operation(Operation {
+                            special: Some(special),
+                            args,
+                            ret,
+                            ..
+                        }) = m
+                        else {
+                            continue;
+                        };
+                        let ret = self.idl.resolve(ret);
+                        let first = args.first().map(|a| self.idl.resolve(&a.ty));
+                        let indexed = matches!(first, Some(Type::UnsignedLong));
+                        match (special, indexed) {
+                            (Special::Getter, true) if e.indexed_getter.is_none() => {
+                                self.note(&ret);
+                                if own {
+                                    traits.push(TraitMember::IndexedGet { ty: ret.clone() });
+                                }
+                                e.indexed_getter = Some(PSpecial {
+                                    rust: "indexed_get".into(),
+                                    ty: ret,
+                                    owner: owner.clone(),
+                                    null_to_empty: false,
+                                });
+                            }
+                            (Special::Getter, false) if e.named_getter.is_none() => {
+                                self.note(&ret);
+                                if own {
+                                    traits.push(TraitMember::NamedGet { ty: ret.clone() });
+                                    traits.push(TraitMember::NamedProperties);
+                                }
+                                e.named_getter = Some(PSpecial {
+                                    rust: "named_get".into(),
+                                    ty: ret,
+                                    owner: owner.clone(),
+                                    null_to_empty: false,
+                                });
+                            }
+                            (Special::Setter, false) if e.named_setter.is_none() => {
+                                let value = args
+                                    .get(1)
+                                    .map(|a| self.idl.resolve(&a.ty))
+                                    .unwrap_or(Type::DomString);
+                                self.note(&value);
+                                if own {
+                                    traits.push(TraitMember::NamedSet { ty: value.clone() });
+                                }
+                                e.named_setter = Some(PSpecial {
+                                    rust: "named_set".into(),
+                                    ty: value,
+                                    owner: owner.clone(),
+                                    null_to_empty: args
+                                        .get(1)
+                                        .is_some_and(|a| a.type_ext.has("LegacyNullToEmptyString")),
+                                });
+                            }
+                            (Special::Deleter, false) if e.named_deleter.is_none() => {
+                                if own {
+                                    traits.push(TraitMember::NamedDelete);
+                                }
+                                e.named_deleter = Some(PSpecial {
+                                    rust: "named_delete".into(),
+                                    ty: Type::Undefined,
+                                    owner: owner.clone(),
+                                    null_to_empty: false,
+                                });
+                            }
+                            _ => {}
                         }
-                        (Special::Getter, false) => {
-                            self.note(&ret);
-                            traits.push(TraitMember::NamedGet { ty: ret.clone() });
-                            traits.push(TraitMember::NamedProperties);
-                            e.named_getter = Some(PSpecial {
-                                rust: "named_get".into(),
-                                ty: ret,
-                                owner: name.clone(),
-                            });
-                        }
-                        (Special::Setter, false) => {
-                            let value = args
-                                .get(1)
-                                .map(|a| self.idl.resolve(&a.ty))
-                                .unwrap_or(Type::DomString);
-                            self.note(&value);
-                            traits.push(TraitMember::NamedSet { ty: value.clone() });
-                            e.named_setter = Some(PSpecial {
-                                rust: "named_set".into(),
-                                ty: value,
-                                owner: name.clone(),
-                            });
-                        }
-                        (Special::Deleter, false) => {
-                            traits.push(TraitMember::NamedDelete);
-                            e.named_deleter = Some(PSpecial {
-                                rust: "named_delete".into(),
-                                ty: Type::Undefined,
-                                owner: name.clone(),
-                            });
-                        }
-                        _ => {}
                     }
                 }
                 exotic = Some(e);
