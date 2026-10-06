@@ -5,15 +5,13 @@ use base64::Engine as _;
 use base64::alphabet;
 use base64::engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig};
 use catpaw_dom::NodeId;
-use catpaw_js::{
-    Callback, EventTargetRef, Exception, Fallible, ObjectId, PromiseRef, Value, WindowRef,
-};
+use catpaw_js::{Callback, Exception, Fallible, ObjectId, PromiseRef, Value, WindowRef};
 use url::Url;
 
 use crate::event_loop::{self, TimerAction};
 use crate::generated::{self as web, StringOrFunction};
 use crate::page::{ConsoleLevel, Cx, DialogRecord, NavigationRequest, PageState, Singletons};
-use crate::{Web, events, platform_object};
+use crate::{Web, platform_object};
 
 pub struct LocationObject;
 platform_object!(LocationObject, Location);
@@ -138,6 +136,14 @@ impl web::WindowImpl for Web {
 
     fn location(cx: &mut Cx<'_>) -> Fallible<ObjectId> {
         Ok(location(cx))
+    }
+
+    fn history(cx: &mut Cx<'_>) -> Fallible<ObjectId> {
+        Ok(singleton(
+            cx,
+            |s| &mut s.history,
+            |page| page.alloc(crate::history::HistoryObject),
+        ))
     }
 
     fn closed(_cx: &mut Cx<'_>) -> Fallible<bool> {
@@ -391,10 +397,9 @@ pub(crate) fn navigate(cx: &mut Cx<'_>, url: Url, replace: bool) {
     if url == current {
         return;
     }
-    *cx.page.url.borrow_mut() = url.clone();
-    cx.dom_mut().document_data_mut().url = Some(url);
-    event_loop::queue_task(cx.page, "hashchange", |cx| {
-        events::fire(cx, EventTargetRef::Window, "hashchange", false, false);
+    crate::history::commit_entry(cx, url.clone(), Value::Null, replace);
+    event_loop::queue_task(cx.page, "hashchange", move |cx| {
+        crate::history::fire_hashchange(cx, &current, &url);
     });
 }
 

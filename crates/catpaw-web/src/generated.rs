@@ -28,11 +28,16 @@ pub enum InterfaceId {
     Event,
     EventTarget,
     HTMLCollection,
+    HashChangeEvent,
+    History,
     Location,
     Navigator,
     Node,
     NodeList,
     Performance,
+    PopStateEvent,
+    ProgressEvent,
+    PromiseRejectionEvent,
     Storage,
     TextDecoder,
     TextEncoder,
@@ -47,6 +52,7 @@ pub enum InterfaceId {
     DocumentFragment,
     DocumentType,
     Element,
+    ErrorEvent,
     HTMLElement,
     HTMLFormElement,
     HTMLHRElement,
@@ -86,19 +92,24 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 61;
-    pub const ALL: [InterfaceId; 61] = [
+    pub const COUNT: usize = 67;
+    pub const ALL: [InterfaceId; 67] = [
         InterfaceId::DOMRectReadOnly,
         InterfaceId::DOMStringMap,
         InterfaceId::DOMTokenList,
         InterfaceId::Event,
         InterfaceId::EventTarget,
         InterfaceId::HTMLCollection,
+        InterfaceId::HashChangeEvent,
+        InterfaceId::History,
         InterfaceId::Location,
         InterfaceId::Navigator,
         InterfaceId::Node,
         InterfaceId::NodeList,
         InterfaceId::Performance,
+        InterfaceId::PopStateEvent,
+        InterfaceId::ProgressEvent,
+        InterfaceId::PromiseRejectionEvent,
         InterfaceId::Storage,
         InterfaceId::TextDecoder,
         InterfaceId::TextEncoder,
@@ -113,6 +124,7 @@ impl InterfaceId {
         InterfaceId::DocumentFragment,
         InterfaceId::DocumentType,
         InterfaceId::Element,
+        InterfaceId::ErrorEvent,
         InterfaceId::HTMLElement,
         InterfaceId::HTMLFormElement,
         InterfaceId::HTMLHRElement,
@@ -159,11 +171,16 @@ impl InterfaceId {
             InterfaceId::Event => "Event",
             InterfaceId::EventTarget => "EventTarget",
             InterfaceId::HTMLCollection => "HTMLCollection",
+            InterfaceId::HashChangeEvent => "HashChangeEvent",
+            InterfaceId::History => "History",
             InterfaceId::Location => "Location",
             InterfaceId::Navigator => "Navigator",
             InterfaceId::Node => "Node",
             InterfaceId::NodeList => "NodeList",
             InterfaceId::Performance => "Performance",
+            InterfaceId::PopStateEvent => "PopStateEvent",
+            InterfaceId::ProgressEvent => "ProgressEvent",
+            InterfaceId::PromiseRejectionEvent => "PromiseRejectionEvent",
             InterfaceId::Storage => "Storage",
             InterfaceId::TextDecoder => "TextDecoder",
             InterfaceId::TextEncoder => "TextEncoder",
@@ -178,6 +195,7 @@ impl InterfaceId {
             InterfaceId::DocumentFragment => "DocumentFragment",
             InterfaceId::DocumentType => "DocumentType",
             InterfaceId::Element => "Element",
+            InterfaceId::ErrorEvent => "ErrorEvent",
             InterfaceId::HTMLElement => "HTMLElement",
             InterfaceId::HTMLFormElement => "HTMLFormElement",
             InterfaceId::HTMLHRElement => "HTMLHRElement",
@@ -225,11 +243,16 @@ impl InterfaceId {
             "Event" => InterfaceId::Event,
             "EventTarget" => InterfaceId::EventTarget,
             "HTMLCollection" => InterfaceId::HTMLCollection,
+            "HashChangeEvent" => InterfaceId::HashChangeEvent,
+            "History" => InterfaceId::History,
             "Location" => InterfaceId::Location,
             "Navigator" => InterfaceId::Navigator,
             "Node" => InterfaceId::Node,
             "NodeList" => InterfaceId::NodeList,
             "Performance" => InterfaceId::Performance,
+            "PopStateEvent" => InterfaceId::PopStateEvent,
+            "ProgressEvent" => InterfaceId::ProgressEvent,
+            "PromiseRejectionEvent" => InterfaceId::PromiseRejectionEvent,
             "Storage" => InterfaceId::Storage,
             "TextDecoder" => InterfaceId::TextDecoder,
             "TextEncoder" => InterfaceId::TextEncoder,
@@ -244,6 +267,7 @@ impl InterfaceId {
             "DocumentFragment" => InterfaceId::DocumentFragment,
             "DocumentType" => InterfaceId::DocumentType,
             "Element" => InterfaceId::Element,
+            "ErrorEvent" => InterfaceId::ErrorEvent,
             "HTMLElement" => InterfaceId::HTMLElement,
             "HTMLFormElement" => InterfaceId::HTMLFormElement,
             "HTMLHRElement" => InterfaceId::HTMLHRElement,
@@ -292,11 +316,16 @@ impl InterfaceId {
             InterfaceId::Event => None,
             InterfaceId::EventTarget => None,
             InterfaceId::HTMLCollection => None,
+            InterfaceId::HashChangeEvent => Some(InterfaceId::Event),
+            InterfaceId::History => None,
             InterfaceId::Location => None,
             InterfaceId::Navigator => None,
             InterfaceId::Node => Some(InterfaceId::EventTarget),
             InterfaceId::NodeList => None,
             InterfaceId::Performance => Some(InterfaceId::EventTarget),
+            InterfaceId::PopStateEvent => Some(InterfaceId::Event),
+            InterfaceId::ProgressEvent => Some(InterfaceId::Event),
+            InterfaceId::PromiseRejectionEvent => Some(InterfaceId::Event),
             InterfaceId::Storage => None,
             InterfaceId::TextDecoder => None,
             InterfaceId::TextEncoder => None,
@@ -311,6 +340,7 @@ impl InterfaceId {
             InterfaceId::DocumentFragment => Some(InterfaceId::Node),
             InterfaceId::DocumentType => Some(InterfaceId::Node),
             InterfaceId::Element => Some(InterfaceId::Node),
+            InterfaceId::ErrorEvent => Some(InterfaceId::Event),
             InterfaceId::HTMLElement => Some(InterfaceId::Element),
             InterfaceId::HTMLFormElement => Some(InterfaceId::HTMLElement),
             InterfaceId::HTMLHRElement => Some(InterfaceId::HTMLElement),
@@ -538,6 +568,29 @@ impl ScrollLogicalPosition {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ScrollRestoration {
+    Auto,
+    Manual,
+}
+
+impl ScrollRestoration {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ScrollRestoration::Auto => "auto",
+            ScrollRestoration::Manual => "manual",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "auto" => ScrollRestoration::Auto,
+            "manual" => ScrollRestoration::Manual,
+            _ => return None,
+        })
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct AddEventListenerOptions {
     pub capture: bool,
@@ -556,6 +609,18 @@ pub struct CustomEventInit {
 #[derive(Clone, Debug)]
 pub struct ElementCreationOptions {
     pub is: Option<String>,
+}
+
+#[derive(Clone, Debug)]
+pub struct ErrorEventInit {
+    pub bubbles: bool,
+    pub cancelable: bool,
+    pub composed: bool,
+    pub message: String,
+    pub filename: String,
+    pub lineno: u32,
+    pub colno: u32,
+    pub error: Value,
 }
 
 #[derive(Clone, Debug)]
@@ -582,8 +647,45 @@ pub struct GetRootNodeOptions {
 }
 
 #[derive(Clone, Debug)]
+pub struct HashChangeEventInit {
+    pub bubbles: bool,
+    pub cancelable: bool,
+    pub composed: bool,
+    pub old_url: String,
+    pub new_url: String,
+}
+
+#[derive(Clone, Debug)]
 pub struct ImportNodeOptions {
     pub self_only: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct PopStateEventInit {
+    pub bubbles: bool,
+    pub cancelable: bool,
+    pub composed: bool,
+    pub state: Value,
+    pub has_ua_visual_transition: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct ProgressEventInit {
+    pub bubbles: bool,
+    pub cancelable: bool,
+    pub composed: bool,
+    pub length_computable: bool,
+    pub loaded: f64,
+    pub total: f64,
+}
+
+#[derive(Clone, Debug)]
+pub struct PromiseRejectionEventInit {
+    pub bubbles: bool,
+    pub cancelable: bool,
+    pub composed: bool,
+    pub promise: Value,
+    pub reason: Value,
 }
 
 #[derive(Clone, Debug)]
@@ -902,6 +1004,44 @@ pub trait HTMLCollectionImpl {
     fn named_properties(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<String>>;
 }
 
+pub trait HashChangeEventImpl {
+    fn old_url(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn new_url(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        type_: String,
+        event_init_dict: HashChangeEventInit,
+    ) -> Fallible<ObjectId>;
+}
+
+pub trait HistoryImpl {
+    fn length(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn scroll_restoration(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ScrollRestoration>;
+    fn set_scroll_restoration(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        value: ScrollRestoration,
+    ) -> Fallible<()>;
+    fn state(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
+    fn go(cx: &mut Cx<'_>, this: ObjectId, delta: i32) -> Fallible<()>;
+    fn back(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn forward(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn push_state(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        data: Value,
+        unused: String,
+        url: Option<String>,
+    ) -> Fallible<()>;
+    fn replace_state(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        data: Value,
+        unused: String,
+        url: Option<String>,
+    ) -> Fallible<()>;
+}
+
 pub trait LocationImpl {
     fn href(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
     fn set_href(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
@@ -979,6 +1119,37 @@ pub trait NodeListImpl {
 pub trait PerformanceImpl {
     fn now(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
     fn time_origin(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+}
+
+pub trait PopStateEventImpl {
+    fn state(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
+    fn has_ua_visual_transition(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        type_: String,
+        event_init_dict: PopStateEventInit,
+    ) -> Fallible<ObjectId>;
+}
+
+pub trait ProgressEventImpl {
+    fn length_computable(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn loaded(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn total(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        type_: String,
+        event_init_dict: ProgressEventInit,
+    ) -> Fallible<ObjectId>;
+}
+
+pub trait PromiseRejectionEventImpl {
+    fn promise(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
+    fn reason(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        type_: String,
+        event_init_dict: PromiseRejectionEventInit,
+    ) -> Fallible<ObjectId>;
 }
 
 pub trait StorageImpl {
@@ -1079,6 +1250,7 @@ pub trait WindowImpl {
     fn self_(cx: &mut Cx<'_>) -> Fallible<WindowRef>;
     fn document(cx: &mut Cx<'_>) -> Fallible<NodeId>;
     fn location(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
+    fn history(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
     fn closed(cx: &mut Cx<'_>) -> Fallible<bool>;
     fn focus(cx: &mut Cx<'_>) -> Fallible<()>;
     fn blur(cx: &mut Cx<'_>) -> Fallible<()>;
@@ -1343,6 +1515,19 @@ pub trait ElementImpl {
         position: String,
         string: String,
     ) -> Fallible<()>;
+}
+
+pub trait ErrorEventImpl {
+    fn message(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn filename(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn lineno(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn colno(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn error(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        type_: String,
+        event_init_dict: ErrorEventInit,
+    ) -> Fallible<ObjectId>;
 }
 
 pub trait HTMLElementImpl {

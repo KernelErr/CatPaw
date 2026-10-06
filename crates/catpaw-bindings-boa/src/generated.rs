@@ -88,6 +88,20 @@ impl IntoJs for web::ScrollLogicalPosition {
     }
 }
 
+impl FromJs for web::ScrollRestoration {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::ScrollRestoration::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid ScrollRestoration")))
+    }
+}
+
+impl IntoJs for web::ScrollRestoration {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
 impl FromJs for web::AddEventListenerOptions {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let obj = rt::dictionary_object(v, "AddEventListenerOptions")?;
@@ -169,6 +183,61 @@ impl IntoJs for web::ElementCreationOptions {
     fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
         let obj = rt::new_plain_object(ctx);
         rt::set_member(&obj, "is", self.is, ctx)?;
+        Ok(obj.into())
+    }
+}
+
+impl FromJs for web::ErrorEventInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "ErrorEventInit")?;
+        Ok(Self {
+            bubbles: match rt::dictionary_member(&obj, "bubbles", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            cancelable: match rt::dictionary_member(&obj, "cancelable", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            composed: match rt::dictionary_member(&obj, "composed", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            message: match rt::dictionary_member(&obj, "message", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "".to_string(),
+            },
+            filename: match rt::dictionary_member(&obj, "filename", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "".to_string(),
+            },
+            lineno: match rt::dictionary_member(&obj, "lineno", ctx)? {
+                Some(m) => (&m).to_u32(ctx)?,
+                None => (0) as u32,
+            },
+            colno: match rt::dictionary_member(&obj, "colno", ctx)? {
+                Some(m) => (&m).to_u32(ctx)?,
+                None => (0) as u32,
+            },
+            error: match rt::dictionary_member(&obj, "error", ctx)? {
+                Some(m) => rt::value_from_js((&m), ctx)?,
+                None => Value::Undefined,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::ErrorEventInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "bubbles", self.bubbles, ctx)?;
+        rt::set_member(&obj, "cancelable", self.cancelable, ctx)?;
+        rt::set_member(&obj, "composed", self.composed, ctx)?;
+        rt::set_member(&obj, "message", self.message, ctx)?;
+        rt::set_member(&obj, "filename", self.filename, ctx)?;
+        rt::set_member(&obj, "lineno", self.lineno, ctx)?;
+        rt::set_member(&obj, "colno", self.colno, ctx)?;
+        rt::set_member(&obj, "error", self.error, ctx)?;
         Ok(obj.into())
     }
 }
@@ -268,6 +337,46 @@ impl IntoJs for web::GetRootNodeOptions {
     }
 }
 
+impl FromJs for web::HashChangeEventInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "HashChangeEventInit")?;
+        Ok(Self {
+            bubbles: match rt::dictionary_member(&obj, "bubbles", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            cancelable: match rt::dictionary_member(&obj, "cancelable", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            composed: match rt::dictionary_member(&obj, "composed", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            old_url: match rt::dictionary_member(&obj, "oldURL", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "".to_string(),
+            },
+            new_url: match rt::dictionary_member(&obj, "newURL", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "".to_string(),
+            },
+        })
+    }
+}
+
+impl IntoJs for web::HashChangeEventInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "bubbles", self.bubbles, ctx)?;
+        rt::set_member(&obj, "cancelable", self.cancelable, ctx)?;
+        rt::set_member(&obj, "composed", self.composed, ctx)?;
+        rt::set_member(&obj, "oldURL", self.old_url, ctx)?;
+        rt::set_member(&obj, "newURL", self.new_url, ctx)?;
+        Ok(obj.into())
+    }
+}
+
 impl FromJs for web::ImportNodeOptions {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let obj = rt::dictionary_object(v, "ImportNodeOptions")?;
@@ -284,6 +393,144 @@ impl IntoJs for web::ImportNodeOptions {
     fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
         let obj = rt::new_plain_object(ctx);
         rt::set_member(&obj, "selfOnly", self.self_only, ctx)?;
+        Ok(obj.into())
+    }
+}
+
+impl FromJs for web::PopStateEventInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "PopStateEventInit")?;
+        Ok(Self {
+            bubbles: match rt::dictionary_member(&obj, "bubbles", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            cancelable: match rt::dictionary_member(&obj, "cancelable", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            composed: match rt::dictionary_member(&obj, "composed", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            state: match rt::dictionary_member(&obj, "state", ctx)? {
+                Some(m) => rt::value_from_js((&m), ctx)?,
+                None => Value::Null,
+            },
+            has_ua_visual_transition: match rt::dictionary_member(
+                &obj,
+                "hasUAVisualTransition",
+                ctx,
+            )? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::PopStateEventInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "bubbles", self.bubbles, ctx)?;
+        rt::set_member(&obj, "cancelable", self.cancelable, ctx)?;
+        rt::set_member(&obj, "composed", self.composed, ctx)?;
+        rt::set_member(&obj, "state", self.state, ctx)?;
+        rt::set_member(
+            &obj,
+            "hasUAVisualTransition",
+            self.has_ua_visual_transition,
+            ctx,
+        )?;
+        Ok(obj.into())
+    }
+}
+
+impl FromJs for web::ProgressEventInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "ProgressEventInit")?;
+        Ok(Self {
+            bubbles: match rt::dictionary_member(&obj, "bubbles", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            cancelable: match rt::dictionary_member(&obj, "cancelable", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            composed: match rt::dictionary_member(&obj, "composed", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            length_computable: match rt::dictionary_member(&obj, "lengthComputable", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            loaded: match rt::dictionary_member(&obj, "loaded", ctx)? {
+                Some(m) => (&m).to_number(ctx)?,
+                None => 0_f64,
+            },
+            total: match rt::dictionary_member(&obj, "total", ctx)? {
+                Some(m) => (&m).to_number(ctx)?,
+                None => 0_f64,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::ProgressEventInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "bubbles", self.bubbles, ctx)?;
+        rt::set_member(&obj, "cancelable", self.cancelable, ctx)?;
+        rt::set_member(&obj, "composed", self.composed, ctx)?;
+        rt::set_member(&obj, "lengthComputable", self.length_computable, ctx)?;
+        rt::set_member(&obj, "loaded", self.loaded, ctx)?;
+        rt::set_member(&obj, "total", self.total, ctx)?;
+        Ok(obj.into())
+    }
+}
+
+impl FromJs for web::PromiseRejectionEventInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "PromiseRejectionEventInit")?;
+        Ok(Self {
+            bubbles: match rt::dictionary_member(&obj, "bubbles", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            cancelable: match rt::dictionary_member(&obj, "cancelable", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            composed: match rt::dictionary_member(&obj, "composed", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            promise: match rt::dictionary_member(&obj, "promise", ctx)? {
+                Some(m) => rt::value_from_js((&m), ctx)?,
+                None => {
+                    return Err(rt::type_error(
+                        "PromiseRejectionEventInit.promise is required",
+                    ));
+                }
+            },
+            reason: match rt::dictionary_member(&obj, "reason", ctx)? {
+                Some(m) => rt::value_from_js((&m), ctx)?,
+                None => Value::Undefined,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::PromiseRejectionEventInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "bubbles", self.bubbles, ctx)?;
+        rt::set_member(&obj, "cancelable", self.cancelable, ctx)?;
+        rt::set_member(&obj, "composed", self.composed, ctx)?;
+        rt::set_member(&obj, "promise", self.promise, ctx)?;
+        rt::set_member(&obj, "reason", self.reason, ctx)?;
         Ok(obj.into())
     }
 }
@@ -1608,6 +1855,240 @@ pub mod html_collection {
     };
 }
 
+pub mod hash_change_event {
+    use super::*;
+
+    fn get_old_url(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::HashChangeEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HashChangeEventImpl>::old_url(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_new_url(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::HashChangeEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HashChangeEventImpl>::new_url(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "HashChangeEvent")?;
+        rt::require_args(args, 1, "HashChangeEvent constructor")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::HashChangeEventInit as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HashChangeEventImpl>::constructor(cx, a0, a1)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::HashChangeEvent, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HashChangeEvent,
+        name: "HashChangeEvent",
+        parent: Some(I::Event),
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[
+            rt::AttrDef {
+                name: "oldURL",
+                getter: get_old_url,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "newURL",
+                getter: get_new_url,
+                setter: None,
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod history {
+    use super::*;
+
+    fn get_length(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::History, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::HistoryImpl>::length(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_scroll_restoration(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::History, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HistoryImpl>::scroll_restoration(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_scroll_restoration(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::History, ctx)?;
+        let s = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let Some(a0) = web::ScrollRestoration::parse(&s) else {
+            return Ok(JsValue::undefined());
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HistoryImpl>::set_scroll_restoration(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_state(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::History, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::HistoryImpl>::state(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_go(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::History, ctx)?;
+        let a0 = if args.len() > 0 && !args[0].is_undefined() {
+            rt::arg(args, 0).to_i32(ctx)?
+        } else {
+            (0) as i32
+        };
+        let r = rt::with_cx(ctx, |cx| <Web as web::HistoryImpl>::go(cx, this, a0));
+        rt::ret(r, ctx)
+    }
+
+    fn op_back(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::History, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::HistoryImpl>::back(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_forward(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::History, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::HistoryImpl>::forward(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_push_state(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::History, ctx)?;
+        rt::require_args(args, 2, "History.pushState")?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
+        let a2 = if args.len() > 2 && !args[2].is_undefined() {
+            if rt::arg(args, 2).is_null_or_undefined() {
+                None
+            } else {
+                Some(rt::string_from_js(rt::arg(args, 2), ctx)?)
+            }
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HistoryImpl>::push_state(cx, this, a0, a1, a2)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_replace_state(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::History, ctx)?;
+        rt::require_args(args, 2, "History.replaceState")?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
+        let a2 = if args.len() > 2 && !args[2].is_undefined() {
+            if rt::arg(args, 2).is_null_or_undefined() {
+                None
+            } else {
+                Some(rt::string_from_js(rt::arg(args, 2), ctx)?)
+            }
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HistoryImpl>::replace_state(cx, this, a0, a1, a2)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::History,
+        name: "History",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "length",
+                getter: get_length,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "scrollRestoration",
+                getter: get_scroll_restoration,
+                setter: Some(set_scroll_restoration),
+            },
+            rt::AttrDef {
+                name: "state",
+                getter: get_state,
+                setter: None,
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "go",
+                func: op_go,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "back",
+                func: op_back,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "forward",
+                func: op_forward,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "pushState",
+                func: op_push_state,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "replaceState",
+                func: op_replace_state,
+                length: 2,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod location {
     use super::*;
 
@@ -2704,6 +3185,198 @@ pub mod performance {
     };
 }
 
+pub mod pop_state_event {
+    use super::*;
+
+    fn get_state(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PopStateEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::PopStateEventImpl>::state(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_has_ua_visual_transition(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PopStateEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PopStateEventImpl>::has_ua_visual_transition(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "PopStateEvent")?;
+        rt::require_args(args, 1, "PopStateEvent constructor")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::PopStateEventInit as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PopStateEventImpl>::constructor(cx, a0, a1)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::PopStateEvent, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::PopStateEvent,
+        name: "PopStateEvent",
+        parent: Some(I::Event),
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[
+            rt::AttrDef {
+                name: "state",
+                getter: get_state,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "hasUAVisualTransition",
+                getter: get_has_ua_visual_transition,
+                setter: None,
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod progress_event {
+    use super::*;
+
+    fn get_length_computable(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::ProgressEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ProgressEventImpl>::length_computable(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_loaded(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::ProgressEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ProgressEventImpl>::loaded(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_total(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::ProgressEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ProgressEventImpl>::total(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "ProgressEvent")?;
+        rt::require_args(args, 1, "ProgressEvent constructor")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::ProgressEventInit as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ProgressEventImpl>::constructor(cx, a0, a1)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::ProgressEvent, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::ProgressEvent,
+        name: "ProgressEvent",
+        parent: Some(I::Event),
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[
+            rt::AttrDef {
+                name: "lengthComputable",
+                getter: get_length_computable,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "loaded",
+                getter: get_loaded,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "total",
+                getter: get_total,
+                setter: None,
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod promise_rejection_event {
+    use super::*;
+
+    fn get_promise(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PromiseRejectionEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PromiseRejectionEventImpl>::promise(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_reason(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PromiseRejectionEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PromiseRejectionEventImpl>::reason(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "PromiseRejectionEvent")?;
+        rt::require_args(args, 2, "PromiseRejectionEvent constructor")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::PromiseRejectionEventInit as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PromiseRejectionEventImpl>::constructor(cx, a0, a1)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::PromiseRejectionEvent, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::PromiseRejectionEvent,
+        name: "PromiseRejectionEvent",
+        parent: Some(I::Event),
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 2,
+        attrs: &[
+            rt::AttrDef {
+                name: "promise",
+                getter: get_promise,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "reason",
+                getter: get_reason,
+                setter: None,
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod storage {
     use super::*;
 
@@ -3673,6 +4346,12 @@ pub mod window {
     fn set_location(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         rt::put_forwards(this_js, "location", "href", rt::arg(args, 0), ctx)?;
         Ok(JsValue::undefined())
+    }
+
+    fn get_history(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WindowImpl>::history(cx));
+        rt::ret(r, ctx)
     }
 
     fn get_closed(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
@@ -6246,6 +6925,11 @@ pub mod window {
                 name: "location",
                 getter: get_location,
                 setter: Some(set_location),
+            },
+            rt::AttrDef {
+                name: "history",
+                getter: get_history,
+                setter: None,
             },
             rt::AttrDef {
                 name: "closed",
@@ -11770,6 +12454,94 @@ pub mod element {
                 length: 0,
             },
         ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod error_event {
+    use super::*;
+
+    fn get_message(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::ErrorEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ErrorEventImpl>::message(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_filename(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::ErrorEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ErrorEventImpl>::filename(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_lineno(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::ErrorEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ErrorEventImpl>::lineno(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_colno(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::ErrorEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ErrorEventImpl>::colno(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_error(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::ErrorEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ErrorEventImpl>::error(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "ErrorEvent")?;
+        rt::require_args(args, 1, "ErrorEvent constructor")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::ErrorEventInit as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ErrorEventImpl>::constructor(cx, a0, a1)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::ErrorEvent, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::ErrorEvent,
+        name: "ErrorEvent",
+        parent: Some(I::Event),
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[
+            rt::AttrDef {
+                name: "message",
+                getter: get_message,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "filename",
+                getter: get_filename,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "lineno",
+                getter: get_lineno,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "colno",
+                getter: get_colno,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "error",
+                getter: get_error,
+                setter: None,
+            },
+        ],
+        ops: &[],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -20811,11 +21583,16 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &event::DEF,
     &event_target::DEF,
     &html_collection::DEF,
+    &hash_change_event::DEF,
+    &history::DEF,
     &location::DEF,
     &navigator::DEF,
     &node::DEF,
     &node_list::DEF,
     &performance::DEF,
+    &pop_state_event::DEF,
+    &progress_event::DEF,
+    &promise_rejection_event::DEF,
     &storage::DEF,
     &text_decoder::DEF,
     &text_encoder::DEF,
@@ -20830,6 +21607,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &document_fragment::DEF,
     &document_type::DEF,
     &element::DEF,
+    &error_event::DEF,
     &html_element::DEF,
     &html_form_element::DEF,
     &htmlhr_element::DEF,

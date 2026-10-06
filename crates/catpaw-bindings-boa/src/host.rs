@@ -45,6 +45,7 @@ pub(crate) fn checkpoint(ctx: &mut Context, rt: &Runtime) {
 
     // Promises rejected during this task that still have no handler.
     let rejected = std::mem::take(&mut *rt.rejections.borrow_mut());
+    let mut reported = false;
     for promise in rejected {
         let Ok(promise) = JsPromise::from_object(promise) else {
             continue;
@@ -53,8 +54,22 @@ pub(crate) fn checkpoint(ctx: &mut Context, rt: &Runtime) {
             let text = inspect::describe_thrown(&reason, ctx, &rt::describe_native);
             let text = format!("Uncaught (in promise) {text}");
             rt.page.errors.borrow_mut().push(text.clone());
-            rt.page.log(ConsoleLevel::Error, text);
+            // `unhandledrejection` listeners may claim the rejection.
+            let promise_value = Value::Opaque(rt::root(promise.into()));
+            let reason_value = rt::value_from_js(&reason, ctx).unwrap_or_default();
+            let unhandled = rt::with_cx(ctx, |cx| {
+                catpaw_web::events::report_unhandled_rejection(cx, promise_value, reason_value)
+            });
+            if unhandled {
+                rt.page.log(ConsoleLevel::Error, text);
+            }
+            reported = true;
         }
+    }
+
+    if reported {
+        // Listeners may have queued microtasks of their own.
+        rt.jobs.checkpoint(ctx);
     }
 
     rt.between_tasks(ctx);

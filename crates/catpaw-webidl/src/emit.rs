@@ -1024,11 +1024,21 @@ impl<'a> Emitter<'a> {
             }
             AttrKind::Native => {
                 w!(out, "{this_stmt}");
-                w!(
-                    out,
-                    "let a0 = {};",
-                    self.conv(&a.ty, "rt::arg(args, 0)", a.null_to_empty)
-                );
+                match &a.ty {
+                    // Assigning a string that is not one of the enumeration's
+                    // values is ignored rather than an error.
+                    Type::Named(n) if self.types.classify(n) == Named::Enum => {
+                        w!(
+                            out,
+                            "let s = rt::string_from_js(rt::arg(args, 0), ctx)?;\nlet Some(a0) = web::{n}::parse(&s) else {{ return Ok(JsValue::undefined()); }};"
+                        );
+                    }
+                    _ => w!(
+                        out,
+                        "let a0 = {};",
+                        self.conv(&a.ty, "rt::arg(args, 0)", a.null_to_empty)
+                    ),
+                }
                 w!(
                     out,
                     "let r = rt::with_cx(ctx, |cx| <Web as web::{}Impl>::set_{base}(cx{this_arg}, a0));\nrt::ret(r, ctx)?;",

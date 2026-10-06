@@ -176,6 +176,7 @@ impl web::DocumentImpl for Web {
         let iface = match interface.to_ascii_lowercase().as_str() {
             "event" | "events" | "htmlevents" | "svgevents" => InterfaceId::Event,
             "customevent" => InterfaceId::CustomEvent,
+            "hashchangeevent" => InterfaceId::HashChangeEvent,
             _ => {
                 return Err(Exception::not_supported(format!(
                     "The event interface '{interface}' is not supported"

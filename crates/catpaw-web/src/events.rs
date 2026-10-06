@@ -16,6 +16,36 @@ pub const PHASE_CAPTURING: u16 = 1;
 pub const PHASE_AT_TARGET: u16 = 2;
 pub const PHASE_BUBBLING: u16 = 3;
 
+/// What the interfaces derived from `Event` add to it.
+#[derive(Clone, Debug, Default)]
+pub enum EventData {
+    #[default]
+    None,
+    Error {
+        message: String,
+        filename: String,
+        lineno: u32,
+        colno: u32,
+        error: Value,
+    },
+    PromiseRejection {
+        promise: Value,
+        reason: Value,
+    },
+    HashChange {
+        old_url: String,
+        new_url: String,
+    },
+    PopState {
+        state: Value,
+    },
+    Progress {
+        length_computable: bool,
+        loaded: f64,
+        total: f64,
+    },
+}
+
 /// The state behind every event interface (`Event`, `CustomEvent`, ...).
 pub struct Event {
     pub iface: InterfaceId,
@@ -39,6 +69,8 @@ pub struct Event {
     pub path: Vec<EventTargetRef>,
     /// `CustomEvent.detail`.
     pub detail: Value,
+    /// State of the more specific event interfaces.
+    pub data: EventData,
 }
 
 platform_object!(Event, |e| e.iface);
@@ -65,6 +97,7 @@ impl Event {
             time_stamp,
             path: Vec::new(),
             detail: Value::Null,
+            data: EventData::None,
         }
     }
 
@@ -437,17 +470,28 @@ fn invoke(
         let _ = cx
             .page
             .with::<Event, _>(event, |e| e.in_passive_listener = listener.passive);
-        let result = cx
-            .script
-            .call(&callback, &Value::from(current), &[Value::Object(event)]);
+        // `window.onerror` receives the error's details instead of the
+        // event, and cancels by returning true.
+        let error_args = (is_handler && current == EventTargetRef::Window && type_ == "error")
+            .then(|| error_handler_args(cx.page, event))
+            .flatten();
+        let result = match &error_args {
+            Some(args) => cx.script.call(&callback, &Value::from(current), args),
+            None => cx
+                .script
+                .call(&callback, &Value::from(current), &[Value::Object(event)]),
+        };
         let _ = cx
             .page
             .with::<Event, _>(event, |e| e.in_passive_listener = false);
         cx.page.current_event.set(previous);
 
         match result {
+            Ok(Value::Bool(true)) if error_args.is_some() => {
+                let _ = cx.page.with::<Event, _>(event, Event::cancel);
+            }
             // An event handler returning false cancels the event.
-            Ok(Value::Bool(false)) if is_handler => {
+            Ok(Value::Bool(false)) if is_handler && error_args.is_none() => {
                 let _ = cx.page.with::<Event, _>(event, Event::cancel);
             }
             Ok(_) => {}
@@ -780,5 +824,297 @@ impl web::CustomEventImpl for Web {
         event.composed = event_init_dict.composed;
         event.detail = event_init_dict.detail;
         Ok(cx.page.alloc(event))
+    }
+}
+
+// ---- error reporting -------------------------------------------------------
+
+/// The arguments `window.onerror` is called with, if `event` is an
+/// `ErrorEvent`.
+fn error_handler_args(page: &PageState, event: ObjectId) -> Option<Vec<Value>> {
+    page.try_with::<Event, _>(event, |e| match &e.data {
+        EventData::Error {
+            message,
+            filename,
+            lineno,
+            colno,
+            error,
+        } => Some(vec![
+            Value::String(message.clone()),
+            Value::String(filename.clone()),
+            Value::Number(f64::from(*lineno)),
+            Value::Number(f64::from(*colno)),
+            error.clone(),
+        ]),
+        _ => None,
+    })
+    .flatten()
+}
+
+/// Reports an uncaught exception
+/// (<https://html.spec.whatwg.org/multipage/#report-an-exception>): an
+/// `error` event at the window, then a console message unless a handler
+/// cancelled the event.
+pub fn report_exception(cx: &mut Cx<'_>, exception: &Exception) {
+    let text = format!("Uncaught {}", cx.script.describe_exception(exception));
+    cx.page.errors.borrow_mut().push(text.clone());
+
+    // An exception thrown while one is being reported is only logged.
+    let handled = if cx.page.reporting_error.replace(true) {
+        false
+    } else {
+        let mut event = Event::new("error", false, true, cx.page.clock.peek());
+        event.iface = InterfaceId::ErrorEvent;
+        event.trusted = true;
+        event.data = EventData::Error {
+            message: text.lines().next().unwrap_or_default().to_string(),
+            filename: cx.page.url.borrow().to_string(),
+            lineno: 0,
+            colno: 0,
+            error: match exception {
+                Exception::Thrown(root) => Value::Opaque(root.clone()),
+                _ => Value::Undefined,
+            },
+        };
+        let event = cx.page.alloc(event);
+        let proceed = dispatch(cx, EventTargetRef::Window, event);
+        cx.page.reporting_error.set(false);
+        !proceed
+    };
+    if !handled {
+        cx.page.log(crate::page::ConsoleLevel::Error, text);
+    }
+}
+
+/// Fires `unhandledrejection` at the window for a rejected promise nobody
+/// handled. Returns `false` if a listener cancelled the event, in which
+/// case the rejection counts as handled.
+pub fn report_unhandled_rejection(cx: &mut Cx<'_>, promise: Value, reason: Value) -> bool {
+    let mut event = Event::new("unhandledrejection", false, true, cx.page.clock.peek());
+    event.iface = InterfaceId::PromiseRejectionEvent;
+    event.trusted = true;
+    event.data = EventData::PromiseRejection { promise, reason };
+    let event = cx.page.alloc(event);
+    dispatch(cx, EventTargetRef::Window, event)
+}
+
+fn derived_event(
+    cx: &Cx<'_>,
+    iface: InterfaceId,
+    type_: String,
+    flags: (bool, bool, bool),
+    data: EventData,
+) -> ObjectId {
+    let (bubbles, cancelable, composed) = flags;
+    let mut event = Event::new(type_, bubbles, cancelable, cx.page.clock.peek());
+    event.iface = iface;
+    event.composed = composed;
+    event.data = data;
+    cx.page.alloc(event)
+}
+
+impl web::ErrorEventImpl for Web {
+    fn message(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String> {
+        get(cx, this, |e| match &e.data {
+            EventData::Error { message, .. } => message.clone(),
+            _ => String::new(),
+        })
+    }
+
+    fn filename(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String> {
+        get(cx, this, |e| match &e.data {
+            EventData::Error { filename, .. } => filename.clone(),
+            _ => String::new(),
+        })
+    }
+
+    fn lineno(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32> {
+        get(cx, this, |e| match &e.data {
+            EventData::Error { lineno, .. } => *lineno,
+            _ => 0,
+        })
+    }
+
+    fn colno(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32> {
+        get(cx, this, |e| match &e.data {
+            EventData::Error { colno, .. } => *colno,
+            _ => 0,
+        })
+    }
+
+    fn error(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value> {
+        get(cx, this, |e| match &e.data {
+            EventData::Error { error, .. } => error.clone(),
+            _ => Value::Undefined,
+        })
+    }
+
+    fn constructor(
+        cx: &mut Cx<'_>,
+        type_: String,
+        init: web::ErrorEventInit,
+    ) -> Fallible<ObjectId> {
+        Ok(derived_event(
+            cx,
+            InterfaceId::ErrorEvent,
+            type_,
+            (init.bubbles, init.cancelable, init.composed),
+            EventData::Error {
+                message: init.message,
+                filename: init.filename,
+                lineno: init.lineno,
+                colno: init.colno,
+                error: init.error,
+            },
+        ))
+    }
+}
+
+impl web::PromiseRejectionEventImpl for Web {
+    fn promise(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value> {
+        get(cx, this, |e| match &e.data {
+            EventData::PromiseRejection { promise, .. } => promise.clone(),
+            _ => Value::Undefined,
+        })
+    }
+
+    fn reason(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value> {
+        get(cx, this, |e| match &e.data {
+            EventData::PromiseRejection { reason, .. } => reason.clone(),
+            _ => Value::Undefined,
+        })
+    }
+
+    fn constructor(
+        cx: &mut Cx<'_>,
+        type_: String,
+        init: web::PromiseRejectionEventInit,
+    ) -> Fallible<ObjectId> {
+        Ok(derived_event(
+            cx,
+            InterfaceId::PromiseRejectionEvent,
+            type_,
+            (init.bubbles, init.cancelable, init.composed),
+            EventData::PromiseRejection {
+                promise: init.promise,
+                reason: init.reason,
+            },
+        ))
+    }
+}
+
+impl web::HashChangeEventImpl for Web {
+    fn old_url(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String> {
+        get(cx, this, |e| match &e.data {
+            EventData::HashChange { old_url, .. } => old_url.clone(),
+            _ => String::new(),
+        })
+    }
+
+    fn new_url(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String> {
+        get(cx, this, |e| match &e.data {
+            EventData::HashChange { new_url, .. } => new_url.clone(),
+            _ => String::new(),
+        })
+    }
+
+    fn constructor(
+        cx: &mut Cx<'_>,
+        type_: String,
+        init: web::HashChangeEventInit,
+    ) -> Fallible<ObjectId> {
+        Ok(derived_event(
+            cx,
+            InterfaceId::HashChangeEvent,
+            type_,
+            (init.bubbles, init.cancelable, init.composed),
+            EventData::HashChange {
+                old_url: init.old_url,
+                new_url: init.new_url,
+            },
+        ))
+    }
+}
+
+impl web::PopStateEventImpl for Web {
+    fn state(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value> {
+        get(cx, this, |e| match &e.data {
+            EventData::PopState { state } => state.clone(),
+            _ => Value::Null,
+        })
+    }
+
+    fn has_ua_visual_transition(_cx: &mut Cx<'_>, _this: ObjectId) -> Fallible<bool> {
+        Ok(false)
+    }
+
+    fn constructor(
+        cx: &mut Cx<'_>,
+        type_: String,
+        init: web::PopStateEventInit,
+    ) -> Fallible<ObjectId> {
+        Ok(derived_event(
+            cx,
+            InterfaceId::PopStateEvent,
+            type_,
+            (init.bubbles, init.cancelable, init.composed),
+            EventData::PopState { state: init.state },
+        ))
+    }
+}
+
+/// Creates a `ProgressEvent`.
+pub fn progress_event(cx: &Cx<'_>, type_: &str, loaded: f64, total: Option<f64>) -> ObjectId {
+    let mut event = Event::new(type_, false, false, cx.page.clock.peek());
+    event.iface = InterfaceId::ProgressEvent;
+    event.trusted = true;
+    event.data = EventData::Progress {
+        length_computable: total.is_some(),
+        loaded,
+        total: total.unwrap_or(0.0),
+    };
+    cx.page.alloc(event)
+}
+
+impl web::ProgressEventImpl for Web {
+    fn length_computable(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool> {
+        get(cx, this, |e| match &e.data {
+            EventData::Progress {
+                length_computable, ..
+            } => *length_computable,
+            _ => false,
+        })
+    }
+
+    fn loaded(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64> {
+        get(cx, this, |e| match &e.data {
+            EventData::Progress { loaded, .. } => *loaded,
+            _ => 0.0,
+        })
+    }
+
+    fn total(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64> {
+        get(cx, this, |e| match &e.data {
+            EventData::Progress { total, .. } => *total,
+            _ => 0.0,
+        })
+    }
+
+    fn constructor(
+        cx: &mut Cx<'_>,
+        type_: String,
+        init: web::ProgressEventInit,
+    ) -> Fallible<ObjectId> {
+        Ok(derived_event(
+            cx,
+            InterfaceId::ProgressEvent,
+            type_,
+            (init.bubbles, init.cancelable, init.composed),
+            EventData::Progress {
+                length_computable: init.length_computable,
+                loaded: init.loaded,
+                total: init.total,
+            },
+        ))
     }
 }

@@ -182,6 +182,7 @@ impl Default for DocumentState {
 #[derive(Default, Debug)]
 pub struct Singletons {
     pub location: Option<ObjectId>,
+    pub history: Option<ObjectId>,
     pub navigator: Option<ObjectId>,
     pub performance: Option<ObjectId>,
     pub local_storage: Option<ObjectId>,
@@ -235,6 +236,10 @@ pub struct PageState {
     pub(crate) console_state: RefCell<ConsoleState>,
     pub dialogs: RefCell<Vec<DialogRecord>>,
     pub navigation: RefCell<Option<NavigationRequest>>,
+    /// The session history of this document (same-document entries).
+    pub(crate) history: RefCell<crate::history::HistoryState>,
+    /// An uncaught exception is being reported (reports do not nest).
+    pub(crate) reporting_error: Cell<bool>,
     /// Uncaught exceptions, as reported to the console.
     pub errors: RefCell<Vec<String>>,
     /// Calls to members that exist but are not implemented, by name.
@@ -266,7 +271,7 @@ impl PageState {
             dom: Rc::new(RefCell::new(dom)),
             config,
             clock: Rc::new(clock),
-            url: RefCell::new(url),
+            url: RefCell::new(url.clone()),
             document_state: RefCell::new(DocumentState::default()),
             singletons: RefCell::new(Singletons::default()),
             objects: RefCell::new(SlotMap::with_key()),
@@ -287,6 +292,8 @@ impl PageState {
             console_state: RefCell::new(ConsoleState::default()),
             dialogs: RefCell::new(Vec::new()),
             navigation: RefCell::new(None),
+            history: RefCell::new(crate::history::HistoryState::new(url.clone())),
+            reporting_error: Cell::new(false),
             errors: RefCell::new(Vec::new()),
             stub_calls: RefCell::new(IndexMap::new()),
         }
@@ -461,11 +468,10 @@ impl<'a> Cx<'a> {
         }
     }
 
-    /// Logs an uncaught exception the way a browser console would.
+    /// Reports an uncaught exception: an `error` event at the window, and
+    /// a console message unless a handler cancelled it.
     pub fn report_exception(&mut self, exception: &Exception) {
-        let text = format!("Uncaught {}", self.script.describe_exception(exception));
-        self.page.errors.borrow_mut().push(text.clone());
-        self.page.log(ConsoleLevel::Error, text);
+        crate::events::report_exception(self, exception);
     }
 
     /// Performs a microtask checkpoint.

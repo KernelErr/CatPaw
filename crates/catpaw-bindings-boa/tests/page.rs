@@ -726,3 +726,137 @@ fn platform_objects_are_freed_when_script_drops_them() {
         "kept true"
     );
 }
+
+/// Runs the event loop until the page is idle again.
+fn settle(page: &mut BoaPage) {
+    let report = page.with_cx(|cx| event_loop::run(cx, &LoopLimits::default()));
+    assert_eq!(report.stop, StopReason::Idle);
+}
+
+#[test]
+fn history_tracks_same_document_navigations() {
+    let mut page = load(
+        r#"<script>
+  var log = [];
+  window.addEventListener('popstate', function (e) {
+    log.push('pop ' + JSON.stringify(e.state) + ' ' + location.pathname + location.hash + ' ' + (e instanceof PopStateEvent));
+  });
+  window.onhashchange = function (e) {
+    log.push('hash ' + e.oldURL.split('/').pop() + ' -> ' + e.newURL.split('/').pop());
+  };
+  history.replaceState({ n: 0 }, '', '/start');
+  history.pushState({ n: 1 }, '', '/one?x=1');
+  history.pushState({ n: 2 }, '', 'two#h');
+  log.push(history.length + ' ' + JSON.stringify(history.state) + ' ' + location.href + ' ' + (document.URL === location.href));
+  history.back();
+  log.push('still ' + location.pathname);
+</script>"#,
+    );
+    assert_eq!(
+        eval(&mut page, "log.join('; ')"),
+        r#"3 {"n":2} https://example.test/two#h true; still /two; pop {"n":1} /one true"#
+    );
+
+    // A fragment navigation adds an entry (dropping the forward one) and
+    // fires hashchange.
+    assert_eq!(
+        eval(
+            &mut page,
+            "log = []; location.hash = 'sec'; history.length + ' ' + location.href + ' ' + history.state"
+        ),
+        "3 https://example.test/one?x=1#sec null"
+    );
+    settle(&mut page);
+    assert_eq!(
+        eval(&mut page, "log.join('; ')"),
+        "hash one?x=1 -> one?x=1#sec"
+    );
+
+    assert_eq!(
+        eval(&mut page, "log = []; history.go(-2); history.go(-5); 0"),
+        "0"
+    );
+    settle(&mut page);
+    assert_eq!(
+        eval(&mut page, "log.join('; ') + ' ' + location.pathname"),
+        r#"pop {"n":0} /start true /start"#
+    );
+    assert_eq!(eval(&mut page, "log = []; history.forward(); 0"), "0");
+    settle(&mut page);
+    assert_eq!(
+        eval(&mut page, "log.join('; ')"),
+        r#"pop {"n":1} /one true"#
+    );
+
+    assert!(
+        eval(
+            &mut page,
+            "history.pushState(null, '', 'https://other.example/')"
+        )
+        .contains("SecurityError")
+    );
+    assert_eq!(
+        eval(
+            &mut page,
+            "history.scrollRestoration = 'manual'; history.scrollRestoration = 'bogus'; history.scrollRestoration"
+        ),
+        "manual"
+    );
+    assert_eq!(
+        eval(
+            &mut page,
+            "history === window.history && history instanceof History"
+        ),
+        "true"
+    );
+    // A state object is cloned when stored.
+    assert_eq!(
+        eval(
+            &mut page,
+            "var st = { a: [1] }; history.replaceState(st, ''); st.a.push(2); JSON.stringify(history.state)"
+        ),
+        r#"{"a":[1]}"#
+    );
+    assert!(eval(&mut page, "history.pushState(function () {}, '')").contains("DataCloneError"));
+}
+
+#[test]
+fn uncaught_errors_and_rejections_fire_events() {
+    let page = load(
+        r#"<script>
+  var seen = [];
+  window.onerror = function (message, source, line, column, error) {
+    seen.push('onerror ' + message + ' | ' + (error instanceof RangeError) + ' | ' + typeof source + typeof line);
+    return error.message === 'quiet';
+  };
+  window.addEventListener('error', function (e) {
+    seen.push('listener ' + (e instanceof ErrorEvent) + ' ' + e.error.message + ' ' + e.cancelable);
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    seen.push('rejection ' + e.reason + ' ' + (e.promise instanceof Promise) + ' ' + (e instanceof PromiseRejectionEvent));
+    if (e.reason === 'claimed') e.preventDefault();
+  });
+</script>
+<script>throw new RangeError('loud');</script>
+<script>throw new RangeError('quiet');</script>
+<script>Promise.reject('claimed'); Promise.reject('unclaimed');</script>
+<script>console.info(seen.join('\n'));</script>"#,
+    );
+    assert_eq!(
+        console(&page, ConsoleLevel::Info),
+        vec![
+            "onerror Uncaught RangeError: loud | true | stringnumber\n\
+             listener true loud true\n\
+             onerror Uncaught RangeError: quiet | true | stringnumber\n\
+             listener true quiet true\n\
+             rejection claimed true true\n\
+             rejection unclaimed true true"
+        ]
+    );
+    // Cancelled reports stay out of the console but are still counted.
+    let errors = console(&page, ConsoleLevel::Error);
+    assert_eq!(errors.len(), 2, "{errors:?}");
+    assert!(errors[0].starts_with("Uncaught RangeError: loud"));
+    assert_eq!(errors[1], "Uncaught (in promise) unclaimed");
+    assert_eq!(page.page().errors.borrow().len(), 4);
+}

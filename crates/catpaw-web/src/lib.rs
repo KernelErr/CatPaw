@@ -21,6 +21,7 @@ mod encoding;
 pub mod event_loop;
 pub mod events;
 pub mod generated;
+mod history;
 pub mod html_names;
 pub mod net;
 mod node;

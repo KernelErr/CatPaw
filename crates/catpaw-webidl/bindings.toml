@@ -36,6 +36,26 @@ members = [
 constructor = true
 members = ["detail", "initCustomEvent"]
 
+[interfaces.ErrorEvent]
+constructor = true
+members = ["message", "filename", "lineno", "colno", "error"]
+
+[interfaces.PromiseRejectionEvent]
+constructor = true
+members = ["promise", "reason"]
+
+[interfaces.HashChangeEvent]
+constructor = true
+members = ["oldURL", "newURL"]
+
+[interfaces.PopStateEvent]
+constructor = true
+members = ["state", "hasUAVisualTransition"]
+
+[interfaces.ProgressEvent]
+constructor = true
+members = ["lengthComputable", "loaded", "total"]
+
 # ----------------------------------------------------------------- DOM: nodes
 
 [interfaces.Node]
@@ -192,7 +212,7 @@ members = ["content"]
 
 [interfaces.Window]
 members = [
-  "window", "self", "document", "location", "navigator", "frames", "top", "parent",
+  "window", "self", "document", "location", "history", "navigator", "frames", "top", "parent",
   "closed", "focus", "blur", "alert", "confirm", "prompt", "innerWidth", "innerHeight",
   "scrollX", "scrollY", "pageXOffset", "pageYOffset", "scroll", "scrollTo", "scrollBy",
   "devicePixelRatio", "event",
@@ -217,6 +237,11 @@ members = ["sessionStorage"]
 members = [
   "href", "origin", "protocol", "host", "hostname", "port", "pathname", "search", "hash",
   "assign", "replace", "reload",
+]
+
+[interfaces.History]
+members = [
+  "length", "scrollRestoration", "state", "go", "back", "forward", "pushState", "replaceState",
 ]
 
 [interfaces.Navigator]
