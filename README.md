@@ -17,14 +17,19 @@ isolated contexts.
 > `defer`, `async`, script-inserted, `document.write`) and module scripts
 > (static and dynamic imports, import maps) run interleaved with the parser
 > on Boa, against bindings generated from Web IDL for the core DOM (every
-> HTML and SVG element interface, attributes, traversal, `DOMParser`,
-> `document.implementation`), custom elements, events, mutation,
-> intersection and performance observers, timers, history, inline and
-> computed styles (style sheets are fetched and cascaded by Stylo),
-> `fetch`/`XMLHttpRequest` (with CORS enforced), `URL`, storage, encoding,
-> `crypto.getRandomValues` and console APIs, on an event loop with virtual
-> time. Not there yet: layout, streams, shadow DOM, workers, and the members
-> of HTML elements that go beyond their attributes.
+> HTML and SVG element interface, attributes, traversal, XPath, `DOMParser`,
+> `document.implementation`), shadow trees and slots, custom elements,
+> events, mutation, intersection and performance observers, timers, history,
+> navigation timing, inline and computed styles (style sheets are fetched and
+> cascaded by Stylo) with the CSSOM (`CSSStyleSheet`, `adoptedStyleSheets`,
+> `CSS.supports`), `fetch`/`XMLHttpRequest` (with CORS enforced), streams,
+> `data:` URLs, `sendBeacon`, `URL`, storage, encoding, `crypto` random
+> values and digests, the font-loading and selection APIs in their
+> no-layout forms, and console APIs, on an event loop with virtual time.
+> React, Vue, Svelte, Lit, htmx and Alpine sites run; the Boa engine is
+> vendored with fixes described in `vendor/`. Not there yet: layout, canvas,
+> media, workers, WebAssembly, `Range`, and the members of HTML elements
+> that go beyond their attributes.
 >
 > What works without JavaScript: HTTP/1.1 and HTTP/2 over rustls,
 > redirects, cookies, gzip/brotli/zstd, encoding sniffing, Web Bot Auth

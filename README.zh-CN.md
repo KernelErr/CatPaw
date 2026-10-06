@@ -10,10 +10,13 @@ agent 真正需要的东西——带稳定引用的紧凑语义快照、精确�
 > 状态：**pre-alpha**。里程碑 M0（"抓取与阅读"）已完成，M1（基于 Boa 的 JavaScript）进行中。
 >
 > M1 当前进展（通过 `catpaw fetch --js` 使用）：经典脚本（内联、外链、`defer`、`async`、
-> 脚本动态插入、`document.write`）与模块脚本（静态与动态 import、import map）在 Boa 上与解析器交错执行；核心 DOM（全部 HTML/SVG 元素接口、属性对象、树遍历、`DOMParser`、`document.implementation`）、
-> Custom Elements、事件、`MutationObserver`/`IntersectionObserver`/`PerformanceObserver`、定时器、`URL`、
-> history、内联样式与计算样式（样式表会被抓取并由 Stylo 层叠）、`fetch`/`XMLHttpRequest`（执行 CORS 检查）、storage、编码、`crypto.getRandomValues` 与 console 等 API 的绑定
-> 由 Web IDL 生成；事件循环支持虚拟时间。尚未支持：布局、流（Streams）、Shadow DOM、Worker，以及 HTML 元素中超出属性反射的成员。
+> 脚本动态插入、`document.write`）与模块脚本（静态与动态 import、import map）在 Boa 上与解析器交错执行；核心 DOM（全部 HTML/SVG 元素接口、属性对象、树遍历、XPath、`DOMParser`、`document.implementation`）、
+> Shadow DOM 与 slot、Custom Elements、事件、`MutationObserver`/`IntersectionObserver`/`PerformanceObserver`、定时器、`URL`、
+> history、Navigation Timing、内联样式与计算样式（样式表会被抓取并由 Stylo 层叠）及 CSSOM（`CSSStyleSheet`、`adoptedStyleSheets`、`CSS.supports`）、
+> `fetch`/`XMLHttpRequest`（执行 CORS 检查）、Streams、`data:` URL、`sendBeacon`、storage、编码、`crypto` 随机数与摘要、
+> 无布局形态的字体加载与 Selection API，以及 console 等 API 的绑定由 Web IDL 生成；事件循环支持虚拟时间。
+> React、Vue、Svelte、Lit、htmx、Alpine 站点均可运行；Boa 引擎以附带修复的形式 vendor 在 `vendor/` 下（见其中说明）。
+> 尚未支持：布局、canvas、媒体、Worker、WebAssembly、`Range`，以及 HTML 元素中超出属性反射的成员。
 >
 > 不依赖 JavaScript 即可用的部分：基于 rustls 的 HTTP/1.1 与 HTTP/2、重定向、cookie、
 > gzip/brotli/zstd 解压、编码嗅探、Web Bot Auth 请求签名（已通过 Cloudflare 测试端点验证）、
