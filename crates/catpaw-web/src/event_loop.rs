@@ -15,6 +15,18 @@ pub struct Task {
     pub run: Box<dyn FnOnce(&mut Cx<'_>)>,
 }
 
+/// Runs the next queued task, if there is one, and performs a microtask
+/// checkpoint after it.
+pub fn run_one_task(cx: &mut Cx<'_>) -> bool {
+    let task = cx.page.tasks.borrow_mut().pop_front();
+    let Some(task) = task else {
+        return false;
+    };
+    (task.run)(cx);
+    cx.checkpoint();
+    true
+}
+
 /// Queues `f` to run as a task.
 pub fn queue_task(page: &PageState, label: &'static str, f: impl FnOnce(&mut Cx<'_>) + 'static) {
     page.tasks.borrow_mut().push_back(Task {

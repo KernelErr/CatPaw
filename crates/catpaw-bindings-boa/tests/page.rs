@@ -1180,3 +1180,21 @@ fn document_domain_is_the_host() {
         assert_eq!(eval(&mut page, source), expected, "{source}");
     }
 }
+
+#[test]
+fn data_urls_are_fetched_without_a_network() {
+    let mut page = load(
+        r#"<script>var log = [];</script>
+<script src="data:text/javascript;base64,bG9nLnB1c2goJ2Jhc2U2NCBzY3JpcHQnKTs="></script>
+<script src="data:text/javascript,log.push('plain%20script')"></script>
+<script type="module" src="data:text/javascript,log.push('module')"></script>
+<script>
+  fetch('data:text/plain;charset=utf-8,hi%20there').then(function (r) { return r.text(); }).then(function (t) { log.push('fetched ' + t); });
+  fetch('data:,bare').then(function (r) { log.push(r.headers.get('content-type')); return r.text(); }).then(function (t) { log.push(t); });
+</script>"#,
+    );
+    assert_eq!(
+        eval(&mut page, "log.join(' / ')"),
+        "base64 script / plain script / module / fetched hi there / text/plain;charset=US-ASCII / bare"
+    );
+}

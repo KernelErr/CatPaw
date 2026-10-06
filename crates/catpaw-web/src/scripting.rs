@@ -395,10 +395,7 @@ fn prepare(cx: &mut Cx<'_>, el: NodeId, parser_inserted: bool) {
 
     if parser_inserted && !module && !is_async && !is_defer {
         // Parser-blocking: nothing else happens until it has run.
-        let result = match cx.page.net() {
-            Some(net) => net.fetch_blocking(request),
-            None => Err("no network available".to_string()),
-        };
+        let result = net::fetch_blocking(cx.page, request);
         execute_fetched(cx, el, &url, result, true, false);
         return;
     }
@@ -506,9 +503,14 @@ fn finish_parsing(cx: &mut Cx<'_>) {
             }
             Pending::Fetch(slot) => {
                 // Wait for this script's fetch; other fetches complete
-                // meanwhile.
-                while slot.borrow().is_none() && net::inflight(cx.page) > 0 {
-                    net::deliver(cx, Some(Duration::from_millis(50)));
+                // meanwhile, and so do queued tasks (a data URL's answer
+                // is one).
+                while slot.borrow().is_none() {
+                    if net::inflight(cx.page) > 0 {
+                        net::deliver(cx, Some(Duration::from_millis(50)));
+                    } else if !crate::event_loop::run_one_task(cx) {
+                        break;
+                    }
                 }
                 // Without a network the failure arrives as a task instead.
                 if slot.borrow().is_none() && cx.page.net().is_none() {

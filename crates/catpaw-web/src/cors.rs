@@ -438,6 +438,19 @@ pub fn send(
 ) -> Pending {
     let pending = Pending::default();
     let done: Done = Box::new(done);
+    // A data URL is its own response, readable by anyone.
+    if let Some(result) = crate::net::data_url_response(&out.url) {
+        crate::event_loop::queue_task(page, "data URL", move |cx| {
+            done(
+                cx,
+                result.map(|response| Readable {
+                    response,
+                    exposure: Exposure::Basic,
+                }),
+            )
+        });
+        return pending;
+    }
     let plan = match plan(page, out) {
         Ok(plan) => plan,
         Err(reason) => {
@@ -487,6 +500,12 @@ fn start_actual(
 
 /// Sends `out` and waits for the response (synchronous `XMLHttpRequest`).
 pub fn send_blocking(page: &PageState, out: Outgoing) -> Result<Readable, String> {
+    if let Some(result) = crate::net::data_url_response(&out.url) {
+        return result.map(|response| Readable {
+            response,
+            exposure: Exposure::Basic,
+        });
+    }
     let plan = plan(page, out)?;
     let net = page.net().ok_or("no network available")?;
     if let Some(preflight) = plan.preflight {

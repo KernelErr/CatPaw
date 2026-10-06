@@ -40,14 +40,9 @@ impl PageModuleLoader {
     }
 
     fn fetch(&self, url: &Url) -> JsResult<String> {
-        let net = self
-            .page
-            .net()
-            .ok_or_else(|| load_error(format!("Failed to fetch module {url}: no network")))?;
         let mut request = NetRequest::get(url.clone(), RequestKind::Script);
         request.referrer = Some(self.page.url.borrow().clone());
-        let response = net
-            .fetch_blocking(request)
+        let response = catpaw_web::net::fetch_blocking(&self.page, request)
             .map_err(|reason| load_error(format!("Failed to fetch module {url}: {reason}")))?;
         if !response.is_success() {
             return Err(load_error(format!(
