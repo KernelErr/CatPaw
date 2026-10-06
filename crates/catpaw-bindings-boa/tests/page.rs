@@ -928,3 +928,92 @@ fn inline_styles_are_editable_through_the_cssom() {
         r#"<p style="font-size: 12px;"></p>"#
     );
 }
+
+#[test]
+fn svg_elements_have_their_interfaces() {
+    let mut page = load(
+        r##"<body><svg id="s" class="icon big" viewBox="0 0 10 10"><g id="g">
+<a id="link" href="/x#y"><path id="p" d="M0 0"/></a>
+<use id="u" xlink:href="#sym"/><text id="t">hi<tspan id="ts">x</tspan></text>
+<foreignObject id="fo"><div id="inside"></div></foreignObject><unknown id="unk"/></g></svg>
+<div id="d"></div>
+<script>
+  var $ = function (id) { return document.getElementById(id); };
+  var s = $('s'), p = $('p'), link = $('link'), u = $('u');
+  var XLINK = 'http://www.w3.org/1999/xlink';
+</script>"##,
+    );
+    for (source, expected) in [
+        (
+            "s instanceof SVGSVGElement && s instanceof SVGGraphicsElement && s instanceof SVGElement && s instanceof Element",
+            "true",
+        ),
+        ("s instanceof HTMLElement", "false"),
+        (
+            "Object.getPrototypeOf(SVGSVGElement.prototype) === SVGGraphicsElement.prototype",
+            "true",
+        ),
+        (
+            "p instanceof SVGPathElement && p instanceof SVGGeometryElement",
+            "true",
+        ),
+        (
+            "$('g').constructor.name + ' ' + $('fo').constructor.name",
+            "SVGGElement SVGForeignObjectElement",
+        ),
+        ("$('inside') instanceof HTMLDivElement", "true"),
+        (
+            "$('t') instanceof SVGTextPositioningElement && $('t') instanceof SVGTextContentElement && $('ts') instanceof SVGTSpanElement",
+            "true",
+        ),
+        ("$('unk').constructor === SVGElement", "true"),
+        (
+            "document.createElementNS('http://www.w3.org/2000/svg', 'circle') instanceof SVGCircleElement",
+            "true",
+        ),
+        (
+            "document.createElement('svg') instanceof HTMLUnknownElement",
+            "true",
+        ),
+        // String attributes are objects on SVG elements.
+        (
+            "typeof s.className + ' ' + s.className.baseVal + '|' + s.className.animVal",
+            "object icon big|icon big",
+        ),
+        (
+            "s.className === s.className && s.className instanceof SVGAnimatedString",
+            "true",
+        ),
+        (
+            "s.className.baseVal = 'small'; s.getAttribute('class') + ' ' + s.classList.contains('small')",
+            "small true",
+        ),
+        ("typeof $('d').className", "string"),
+        ("link instanceof SVGAElement && link.href.baseVal", "/x#y"),
+        (
+            "u.href.baseVal + ' ' + u.hasAttribute('href')",
+            "#sym false",
+        ),
+        (
+            "u.href.baseVal = '#other'; u.getAttributeNS(XLINK, 'href') + ' ' + u.hasAttribute('href')",
+            "#other false",
+        ),
+        ("link.href.baseVal = '/z'; link.getAttribute('href')", "/z"),
+        (
+            "p.ownerSVGElement === s && p.viewportElement === s && s.ownerSVGElement",
+            "null",
+        ),
+        // What SVG elements share with HTML elements.
+        (
+            "s.style.fill = 'red'; s.getAttribute('style')",
+            "fill: red;",
+        ),
+        (
+            "s.dataset.kind = 'icon'; s.getAttribute('data-kind')",
+            "icon",
+        ),
+        ("typeof s.focus + ' ' + ('onclick' in s)", "function true"),
+    ] {
+        assert_eq!(eval(&mut page, source), expected, "{source}");
+    }
+}

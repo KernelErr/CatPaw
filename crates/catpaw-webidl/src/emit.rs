@@ -243,6 +243,16 @@ impl<'a> Emitter<'a> {
                 w!(out, "            {} => InterfaceId::{iface},", lit(tag));
             }
         }
+        w!(out, "            _ => return None,\n        }})\n    }}\n");
+        w!(
+            out,
+            "    /// The element interface for an SVG local name.\n    pub fn for_svg_tag(local: &str) -> Option<InterfaceId> {{\n        Some(match local {{"
+        );
+        for (tag, iface) in &self.plan.svg_tags {
+            if names.contains(&iface.as_str()) {
+                w!(out, "            {} => InterfaceId::{iface},", lit(tag));
+            }
+        }
         w!(
             out,
             "            _ => return None,\n        }})\n    }}\n}}\n"

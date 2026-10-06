@@ -50,6 +50,7 @@ pub enum InterfaceId {
     Request,
     ResizeObserver,
     Response,
+    SVGAnimatedString,
     Screen,
     Storage,
     TextDecoder,
@@ -99,6 +100,27 @@ pub enum InterfaceId {
     HTMLTitleElement,
     HTMLUListElement,
     HTMLUnknownElement,
+    SVGElement,
+    SVGGradientElement,
+    SVGGraphicsElement,
+    SVGImageElement,
+    SVGLinearGradientElement,
+    SVGMarkerElement,
+    SVGMetadataElement,
+    SVGPatternElement,
+    SVGRadialGradientElement,
+    SVGSVGElement,
+    SVGScriptElement,
+    SVGStopElement,
+    SVGStyleElement,
+    SVGSwitchElement,
+    SVGSymbolElement,
+    SVGTextContentElement,
+    SVGTextPathElement,
+    SVGTextPositioningElement,
+    SVGTitleElement,
+    SVGUseElement,
+    SVGViewElement,
     Text,
     XMLHttpRequest,
     HTMLAnchorElement,
@@ -106,11 +128,26 @@ pub enum InterfaceId {
     HTMLBodyElement,
     HTMLButtonElement,
     HTMLDivElement,
+    SVGAElement,
+    SVGDefsElement,
+    SVGDescElement,
+    SVGForeignObjectElement,
+    SVGGElement,
+    SVGGeometryElement,
+    SVGLineElement,
+    SVGPathElement,
+    SVGPolygonElement,
+    SVGPolylineElement,
+    SVGRectElement,
+    SVGTSpanElement,
+    SVGTextElement,
+    SVGCircleElement,
+    SVGEllipseElement,
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 84;
-    pub const ALL: [InterfaceId; 84] = [
+    pub const COUNT: usize = 121;
+    pub const ALL: [InterfaceId; 121] = [
         InterfaceId::AbortController,
         InterfaceId::CSSStyleDeclaration,
         InterfaceId::CSSStyleProperties,
@@ -139,6 +176,7 @@ impl InterfaceId {
         InterfaceId::Request,
         InterfaceId::ResizeObserver,
         InterfaceId::Response,
+        InterfaceId::SVGAnimatedString,
         InterfaceId::Screen,
         InterfaceId::Storage,
         InterfaceId::TextDecoder,
@@ -188,6 +226,27 @@ impl InterfaceId {
         InterfaceId::HTMLTitleElement,
         InterfaceId::HTMLUListElement,
         InterfaceId::HTMLUnknownElement,
+        InterfaceId::SVGElement,
+        InterfaceId::SVGGradientElement,
+        InterfaceId::SVGGraphicsElement,
+        InterfaceId::SVGImageElement,
+        InterfaceId::SVGLinearGradientElement,
+        InterfaceId::SVGMarkerElement,
+        InterfaceId::SVGMetadataElement,
+        InterfaceId::SVGPatternElement,
+        InterfaceId::SVGRadialGradientElement,
+        InterfaceId::SVGSVGElement,
+        InterfaceId::SVGScriptElement,
+        InterfaceId::SVGStopElement,
+        InterfaceId::SVGStyleElement,
+        InterfaceId::SVGSwitchElement,
+        InterfaceId::SVGSymbolElement,
+        InterfaceId::SVGTextContentElement,
+        InterfaceId::SVGTextPathElement,
+        InterfaceId::SVGTextPositioningElement,
+        InterfaceId::SVGTitleElement,
+        InterfaceId::SVGUseElement,
+        InterfaceId::SVGViewElement,
         InterfaceId::Text,
         InterfaceId::XMLHttpRequest,
         InterfaceId::HTMLAnchorElement,
@@ -195,6 +254,21 @@ impl InterfaceId {
         InterfaceId::HTMLBodyElement,
         InterfaceId::HTMLButtonElement,
         InterfaceId::HTMLDivElement,
+        InterfaceId::SVGAElement,
+        InterfaceId::SVGDefsElement,
+        InterfaceId::SVGDescElement,
+        InterfaceId::SVGForeignObjectElement,
+        InterfaceId::SVGGElement,
+        InterfaceId::SVGGeometryElement,
+        InterfaceId::SVGLineElement,
+        InterfaceId::SVGPathElement,
+        InterfaceId::SVGPolygonElement,
+        InterfaceId::SVGPolylineElement,
+        InterfaceId::SVGRectElement,
+        InterfaceId::SVGTSpanElement,
+        InterfaceId::SVGTextElement,
+        InterfaceId::SVGCircleElement,
+        InterfaceId::SVGEllipseElement,
     ];
 
     pub fn name(self) -> &'static str {
@@ -227,6 +301,7 @@ impl InterfaceId {
             InterfaceId::Request => "Request",
             InterfaceId::ResizeObserver => "ResizeObserver",
             InterfaceId::Response => "Response",
+            InterfaceId::SVGAnimatedString => "SVGAnimatedString",
             InterfaceId::Screen => "Screen",
             InterfaceId::Storage => "Storage",
             InterfaceId::TextDecoder => "TextDecoder",
@@ -276,6 +351,27 @@ impl InterfaceId {
             InterfaceId::HTMLTitleElement => "HTMLTitleElement",
             InterfaceId::HTMLUListElement => "HTMLUListElement",
             InterfaceId::HTMLUnknownElement => "HTMLUnknownElement",
+            InterfaceId::SVGElement => "SVGElement",
+            InterfaceId::SVGGradientElement => "SVGGradientElement",
+            InterfaceId::SVGGraphicsElement => "SVGGraphicsElement",
+            InterfaceId::SVGImageElement => "SVGImageElement",
+            InterfaceId::SVGLinearGradientElement => "SVGLinearGradientElement",
+            InterfaceId::SVGMarkerElement => "SVGMarkerElement",
+            InterfaceId::SVGMetadataElement => "SVGMetadataElement",
+            InterfaceId::SVGPatternElement => "SVGPatternElement",
+            InterfaceId::SVGRadialGradientElement => "SVGRadialGradientElement",
+            InterfaceId::SVGSVGElement => "SVGSVGElement",
+            InterfaceId::SVGScriptElement => "SVGScriptElement",
+            InterfaceId::SVGStopElement => "SVGStopElement",
+            InterfaceId::SVGStyleElement => "SVGStyleElement",
+            InterfaceId::SVGSwitchElement => "SVGSwitchElement",
+            InterfaceId::SVGSymbolElement => "SVGSymbolElement",
+            InterfaceId::SVGTextContentElement => "SVGTextContentElement",
+            InterfaceId::SVGTextPathElement => "SVGTextPathElement",
+            InterfaceId::SVGTextPositioningElement => "SVGTextPositioningElement",
+            InterfaceId::SVGTitleElement => "SVGTitleElement",
+            InterfaceId::SVGUseElement => "SVGUseElement",
+            InterfaceId::SVGViewElement => "SVGViewElement",
             InterfaceId::Text => "Text",
             InterfaceId::XMLHttpRequest => "XMLHttpRequest",
             InterfaceId::HTMLAnchorElement => "HTMLAnchorElement",
@@ -283,6 +379,21 @@ impl InterfaceId {
             InterfaceId::HTMLBodyElement => "HTMLBodyElement",
             InterfaceId::HTMLButtonElement => "HTMLButtonElement",
             InterfaceId::HTMLDivElement => "HTMLDivElement",
+            InterfaceId::SVGAElement => "SVGAElement",
+            InterfaceId::SVGDefsElement => "SVGDefsElement",
+            InterfaceId::SVGDescElement => "SVGDescElement",
+            InterfaceId::SVGForeignObjectElement => "SVGForeignObjectElement",
+            InterfaceId::SVGGElement => "SVGGElement",
+            InterfaceId::SVGGeometryElement => "SVGGeometryElement",
+            InterfaceId::SVGLineElement => "SVGLineElement",
+            InterfaceId::SVGPathElement => "SVGPathElement",
+            InterfaceId::SVGPolygonElement => "SVGPolygonElement",
+            InterfaceId::SVGPolylineElement => "SVGPolylineElement",
+            InterfaceId::SVGRectElement => "SVGRectElement",
+            InterfaceId::SVGTSpanElement => "SVGTSpanElement",
+            InterfaceId::SVGTextElement => "SVGTextElement",
+            InterfaceId::SVGCircleElement => "SVGCircleElement",
+            InterfaceId::SVGEllipseElement => "SVGEllipseElement",
         }
     }
 
@@ -316,6 +427,7 @@ impl InterfaceId {
             "Request" => InterfaceId::Request,
             "ResizeObserver" => InterfaceId::ResizeObserver,
             "Response" => InterfaceId::Response,
+            "SVGAnimatedString" => InterfaceId::SVGAnimatedString,
             "Screen" => InterfaceId::Screen,
             "Storage" => InterfaceId::Storage,
             "TextDecoder" => InterfaceId::TextDecoder,
@@ -365,6 +477,27 @@ impl InterfaceId {
             "HTMLTitleElement" => InterfaceId::HTMLTitleElement,
             "HTMLUListElement" => InterfaceId::HTMLUListElement,
             "HTMLUnknownElement" => InterfaceId::HTMLUnknownElement,
+            "SVGElement" => InterfaceId::SVGElement,
+            "SVGGradientElement" => InterfaceId::SVGGradientElement,
+            "SVGGraphicsElement" => InterfaceId::SVGGraphicsElement,
+            "SVGImageElement" => InterfaceId::SVGImageElement,
+            "SVGLinearGradientElement" => InterfaceId::SVGLinearGradientElement,
+            "SVGMarkerElement" => InterfaceId::SVGMarkerElement,
+            "SVGMetadataElement" => InterfaceId::SVGMetadataElement,
+            "SVGPatternElement" => InterfaceId::SVGPatternElement,
+            "SVGRadialGradientElement" => InterfaceId::SVGRadialGradientElement,
+            "SVGSVGElement" => InterfaceId::SVGSVGElement,
+            "SVGScriptElement" => InterfaceId::SVGScriptElement,
+            "SVGStopElement" => InterfaceId::SVGStopElement,
+            "SVGStyleElement" => InterfaceId::SVGStyleElement,
+            "SVGSwitchElement" => InterfaceId::SVGSwitchElement,
+            "SVGSymbolElement" => InterfaceId::SVGSymbolElement,
+            "SVGTextContentElement" => InterfaceId::SVGTextContentElement,
+            "SVGTextPathElement" => InterfaceId::SVGTextPathElement,
+            "SVGTextPositioningElement" => InterfaceId::SVGTextPositioningElement,
+            "SVGTitleElement" => InterfaceId::SVGTitleElement,
+            "SVGUseElement" => InterfaceId::SVGUseElement,
+            "SVGViewElement" => InterfaceId::SVGViewElement,
             "Text" => InterfaceId::Text,
             "XMLHttpRequest" => InterfaceId::XMLHttpRequest,
             "HTMLAnchorElement" => InterfaceId::HTMLAnchorElement,
@@ -372,6 +505,21 @@ impl InterfaceId {
             "HTMLBodyElement" => InterfaceId::HTMLBodyElement,
             "HTMLButtonElement" => InterfaceId::HTMLButtonElement,
             "HTMLDivElement" => InterfaceId::HTMLDivElement,
+            "SVGAElement" => InterfaceId::SVGAElement,
+            "SVGDefsElement" => InterfaceId::SVGDefsElement,
+            "SVGDescElement" => InterfaceId::SVGDescElement,
+            "SVGForeignObjectElement" => InterfaceId::SVGForeignObjectElement,
+            "SVGGElement" => InterfaceId::SVGGElement,
+            "SVGGeometryElement" => InterfaceId::SVGGeometryElement,
+            "SVGLineElement" => InterfaceId::SVGLineElement,
+            "SVGPathElement" => InterfaceId::SVGPathElement,
+            "SVGPolygonElement" => InterfaceId::SVGPolygonElement,
+            "SVGPolylineElement" => InterfaceId::SVGPolylineElement,
+            "SVGRectElement" => InterfaceId::SVGRectElement,
+            "SVGTSpanElement" => InterfaceId::SVGTSpanElement,
+            "SVGTextElement" => InterfaceId::SVGTextElement,
+            "SVGCircleElement" => InterfaceId::SVGCircleElement,
+            "SVGEllipseElement" => InterfaceId::SVGEllipseElement,
             _ => return None,
         })
     }
@@ -406,6 +554,7 @@ impl InterfaceId {
             InterfaceId::Request => None,
             InterfaceId::ResizeObserver => None,
             InterfaceId::Response => None,
+            InterfaceId::SVGAnimatedString => None,
             InterfaceId::Screen => None,
             InterfaceId::Storage => None,
             InterfaceId::TextDecoder => None,
@@ -455,6 +604,27 @@ impl InterfaceId {
             InterfaceId::HTMLTitleElement => Some(InterfaceId::HTMLElement),
             InterfaceId::HTMLUListElement => Some(InterfaceId::HTMLElement),
             InterfaceId::HTMLUnknownElement => Some(InterfaceId::HTMLElement),
+            InterfaceId::SVGElement => Some(InterfaceId::Element),
+            InterfaceId::SVGGradientElement => Some(InterfaceId::SVGElement),
+            InterfaceId::SVGGraphicsElement => Some(InterfaceId::SVGElement),
+            InterfaceId::SVGImageElement => Some(InterfaceId::SVGGraphicsElement),
+            InterfaceId::SVGLinearGradientElement => Some(InterfaceId::SVGGradientElement),
+            InterfaceId::SVGMarkerElement => Some(InterfaceId::SVGElement),
+            InterfaceId::SVGMetadataElement => Some(InterfaceId::SVGElement),
+            InterfaceId::SVGPatternElement => Some(InterfaceId::SVGElement),
+            InterfaceId::SVGRadialGradientElement => Some(InterfaceId::SVGGradientElement),
+            InterfaceId::SVGSVGElement => Some(InterfaceId::SVGGraphicsElement),
+            InterfaceId::SVGScriptElement => Some(InterfaceId::SVGElement),
+            InterfaceId::SVGStopElement => Some(InterfaceId::SVGElement),
+            InterfaceId::SVGStyleElement => Some(InterfaceId::SVGElement),
+            InterfaceId::SVGSwitchElement => Some(InterfaceId::SVGGraphicsElement),
+            InterfaceId::SVGSymbolElement => Some(InterfaceId::SVGGraphicsElement),
+            InterfaceId::SVGTextContentElement => Some(InterfaceId::SVGGraphicsElement),
+            InterfaceId::SVGTextPathElement => Some(InterfaceId::SVGTextContentElement),
+            InterfaceId::SVGTextPositioningElement => Some(InterfaceId::SVGTextContentElement),
+            InterfaceId::SVGTitleElement => Some(InterfaceId::SVGElement),
+            InterfaceId::SVGUseElement => Some(InterfaceId::SVGGraphicsElement),
+            InterfaceId::SVGViewElement => Some(InterfaceId::SVGElement),
             InterfaceId::Text => Some(InterfaceId::CharacterData),
             InterfaceId::XMLHttpRequest => Some(InterfaceId::XMLHttpRequestEventTarget),
             InterfaceId::HTMLAnchorElement => Some(InterfaceId::HTMLElement),
@@ -462,6 +632,21 @@ impl InterfaceId {
             InterfaceId::HTMLBodyElement => Some(InterfaceId::HTMLElement),
             InterfaceId::HTMLButtonElement => Some(InterfaceId::HTMLElement),
             InterfaceId::HTMLDivElement => Some(InterfaceId::HTMLElement),
+            InterfaceId::SVGAElement => Some(InterfaceId::SVGGraphicsElement),
+            InterfaceId::SVGDefsElement => Some(InterfaceId::SVGGraphicsElement),
+            InterfaceId::SVGDescElement => Some(InterfaceId::SVGElement),
+            InterfaceId::SVGForeignObjectElement => Some(InterfaceId::SVGGraphicsElement),
+            InterfaceId::SVGGElement => Some(InterfaceId::SVGGraphicsElement),
+            InterfaceId::SVGGeometryElement => Some(InterfaceId::SVGGraphicsElement),
+            InterfaceId::SVGLineElement => Some(InterfaceId::SVGGeometryElement),
+            InterfaceId::SVGPathElement => Some(InterfaceId::SVGGeometryElement),
+            InterfaceId::SVGPolygonElement => Some(InterfaceId::SVGGeometryElement),
+            InterfaceId::SVGPolylineElement => Some(InterfaceId::SVGGeometryElement),
+            InterfaceId::SVGRectElement => Some(InterfaceId::SVGGeometryElement),
+            InterfaceId::SVGTSpanElement => Some(InterfaceId::SVGTextPositioningElement),
+            InterfaceId::SVGTextElement => Some(InterfaceId::SVGTextPositioningElement),
+            InterfaceId::SVGCircleElement => Some(InterfaceId::SVGGeometryElement),
+            InterfaceId::SVGEllipseElement => Some(InterfaceId::SVGGeometryElement),
         }
     }
 
@@ -521,6 +706,43 @@ impl InterfaceId {
             "title" => InterfaceId::HTMLTitleElement,
             "tr" => InterfaceId::HTMLTableRowElement,
             "ul" => InterfaceId::HTMLUListElement,
+            _ => return None,
+        })
+    }
+
+    /// The element interface for an SVG local name.
+    pub fn for_svg_tag(local: &str) -> Option<InterfaceId> {
+        Some(match local {
+            "a" => InterfaceId::SVGAElement,
+            "circle" => InterfaceId::SVGCircleElement,
+            "defs" => InterfaceId::SVGDefsElement,
+            "desc" => InterfaceId::SVGDescElement,
+            "ellipse" => InterfaceId::SVGEllipseElement,
+            "foreignObject" => InterfaceId::SVGForeignObjectElement,
+            "g" => InterfaceId::SVGGElement,
+            "image" => InterfaceId::SVGImageElement,
+            "line" => InterfaceId::SVGLineElement,
+            "linearGradient" => InterfaceId::SVGLinearGradientElement,
+            "marker" => InterfaceId::SVGMarkerElement,
+            "metadata" => InterfaceId::SVGMetadataElement,
+            "path" => InterfaceId::SVGPathElement,
+            "pattern" => InterfaceId::SVGPatternElement,
+            "polygon" => InterfaceId::SVGPolygonElement,
+            "polyline" => InterfaceId::SVGPolylineElement,
+            "radialGradient" => InterfaceId::SVGRadialGradientElement,
+            "rect" => InterfaceId::SVGRectElement,
+            "script" => InterfaceId::SVGScriptElement,
+            "stop" => InterfaceId::SVGStopElement,
+            "style" => InterfaceId::SVGStyleElement,
+            "svg" => InterfaceId::SVGSVGElement,
+            "switch" => InterfaceId::SVGSwitchElement,
+            "symbol" => InterfaceId::SVGSymbolElement,
+            "text" => InterfaceId::SVGTextElement,
+            "textPath" => InterfaceId::SVGTextPathElement,
+            "title" => InterfaceId::SVGTitleElement,
+            "tspan" => InterfaceId::SVGTSpanElement,
+            "use" => InterfaceId::SVGUseElement,
+            "view" => InterfaceId::SVGViewElement,
             _ => return None,
         })
     }
@@ -1430,6 +1652,10 @@ pub trait ParentNodeImpl {
     fn query_selector_all(cx: &mut Cx<'_>, this: NodeId, selectors: String) -> Fallible<ObjectId>;
 }
 
+pub trait SVGURIReferenceImpl {
+    fn href(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
+}
+
 pub trait TextDecoderCommonImpl {
     fn encoding(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
     fn fatal(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
@@ -1885,6 +2111,12 @@ pub trait ResponseImpl {
     ) -> Fallible<ObjectId>;
 }
 
+pub trait SVGAnimatedStringImpl {
+    fn base_val(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_base_val(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+    fn anim_val(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+}
+
 pub trait ScreenImpl {
     fn avail_width(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<i32>;
     fn avail_height(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<i32>;
@@ -2337,6 +2569,12 @@ pub trait HTMLTextAreaElementImpl {
 pub trait HTMLTitleElementImpl {
     fn text(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
     fn set_text(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+}
+
+pub trait SVGElementImpl {
+    fn class_name(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
+    fn owner_svg_element(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
+    fn viewport_element(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
 }
 
 pub trait TextImpl {

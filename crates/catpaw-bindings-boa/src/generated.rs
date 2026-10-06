@@ -5778,6 +5778,63 @@ pub mod response {
     };
 }
 
+pub mod svg_animated_string {
+    use super::*;
+
+    fn get_base_val(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::SVGAnimatedString, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SVGAnimatedStringImpl>::base_val(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_base_val(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::SVGAnimatedString, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SVGAnimatedStringImpl>::set_base_val(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_anim_val(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::SVGAnimatedString, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SVGAnimatedStringImpl>::anim_val(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGAnimatedString,
+        name: "SVGAnimatedString",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "baseVal",
+                getter: get_base_val,
+                setter: Some(set_base_val),
+            },
+            rt::AttrDef {
+                name: "animVal",
+                getter: get_anim_val,
+                setter: None,
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod screen {
     use super::*;
 
@@ -22990,6 +23047,3410 @@ pub mod html_unknown_element {
     };
 }
 
+pub mod svg_element {
+    use super::*;
+
+    fn get_class_name(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "className", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::SVGElementImpl>::class_name(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "className", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_owner_svg_element(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SVGElementImpl>::owner_svg_element(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_viewport_element(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SVGElementImpl>::viewport_element(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_onabort(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "abort")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onabort(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "abort", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onauxclick(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "auxclick")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onauxclick(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "auxclick", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onbeforeinput(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "beforeinput")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onbeforeinput(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "beforeinput", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onbeforematch(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "beforematch")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onbeforematch(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "beforematch", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onbeforetoggle(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "beforetoggle")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onbeforetoggle(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "beforetoggle",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onblur(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "blur")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onblur(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "blur", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_oncancel(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "cancel")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_oncancel(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "cancel", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_oncanplay(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "canplay")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_oncanplay(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "canplay", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_oncanplaythrough(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "canplaythrough")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_oncanplaythrough(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "canplaythrough",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onchange(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "change")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onchange(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "change", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onclick(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "click")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onclick(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "click", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onclose(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "close")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onclose(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "close", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_oncommand(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "command")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_oncommand(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "command", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_oncontextlost(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "contextlost")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_oncontextlost(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "contextlost", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_oncontextmenu(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "contextmenu")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_oncontextmenu(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "contextmenu", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_oncontextrestored(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "contextrestored")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_oncontextrestored(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "contextrestored",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_oncopy(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "copy")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_oncopy(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "copy", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_oncuechange(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "cuechange")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_oncuechange(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "cuechange", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_oncut(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "cut")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_oncut(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "cut", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ondblclick(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "dblclick")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_ondblclick(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "dblclick", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ondrag(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "drag")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_ondrag(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "drag", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ondragend(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "dragend")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_ondragend(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "dragend", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ondragenter(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "dragenter")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_ondragenter(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "dragenter", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ondragleave(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "dragleave")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_ondragleave(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "dragleave", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ondragover(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "dragover")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_ondragover(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "dragover", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ondragstart(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "dragstart")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_ondragstart(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "dragstart", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ondrop(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "drop")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_ondrop(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "drop", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ondurationchange(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "durationchange")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_ondurationchange(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "durationchange",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onemptied(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "emptied")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onemptied(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "emptied", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onended(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "ended")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onended(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "ended", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onerror(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "error")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onerror(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "error", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onfocus(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "focus")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onfocus(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "focus", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onformdata(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "formdata")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onformdata(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "formdata", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_oninput(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "input")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_oninput(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "input", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_oninvalid(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "invalid")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_oninvalid(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "invalid", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onkeydown(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "keydown")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onkeydown(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "keydown", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onkeypress(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "keypress")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onkeypress(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "keypress", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onkeyup(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "keyup")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onkeyup(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "keyup", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onload(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "load")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onload(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "load", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onloadeddata(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "loadeddata")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onloadeddata(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "loadeddata", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onloadedmetadata(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "loadedmetadata")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onloadedmetadata(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "loadedmetadata",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onloadstart(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "loadstart")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onloadstart(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "loadstart", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onmousedown(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "mousedown")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onmousedown(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "mousedown", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onmouseenter(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "mouseenter")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onmouseenter(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "mouseenter", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onmouseleave(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "mouseleave")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onmouseleave(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "mouseleave", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onmousemove(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "mousemove")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onmousemove(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "mousemove", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onmouseout(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "mouseout")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onmouseout(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "mouseout", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onmouseover(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "mouseover")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onmouseover(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "mouseover", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onmouseup(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "mouseup")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onmouseup(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "mouseup", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpaste(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "paste")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpaste(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "paste", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpause(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pause")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpause(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "pause", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onplay(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "play")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onplay(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "play", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onplaying(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "playing")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onplaying(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "playing", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onprogress(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "progress")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onprogress(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "progress", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onratechange(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "ratechange")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onratechange(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "ratechange", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onreset(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "reset")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onreset(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "reset", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onresize(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "resize")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onresize(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "resize", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onscroll(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "scroll")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onscroll(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "scroll", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onscrollend(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "scrollend")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onscrollend(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "scrollend", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onsecuritypolicyviolation(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "securitypolicyviolation",
+            )
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onsecuritypolicyviolation(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "securitypolicyviolation",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onseeked(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "seeked")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onseeked(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "seeked", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onseeking(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "seeking")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onseeking(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "seeking", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onselect(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "select")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onselect(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "select", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onslotchange(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "slotchange")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onslotchange(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "slotchange", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onstalled(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "stalled")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onstalled(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "stalled", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onsubmit(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "submit")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onsubmit(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "submit", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onsuspend(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "suspend")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onsuspend(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "suspend", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ontimeupdate(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "timeupdate")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_ontimeupdate(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "timeupdate", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ontoggle(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "toggle")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_ontoggle(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "toggle", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onvolumechange(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "volumechange")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onvolumechange(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "volumechange",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onwaiting(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "waiting")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onwaiting(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "waiting", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onwebkitanimationend(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "webkitanimationend")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onwebkitanimationend(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "webkitanimationend",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onwebkitanimationiteration(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "webkitanimationiteration",
+            )
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onwebkitanimationiteration(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "webkitanimationiteration",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onwebkitanimationstart(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "webkitanimationstart",
+            )
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onwebkitanimationstart(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "webkitanimationstart",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onwebkittransitionend(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "webkittransitionend")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onwebkittransitionend(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "webkittransitionend",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onwheel(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "wheel")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onwheel(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "wheel", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_dataset(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "dataset", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLOrSVGOrMathMLElementImpl>::dataset(cx, this)
+        });
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "dataset", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_autofocus(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_bool(cx, this, "autofocus")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_autofocus(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_boolean();
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_bool(cx, this, "autofocus", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_tab_index(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_long(cx, this, "tabindex", 0, "none")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_tab_index(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_i32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_long(cx, this, "tabindex", a0, "none")
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_style(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "style", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ElementCSSInlineStyleImpl>::style(cx, this)
+        });
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "style", &v, ctx);
+        Ok(v)
+    }
+
+    fn set_style(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::put_forwards(this_js, "style", "cssText", rt::arg(args, 0), ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn op_focus(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let a0 = <web::FocusOptions as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLOrSVGOrMathMLElementImpl>::focus(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_blur(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::SVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLOrSVGOrMathMLElementImpl>::blur(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGElement,
+        name: "SVGElement",
+        parent: Some(I::Element),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "className",
+                getter: get_class_name,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "ownerSVGElement",
+                getter: get_owner_svg_element,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "viewportElement",
+                getter: get_viewport_element,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "onabort",
+                getter: get_onabort,
+                setter: Some(set_onabort),
+            },
+            rt::AttrDef {
+                name: "onauxclick",
+                getter: get_onauxclick,
+                setter: Some(set_onauxclick),
+            },
+            rt::AttrDef {
+                name: "onbeforeinput",
+                getter: get_onbeforeinput,
+                setter: Some(set_onbeforeinput),
+            },
+            rt::AttrDef {
+                name: "onbeforematch",
+                getter: get_onbeforematch,
+                setter: Some(set_onbeforematch),
+            },
+            rt::AttrDef {
+                name: "onbeforetoggle",
+                getter: get_onbeforetoggle,
+                setter: Some(set_onbeforetoggle),
+            },
+            rt::AttrDef {
+                name: "onblur",
+                getter: get_onblur,
+                setter: Some(set_onblur),
+            },
+            rt::AttrDef {
+                name: "oncancel",
+                getter: get_oncancel,
+                setter: Some(set_oncancel),
+            },
+            rt::AttrDef {
+                name: "oncanplay",
+                getter: get_oncanplay,
+                setter: Some(set_oncanplay),
+            },
+            rt::AttrDef {
+                name: "oncanplaythrough",
+                getter: get_oncanplaythrough,
+                setter: Some(set_oncanplaythrough),
+            },
+            rt::AttrDef {
+                name: "onchange",
+                getter: get_onchange,
+                setter: Some(set_onchange),
+            },
+            rt::AttrDef {
+                name: "onclick",
+                getter: get_onclick,
+                setter: Some(set_onclick),
+            },
+            rt::AttrDef {
+                name: "onclose",
+                getter: get_onclose,
+                setter: Some(set_onclose),
+            },
+            rt::AttrDef {
+                name: "oncommand",
+                getter: get_oncommand,
+                setter: Some(set_oncommand),
+            },
+            rt::AttrDef {
+                name: "oncontextlost",
+                getter: get_oncontextlost,
+                setter: Some(set_oncontextlost),
+            },
+            rt::AttrDef {
+                name: "oncontextmenu",
+                getter: get_oncontextmenu,
+                setter: Some(set_oncontextmenu),
+            },
+            rt::AttrDef {
+                name: "oncontextrestored",
+                getter: get_oncontextrestored,
+                setter: Some(set_oncontextrestored),
+            },
+            rt::AttrDef {
+                name: "oncopy",
+                getter: get_oncopy,
+                setter: Some(set_oncopy),
+            },
+            rt::AttrDef {
+                name: "oncuechange",
+                getter: get_oncuechange,
+                setter: Some(set_oncuechange),
+            },
+            rt::AttrDef {
+                name: "oncut",
+                getter: get_oncut,
+                setter: Some(set_oncut),
+            },
+            rt::AttrDef {
+                name: "ondblclick",
+                getter: get_ondblclick,
+                setter: Some(set_ondblclick),
+            },
+            rt::AttrDef {
+                name: "ondrag",
+                getter: get_ondrag,
+                setter: Some(set_ondrag),
+            },
+            rt::AttrDef {
+                name: "ondragend",
+                getter: get_ondragend,
+                setter: Some(set_ondragend),
+            },
+            rt::AttrDef {
+                name: "ondragenter",
+                getter: get_ondragenter,
+                setter: Some(set_ondragenter),
+            },
+            rt::AttrDef {
+                name: "ondragleave",
+                getter: get_ondragleave,
+                setter: Some(set_ondragleave),
+            },
+            rt::AttrDef {
+                name: "ondragover",
+                getter: get_ondragover,
+                setter: Some(set_ondragover),
+            },
+            rt::AttrDef {
+                name: "ondragstart",
+                getter: get_ondragstart,
+                setter: Some(set_ondragstart),
+            },
+            rt::AttrDef {
+                name: "ondrop",
+                getter: get_ondrop,
+                setter: Some(set_ondrop),
+            },
+            rt::AttrDef {
+                name: "ondurationchange",
+                getter: get_ondurationchange,
+                setter: Some(set_ondurationchange),
+            },
+            rt::AttrDef {
+                name: "onemptied",
+                getter: get_onemptied,
+                setter: Some(set_onemptied),
+            },
+            rt::AttrDef {
+                name: "onended",
+                getter: get_onended,
+                setter: Some(set_onended),
+            },
+            rt::AttrDef {
+                name: "onerror",
+                getter: get_onerror,
+                setter: Some(set_onerror),
+            },
+            rt::AttrDef {
+                name: "onfocus",
+                getter: get_onfocus,
+                setter: Some(set_onfocus),
+            },
+            rt::AttrDef {
+                name: "onformdata",
+                getter: get_onformdata,
+                setter: Some(set_onformdata),
+            },
+            rt::AttrDef {
+                name: "oninput",
+                getter: get_oninput,
+                setter: Some(set_oninput),
+            },
+            rt::AttrDef {
+                name: "oninvalid",
+                getter: get_oninvalid,
+                setter: Some(set_oninvalid),
+            },
+            rt::AttrDef {
+                name: "onkeydown",
+                getter: get_onkeydown,
+                setter: Some(set_onkeydown),
+            },
+            rt::AttrDef {
+                name: "onkeypress",
+                getter: get_onkeypress,
+                setter: Some(set_onkeypress),
+            },
+            rt::AttrDef {
+                name: "onkeyup",
+                getter: get_onkeyup,
+                setter: Some(set_onkeyup),
+            },
+            rt::AttrDef {
+                name: "onload",
+                getter: get_onload,
+                setter: Some(set_onload),
+            },
+            rt::AttrDef {
+                name: "onloadeddata",
+                getter: get_onloadeddata,
+                setter: Some(set_onloadeddata),
+            },
+            rt::AttrDef {
+                name: "onloadedmetadata",
+                getter: get_onloadedmetadata,
+                setter: Some(set_onloadedmetadata),
+            },
+            rt::AttrDef {
+                name: "onloadstart",
+                getter: get_onloadstart,
+                setter: Some(set_onloadstart),
+            },
+            rt::AttrDef {
+                name: "onmousedown",
+                getter: get_onmousedown,
+                setter: Some(set_onmousedown),
+            },
+            rt::AttrDef {
+                name: "onmouseenter",
+                getter: get_onmouseenter,
+                setter: Some(set_onmouseenter),
+            },
+            rt::AttrDef {
+                name: "onmouseleave",
+                getter: get_onmouseleave,
+                setter: Some(set_onmouseleave),
+            },
+            rt::AttrDef {
+                name: "onmousemove",
+                getter: get_onmousemove,
+                setter: Some(set_onmousemove),
+            },
+            rt::AttrDef {
+                name: "onmouseout",
+                getter: get_onmouseout,
+                setter: Some(set_onmouseout),
+            },
+            rt::AttrDef {
+                name: "onmouseover",
+                getter: get_onmouseover,
+                setter: Some(set_onmouseover),
+            },
+            rt::AttrDef {
+                name: "onmouseup",
+                getter: get_onmouseup,
+                setter: Some(set_onmouseup),
+            },
+            rt::AttrDef {
+                name: "onpaste",
+                getter: get_onpaste,
+                setter: Some(set_onpaste),
+            },
+            rt::AttrDef {
+                name: "onpause",
+                getter: get_onpause,
+                setter: Some(set_onpause),
+            },
+            rt::AttrDef {
+                name: "onplay",
+                getter: get_onplay,
+                setter: Some(set_onplay),
+            },
+            rt::AttrDef {
+                name: "onplaying",
+                getter: get_onplaying,
+                setter: Some(set_onplaying),
+            },
+            rt::AttrDef {
+                name: "onprogress",
+                getter: get_onprogress,
+                setter: Some(set_onprogress),
+            },
+            rt::AttrDef {
+                name: "onratechange",
+                getter: get_onratechange,
+                setter: Some(set_onratechange),
+            },
+            rt::AttrDef {
+                name: "onreset",
+                getter: get_onreset,
+                setter: Some(set_onreset),
+            },
+            rt::AttrDef {
+                name: "onresize",
+                getter: get_onresize,
+                setter: Some(set_onresize),
+            },
+            rt::AttrDef {
+                name: "onscroll",
+                getter: get_onscroll,
+                setter: Some(set_onscroll),
+            },
+            rt::AttrDef {
+                name: "onscrollend",
+                getter: get_onscrollend,
+                setter: Some(set_onscrollend),
+            },
+            rt::AttrDef {
+                name: "onsecuritypolicyviolation",
+                getter: get_onsecuritypolicyviolation,
+                setter: Some(set_onsecuritypolicyviolation),
+            },
+            rt::AttrDef {
+                name: "onseeked",
+                getter: get_onseeked,
+                setter: Some(set_onseeked),
+            },
+            rt::AttrDef {
+                name: "onseeking",
+                getter: get_onseeking,
+                setter: Some(set_onseeking),
+            },
+            rt::AttrDef {
+                name: "onselect",
+                getter: get_onselect,
+                setter: Some(set_onselect),
+            },
+            rt::AttrDef {
+                name: "onslotchange",
+                getter: get_onslotchange,
+                setter: Some(set_onslotchange),
+            },
+            rt::AttrDef {
+                name: "onstalled",
+                getter: get_onstalled,
+                setter: Some(set_onstalled),
+            },
+            rt::AttrDef {
+                name: "onsubmit",
+                getter: get_onsubmit,
+                setter: Some(set_onsubmit),
+            },
+            rt::AttrDef {
+                name: "onsuspend",
+                getter: get_onsuspend,
+                setter: Some(set_onsuspend),
+            },
+            rt::AttrDef {
+                name: "ontimeupdate",
+                getter: get_ontimeupdate,
+                setter: Some(set_ontimeupdate),
+            },
+            rt::AttrDef {
+                name: "ontoggle",
+                getter: get_ontoggle,
+                setter: Some(set_ontoggle),
+            },
+            rt::AttrDef {
+                name: "onvolumechange",
+                getter: get_onvolumechange,
+                setter: Some(set_onvolumechange),
+            },
+            rt::AttrDef {
+                name: "onwaiting",
+                getter: get_onwaiting,
+                setter: Some(set_onwaiting),
+            },
+            rt::AttrDef {
+                name: "onwebkitanimationend",
+                getter: get_onwebkitanimationend,
+                setter: Some(set_onwebkitanimationend),
+            },
+            rt::AttrDef {
+                name: "onwebkitanimationiteration",
+                getter: get_onwebkitanimationiteration,
+                setter: Some(set_onwebkitanimationiteration),
+            },
+            rt::AttrDef {
+                name: "onwebkitanimationstart",
+                getter: get_onwebkitanimationstart,
+                setter: Some(set_onwebkitanimationstart),
+            },
+            rt::AttrDef {
+                name: "onwebkittransitionend",
+                getter: get_onwebkittransitionend,
+                setter: Some(set_onwebkittransitionend),
+            },
+            rt::AttrDef {
+                name: "onwheel",
+                getter: get_onwheel,
+                setter: Some(set_onwheel),
+            },
+            rt::AttrDef {
+                name: "dataset",
+                getter: get_dataset,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "autofocus",
+                getter: get_autofocus,
+                setter: Some(set_autofocus),
+            },
+            rt::AttrDef {
+                name: "tabIndex",
+                getter: get_tab_index,
+                setter: Some(set_tab_index),
+            },
+            rt::AttrDef {
+                name: "style",
+                getter: get_style,
+                setter: Some(set_style),
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "focus",
+                func: op_focus,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "blur",
+                func: op_blur,
+                length: 0,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_gradient_element {
+    use super::*;
+
+    fn get_href(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "href", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::SVGGradientElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::SVGURIReferenceImpl>::href(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "href", &v, ctx);
+        Ok(v)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGGradientElement,
+        name: "SVGGradientElement",
+        parent: Some(I::SVGElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "href",
+            getter: get_href,
+            setter: None,
+        }],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[
+            ("SVG_SPREADMETHOD_UNKNOWN", 0_f64),
+            ("SVG_SPREADMETHOD_PAD", 1_f64),
+            ("SVG_SPREADMETHOD_REFLECT", 2_f64),
+            ("SVG_SPREADMETHOD_REPEAT", 3_f64),
+        ],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_graphics_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGGraphicsElement,
+        name: "SVGGraphicsElement",
+        parent: Some(I::SVGElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_image_element {
+    use super::*;
+
+    fn get_href(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "href", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::SVGImageElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::SVGURIReferenceImpl>::href(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "href", &v, ctx);
+        Ok(v)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGImageElement,
+        name: "SVGImageElement",
+        parent: Some(I::SVGGraphicsElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "href",
+            getter: get_href,
+            setter: None,
+        }],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_linear_gradient_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGLinearGradientElement,
+        name: "SVGLinearGradientElement",
+        parent: Some(I::SVGGradientElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_marker_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGMarkerElement,
+        name: "SVGMarkerElement",
+        parent: Some(I::SVGElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[
+            ("SVG_MARKERUNITS_UNKNOWN", 0_f64),
+            ("SVG_MARKERUNITS_USERSPACEONUSE", 1_f64),
+            ("SVG_MARKERUNITS_STROKEWIDTH", 2_f64),
+            ("SVG_MARKER_ORIENT_UNKNOWN", 0_f64),
+            ("SVG_MARKER_ORIENT_AUTO", 1_f64),
+            ("SVG_MARKER_ORIENT_ANGLE", 2_f64),
+            ("SVG_MARKER_ORIENT_AUTO_START_REVERSE", 3_f64),
+        ],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_metadata_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGMetadataElement,
+        name: "SVGMetadataElement",
+        parent: Some(I::SVGElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_pattern_element {
+    use super::*;
+
+    fn get_href(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "href", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::SVGPatternElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::SVGURIReferenceImpl>::href(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "href", &v, ctx);
+        Ok(v)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGPatternElement,
+        name: "SVGPatternElement",
+        parent: Some(I::SVGElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "href",
+            getter: get_href,
+            setter: None,
+        }],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_radial_gradient_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGRadialGradientElement,
+        name: "SVGRadialGradientElement",
+        parent: Some(I::SVGGradientElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svgsvg_element {
+    use super::*;
+
+    fn get_onafterprint(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "afterprint")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onafterprint(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "afterprint", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onbeforeprint(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "beforeprint")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onbeforeprint(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "beforeprint", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onbeforeunload(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "beforeunload")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onbeforeunload(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "beforeunload",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onhashchange(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "hashchange")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onhashchange(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "hashchange", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onlanguagechange(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "languagechange")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onlanguagechange(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "languagechange",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onmessage(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "message")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onmessage(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "message", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onmessageerror(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "messageerror")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onmessageerror(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "messageerror",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onoffline(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "offline")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onoffline(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "offline", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ononline(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "line")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_ononline(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "line", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpagehide(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pagehide")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpagehide(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "pagehide", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpagereveal(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pagereveal")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpagereveal(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "pagereveal", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpageshow(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pageshow")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpageshow(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "pageshow", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpageswap(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "pageswap")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpageswap(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "pageswap", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onpopstate(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "popstate")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onpopstate(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "popstate", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onrejectionhandled(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "rejectionhandled")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onrejectionhandled(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "rejectionhandled",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onstorage(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "storage")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onstorage(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "storage", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onunhandledrejection(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "unhandledrejection")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onunhandledrejection(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Node(this),
+                "unhandledrejection",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onunload(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Node(this), "unload")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onunload(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGSVGElement, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Node(this), "unload", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGSVGElement,
+        name: "SVGSVGElement",
+        parent: Some(I::SVGGraphicsElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "onafterprint",
+                getter: get_onafterprint,
+                setter: Some(set_onafterprint),
+            },
+            rt::AttrDef {
+                name: "onbeforeprint",
+                getter: get_onbeforeprint,
+                setter: Some(set_onbeforeprint),
+            },
+            rt::AttrDef {
+                name: "onbeforeunload",
+                getter: get_onbeforeunload,
+                setter: Some(set_onbeforeunload),
+            },
+            rt::AttrDef {
+                name: "onhashchange",
+                getter: get_onhashchange,
+                setter: Some(set_onhashchange),
+            },
+            rt::AttrDef {
+                name: "onlanguagechange",
+                getter: get_onlanguagechange,
+                setter: Some(set_onlanguagechange),
+            },
+            rt::AttrDef {
+                name: "onmessage",
+                getter: get_onmessage,
+                setter: Some(set_onmessage),
+            },
+            rt::AttrDef {
+                name: "onmessageerror",
+                getter: get_onmessageerror,
+                setter: Some(set_onmessageerror),
+            },
+            rt::AttrDef {
+                name: "onoffline",
+                getter: get_onoffline,
+                setter: Some(set_onoffline),
+            },
+            rt::AttrDef {
+                name: "ononline",
+                getter: get_ononline,
+                setter: Some(set_ononline),
+            },
+            rt::AttrDef {
+                name: "onpagehide",
+                getter: get_onpagehide,
+                setter: Some(set_onpagehide),
+            },
+            rt::AttrDef {
+                name: "onpagereveal",
+                getter: get_onpagereveal,
+                setter: Some(set_onpagereveal),
+            },
+            rt::AttrDef {
+                name: "onpageshow",
+                getter: get_onpageshow,
+                setter: Some(set_onpageshow),
+            },
+            rt::AttrDef {
+                name: "onpageswap",
+                getter: get_onpageswap,
+                setter: Some(set_onpageswap),
+            },
+            rt::AttrDef {
+                name: "onpopstate",
+                getter: get_onpopstate,
+                setter: Some(set_onpopstate),
+            },
+            rt::AttrDef {
+                name: "onrejectionhandled",
+                getter: get_onrejectionhandled,
+                setter: Some(set_onrejectionhandled),
+            },
+            rt::AttrDef {
+                name: "onstorage",
+                getter: get_onstorage,
+                setter: Some(set_onstorage),
+            },
+            rt::AttrDef {
+                name: "onunhandledrejection",
+                getter: get_onunhandledrejection,
+                setter: Some(set_onunhandledrejection),
+            },
+            rt::AttrDef {
+                name: "onunload",
+                getter: get_onunload,
+                setter: Some(set_onunload),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_script_element {
+    use super::*;
+
+    fn get_type(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGScriptElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "type"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGScriptElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "type", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_href(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "href", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::SVGScriptElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::SVGURIReferenceImpl>::href(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "href", &v, ctx);
+        Ok(v)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGScriptElement,
+        name: "SVGScriptElement",
+        parent: Some(I::SVGElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "type",
+                getter: get_type,
+                setter: Some(set_type),
+            },
+            rt::AttrDef {
+                name: "href",
+                getter: get_href,
+                setter: None,
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_stop_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGStopElement,
+        name: "SVGStopElement",
+        parent: Some(I::SVGElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_style_element {
+    use super::*;
+
+    fn get_type(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGStyleElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "type"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGStyleElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "type", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_media(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGStyleElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "media"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_media(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGStyleElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "media", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_title(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGStyleElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "title"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_title(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGStyleElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "title", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGStyleElement,
+        name: "SVGStyleElement",
+        parent: Some(I::SVGElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "type",
+                getter: get_type,
+                setter: Some(set_type),
+            },
+            rt::AttrDef {
+                name: "media",
+                getter: get_media,
+                setter: Some(set_media),
+            },
+            rt::AttrDef {
+                name: "title",
+                getter: get_title,
+                setter: Some(set_title),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_switch_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGSwitchElement,
+        name: "SVGSwitchElement",
+        parent: Some(I::SVGGraphicsElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_symbol_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGSymbolElement,
+        name: "SVGSymbolElement",
+        parent: Some(I::SVGGraphicsElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_text_content_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGTextContentElement,
+        name: "SVGTextContentElement",
+        parent: Some(I::SVGGraphicsElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[
+            ("LENGTHADJUST_UNKNOWN", 0_f64),
+            ("LENGTHADJUST_SPACING", 1_f64),
+            ("LENGTHADJUST_SPACINGANDGLYPHS", 2_f64),
+        ],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_text_path_element {
+    use super::*;
+
+    fn get_href(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "href", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::SVGTextPathElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::SVGURIReferenceImpl>::href(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "href", &v, ctx);
+        Ok(v)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGTextPathElement,
+        name: "SVGTextPathElement",
+        parent: Some(I::SVGTextContentElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "href",
+            getter: get_href,
+            setter: None,
+        }],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[
+            ("TEXTPATH_METHODTYPE_UNKNOWN", 0_f64),
+            ("TEXTPATH_METHODTYPE_ALIGN", 1_f64),
+            ("TEXTPATH_METHODTYPE_STRETCH", 2_f64),
+            ("TEXTPATH_SPACINGTYPE_UNKNOWN", 0_f64),
+            ("TEXTPATH_SPACINGTYPE_AUTO", 1_f64),
+            ("TEXTPATH_SPACINGTYPE_EXACT", 2_f64),
+        ],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_text_positioning_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGTextPositioningElement,
+        name: "SVGTextPositioningElement",
+        parent: Some(I::SVGTextContentElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_title_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGTitleElement,
+        name: "SVGTitleElement",
+        parent: Some(I::SVGElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_use_element {
+    use super::*;
+
+    fn get_href(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "href", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::SVGUseElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::SVGURIReferenceImpl>::href(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "href", &v, ctx);
+        Ok(v)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGUseElement,
+        name: "SVGUseElement",
+        parent: Some(I::SVGGraphicsElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "href",
+            getter: get_href,
+            setter: None,
+        }],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_view_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGViewElement,
+        name: "SVGViewElement",
+        parent: Some(I::SVGElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod text {
     use super::*;
 
@@ -24780,6 +28241,455 @@ pub mod html_div_element {
     };
 }
 
+pub mod svga_element {
+    use super::*;
+
+    fn get_download(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "download")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_download(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "download", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ping(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "ping"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_ping(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "ping", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_rel(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "rel"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_rel(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "rel", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_rel_list(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "relList", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_token_list(cx, this, "rel")
+        });
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "relList", &v, ctx);
+        Ok(v)
+    }
+
+    fn set_rel_list(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::put_forwards(this_js, "relList", "value", rt::arg(args, 0), ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_href(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "href", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::SVGURIReferenceImpl>::href(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "href", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_hreflang(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::get_string(cx, this, "hreflang")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_hreflang(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "hreflang", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_type(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "type"));
+        rt::ret(r, ctx)
+    }
+
+    fn set_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::SVGAElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::reflect::set_string(cx, this, "type", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGAElement,
+        name: "SVGAElement",
+        parent: Some(I::SVGGraphicsElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "download",
+                getter: get_download,
+                setter: Some(set_download),
+            },
+            rt::AttrDef {
+                name: "ping",
+                getter: get_ping,
+                setter: Some(set_ping),
+            },
+            rt::AttrDef {
+                name: "rel",
+                getter: get_rel,
+                setter: Some(set_rel),
+            },
+            rt::AttrDef {
+                name: "relList",
+                getter: get_rel_list,
+                setter: Some(set_rel_list),
+            },
+            rt::AttrDef {
+                name: "href",
+                getter: get_href,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "hreflang",
+                getter: get_hreflang,
+                setter: Some(set_hreflang),
+            },
+            rt::AttrDef {
+                name: "type",
+                getter: get_type,
+                setter: Some(set_type),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_defs_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGDefsElement,
+        name: "SVGDefsElement",
+        parent: Some(I::SVGGraphicsElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_desc_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGDescElement,
+        name: "SVGDescElement",
+        parent: Some(I::SVGElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_foreign_object_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGForeignObjectElement,
+        name: "SVGForeignObjectElement",
+        parent: Some(I::SVGGraphicsElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svgg_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGGElement,
+        name: "SVGGElement",
+        parent: Some(I::SVGGraphicsElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_geometry_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGGeometryElement,
+        name: "SVGGeometryElement",
+        parent: Some(I::SVGGraphicsElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_line_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGLineElement,
+        name: "SVGLineElement",
+        parent: Some(I::SVGGeometryElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_path_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGPathElement,
+        name: "SVGPathElement",
+        parent: Some(I::SVGGeometryElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_polygon_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGPolygonElement,
+        name: "SVGPolygonElement",
+        parent: Some(I::SVGGeometryElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_polyline_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGPolylineElement,
+        name: "SVGPolylineElement",
+        parent: Some(I::SVGGeometryElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_rect_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGRectElement,
+        name: "SVGRectElement",
+        parent: Some(I::SVGGeometryElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svgt_span_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGTSpanElement,
+        name: "SVGTSpanElement",
+        parent: Some(I::SVGTextPositioningElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_text_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGTextElement,
+        name: "SVGTextElement",
+        parent: Some(I::SVGTextPositioningElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_circle_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGCircleElement,
+        name: "SVGCircleElement",
+        parent: Some(I::SVGGeometryElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod svg_ellipse_element {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SVGEllipseElement,
+        name: "SVGEllipseElement",
+        parent: Some(I::SVGGeometryElement),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod ns_console {
     use super::*;
 
@@ -25128,6 +29038,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &request::DEF,
     &resize_observer::DEF,
     &response::DEF,
+    &svg_animated_string::DEF,
     &screen::DEF,
     &storage::DEF,
     &text_decoder::DEF,
@@ -25177,6 +29088,27 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &html_title_element::DEF,
     &htmlu_list_element::DEF,
     &html_unknown_element::DEF,
+    &svg_element::DEF,
+    &svg_gradient_element::DEF,
+    &svg_graphics_element::DEF,
+    &svg_image_element::DEF,
+    &svg_linear_gradient_element::DEF,
+    &svg_marker_element::DEF,
+    &svg_metadata_element::DEF,
+    &svg_pattern_element::DEF,
+    &svg_radial_gradient_element::DEF,
+    &svgsvg_element::DEF,
+    &svg_script_element::DEF,
+    &svg_stop_element::DEF,
+    &svg_style_element::DEF,
+    &svg_switch_element::DEF,
+    &svg_symbol_element::DEF,
+    &svg_text_content_element::DEF,
+    &svg_text_path_element::DEF,
+    &svg_text_positioning_element::DEF,
+    &svg_title_element::DEF,
+    &svg_use_element::DEF,
+    &svg_view_element::DEF,
     &text::DEF,
     &xml_http_request::DEF,
     &html_anchor_element::DEF,
@@ -25184,6 +29116,21 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &html_body_element::DEF,
     &html_button_element::DEF,
     &html_div_element::DEF,
+    &svga_element::DEF,
+    &svg_defs_element::DEF,
+    &svg_desc_element::DEF,
+    &svg_foreign_object_element::DEF,
+    &svgg_element::DEF,
+    &svg_geometry_element::DEF,
+    &svg_line_element::DEF,
+    &svg_path_element::DEF,
+    &svg_polygon_element::DEF,
+    &svg_polyline_element::DEF,
+    &svg_rect_element::DEF,
+    &svgt_span_element::DEF,
+    &svg_text_element::DEF,
+    &svg_circle_element::DEF,
+    &svg_ellipse_element::DEF,
 ];
 
 pub static NAMESPACES: &[&rt::NamespaceDef] = &[&ns_console::DEF];

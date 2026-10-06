@@ -408,6 +408,87 @@ members = [
 # Tags not listed here use HTMLElement (known elements without their own
 # interface) or HTMLUnknownElement (everything else).
 
+# ------------------------------------------------------------------------ SVG
+# The element interfaces, mostly for what `instanceof` and prototype chains
+# tell script. Geometry and animated values other than strings are absent.
+
+[interfaces.SVGElement]
+members = ["className", "ownerSVGElement", "viewportElement"]
+
+[interfaces.SVGAnimatedString]
+members = ["baseVal", "animVal"]
+
+[mixins.SVGURIReference]
+members = ["href"]
+
+[interfaces.SVGGraphicsElement]
+[interfaces.SVGGeometryElement]
+[interfaces.SVGSVGElement]
+[interfaces.SVGGElement]
+[interfaces.SVGDefsElement]
+[interfaces.SVGDescElement]
+[interfaces.SVGMetadataElement]
+[interfaces.SVGTitleElement]
+[interfaces.SVGSymbolElement]
+[interfaces.SVGUseElement]
+[interfaces.SVGSwitchElement]
+[interfaces.SVGStyleElement]
+[interfaces.SVGScriptElement]
+[interfaces.SVGImageElement]
+[interfaces.SVGForeignObjectElement]
+[interfaces.SVGMarkerElement]
+[interfaces.SVGAElement]
+[interfaces.SVGViewElement]
+[interfaces.SVGPathElement]
+[interfaces.SVGRectElement]
+[interfaces.SVGCircleElement]
+[interfaces.SVGEllipseElement]
+[interfaces.SVGLineElement]
+[interfaces.SVGPolylineElement]
+[interfaces.SVGPolygonElement]
+[interfaces.SVGTextContentElement]
+[interfaces.SVGTextPositioningElement]
+[interfaces.SVGTextElement]
+[interfaces.SVGTSpanElement]
+[interfaces.SVGTextPathElement]
+[interfaces.SVGGradientElement]
+[interfaces.SVGLinearGradientElement]
+[interfaces.SVGRadialGradientElement]
+[interfaces.SVGStopElement]
+[interfaces.SVGPatternElement]
+
+[svg_tags]
+a = "SVGAElement"
+circle = "SVGCircleElement"
+defs = "SVGDefsElement"
+desc = "SVGDescElement"
+ellipse = "SVGEllipseElement"
+foreignObject = "SVGForeignObjectElement"
+g = "SVGGElement"
+image = "SVGImageElement"
+line = "SVGLineElement"
+linearGradient = "SVGLinearGradientElement"
+marker = "SVGMarkerElement"
+metadata = "SVGMetadataElement"
+path = "SVGPathElement"
+pattern = "SVGPatternElement"
+polygon = "SVGPolygonElement"
+polyline = "SVGPolylineElement"
+radialGradient = "SVGRadialGradientElement"
+rect = "SVGRectElement"
+script = "SVGScriptElement"
+stop = "SVGStopElement"
+style = "SVGStyleElement"
+svg = "SVGSVGElement"
+switch = "SVGSwitchElement"
+symbol = "SVGSymbolElement"
+text = "SVGTextElement"
+textPath = "SVGTextPathElement"
+title = "SVGTitleElement"
+tspan = "SVGTSpanElement"
+use = "SVGUseElement"
+view = "SVGViewElement"
+
 [tags]
 a = "HTMLAnchorElement"
 body = "HTMLBodyElement"

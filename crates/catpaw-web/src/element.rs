@@ -1557,6 +1557,9 @@ pub fn interface_for_node(dom: &Dom, id: NodeId) -> InterfaceId {
         NodeKind::ProcessingInstruction { .. } => InterfaceId::CharacterData,
         NodeKind::DocumentFragment(_) => InterfaceId::DocumentFragment,
         NodeKind::Element(el) => {
+            if &*el.name.ns == crate::svg::SVG_NS {
+                return InterfaceId::for_svg_tag(&el.name.local).unwrap_or(InterfaceId::SVGElement);
+            }
             if &*el.name.ns != HTML_NS {
                 return InterfaceId::Element;
             }

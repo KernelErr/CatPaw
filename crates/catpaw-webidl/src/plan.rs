@@ -36,6 +36,8 @@ pub struct Manifest {
     pub namespaces: BTreeMap<String, MemberCfg>,
     /// HTML local name → interface name.
     pub tags: BTreeMap<String, String>,
+    /// SVG local name → interface name.
+    pub svg_tags: BTreeMap<String, String>,
 }
 
 impl Manifest {
@@ -247,6 +249,7 @@ pub struct Plan {
     pub enums: Vec<String>,
     pub unions: Vec<UnionDef>,
     pub tags: BTreeMap<String, String>,
+    pub svg_tags: BTreeMap<String, String>,
 }
 
 /// Classification of a named type, for emitters.
@@ -728,6 +731,7 @@ impl<'a> Planner<'a> {
     pub fn plan(mut self) -> Result<Plan> {
         let mut plan = Plan {
             tags: self.manifest.tags.clone(),
+            svg_tags: self.manifest.svg_tags.clone(),
             ..Plan::default()
         };
 
