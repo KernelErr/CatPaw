@@ -239,6 +239,19 @@ impl web::DocumentImpl for Web {
         Ok(created(cx, this, node))
     }
 
+    fn create_attribute(cx: &mut Cx<'_>, this: NodeId, local_name: String) -> Fallible<ObjectId> {
+        crate::attributes::create(cx, this, local_name)
+    }
+
+    fn create_attribute_ns(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        namespace: Option<String>,
+        qualified_name: String,
+    ) -> Fallible<ObjectId> {
+        crate::attributes::create_ns(cx, this, namespace, &qualified_name)
+    }
+
     fn create_event(cx: &mut Cx<'_>, _this: NodeId, interface: String) -> Fallible<ObjectId> {
         let iface = match interface.to_ascii_lowercase().as_str() {
             "event" | "events" | "htmlevents" | "svgevents" => InterfaceId::Event,

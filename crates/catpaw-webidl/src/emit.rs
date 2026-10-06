@@ -1203,6 +1203,13 @@ impl<'a> Emitter<'a> {
                 .get(name)
                 .is_some_and(|i| i.ext.has("CatPawNamedPropertiesAreAttributes"))
         ));
+        fields.push(format!(
+            "unenumerable_names: {}",
+            self.idl
+                .interfaces
+                .get(name)
+                .is_some_and(|i| i.ext.has("LegacyUnenumerableNamedProperties"))
+        ));
         format!("Some(rt::ExoticDef {{ {} }})", fields.join(", "))
     }
 

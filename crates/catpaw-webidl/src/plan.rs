@@ -304,6 +304,18 @@ impl<'a> Planner<'a> {
         }
     }
 
+    /// Whether objects of the interface are arena nodes. `[CatPawObject]`
+    /// marks an interface that inherits from `Node` in IDL but is kept as a
+    /// platform object here.
+    fn is_node_interface(&self, name: &str) -> bool {
+        let kept_as_object = self
+            .idl
+            .interfaces
+            .get(name)
+            .is_some_and(|i| i.ext.has("CatPawObject"));
+        self.idl.inherits(name, "Node") && !kept_as_object
+    }
+
     pub fn classify(&self, name: &str) -> Named {
         if name == "Window" || name == "WindowProxy" {
             return Named::Window;
@@ -315,7 +327,7 @@ impl<'a> Planner<'a> {
             return match i.kind {
                 InterfaceKind::CallbackInterface => Named::CallbackInterface,
                 InterfaceKind::Interface if self.planned.contains(name) => {
-                    if self.idl.inherits(name, "Node") {
+                    if self.is_node_interface(name) {
                         Named::Node
                     } else {
                         Named::Object
@@ -721,7 +733,7 @@ impl<'a> Planner<'a> {
             Handle::Window
         } else if name == "EventTarget" {
             Handle::EventTarget
-        } else if self.idl.inherits(name, "Node") {
+        } else if self.is_node_interface(name) {
             Handle::Node
         } else {
             Handle::Object

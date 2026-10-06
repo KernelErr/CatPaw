@@ -107,6 +107,7 @@ members = [
   "location", "referrer", "cookie", "readyState", "title", "body", "head",
   "getElementsByName", "currentScript", "defaultView", "hasFocus", "hidden",
   "visibilityState", "write", "writeln", "open", "close", "implementation",
+  "createAttribute", "createAttributeNS",
 ]
 
 [interfaces.XMLDocument]
@@ -121,6 +122,20 @@ members = ["parseFromString"]
 [interfaces.DocumentType]
 members = ["name", "publicId", "systemId"]
 
+[interfaces.NamedNodeMap]
+exotic = true
+members = [
+  "length", "item", "getNamedItem", "getNamedItemNS", "setNamedItem", "setNamedItemNS",
+  "removeNamedItem", "removeNamedItemNS",
+]
+
+[interfaces.Attr]
+members = [
+  "namespaceURI", "prefix", "localName", "name", "value", "ownerElement", "specified",
+  "nodeType", "nodeName", "nodeValue", "textContent", "ownerDocument", "parentNode",
+  "parentElement",
+]
+
 [interfaces.DocumentFragment]
 constructor = true
 
@@ -133,7 +148,9 @@ members = [
   "getElementsByTagName", "getElementsByClassName", "insertAdjacentElement",
   "insertAdjacentText", "innerHTML", "outerHTML", "insertAdjacentHTML",
   "getBoundingClientRect", "scrollIntoView", "scrollTop", "scrollLeft", "scrollWidth",
-  "scrollHeight", "clientTop", "clientLeft", "clientWidth", "clientHeight",
+  "scrollHeight", "clientTop", "clientLeft", "clientWidth", "clientHeight", "attributes",
+  "getAttributeNode", "getAttributeNodeNS", "setAttributeNode", "setAttributeNodeNS",
+  "removeAttributeNode",
 ]
 
 [interfaces.CharacterData]

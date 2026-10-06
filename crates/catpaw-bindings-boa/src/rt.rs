@@ -81,6 +81,9 @@ pub struct ExoticDef {
     /// otherwise define one by one: members on the prototype chain take
     /// precedence when setting, too.
     pub attribute_like: bool,
+    /// `[LegacyUnenumerableNamedProperties]`: named properties do not show
+    /// up when the object is enumerated.
+    pub unenumerable_names: bool,
 }
 
 pub enum Iterable {
@@ -1495,11 +1498,16 @@ fn trap_own_keys(_this: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResu
     Ok(JsArray::from_iter(keys, ctx).into())
 }
 
-fn data_descriptor(value: JsValue, writable: bool, ctx: &mut Context) -> JsResult<JsValue> {
+fn data_descriptor(
+    value: JsValue,
+    writable: bool,
+    enumerable: bool,
+    ctx: &mut Context,
+) -> JsResult<JsValue> {
     let descriptor = new_plain_object(ctx);
     descriptor.create_data_property_or_throw(js_string!("value"), value, ctx)?;
     descriptor.create_data_property_or_throw(js_string!("writable"), writable, ctx)?;
-    descriptor.create_data_property_or_throw(js_string!("enumerable"), true, ctx)?;
+    descriptor.create_data_property_or_throw(js_string!("enumerable"), enumerable, ctx)?;
     descriptor.create_data_property_or_throw(js_string!("configurable"), true, ctx)?;
     Ok(descriptor.into())
 }
@@ -1540,12 +1548,13 @@ fn trap_get_own_property_descriptor(
             && let Some(indexed_get) = t.def.indexed_get
         {
             return match indexed_get(t.handle, index, ctx)? {
-                Some(value) => data_descriptor(value, false, ctx),
+                Some(value) => data_descriptor(value, false, true, ctx),
                 None => Ok(JsValue::undefined()),
             };
         }
         if let Some(value) = named_visible(&t, &name, key, ctx)? {
-            return data_descriptor(value, t.def.named_set.is_some(), ctx);
+            let enumerable = !t.def.unenumerable_names;
+            return data_descriptor(value, t.def.named_set.is_some(), enumerable, ctx);
         }
     }
     let key = property_key(key, ctx)?;

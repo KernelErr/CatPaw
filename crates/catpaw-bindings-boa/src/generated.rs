@@ -1779,6 +1779,7 @@ pub mod css_style_declaration {
             named_delete: None,
             override_builtins: false,
             attribute_like: false,
+            unenumerable_names: false,
         }),
     };
 }
@@ -1880,6 +1881,7 @@ pub mod css_style_properties {
             named_delete: None,
             override_builtins: false,
             attribute_like: true,
+            unenumerable_names: false,
         }),
     };
 }
@@ -2234,6 +2236,7 @@ pub mod dom_string_map {
             named_delete: Some(exotic_named_delete),
             override_builtins: true,
             attribute_like: false,
+            unenumerable_names: false,
         }),
     };
 }
@@ -2440,6 +2443,7 @@ pub mod dom_token_list {
             named_delete: None,
             override_builtins: false,
             attribute_like: false,
+            unenumerable_names: false,
         }),
     };
 }
@@ -3006,6 +3010,7 @@ pub mod html_collection {
             named_delete: None,
             override_builtins: false,
             attribute_like: false,
+            unenumerable_names: true,
         }),
     };
 }
@@ -4291,6 +4296,225 @@ pub mod mutation_record {
     };
 }
 
+pub mod named_node_map {
+    use super::*;
+
+    fn get_length(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::NamedNodeMap, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::NamedNodeMapImpl>::length(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_item(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::NamedNodeMap, ctx)?;
+        rt::require_args(args, 1, "NamedNodeMap.item")?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::NamedNodeMapImpl>::item(cx, this, a0));
+        rt::ret(r, ctx)
+    }
+
+    fn op_get_named_item(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::NamedNodeMap, ctx)?;
+        rt::require_args(args, 1, "NamedNodeMap.getNamedItem")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NamedNodeMapImpl>::get_named_item(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_get_named_item_ns(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::NamedNodeMap, ctx)?;
+        rt::require_args(args, 2, "NamedNodeMap.getNamedItemNS")?;
+        let a0 = if rt::arg(args, 0).is_null_or_undefined() {
+            None
+        } else {
+            Some(rt::string_from_js(rt::arg(args, 0), ctx)?)
+        };
+        let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NamedNodeMapImpl>::get_named_item_ns(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_set_named_item(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::NamedNodeMap, ctx)?;
+        rt::require_args(args, 1, "NamedNodeMap.setNamedItem")?;
+        let a0 = rt::object_from_js(rt::arg(args, 0), I::Attr, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NamedNodeMapImpl>::set_named_item(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_set_named_item_ns(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::NamedNodeMap, ctx)?;
+        rt::require_args(args, 1, "NamedNodeMap.setNamedItemNS")?;
+        let a0 = rt::object_from_js(rt::arg(args, 0), I::Attr, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NamedNodeMapImpl>::set_named_item_ns(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_remove_named_item(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::NamedNodeMap, ctx)?;
+        rt::require_args(args, 1, "NamedNodeMap.removeNamedItem")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NamedNodeMapImpl>::remove_named_item(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_remove_named_item_ns(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::NamedNodeMap, ctx)?;
+        rt::require_args(args, 2, "NamedNodeMap.removeNamedItemNS")?;
+        let a0 = if rt::arg(args, 0).is_null_or_undefined() {
+            None
+        } else {
+            Some(rt::string_from_js(rt::arg(args, 0), ctx)?)
+        };
+        let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NamedNodeMapImpl>::remove_named_item_ns(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn exotic_length(h: rt::Handle, ctx: &mut Context) -> JsResult<u32> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| <Web as web::NamedNodeMapImpl>::length(cx, this));
+        r.map_err(|e| rt::exception_to_js(e, ctx))
+    }
+
+    fn exotic_indexed_get(
+        h: rt::Handle,
+        index: u32,
+        ctx: &mut Context,
+    ) -> JsResult<Option<JsValue>> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NamedNodeMapImpl>::indexed_get(cx, this, index)
+        });
+        rt::ret_opt(r, ctx)
+    }
+
+    fn exotic_named_get(h: rt::Handle, name: &str, ctx: &mut Context) -> JsResult<Option<JsValue>> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NamedNodeMapImpl>::named_get(cx, this, name)
+        });
+        rt::ret_opt(r, ctx)
+    }
+
+    fn exotic_named_properties(h: rt::Handle, ctx: &mut Context) -> JsResult<Vec<String>> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NamedNodeMapImpl>::named_properties(cx, this)
+        });
+        r.map_err(|e| rt::exception_to_js(e, ctx))
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::NamedNodeMap,
+        name: "NamedNodeMap",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "length",
+            getter: get_length,
+            setter: None,
+        }],
+        ops: &[
+            rt::OpDef {
+                name: "item",
+                func: op_item,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "getNamedItem",
+                func: op_get_named_item,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "getNamedItemNS",
+                func: op_get_named_item_ns,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "setNamedItem",
+                func: op_set_named_item,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "setNamedItemNS",
+                func: op_set_named_item_ns,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "removeNamedItem",
+                func: op_remove_named_item,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "removeNamedItemNS",
+                func: op_remove_named_item_ns,
+                length: 2,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: Some(rt::ExoticDef {
+            length: Some(exotic_length),
+            indexed_get: Some(exotic_indexed_get),
+            named_get: Some(exotic_named_get),
+            named_properties: Some(exotic_named_properties),
+            named_set: None,
+            named_delete: None,
+            override_builtins: false,
+            attribute_like: false,
+            unenumerable_names: true,
+        }),
+    };
+}
+
 pub mod navigator {
     use super::*;
 
@@ -5099,6 +5323,7 @@ pub mod node_list {
             named_delete: None,
             override_builtins: false,
             attribute_like: false,
+            unenumerable_names: false,
         }),
     };
 }
@@ -6260,6 +6485,7 @@ pub mod storage {
             named_delete: Some(exotic_named_delete),
             override_builtins: false,
             attribute_like: false,
+            unenumerable_names: false,
         }),
     };
 }
@@ -10853,6 +11079,253 @@ pub mod abort_signal {
     };
 }
 
+pub mod attr {
+    use super::*;
+
+    fn get_namespace_uri(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Attr, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::AttrImpl>::namespace_uri(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_prefix(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Attr, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::AttrImpl>::prefix(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_local_name(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Attr, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::AttrImpl>::local_name(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_name(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Attr, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::AttrImpl>::name(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_value(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Attr, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::AttrImpl>::value(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn set_value(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Attr, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::AttrImpl>::set_value(cx, this, a0));
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_owner_element(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Attr, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::AttrImpl>::owner_element(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_specified(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Attr, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::AttrImpl>::specified(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_node_type(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Attr, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::AttrImpl>::node_type(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_node_name(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Attr, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::AttrImpl>::node_name(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_node_value(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Attr, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::AttrImpl>::node_value(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn set_node_value(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Attr, ctx)?;
+        let a0 = if rt::arg(args, 0).is_null_or_undefined() {
+            None
+        } else {
+            Some(rt::string_from_js(rt::arg(args, 0), ctx)?)
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::AttrImpl>::set_node_value(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_text_content(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Attr, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::AttrImpl>::text_content(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn set_text_content(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Attr, ctx)?;
+        let a0 = if rt::arg(args, 0).is_null_or_undefined() {
+            None
+        } else {
+            Some(rt::string_from_js(rt::arg(args, 0), ctx)?)
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::AttrImpl>::set_text_content(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_owner_document(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Attr, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::AttrImpl>::owner_document(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_parent_node(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Attr, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::AttrImpl>::parent_node(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_parent_element(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Attr, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::AttrImpl>::parent_element(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::Attr,
+        name: "Attr",
+        parent: Some(I::Node),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "namespaceURI",
+                getter: get_namespace_uri,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "prefix",
+                getter: get_prefix,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "localName",
+                getter: get_local_name,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "name",
+                getter: get_name,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "value",
+                getter: get_value,
+                setter: Some(set_value),
+            },
+            rt::AttrDef {
+                name: "ownerElement",
+                getter: get_owner_element,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "specified",
+                getter: get_specified,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "nodeType",
+                getter: get_node_type,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "nodeName",
+                getter: get_node_name,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "nodeValue",
+                getter: get_node_value,
+                setter: Some(set_node_value),
+            },
+            rt::AttrDef {
+                name: "textContent",
+                getter: get_text_content,
+                setter: Some(set_text_content),
+            },
+            rt::AttrDef {
+                name: "ownerDocument",
+                getter: get_owner_document,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "parentNode",
+                getter: get_parent_node,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "parentElement",
+                getter: get_parent_element,
+                setter: None,
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod character_data {
     use super::*;
 
@@ -13535,6 +14008,41 @@ pub mod document {
         rt::ret(r, ctx)
     }
 
+    fn op_create_attribute(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        rt::require_args(args, 1, "Document.createAttribute")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DocumentImpl>::create_attribute(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_create_attribute_ns(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        rt::require_args(args, 2, "Document.createAttributeNS")?;
+        let a0 = if rt::arg(args, 0).is_null_or_undefined() {
+            None
+        } else {
+            Some(rt::string_from_js(rt::arg(args, 0), ctx)?)
+        };
+        let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DocumentImpl>::create_attribute_ns(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn op_create_event(
         this_js: &JsValue,
         args: &[JsValue],
@@ -14300,6 +14808,16 @@ pub mod document {
                 length: 1,
             },
             rt::OpDef {
+                name: "createAttribute",
+                func: op_create_attribute,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "createAttributeNS",
+                func: op_create_attribute_ns,
+                length: 2,
+            },
+            rt::OpDef {
                 name: "createEvent",
                 func: op_create_event,
                 length: 1,
@@ -14925,6 +15443,21 @@ pub mod element {
         Ok(JsValue::undefined())
     }
 
+    fn get_attributes(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "attributes", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::Element, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ElementImpl>::attributes(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "attributes", &v, ctx);
+        Ok(v)
+    }
+
     fn get_inner_html(
         this_js: &JsValue,
         _args: &[JsValue],
@@ -15257,6 +15790,86 @@ pub mod element {
         rt::ret(r, ctx)
     }
 
+    fn op_get_attribute_node(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Element, ctx)?;
+        rt::require_args(args, 1, "Element.getAttributeNode")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ElementImpl>::get_attribute_node(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_get_attribute_node_ns(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Element, ctx)?;
+        rt::require_args(args, 2, "Element.getAttributeNodeNS")?;
+        let a0 = if rt::arg(args, 0).is_null_or_undefined() {
+            None
+        } else {
+            Some(rt::string_from_js(rt::arg(args, 0), ctx)?)
+        };
+        let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ElementImpl>::get_attribute_node_ns(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_set_attribute_node(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Element, ctx)?;
+        rt::require_args(args, 1, "Element.setAttributeNode")?;
+        let a0 = rt::object_from_js(rt::arg(args, 0), I::Attr, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ElementImpl>::set_attribute_node(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_set_attribute_node_ns(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Element, ctx)?;
+        rt::require_args(args, 1, "Element.setAttributeNodeNS")?;
+        let a0 = rt::object_from_js(rt::arg(args, 0), I::Attr, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ElementImpl>::set_attribute_node_ns(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_remove_attribute_node(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Element, ctx)?;
+        rt::require_args(args, 1, "Element.removeAttributeNode")?;
+        let a0 = rt::object_from_js(rt::arg(args, 0), I::Attr, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ElementImpl>::remove_attribute_node(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn op_closest(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_node(this_js, I::Element, ctx)?;
@@ -15580,6 +16193,11 @@ pub mod element {
                 setter: Some(set_slot),
             },
             rt::AttrDef {
+                name: "attributes",
+                getter: get_attributes,
+                setter: None,
+            },
+            rt::AttrDef {
                 name: "innerHTML",
                 getter: get_inner_html,
                 setter: Some(set_inner_html),
@@ -15685,6 +16303,31 @@ pub mod element {
                 name: "hasAttributeNS",
                 func: op_has_attribute_ns,
                 length: 2,
+            },
+            rt::OpDef {
+                name: "getAttributeNode",
+                func: op_get_attribute_node,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "getAttributeNodeNS",
+                func: op_get_attribute_node_ns,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "setAttributeNode",
+                func: op_set_attribute_node,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "setAttributeNodeNS",
+                func: op_set_attribute_node_ns,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "removeAttributeNode",
+                func: op_remove_attribute_node,
+                length: 1,
             },
             rt::OpDef {
                 name: "closest",
@@ -29247,6 +29890,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &media_query_list::DEF,
     &mutation_observer::DEF,
     &mutation_record::DEF,
+    &named_node_map::DEF,
     &navigator::DEF,
     &node::DEF,
     &node_list::DEF,
@@ -29268,6 +29912,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &xml_http_request_event_target::DEF,
     &xml_http_request_upload::DEF,
     &abort_signal::DEF,
+    &attr::DEF,
     &character_data::DEF,
     &comment::DEF,
     &custom_event::DEF,

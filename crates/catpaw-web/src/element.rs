@@ -12,7 +12,7 @@ use crate::collections::{self, ListSource};
 use crate::generated::{self as web, BooleanOrDoubleOrString, InterfaceId};
 use crate::node::{self, qualified_name};
 use crate::page::Cx;
-use crate::{Web, events, platform_object};
+use crate::{Web, attributes, events, platform_object};
 
 const XML_NS: &str = "http://www.w3.org/XML/1998/namespace";
 const XMLNS_NS: &str = "http://www.w3.org/2000/xmlns/";
@@ -26,7 +26,7 @@ fn with_element<R>(cx: &Cx<'_>, id: NodeId, f: impl FnOnce(&ElementData) -> R) -
     cx.dom().element(id).map(f).ok_or_else(stale)
 }
 
-fn attr_qualified_name(attr: &Attr) -> String {
+pub(crate) fn attr_qualified_name(attr: &Attr) -> String {
     match &attr.name.prefix {
         Some(prefix) => format!("{}:{}", prefix, attr.name.local),
         None => attr.name.local.to_string(),
@@ -93,7 +93,7 @@ pub(crate) fn remove_attr(cx: &mut Cx<'_>, el: NodeId, local: &str) {
 }
 
 /// <https://dom.spec.whatwg.org/#valid-attribute-local-name>
-fn is_valid_attribute_name(name: &str) -> bool {
+pub(crate) fn is_valid_attribute_name(name: &str) -> bool {
     !name.is_empty()
         && !name.chars().any(|c| {
             matches!(
@@ -704,6 +704,55 @@ impl web::ElementImpl for Web {
         with_element(cx, this, |el| {
             find_attr_ns(el, &namespace, &local_name).map(|a| a.value.clone())
         })
+    }
+
+    fn attributes(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId> {
+        Ok(attributes::map(cx, this))
+    }
+
+    fn get_attribute_node(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        qualified_name: String,
+    ) -> Fallible<Option<ObjectId>> {
+        node::check(cx, this)?;
+        Ok(attributes::get(cx, this, &qualified_name))
+    }
+
+    fn get_attribute_node_ns(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        namespace: Option<String>,
+        local_name: String,
+    ) -> Fallible<Option<ObjectId>> {
+        node::check(cx, this)?;
+        let namespace = namespace.filter(|ns| !ns.is_empty());
+        Ok(attributes::get_ns(
+            cx,
+            this,
+            namespace.as_deref(),
+            &local_name,
+        ))
+    }
+
+    fn set_attribute_node(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        attr: ObjectId,
+    ) -> Fallible<Option<ObjectId>> {
+        attributes::set(cx, this, attr)
+    }
+
+    fn set_attribute_node_ns(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        attr: ObjectId,
+    ) -> Fallible<Option<ObjectId>> {
+        attributes::set(cx, this, attr)
+    }
+
+    fn remove_attribute_node(cx: &mut Cx<'_>, this: NodeId, attr: ObjectId) -> Fallible<ObjectId> {
+        attributes::remove(cx, this, attr)
     }
 
     fn set_attribute(

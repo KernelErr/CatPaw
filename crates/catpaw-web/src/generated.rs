@@ -42,6 +42,7 @@ pub enum InterfaceId {
     MediaQueryList,
     MutationObserver,
     MutationRecord,
+    NamedNodeMap,
     Navigator,
     Node,
     NodeList,
@@ -63,6 +64,7 @@ pub enum InterfaceId {
     XMLHttpRequestEventTarget,
     XMLHttpRequestUpload,
     AbortSignal,
+    Attr,
     CharacterData,
     Comment,
     CustomEvent,
@@ -149,8 +151,8 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 124;
-    pub const ALL: [InterfaceId; 124] = [
+    pub const COUNT: usize = 126;
+    pub const ALL: [InterfaceId; 126] = [
         InterfaceId::AbortController,
         InterfaceId::CSSStyleDeclaration,
         InterfaceId::CSSStyleProperties,
@@ -171,6 +173,7 @@ impl InterfaceId {
         InterfaceId::MediaQueryList,
         InterfaceId::MutationObserver,
         InterfaceId::MutationRecord,
+        InterfaceId::NamedNodeMap,
         InterfaceId::Navigator,
         InterfaceId::Node,
         InterfaceId::NodeList,
@@ -192,6 +195,7 @@ impl InterfaceId {
         InterfaceId::XMLHttpRequestEventTarget,
         InterfaceId::XMLHttpRequestUpload,
         InterfaceId::AbortSignal,
+        InterfaceId::Attr,
         InterfaceId::CharacterData,
         InterfaceId::Comment,
         InterfaceId::CustomEvent,
@@ -299,6 +303,7 @@ impl InterfaceId {
             InterfaceId::MediaQueryList => "MediaQueryList",
             InterfaceId::MutationObserver => "MutationObserver",
             InterfaceId::MutationRecord => "MutationRecord",
+            InterfaceId::NamedNodeMap => "NamedNodeMap",
             InterfaceId::Navigator => "Navigator",
             InterfaceId::Node => "Node",
             InterfaceId::NodeList => "NodeList",
@@ -320,6 +325,7 @@ impl InterfaceId {
             InterfaceId::XMLHttpRequestEventTarget => "XMLHttpRequestEventTarget",
             InterfaceId::XMLHttpRequestUpload => "XMLHttpRequestUpload",
             InterfaceId::AbortSignal => "AbortSignal",
+            InterfaceId::Attr => "Attr",
             InterfaceId::CharacterData => "CharacterData",
             InterfaceId::Comment => "Comment",
             InterfaceId::CustomEvent => "CustomEvent",
@@ -428,6 +434,7 @@ impl InterfaceId {
             "MediaQueryList" => InterfaceId::MediaQueryList,
             "MutationObserver" => InterfaceId::MutationObserver,
             "MutationRecord" => InterfaceId::MutationRecord,
+            "NamedNodeMap" => InterfaceId::NamedNodeMap,
             "Navigator" => InterfaceId::Navigator,
             "Node" => InterfaceId::Node,
             "NodeList" => InterfaceId::NodeList,
@@ -449,6 +456,7 @@ impl InterfaceId {
             "XMLHttpRequestEventTarget" => InterfaceId::XMLHttpRequestEventTarget,
             "XMLHttpRequestUpload" => InterfaceId::XMLHttpRequestUpload,
             "AbortSignal" => InterfaceId::AbortSignal,
+            "Attr" => InterfaceId::Attr,
             "CharacterData" => InterfaceId::CharacterData,
             "Comment" => InterfaceId::Comment,
             "CustomEvent" => InterfaceId::CustomEvent,
@@ -558,6 +566,7 @@ impl InterfaceId {
             InterfaceId::MediaQueryList => Some(InterfaceId::EventTarget),
             InterfaceId::MutationObserver => None,
             InterfaceId::MutationRecord => None,
+            InterfaceId::NamedNodeMap => None,
             InterfaceId::Navigator => None,
             InterfaceId::Node => Some(InterfaceId::EventTarget),
             InterfaceId::NodeList => None,
@@ -579,6 +588,7 @@ impl InterfaceId {
             InterfaceId::XMLHttpRequestEventTarget => Some(InterfaceId::EventTarget),
             InterfaceId::XMLHttpRequestUpload => Some(InterfaceId::XMLHttpRequestEventTarget),
             InterfaceId::AbortSignal => Some(InterfaceId::EventTarget),
+            InterfaceId::Attr => Some(InterfaceId::Node),
             InterfaceId::CharacterData => Some(InterfaceId::Node),
             InterfaceId::Comment => Some(InterfaceId::CharacterData),
             InterfaceId::CustomEvent => Some(InterfaceId::Event),
@@ -2051,6 +2061,46 @@ pub trait MutationRecordImpl {
     fn old_value(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<String>>;
 }
 
+pub trait NamedNodeMapImpl {
+    fn length(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn item(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<ObjectId>>;
+    fn get_named_item(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        qualified_name: String,
+    ) -> Fallible<Option<ObjectId>>;
+    fn get_named_item_ns(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        namespace: Option<String>,
+        local_name: String,
+    ) -> Fallible<Option<ObjectId>>;
+    fn set_named_item(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        attr: ObjectId,
+    ) -> Fallible<Option<ObjectId>>;
+    fn set_named_item_ns(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        attr: ObjectId,
+    ) -> Fallible<Option<ObjectId>>;
+    fn remove_named_item(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        qualified_name: String,
+    ) -> Fallible<ObjectId>;
+    fn remove_named_item_ns(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        namespace: Option<String>,
+        local_name: String,
+    ) -> Fallible<ObjectId>;
+    fn indexed_get(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<ObjectId>>;
+    fn named_get(cx: &mut Cx<'_>, this: ObjectId, name: &str) -> Fallible<Option<ObjectId>>;
+    fn named_properties(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<String>>;
+}
+
 pub trait NodeImpl {
     fn node_type(cx: &mut Cx<'_>, this: NodeId) -> Fallible<u16>;
     fn node_name(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
@@ -2340,6 +2390,26 @@ pub trait AbortSignalImpl {
     fn throw_if_aborted(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
 }
 
+pub trait AttrImpl {
+    fn namespace_uri(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<String>>;
+    fn prefix(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<String>>;
+    fn local_name(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn name(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn value(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_value(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+    fn owner_element(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
+    fn specified(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn node_type(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u16>;
+    fn node_name(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn node_value(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<String>>;
+    fn set_node_value(cx: &mut Cx<'_>, this: ObjectId, value: Option<String>) -> Fallible<()>;
+    fn text_content(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<String>>;
+    fn set_text_content(cx: &mut Cx<'_>, this: ObjectId, value: Option<String>) -> Fallible<()>;
+    fn owner_document(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
+    fn parent_node(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
+    fn parent_element(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
+}
+
 pub trait CharacterDataImpl {
     fn data(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
     fn set_data(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
@@ -2434,6 +2504,13 @@ pub trait DocumentImpl {
         options: BooleanOrImportNodeOptions,
     ) -> Fallible<NodeId>;
     fn adopt_node(cx: &mut Cx<'_>, this: NodeId, node: NodeId) -> Fallible<NodeId>;
+    fn create_attribute(cx: &mut Cx<'_>, this: NodeId, local_name: String) -> Fallible<ObjectId>;
+    fn create_attribute_ns(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        namespace: Option<String>,
+        qualified_name: String,
+    ) -> Fallible<ObjectId>;
     fn create_event(cx: &mut Cx<'_>, this: NodeId, interface: String) -> Fallible<ObjectId>;
     fn location(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<ObjectId>>;
     fn referrer(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
@@ -2512,6 +2589,7 @@ pub trait ElementImpl {
     fn slot(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
     fn set_slot(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
     fn has_attributes(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool>;
+    fn attributes(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
     fn get_attribute_names(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Vec<String>>;
     fn get_attribute(
         cx: &mut Cx<'_>,
@@ -2557,6 +2635,28 @@ pub trait ElementImpl {
         namespace: Option<String>,
         local_name: String,
     ) -> Fallible<bool>;
+    fn get_attribute_node(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        qualified_name: String,
+    ) -> Fallible<Option<ObjectId>>;
+    fn get_attribute_node_ns(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        namespace: Option<String>,
+        local_name: String,
+    ) -> Fallible<Option<ObjectId>>;
+    fn set_attribute_node(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        attr: ObjectId,
+    ) -> Fallible<Option<ObjectId>>;
+    fn set_attribute_node_ns(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        attr: ObjectId,
+    ) -> Fallible<Option<ObjectId>>;
+    fn remove_attribute_node(cx: &mut Cx<'_>, this: NodeId, attr: ObjectId) -> Fallible<ObjectId>;
     fn closest(cx: &mut Cx<'_>, this: NodeId, selectors: String) -> Fallible<Option<NodeId>>;
     fn matches(cx: &mut Cx<'_>, this: NodeId, selectors: String) -> Fallible<bool>;
     fn webkit_matches_selector(cx: &mut Cx<'_>, this: NodeId, selectors: String) -> Fallible<bool>;

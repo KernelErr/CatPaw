@@ -20,3 +20,18 @@ partial interface CSSStyleProperties {
   getter CSSOMString (CSSOMString property);
   setter undefined (CSSOMString property, [LegacyNullToEmptyString] CSSOMString value);
 };
+
+// Attributes are not nodes of the tree, and are not kept as nodes here:
+// an `Attr` is a view of one attribute of an element. The members script
+// asks of an attribute as a node are declared on `Attr` itself; the other
+// members of `Node` do not apply to it.
+[CatPawObject]
+partial interface Attr {
+  readonly attribute unsigned short nodeType;
+  readonly attribute DOMString nodeName;
+  attribute DOMString? nodeValue;
+  attribute DOMString? textContent;
+  readonly attribute Document? ownerDocument;
+  readonly attribute Node? parentNode;
+  readonly attribute Element? parentElement;
+};

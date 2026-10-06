@@ -247,6 +247,7 @@ pub struct PageState {
     pub(crate) mutation: crate::mutation_observer::Observers,
     pub(crate) intersection: crate::intersection_observer::Observers,
     pub(crate) styles: crate::stylesheets::Styles,
+    pub(crate) attrs: crate::attributes::AttrObjects,
     microtask_queue: RefCell<Option<MicrotaskQueue>>,
     /// An uncaught exception is being reported (reports do not nest).
     pub(crate) reporting_error: Cell<bool>,
@@ -306,6 +307,7 @@ impl PageState {
             mutation: Default::default(),
             intersection: Default::default(),
             styles: Default::default(),
+            attrs: Default::default(),
             microtask_queue: RefCell::new(None),
             reporting_error: Cell::new(false),
             errors: RefCell::new(Vec::new()),

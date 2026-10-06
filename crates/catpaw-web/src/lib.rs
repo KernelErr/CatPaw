@@ -13,6 +13,7 @@
 
 mod abort;
 pub mod activation;
+mod attributes;
 pub mod clock;
 mod collections;
 mod console;
