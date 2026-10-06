@@ -4,6 +4,11 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories = ["command-line-utilities", "web-programming"]
+readme = "../../README.md"
 description = "CatPaw: a headless-first browser for AI agents"
 
 [[bin]]
@@ -11,12 +16,12 @@ name = "catpaw"
 path = "src/main.rs"
 
 [dependencies]
-catpaw-net = { path = "../catpaw-net" }
-catpaw-fetch = { path = "../catpaw-fetch" }
-catpaw-dom = { path = "../catpaw-dom" }
-catpaw-agent = { path = "../catpaw-agent" }
+catpaw-net = { path = "../catpaw-net", version = "0.0.1" }
+catpaw-fetch = { path = "../catpaw-fetch", version = "0.0.1" }
+catpaw-dom = { path = "../catpaw-dom", version = "0.0.1" }
+catpaw-agent = { path = "../catpaw-agent", version = "0.0.1" }
 clap.workspace = true
 tokio.workspace = true
 anyhow.workspace = true
 url.workspace = true
-catpaw-style = { path = "../catpaw-style" }
+catpaw-style = { path = "../catpaw-style", version = "0.0.1" }

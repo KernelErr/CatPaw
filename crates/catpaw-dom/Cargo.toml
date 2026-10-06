@@ -4,7 +4,12 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = "CatPaw browser engine: dom"
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories = ["parsing", "web-programming"]
+readme = "../../README.md"
+description = "Arena DOM and html5ever integration for the CatPaw browser"
 
 [dependencies]
 html5ever.workspace = true

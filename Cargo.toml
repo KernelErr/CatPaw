@@ -8,6 +8,9 @@ edition = "2024"
 rust-version = "1.88"
 license = "Apache-2.0 OR MIT"
 authors = ["The CatPaw Contributors"]
+repository = "https://github.com/KernelErr/CatPaw"
+homepage = "https://github.com/KernelErr/CatPaw"
+keywords = ["browser", "headless", "agent", "html", "llm"]
 
 [workspace.dependencies]
 # --- engine-side ---

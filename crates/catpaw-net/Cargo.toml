@@ -4,7 +4,12 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = "CatPaw browser engine: net"
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories = ["web-programming::http-client"]
+readme = "../../README.md"
+description = "HTTP client for the CatPaw browser: hyper + rustls, cookies, redirects, content decoding, Web Bot Auth (RFC 9421) request signing"
 
 [dependencies]
 hyper.workspace = true

@@ -4,8 +4,13 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = "CatPaw browser engine: agent"
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories = ["web-programming"]
+readme = "../../README.md"
+description = "Agent-facing page views for the CatPaw browser: accessibility snapshots with stable refs, markdown, links and forms"
 
 [dependencies]
-catpaw-dom = { path = "../catpaw-dom" }
+catpaw-dom = { path = "../catpaw-dom", version = "0.0.1" }
 url.workspace = true

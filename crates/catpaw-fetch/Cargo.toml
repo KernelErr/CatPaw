@@ -4,9 +4,14 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = "CatPaw browser engine: fetch"
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories = ["web-programming::http-client"]
+readme = "../../README.md"
+description = "Document fetching and HTML encoding sniffing for the CatPaw browser"
 
 [dependencies]
-catpaw-net = { path = "../catpaw-net" }
+catpaw-net = { path = "../catpaw-net", version = "0.0.1" }
 encoding_rs.workspace = true
 url.workspace = true
