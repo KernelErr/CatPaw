@@ -500,9 +500,12 @@ members = ["observe", "disconnect", "takeRecords", "supportedEntryTypes"]
 members = ["getEntries", "getEntriesByType", "getEntriesByName"]
 
 # `getRandomValues` is written by hand in the bindings: it fills the array it
-# is given. `subtle` is absent until SubtleCrypto is there.
+# is given. SubtleCrypto offers digest() alone.
 [interfaces.Crypto]
-members = ["randomUUID"]
+members = ["randomUUID", "subtle"]
+
+[interfaces.SubtleCrypto]
+members = ["digest"]
 
 # ------------------------------------------------------------------- CSSOM
 # Sheets as lists of top-level rules (`catpaw_style::cssom`); edits reach the

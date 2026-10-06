@@ -1,15 +1,16 @@
 //! One page: fetch the document, parse it while running its scripts, and
 //! drive the event loop until the page settles.
 
-use std::cell::Ref;
+use std::cell::{Ref, RefCell};
 use std::rc::Rc;
 
 use catpaw_bindings_boa::BoaPage;
 use catpaw_dom::Dom;
 use catpaw_fetch::{FetchedDocument, fetch_document};
+use catpaw_js::Value;
 use catpaw_net::{NetConfig, NetError};
 use catpaw_web::event_loop::{self, LoopLimits, LoopReport, StopReason};
-use catpaw_web::{PageConfig, PageState, scripting};
+use catpaw_web::{PageConfig, PageState, promises, scripting};
 use url::Url;
 
 use crate::net::EngineNet;
@@ -232,6 +233,30 @@ impl Page {
     /// way a console would. `Err` describes an uncaught exception.
     pub fn eval(&mut self, source: &str) -> Result<String, String> {
         self.boa.eval_to_string(source)
+    }
+
+    /// Evaluates a script and, when its value is a promise, runs the event
+    /// loop (within `limits`) until the promise settles, then renders the
+    /// outcome: what `await` would give. `Err` describes an exception or
+    /// a rejection, or says that the promise never settled.
+    pub fn eval_awaited(&mut self, source: &str, limits: &LoopLimits) -> Result<String, String> {
+        let value = self.boa.eval(source)?;
+        let outcome: Rc<RefCell<Option<Result<Value, Value>>>> = Rc::default();
+        let slot = outcome.clone();
+        self.boa.with_cx(|cx| {
+            promises::when_settled(cx, value, move |_, result| {
+                *slot.borrow_mut() = Some(result);
+            });
+        });
+        self.report = self.boa.with_cx(|cx| event_loop::run(cx, limits));
+        let settled = outcome.borrow_mut().take();
+        match settled {
+            Some(Ok(value)) => Ok(self.boa.with_cx(|cx| cx.script.display(&[value]))),
+            Some(Err(reason)) => Err(self.boa.with_cx(|cx| {
+                format!("the promise was rejected: {}", cx.script.display(&[reason]))
+            })),
+            None => Err("the promise did not settle".to_string()),
+        }
     }
 
     /// Runs the event loop again (after `eval` queued more work, say).

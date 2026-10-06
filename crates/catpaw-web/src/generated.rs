@@ -78,6 +78,7 @@ pub enum InterfaceId {
     Storage,
     StyleSheet,
     StyleSheetList,
+    SubtleCrypto,
     TextDecoder,
     TextEncoder,
     TransformStream,
@@ -223,8 +224,8 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 198;
-    pub const ALL: [InterfaceId; 198] = [
+    pub const COUNT: usize = 199;
+    pub const ALL: [InterfaceId; 199] = [
         InterfaceId::AbortController,
         InterfaceId::CSSRule,
         InterfaceId::CSSRuleList,
@@ -281,6 +282,7 @@ impl InterfaceId {
         InterfaceId::Storage,
         InterfaceId::StyleSheet,
         InterfaceId::StyleSheetList,
+        InterfaceId::SubtleCrypto,
         InterfaceId::TextDecoder,
         InterfaceId::TextEncoder,
         InterfaceId::TransformStream,
@@ -483,6 +485,7 @@ impl InterfaceId {
             InterfaceId::Storage => "Storage",
             InterfaceId::StyleSheet => "StyleSheet",
             InterfaceId::StyleSheetList => "StyleSheetList",
+            InterfaceId::SubtleCrypto => "SubtleCrypto",
             InterfaceId::TextDecoder => "TextDecoder",
             InterfaceId::TextEncoder => "TextEncoder",
             InterfaceId::TransformStream => "TransformStream",
@@ -686,6 +689,7 @@ impl InterfaceId {
             "Storage" => InterfaceId::Storage,
             "StyleSheet" => InterfaceId::StyleSheet,
             "StyleSheetList" => InterfaceId::StyleSheetList,
+            "SubtleCrypto" => InterfaceId::SubtleCrypto,
             "TextDecoder" => InterfaceId::TextDecoder,
             "TextEncoder" => InterfaceId::TextEncoder,
             "TransformStream" => InterfaceId::TransformStream,
@@ -890,6 +894,7 @@ impl InterfaceId {
             InterfaceId::Storage => None,
             InterfaceId::StyleSheet => None,
             InterfaceId::StyleSheetList => None,
+            InterfaceId::SubtleCrypto => None,
             InterfaceId::TextDecoder => None,
             InterfaceId::TextEncoder => None,
             InterfaceId::TransformStream => None,
@@ -2566,6 +2571,7 @@ pub trait CSSStylePropertiesImpl {
 }
 
 pub trait CryptoImpl {
+    fn subtle(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
     fn random_uuid(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
 }
 
@@ -3381,6 +3387,15 @@ pub trait StyleSheetListImpl {
     fn item(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<ObjectId>>;
     fn length(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
     fn indexed_get(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<ObjectId>>;
+}
+
+pub trait SubtleCryptoImpl {
+    fn digest(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        algorithm: Value,
+        data: Vec<u8>,
+    ) -> Fallible<PromiseRef>;
 }
 
 pub trait TextDecoderImpl {

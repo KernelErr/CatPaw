@@ -110,7 +110,7 @@ struct FetchArgs {
     #[arg(long, requires = "js")]
     requests: bool,
     /// With --js: evaluate this script once the page has settled and print
-    /// its result instead of a view of the page.
+    /// its result (awaiting a promise) instead of a view of the page.
     #[arg(long, requires = "js")]
     eval: Option<String>,
 }
@@ -497,7 +497,12 @@ fn fetch_with_scripts(args: FetchArgs) -> Result<()> {
         }
 
         if let Some(source) = &args.eval {
-            match page.eval(source) {
+            // A promise is awaited, within the same time budget as the page.
+            let limits = LoopLimits {
+                virtual_ms: args.time_budget as f64,
+                ..LoopLimits::default()
+            };
+            match page.eval_awaited(source, &limits) {
                 Ok(value) => println!("{value}"),
                 Err(e) => bail!("the script threw: {e}"),
             }

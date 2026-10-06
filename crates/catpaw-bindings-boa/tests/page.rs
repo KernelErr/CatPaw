@@ -1087,7 +1087,7 @@ fn crypto_hands_out_random_values() {
 </script>"#,
     );
     for (source, expected) in [
-        ("crypto instanceof Crypto && crypto === window.crypto && typeof crypto.subtle", "undefined"),
+        ("crypto instanceof Crypto && crypto === window.crypto && typeof crypto.subtle", "object"),
         (
             "var bytes = new Uint8Array(32), same = crypto.getRandomValues(bytes); same === bytes && bytes.some(function (b) { return b !== 0; })",
             "true",
@@ -1324,4 +1324,23 @@ fn the_selection_is_empty_but_present() {
     ] {
         assert_eq!(eval(&mut page, source), expected, "{source}");
     }
+}
+
+#[test]
+fn subtle_crypto_digests() {
+    let mut page = load("<script>var log = [];</script>");
+    assert_eq!(
+        eval(
+            &mut page,
+            "var hex = function (b) { return Array.from(new Uint8Array(b)).map(function (x) { return x.toString(16).padStart(2, '0'); }).join(''); }; var data = new TextEncoder().encode('abc'); Promise.all([crypto.subtle.digest('SHA-1', data), crypto.subtle.digest({ name: 'sha-256' }, data), crypto.subtle.digest('SHA-384', data.buffer), crypto.subtle.digest('SHA-512', data)]).then(function (r) { log.push(r.map(hex).map(function (h) { return h.slice(0, 16); }).join(' ')); }); crypto.subtle.digest('MD5', data).catch(function (e) { log.push(e.name); }); crypto.subtle.digest(5, data).catch(function (e) { log.push(e.name); }); (crypto.subtle === crypto.subtle) + ' ' + String(crypto.subtle) + ' ' + typeof crypto.subtle.encrypt"
+        ),
+        "true [object SubtleCrypto] undefined"
+    );
+    page.with_cx(|cx| {
+        catpaw_web::event_loop::run(cx, &catpaw_web::event_loop::LoopLimits::default());
+    });
+    assert_eq!(
+        eval(&mut page, "log.join(' | ')"),
+        "NotSupportedError | TypeError | a9993e364706816a ba7816bf8f01cfea cb00753f45a35e8b ddaf35a193617aba"
+    );
 }

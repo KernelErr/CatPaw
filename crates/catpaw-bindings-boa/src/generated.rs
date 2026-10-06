@@ -2733,6 +2733,17 @@ pub mod css_style_properties {
 pub mod crypto {
     use super::*;
 
+    fn get_subtle(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "subtle", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_object(this_js, I::Crypto, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::CryptoImpl>::subtle(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "subtle", &v, ctx);
+        Ok(v)
+    }
+
     fn op_random_uuid(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_object(this_js, I::Crypto, ctx)?;
@@ -2747,7 +2758,11 @@ pub mod crypto {
         global: false,
         constructor: None,
         constructor_length: 0,
-        attrs: &[],
+        attrs: &[rt::AttrDef {
+            name: "subtle",
+            getter: get_subtle,
+            setter: None,
+        }],
         ops: &[rt::OpDef {
             name: "randomUUID",
             func: op_random_uuid,
@@ -10863,6 +10878,42 @@ pub mod style_sheet_list {
             attribute_like: false,
             unenumerable_names: false,
         }),
+    };
+}
+
+pub mod subtle_crypto {
+    use super::*;
+
+    fn op_digest(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::SubtleCrypto, ctx)?;
+        rt::require_args(args, 2, "SubtleCrypto.digest")?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::buffer_from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SubtleCryptoImpl>::digest(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SubtleCrypto,
+        name: "SubtleCrypto",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[rt::OpDef {
+            name: "digest",
+            func: op_digest,
+            length: 2,
+        }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
     };
 }
 
@@ -44350,6 +44401,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &storage::DEF,
     &style_sheet::DEF,
     &style_sheet_list::DEF,
+    &subtle_crypto::DEF,
     &text_decoder::DEF,
     &text_encoder::DEF,
     &transform_stream::DEF,

@@ -11,6 +11,7 @@ description = "CatPaw browser engine: engine"
 catpaw-bindings-boa = { path = "../catpaw-bindings-boa", version = "0.0.1" }
 catpaw-dom = { path = "../catpaw-dom", version = "0.0.1" }
 catpaw-fetch = { path = "../catpaw-fetch", version = "0.0.1" }
+catpaw-js = { path = "../catpaw-js", version = "0.0.1" }
 catpaw-net = { path = "../catpaw-net", version = "0.0.1" }
 catpaw-web = { path = "../catpaw-web", version = "0.0.1" }
 bytes.workspace = true

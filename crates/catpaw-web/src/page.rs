@@ -190,6 +190,7 @@ pub struct Singletons {
     pub timing: Option<ObjectId>,
     pub navigation: Option<ObjectId>,
     pub selection: Option<ObjectId>,
+    pub subtle: Option<ObjectId>,
     pub local_storage: Option<ObjectId>,
     pub session_storage: Option<ObjectId>,
 }

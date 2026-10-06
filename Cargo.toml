@@ -13,6 +13,8 @@ homepage = "https://github.com/KernelErr/CatPaw"
 keywords = ["browser", "headless", "agent", "html", "llm"]
 
 [workspace.dependencies]
+sha1 = "0.10"
+sha2 = "0.10"
 # --- engine-side ---
 boa_engine = "0.22"
 boa_gc = "0.22"

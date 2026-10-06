@@ -19,7 +19,9 @@ pub(crate) struct Reactions {
 
 /// Runs `f` once `value` settles: with the fulfillment value, or with the
 /// rejection reason. A value that is not a promise counts as fulfilled.
-pub(crate) fn when_settled(
+/// Calls `f` once `value` settles: at once (in a microtask) for a value
+/// that is not a promise.
+pub fn when_settled(
     cx: &mut Cx<'_>,
     value: Value,
     f: impl FnOnce(&mut Cx<'_>, Result<Value, Value>) + 'static,

@@ -287,6 +287,10 @@ pub fn run(cx: &mut Cx<'_>, limits: &LoopLimits) -> LoopReport {
     let started = Instant::now();
     let mut steps = 0u64;
     let mut advanced = 0.0f64;
+    // Whatever ran before the loop (a script evaluated by the embedder,
+    // say) may have queued microtasks; they run before the loop can be
+    // found idle.
+    cx.checkpoint();
 
     let stop = loop {
         if cx.page.navigation.borrow().is_some() {

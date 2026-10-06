@@ -45,6 +45,16 @@ partial interface mixin WindowOrWorkerGlobalScope {
 
 [Exposed=(Window,Worker)]
 interface Crypto {
+  [SameObject] readonly attribute SubtleCrypto subtle;
   ArrayBufferView getRandomValues(ArrayBufferView array);
   DOMString randomUUID();
+};
+
+// https://w3c.github.io/webcrypto/#subtlecrypto-interface: digest() alone,
+// whose algorithm (`AlgorithmIdentifier`, a name or an object with a
+// `name`) is taken as `any` and read by the implementation. The key-based
+// methods are absent until there is key handling.
+[Exposed=(Window,Worker)]
+interface SubtleCrypto {
+  Promise<any> digest(any algorithm, BufferSource data);
 };
