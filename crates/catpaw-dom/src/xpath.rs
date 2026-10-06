@@ -1124,7 +1124,7 @@ impl<'a> Evaluator<'a> {
             .filter(|n| seen.insert(*n))
             .map(|n| (self.order_key(n), n))
             .collect();
-        keyed.sort_by(|a, b| a.0.cmp(&b.0));
+        keyed.sort_by_key(|(key, _)| *key);
         keyed.into_iter().map(|(_, n)| n).collect()
     }
 
