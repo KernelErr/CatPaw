@@ -323,7 +323,7 @@
       "title": "Select option"
     },
     {
-      "description": "Less common element actions: hover, check, uncheck, focus, clear (empty a field), scroll (target into view, or the page by dy pixels; one screen down by default), upload (choose local files in a file input).\nExample: {\"kind\":\"check\",\"target\":\"e14\"}",
+      "description": "Less common element actions: hover, check, uncheck, focus, clear (empty a field), scroll (target into view, or the page by dy pixels; one screen down by default), upload (choose local files in a file input), drag (target onto to).\nExample: {\"kind\":\"check\",\"target\":\"e14\"}",
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
@@ -356,7 +356,8 @@
               "focus",
               "clear",
               "scroll",
-              "upload"
+              "upload",
+              "drag"
             ],
             "type": "string"
           },
@@ -373,6 +374,10 @@
           },
           "target": {
             "description": "Ref (e12), text:<visible text>, role \"name\" or css:<selector>",
+            "type": "string"
+          },
+          "to": {
+            "description": "For drag: where to drop it (a target)",
             "type": "string"
           }
         },

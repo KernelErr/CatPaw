@@ -76,6 +76,13 @@ fn mouse_state(cx: &Cx<'_>, x: f32, y: f32, button: i16, buttons: u16, detail: i
         screen: (x.round() as i32, y.round() as i32),
         button,
         buttons,
+        // The legacy `which`: the button, counted from 1, while one is
+        // pressed or for the press itself.
+        which: if buttons != 0 || detail > 0 {
+            (button + 1) as u32
+        } else {
+            0
+        },
         related_target: None,
         pointer: Pointer {
             pointer_id: 1,
@@ -420,6 +427,44 @@ fn aim(cx: &mut Cx<'_>, el: NodeId) -> Result<(f32, f32), InputError> {
         Some(by) => Err(InputError::Occluded { by }),
         None => Err(InputError::NotVisible),
     }
+}
+
+/// Drags `el` onto `onto` with the left button: down at the centre of the
+/// one, moves there in steps (some libraries wait for several), up at the
+/// centre of the other. Both must fit in the viewport at once. Pages that
+/// use HTML drag and drop (`draggable`, `dragstart`, `drop`) need a
+/// `DataTransfer`, which is not there yet.
+pub fn drag_element(cx: &mut Cx<'_>, el: NodeId, onto: NodeId) -> Result<(), InputError> {
+    aim(cx, el)?;
+    let to = aim(cx, onto)?;
+    // Aiming at the drop target may have scrolled the dragged one away.
+    let from = aim(cx, el)?;
+    if aim(cx, onto)? != to {
+        return Err(InputError::NotVisible);
+    }
+    let target = pointer_move(cx, from.0, from.1).ok_or(InputError::NotVisible)?;
+    let down = mouse_state(cx, from.0, from.1, 0, 1, 1);
+    if fire_pointer(cx, target, "pointerdown", true, down.clone()) {
+        fire_pointer(cx, target, "mousedown", true, down);
+    }
+    const STEPS: u32 = 5;
+    for step in 1..=STEPS {
+        let t = step as f32 / STEPS as f32;
+        let (x, y) = (from.0 + (to.0 - from.0) * t, from.1 + (to.1 - from.1) * t);
+        let Some(over) = target_at(cx, x, y) else {
+            continue;
+        };
+        cx.page.input.pointer.set((x, y));
+        cx.page.input.hover.set(Some(over));
+        let held = mouse_state(cx, x, y, 0, 1, 0);
+        fire_pointer(cx, over, "pointermove", true, held.clone());
+        fire_pointer(cx, over, "mousemove", true, held);
+    }
+    let end = target_at(cx, to.0, to.1).ok_or(InputError::NotVisible)?;
+    let up = mouse_state(cx, to.0, to.1, 0, 0, 1);
+    fire_pointer(cx, end, "pointerup", true, up.clone());
+    fire_pointer(cx, end, "mouseup", true, up);
+    Ok(())
 }
 
 /// Moves the pointer over an element.

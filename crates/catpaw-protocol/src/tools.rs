@@ -142,12 +142,13 @@ pub static TOOLS: &[ToolDef] = &[
     ToolDef {
         name: "act",
         title: "Other action",
-        description: "Less common element actions: hover, check, uncheck, focus, clear (empty a field), scroll (target into view, or the page by dy pixels; one screen down by default), upload (choose local files in a file input).\nExample: {\"kind\":\"check\",\"target\":\"e14\"}",
+        description: "Less common element actions: hover, check, uncheck, focus, clear (empty a field), scroll (target into view, or the page by dy pixels; one screen down by default), upload (choose local files in a file input), drag (target onto to).\nExample: {\"kind\":\"check\",\"target\":\"e14\"}",
         schema: r#"{"type":"object","properties":{
-"kind":{"type":"string","enum":["hover","check","uncheck","focus","clear","scroll","upload"]},
+"kind":{"type":"string","enum":["hover","check","uncheck","focus","clear","scroll","upload","drag"]},
 "target":{"type":"string","description":"Ref (e12), text:<visible text>, role \"name\" or css:<selector>"},
 "dy":{"type":"number","description":"Page scroll in pixels; negative scrolls up"},
 "files":{"type":"array","items":{"type":"string"},"description":"For upload: paths of local files"},
+"to":{"type":"string","description":"For drag: where to drop it (a target)"},
 "snapshot":{"type":"string","enum":["diff","full","none"]},
 "dialog":{"type":"string","enum":["accept","dismiss"]},
 "promptText":{"type":"string"},

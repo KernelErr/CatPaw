@@ -870,6 +870,9 @@ impl GroupState {
         if kind == params::ActKind::Upload {
             return self.upload(tab, p, view);
         }
+        if kind == params::ActKind::Drag {
+            return self.drag(tab, p, view);
+        }
         if kind == params::ActKind::Scroll && p.target.is_none() {
             let (_, state) = self.root_state(tab)?;
             let dy =
@@ -945,9 +948,40 @@ impl GroupState {
                     agent::scroll_into_view(cx, aim.node);
                     Ok(())
                 }
-                params::ActKind::Upload => unreachable!("uploads are handled above"),
+                params::ActKind::Upload | params::ActKind::Drag => {
+                    unreachable!("uploads and drags are handled above")
+                }
             },
         )
+    }
+
+    /// Drags an element onto another, both in the same frame.
+    fn drag(&mut self, tab: u32, p: params::Act, view: View) -> CallResult {
+        let options = p.options();
+        let target = p
+            .target
+            .as_deref()
+            .ok_or_else(|| Failure::bad_argument("drag needs target: what to drag"))?;
+        let to =
+            p.to.as_deref()
+                .ok_or_else(|| Failure::bad_argument("drag needs to: where to drop it"))?;
+        let aim = self.aim(tab, target)?;
+        let onto = self.aim(tab, to)?;
+        if onto.frame != aim.frame {
+            return Err(Failure::new(
+                ErrorCode::Unsupported,
+                "dragging from one frame into another",
+            ));
+        }
+        let status = format!(
+            "ok drag {} → {}",
+            self.aimed(tab, &aim),
+            self.aimed(tab, &onto)
+        );
+        let onto = onto.node;
+        self.act_on(tab, aim, status, &options, view, move |cx, aim| {
+            input::drag_element(cx, aim.node, onto)
+        })
     }
 
     /// Chooses local files in a file input. The input may be hidden (sites

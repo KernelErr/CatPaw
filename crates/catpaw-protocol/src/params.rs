@@ -180,6 +180,8 @@ pub struct Act {
     pub dy: Option<f64>,
     /// For upload: paths of local files.
     pub files: Option<Vec<String>>,
+    /// For drag: where to drop (a target).
+    pub to: Option<String>,
     pub snapshot: Option<SnapshotMode>,
     pub dialog: Option<DialogChoice>,
     pub prompt_text: Option<String>,
@@ -196,6 +198,7 @@ pub enum ActKind {
     Clear,
     Scroll,
     Upload,
+    Drag,
 }
 
 impl ActKind {
@@ -208,6 +211,7 @@ impl ActKind {
             ActKind::Clear => "clear",
             ActKind::Scroll => "scroll",
             ActKind::Upload => "upload",
+            ActKind::Drag => "drag",
         }
     }
 }

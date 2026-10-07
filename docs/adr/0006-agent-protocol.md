@@ -22,7 +22,8 @@ of the model on every turn.
    read its answer while it runs; requests that arrive meanwhile wait
    their turn, pings are answered at once.
 2. **Tools.** `navigate`, `snapshot`, `click`, `type`, `press`, `select`,
-   `act` (hover, check, uncheck, focus, clear, scroll, upload), `wait`,
+   `act` (hover, check, uncheck, focus, clear, scroll, upload, drag),
+   `wait`,
    `read` (markdown, text, links, forms, tables, find, html), `screenshot`,
    `evaluate`, `tabs`, `logs` and `handoff`; `session` (checkpoints) is
    listed only when the server is started with `--tools session`. Frequent actions are tools of

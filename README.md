@@ -155,7 +155,7 @@ cargo build --release -p catpaw
 ```
 
 The tools are `navigate`, `snapshot`, `click`, `type`, `press`, `select`,
-`act` (hover, check, uncheck, focus, clear, scroll, upload), `wait`, `read`
+`act` (hover, check, uncheck, focus, clear, scroll, upload, drag), `wait`, `read`
 (markdown, text, links, forms, tables, find, html), `screenshot`,
 `evaluate`, `tabs`, `logs` and `handoff`; windows a page opens become tabs. Elements
 are named by refs that stay valid until the element leaves the page. An
@@ -245,7 +245,7 @@ counts too, as one more call. CatPaw answers an action with what changed,
 and caps a whole snapshot at 4000 tokens, folding the rest for the agent
 to open; its numbers include the calls that wait for the user's approval
 (logins, the form post, the upload), which Playwright MCP does not make.
-The tool list, a cost on every turn, is 10.6 KB for CatPaw and 20.3 KB for
+The tool list, a cost on every turn, is 10.7 KB for CatPaw and 20.3 KB for
 Playwright MCP.
 `cargo run -p xtask --features engine -- tasks report --baseline tools/baseline/playwright-mcp.json`
 regenerates the table, and

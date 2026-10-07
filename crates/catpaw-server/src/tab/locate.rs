@@ -51,7 +51,7 @@ impl GroupState {
         };
         let model = self.model(tab, Filter::Interesting, ExtraAttrs::default(), None)?;
         let mut found: Vec<Candidate> = Vec::new();
-        let mut text_parents: Vec<(u32, bool)> = Vec::new();
+        let mut text_parents: Vec<(Option<u32>, bool)> = Vec::new();
         let mut parent_stack: Vec<(u16, u32)> = Vec::new();
         for line in &model.lines {
             while parent_stack.last().is_some_and(|&(d, _)| d >= line.depth) {
@@ -94,9 +94,8 @@ impl GroupState {
                 }
                 LineKind::Text(t) if role.is_none() => {
                     let value = normalize(t);
-                    if let Some(&(_, parent)) = parent_stack.last()
-                        && value.contains(&needle)
-                    {
+                    if value.contains(&needle) {
+                        let parent = parent_stack.last().map(|&(_, parent)| parent);
                         text_parents.push((parent, value == needle));
                     }
                 }
@@ -180,26 +179,35 @@ impl GroupState {
 
     /// The deepest element under `parent` whose visible text holds
     /// `needle`, with a ref.
-    fn smallest_holding(&mut self, tab: u32, parent: u32, needle: &str) -> Option<u32> {
-        let key = self.tabs.get(&tab)?.refs.entry(parent)?.key;
-        let frame = FrameId(key.frame);
+    /// `parent` is the ref of the element whose line holds the text, or
+    /// none for text at the top of the tab's page.
+    fn smallest_holding(&mut self, tab: u32, parent: Option<u32>, needle: &str) -> Option<u32> {
+        let entry = self.tabs.get(&tab)?;
+        let (frame, start) = match parent {
+            Some(parent) => {
+                let key = entry.refs.entry(parent)?.key;
+                (FrameId(key.frame), Some(key.node))
+            }
+            None => (entry.root, None),
+        };
         let state = self.page.frame_state(frame)?.clone();
         let node = agent::with_styles(&state, |engine, dom| {
             let oracle = EngineOracle {
                 engine,
                 page: &state,
             };
-            let mut best = key.node;
+            let root = || dom.child_elements(dom.document()).next();
+            let mut best = start.or_else(root)?;
             loop {
                 let next = dom.children(best).find(|&c| {
                     dom.is_element(c) && normalize(&subtree_text(dom, c, &oracle)).contains(needle)
                 });
                 match next {
                     Some(child) => best = child,
-                    None => break best,
+                    None => break Some(best),
                 }
             }
-        });
+        })?;
         self.ref_for(tab, frame, node)
     }
 }

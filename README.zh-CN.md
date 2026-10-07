@@ -73,7 +73,7 @@ cargo build --release -p catpaw
 ./target/release/catpaw setup cursor -- --policy strict
 ```
 
-工具有 `navigate`、`snapshot`、`click`、`type`、`press`、`select`、`act`（hover、check、uncheck、focus、clear、scroll、upload）、`wait`、`read`（markdown、text、links、forms、tables、find、html）、`screenshot`、`evaluate`、`tabs`、`logs` 和 `handoff`；页面打开的窗口成为新 tab。元素用 ref 指代，ref 在元素离开页面前一直有效。每个动作在页面稳定后（统计与轮询不在等待之列）返回发生了什么以及页面上变了什么：
+工具有 `navigate`、`snapshot`、`click`、`type`、`press`、`select`、`act`（hover、check、uncheck、focus、clear、scroll、upload、drag）、`wait`、`read`（markdown、text、links、forms、tables、find、html）、`screenshot`、`evaluate`、`tabs`、`logs` 和 `handoff`；页面打开的窗口成为新 tab。元素用 ref 指代，ref 在元素离开页面前一直有效。每个动作在页面稳定后（统计与轮询不在等待之列）返回发生了什么以及页面上变了什么：
 
 ```text
 ok click e16 button "Add to cart"
@@ -113,7 +113,7 @@ ok click e16 button "Add to cart"
 | todomvc | 5 | 1833 (~524) | 10 | 9128 (~2608) |
 | 合计 | 67 | 65793 (~18798) | 112 | 240980 (~68851) |
 
-字节数是 agent 在一个任务中收到的全部工具结果（token 按每 3.5 字节一个估算）。CatPaw 的数字来自录制的回放；`@playwright/mcp` 0.0.83 搭配 headless Chrome 于 2026-10-08 实网走了同样的步骤（取三次运行的中位数）。Playwright MCP 把页面快照存进文件，页面变化时在结果里给出链接；agent 要看页面、找下一个目标就得读它，所以这个文件也计入，并算作一次调用。CatPaw 对动作只返回变化的部分，整份快照默认上限 4000 token，其余折叠起来由 agent 按需展开；CatPaw 的数字里还包含了等待用户批准的调用（登录、表单提交、上传），Playwright MCP 没有这一步。每轮对话都要付出的工具列表，CatPaw 为 10.6 KB，Playwright MCP 为 20.3 KB。`cargo run -p xtask --features engine -- tasks report --baseline tools/baseline/playwright-mcp.json` 重新生成此表，[`tools/baseline/playwright-mcp.mjs`](tools/baseline/playwright-mcp.mjs) 用来测量对照组。
+字节数是 agent 在一个任务中收到的全部工具结果（token 按每 3.5 字节一个估算）。CatPaw 的数字来自录制的回放；`@playwright/mcp` 0.0.83 搭配 headless Chrome 于 2026-10-08 实网走了同样的步骤（取三次运行的中位数）。Playwright MCP 把页面快照存进文件，页面变化时在结果里给出链接；agent 要看页面、找下一个目标就得读它，所以这个文件也计入，并算作一次调用。CatPaw 对动作只返回变化的部分，整份快照默认上限 4000 token，其余折叠起来由 agent 按需展开；CatPaw 的数字里还包含了等待用户批准的调用（登录、表单提交、上传），Playwright MCP 没有这一步。每轮对话都要付出的工具列表，CatPaw 为 10.7 KB，Playwright MCP 为 20.3 KB。`cargo run -p xtask --features engine -- tasks report --baseline tools/baseline/playwright-mcp.json` 重新生成此表，[`tools/baseline/playwright-mcp.mjs`](tools/baseline/playwright-mcp.mjs) 用来测量对照组。
 
 库 crate 同样已发布：`catpaw-net`、`catpaw-fetch`、`catpaw-dom`、`catpaw-style`、`catpaw-agent`。
 

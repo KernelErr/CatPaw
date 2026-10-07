@@ -79,6 +79,24 @@ for (let i = 0; i < 60; i++) {
 }
 </script>"##;
 
+/// Dragging with the mouse, as libraries that do not use HTML drag and
+/// drop see it.
+const DRAG: &str = r#"<!doctype html><title>Drag</title>
+<div id=box style="position:absolute;left:10px;top:10px;width:50px;height:50px">Box</div>
+<div id=zone style="position:absolute;left:200px;top:10px;width:100px;height:100px">Zone</div>
+<p id=out style="position:absolute;top:150px">idle</p>
+<script>
+let dragging = false, moves = 0;
+box.addEventListener('mousedown', e => { dragging = e.which === 1; });
+document.addEventListener('mousemove', e => { if (dragging && e.which === 1 && e.buttons === 1) moves++; });
+document.addEventListener('mouseup', e => {
+  const z = zone.getBoundingClientRect();
+  const inside = e.clientX >= z.left && e.clientX <= z.right && e.clientY >= z.top && e.clientY <= z.bottom;
+  if (dragging) out.textContent = inside ? 'dropped after ' + moves + ' moves' : 'missed';
+  dragging = false;
+});
+</script>"#;
+
 /// Serves `pages` by path (the query is ignored), a thread per
 /// connection; `/slow…` answers after 300 ms and `/hang…` after 3 s.
 fn serve(pages: HashMap<&'static str, &'static str>) -> u16 {
@@ -144,6 +162,7 @@ impl Client {
             ("/inner", INNER),
             ("/p2", P2),
             ("/long", LONG),
+            ("/drag", DRAG),
         ]));
         let mut config = SessionConfig::default();
         config.options.net.allow_private_network = true;
@@ -675,4 +694,17 @@ fn a_page_over_budget_folds_and_opens_again() {
     );
     assert!(rest.contains("link \"Item 10\""), "{rest}");
     assert!(!rest.contains("link \"Item 9\""), "{rest}");
+}
+
+#[test]
+fn drag_moves_with_the_button_held() {
+    let mut client = Client::new();
+    let url = format!("{}/drag", client.base);
+    client.ok("navigate", json!({ "url": url }));
+    let dragged = client.ok(
+        "act",
+        json!({"kind": "drag", "target": "text:Box", "to": "text:Zone"}),
+    );
+    assert!(dragged.starts_with("ok drag e"), "{dragged}");
+    assert!(dragged.contains("dropped after 5 moves"), "{dragged}");
 }
