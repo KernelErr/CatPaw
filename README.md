@@ -10,29 +10,36 @@ semantic snapshot with stable element references, precise "the page has
 settled" signals, diffs instead of re-dumps, deterministic time, and cheap
 isolated contexts.
 
-> Status: **pre-alpha**. Milestone M0 ("fetch & read") is complete; M1
-> (JavaScript via Boa) is in progress. See the roadmap below.
+> Status: **pre-alpha**. Milestones M0 ("fetch & read") and M1 ("scripts
+> run", JavaScript via Boa) are complete; M2 ("interact": layout, input,
+> navigation, iframes) is next. See the roadmap below.
 >
-> M1 so far, behind `catpaw fetch --js`: classic scripts (inline, external,
-> `defer`, `async`, script-inserted, `document.write`) and module scripts
-> (static and dynamic imports, import maps) run interleaved with the parser
-> on Boa, against bindings generated from Web IDL for the core DOM (every
-> HTML and SVG element interface, attributes, traversal, XPath, `DOMParser`,
-> `document.implementation`), shadow trees and slots, custom elements,
-> events, mutation, intersection and performance observers, timers, history,
+> With `catpaw fetch --js`: classic scripts (inline, external, `defer`,
+> `async`, script-inserted, `document.write`) and module scripts (static and
+> dynamic imports, import maps) run interleaved with the parser on Boa,
+> against bindings generated from Web IDL for the core DOM (every HTML and
+> SVG element interface, attributes, traversal, XPath, `Range` and
+> `Selection`, `DOMParser`, `document.implementation`, the document
+> collections and named access such as `document.forms` and
+> `document.myForm`), shadow trees and slots, custom elements, events,
+> mutation, intersection and performance observers, timers, history,
 > navigation timing, inline and computed styles (style sheets are fetched and
 > cascaded by Stylo) with the CSSOM (`CSSStyleSheet`, `adoptedStyleSheets`,
-> `CSS.supports`), `fetch`/`XMLHttpRequest` (with CORS enforced), streams,
-> `data:` URLs, `sendBeacon`, `URL`, storage, encoding, `crypto` random
-> values and digests, the font-loading and selection APIs in their
-> no-layout forms, and console APIs, on an event loop with virtual time.
+> `CSS.supports`), `fetch`/`XMLHttpRequest` (CORS, preflights, redirects and
+> referrer policy handled by the page as the Fetch standard has them),
+> streams, `data:` URLs, `sendBeacon`, `URL`, storage, encoding, `crypto`
+> random values and digests, the font-loading API in its no-layout form, and
+> console APIs, on an event loop with virtual time. A wall-clock script
+> budget (`--script-budget`, 10 s by default) stops a runaway script.
 > React, Vue, Svelte, Lit, htmx and Alpine sites run; the Boa engine is
 > vendored with fixes described in `vendor/`. web-platform-tests run in CI
-> against recorded expectations: `dom` 2928 of 4243 subtests pass, `html/dom`
-> 498 of 1066, `fetch/api` 1037 of 2172, `xhr` 330 of 974 (much of the rest
-> needs iframes, layout or WPT's Python handlers). Not there yet: layout,
-> canvas, media, workers, WebAssembly, `Range`, and the members of HTML
-> elements that go beyond their attributes.
+> against recorded expectations, served by an in-process stand-in for WPT's
+> server and the Python handlers its fetch and XHR tests use: `dom` 2975 of
+> 4246 subtests pass, `html/dom` 582 of 1066, `fetch/api` 1908 of 2237,
+> `xhr` 859 of 1200 (much of the rest needs iframes, layout, or server
+> behaviour the stand-in does not emulate). Not there yet: layout, canvas,
+> media, workers, WebAssembly, and the members of HTML elements that go
+> beyond their attributes.
 >
 > What works without JavaScript: HTTP/1.1 and HTTP/2 over rustls,
 > redirects, cookies, gzip/brotli/zstd, encoding sniffing, Web Bot Auth
@@ -101,7 +108,7 @@ checked-in output, `--list <Interface>` shows what an interface offers).
 | Milestone | Scope | Done when |
 |---|---|---|
 | M0 fetch & read (done) | HTTP/1.1+2, cookies, Web Bot Auth signing, HTML parsing into the arena DOM, UA + author stylesheets via Stylo, CST snapshot v0, markdown/text/forms views, CLI | `catpaw fetch … --snapshot` works on real pages; WPT tree-construction suite runs in CI with recorded expectations |
-| M1 scripts run | Boa realms, generated bindings, event loop with virtual time, parser/script interleaving, fetch/XHR, minimal WebDriver for WPT | WPT `dom/`, `html/dom/`, `fetch/api/` subsets pass; a Next.js and a Vue app hydrate |
+| M1 scripts run (done) | Boa realms, generated bindings, event loop with virtual time, parser/script interleaving, fetch/XHR, script budget, in-process WPT runner (in place of the WebDriver subset first planned) | WPT `dom/`, `html/dom/`, `fetch/api/`, `xhr/` subsets pass against recorded expectations; React and Vue apps hydrate server-rendered markup (timed in the test suite) |
 | M2 interact | Layout, hit-testing, input events, forms, navigation and history, iframes and popups, storage, observers, screenshots, Canvas 2D, Web Crypto, WebSocket, Workers | Log in to a real site; a Turnstile checkbox click completes |
 | M3 agent API | JSON-RPC/WS, MCP, snapshot diffs, settledness, action consequences, checkpoints, HAR record/replay, SDKs | An agent completes WebArena tasks over MCP |
 | M4 fidelity & challenges | Challenge detection, human hand-off, test zone with each Cloudflare challenge mode, Signed Agent registration | Measured pass rates; hand-off end to end |

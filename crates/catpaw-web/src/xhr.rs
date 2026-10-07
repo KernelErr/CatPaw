@@ -197,8 +197,14 @@ fn response_text(x: &XhrObject) -> String {
         .override_mime
         .as_deref()
         .or_else(|| response.header("content-type"));
+    // Only the default response type looks inside an XML body for its
+    // encoding; "text" takes the MIME type's word or UTF-8.
     let encoding = charset_of(declared)
-        .or_else(|| xml_declared_encoding(declared, &response.body))
+        .or_else(|| {
+            (x.response_type == ResponseType::Empty)
+                .then(|| xml_declared_encoding(declared, &response.body))
+                .flatten()
+        })
         .unwrap_or(encoding_rs::UTF_8);
     encoding.decode(&response.body).0.into_owned()
 }

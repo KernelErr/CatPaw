@@ -4,7 +4,7 @@
 //! requests started through it complete later, and the event loop delivers
 //! each result to the callback registered for it.
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use url::Url;
 
@@ -239,6 +239,9 @@ pub fn start_request(
         return None;
     };
     let token = net.start(request);
+    page.net_started
+        .borrow_mut()
+        .insert(token, (page.clock.peek(), Instant::now()));
     page.net_callbacks
         .borrow_mut()
         .insert(token, Box::new(callback));
@@ -247,6 +250,7 @@ pub fn start_request(
 
 /// Abandons a request started with [`start_request`].
 pub fn abort_request(page: &PageState, token: u64) {
+    page.net_started.borrow_mut().remove(&token);
     if page.net_callbacks.borrow_mut().remove(&token).is_some()
         && let Some(net) = page.net()
     {
@@ -263,6 +267,27 @@ pub fn inflight(page: &PageState) -> usize {
         .saturating_sub(page.background_requests.get())
 }
 
+/// How long, in real time, an awaited request could still complete before
+/// a timer due at `deadline_ms` on the page clock would have fired, had
+/// the page clock followed real time since the request started. A virtual
+/// clock runs ahead of real time while script reads it in a loop; the
+/// event loop waits this long for the network before firing the timer.
+/// `None` when no request is in flight or real time has caught up.
+pub fn real_time_before(page: &PageState, deadline_ms: f64) -> Option<Duration> {
+    let now = Instant::now();
+    let started = page.net_started.borrow();
+    started
+        .iter()
+        .filter(|(token, _)| page.net_callbacks.borrow().contains_key(token))
+        .filter_map(|(_, &(virtual_start, real_start))| {
+            let would_fire = real_start
+                + Duration::from_secs_f64((deadline_ms - virtual_start).max(0.0) / 1000.0);
+            let wait = would_fire.saturating_duration_since(now);
+            (!wait.is_zero()).then_some(wait)
+        })
+        .max()
+}
+
 /// Delivers completed requests to their callbacks. Returns how many were
 /// delivered.
 pub fn deliver(cx: &mut Cx<'_>, wait: Option<Duration>) -> usize {
@@ -271,6 +296,7 @@ pub fn deliver(cx: &mut Cx<'_>, wait: Option<Duration>) -> usize {
     };
     let mut delivered = 0;
     for (token, result) in net.poll(wait) {
+        cx.page.net_started.borrow_mut().remove(&token);
         let callback = cx.page.net_callbacks.borrow_mut().remove(&token);
         if let Some(callback) = callback {
             callback(cx, result);

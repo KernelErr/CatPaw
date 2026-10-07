@@ -2,6 +2,8 @@
 # `-` for the harness itself; `skip <test>` for tests not run at all
 # (those the engine cannot finish in time). Regenerate with
 # `cargo xtask wpt --include dom --update-expectations`.
+skip dom/events/scrolling/scrollend-event-fired-after-sequence-of-scrolls.tentative.html
+skip dom/events/scrolling/scrollend-event-for-user-scroll.html
 skip dom/events/Event-timestamp-safe-resolution.html
 skip dom/nodes/NodeList-static-length-getter-tampered-1.html
 skip dom/nodes/NodeList-static-length-getter-tampered-2.html
@@ -279,8 +281,6 @@ dom/events/scrolling/scrollIntoView-in-onscroll-to-sticky.html	scrollIntoView-in
 dom/events/scrolling/scrollend-event-fired-after-instant-scroll-in-microtask.html	-
 dom/events/scrolling/scrollend-event-fired-after-instant-scroll-in-microtask.html	scrolling state is false at the end of the test
 dom/events/scrolling/scrollend-event-fired-after-layout-clamping.html	scrollend event fires when layout clamps scroll offset
-dom/events/scrolling/scrollend-event-fired-after-sequence-of-scrolls.tentative.html	Move down, up and down again, receive scrollend event only once
-dom/events/scrolling/scrollend-event-fired-after-sequence-of-scrolls.tentative.html	Move right, left and right again, receive scrollend event only once
 dom/events/scrolling/scrollend-event-fired-after-snap.html	-
 dom/events/scrolling/scrollend-event-fired-after-snap.html	Tests that scrollend is fired after fling snap animation completion.
 dom/events/scrolling/scrollend-event-fired-after-snap.html	Tests that scrollend is fired after scroll snap animation completion.
@@ -313,9 +313,6 @@ dom/events/scrolling/scrollend-event-fires-for-repeat-key-ending-after-scroll-co
 dom/events/scrolling/scrollend-event-fires-on-visual-viewport.html	-
 dom/events/scrolling/scrollend-event-fires-to-iframe-inner-frame.html	-
 dom/events/scrolling/scrollend-event-fires-to-iframe-window.html	-
-dom/events/scrolling/scrollend-event-for-user-scroll.html	Tests that the target_div gets scrollend event when mouse wheel scrolling.
-dom/events/scrolling/scrollend-event-for-user-scroll.html	Tests that the target_div gets scrollend event when sending DOWN key to the target.
-dom/events/scrolling/scrollend-event-for-user-scroll.html	Tests that the target_div gets scrollend event when touch dragging.
 dom/events/scrolling/scrollend-event-handler-content-attributes.html	-
 dom/events/scrolling/scrollend-event-handler-content-attributes.html	Tests scrollend event is fired to document event handler property
 dom/events/scrolling/scrollend-event-handler-content-attributes.html	Tests scrollend event is fired to element event handler property

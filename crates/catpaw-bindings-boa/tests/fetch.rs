@@ -4,7 +4,7 @@
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use catpaw_bindings_boa::BoaPage;
 use catpaw_web::event_loop::{self, LoopLimits};
@@ -19,6 +19,15 @@ struct Route {
     status: u16,
     headers: Vec<(&'static str, &'static str)>,
     body: &'static str,
+    /// Real time the response takes to arrive.
+    delay: Duration,
+}
+
+impl Route {
+    fn delayed(mut self, ms: u64) -> Self {
+        self.delay = Duration::from_millis(ms);
+        self
+    }
 }
 
 fn route(status: u16, headers: &[(&'static str, &'static str)], body: &'static str) -> Route {
@@ -26,6 +35,7 @@ fn route(status: u16, headers: &[(&'static str, &'static str)], body: &'static s
         status,
         headers: headers.to_vec(),
         body,
+        delay: Duration::ZERO,
     }
 }
 
@@ -52,13 +62,14 @@ impl Seen {
 #[derive(Default)]
 struct TestNet {
     routes: HashMap<String, Route>,
-    completed: RefCell<Vec<(u64, NetResult)>>,
+    /// Finished requests and the real instant their result may be delivered.
+    completed: RefCell<Vec<(u64, Instant, NetResult)>>,
     next_token: Cell<u64>,
     seen: RefCell<Vec<Seen>>,
 }
 
 impl TestNet {
-    fn respond(&self, request: &NetRequest) -> Option<NetResult> {
+    fn respond(&self, request: &NetRequest) -> Option<(Duration, NetResult)> {
         self.seen.borrow_mut().push(Seen {
             method: request.method.clone(),
             headers: request.headers.clone(),
@@ -70,53 +81,78 @@ impl TestNet {
         });
         let key = format!("{} {}", request.method, request.url);
         let Some(route) = self.routes.get(&key) else {
-            return Some(Err("connection refused".to_string()));
+            return Some((Duration::ZERO, Err("connection refused".to_string())));
         };
         if route.body == "<hang>" {
             return None;
         }
-        Some(Ok(NetResponse {
-            url: request.url.clone(),
-            status: route.status,
-            status_text: if route.status == 200 { "OK" } else { "" }.to_string(),
-            headers: route
-                .headers
-                .iter()
-                .map(|(n, v)| (n.to_string(), v.to_string()))
-                .collect(),
-            body: route.body.as_bytes().to_vec(),
-            redirected: false,
-        }))
+        Some((
+            route.delay,
+            Ok(NetResponse {
+                url: request.url.clone(),
+                status: route.status,
+                status_text: if route.status == 200 { "OK" } else { "" }.to_string(),
+                headers: route
+                    .headers
+                    .iter()
+                    .map(|(n, v)| (n.to_string(), v.to_string()))
+                    .collect(),
+                body: route.body.as_bytes().to_vec(),
+                redirected: false,
+            }),
+        ))
     }
 }
 
 impl NetHost for TestNet {
     fn fetch_blocking(&self, request: NetRequest) -> NetResult {
-        self.respond(&request)
-            .unwrap_or_else(|| Err("timed out".to_string()))
+        match self.respond(&request) {
+            Some((delay, result)) => {
+                std::thread::sleep(delay);
+                result
+            }
+            None => Err("timed out".to_string()),
+        }
     }
 
     fn start(&self, request: NetRequest) -> u64 {
         let token = self.next_token.get() + 1;
         self.next_token.set(token);
-        if let Some(result) = self.respond(&request) {
-            self.completed.borrow_mut().push((token, result));
+        if let Some((delay, result)) = self.respond(&request) {
+            self.completed
+                .borrow_mut()
+                .push((token, Instant::now() + delay, result));
         }
         token
     }
 
     fn poll(&self, wait: Option<Duration>) -> Vec<(u64, NetResult)> {
-        let done = std::mem::take(&mut *self.completed.borrow_mut());
+        let take_ready = || {
+            let now = Instant::now();
+            let mut completed = self.completed.borrow_mut();
+            let (ready, later): (Vec<_>, Vec<_>) = std::mem::take(&mut *completed)
+                .into_iter()
+                .partition(|(_, at, _)| *at <= now);
+            *completed = later;
+            ready
+                .into_iter()
+                .map(|(token, _, result)| (token, result))
+                .collect::<Vec<_>>()
+        };
+        let mut done = take_ready();
         if done.is_empty()
             && let Some(wait) = wait
         {
-            std::thread::sleep(wait);
+            let next = self.completed.borrow().iter().map(|(_, at, _)| *at).min();
+            let until_next = next.map_or(wait, |at| at.saturating_duration_since(Instant::now()));
+            std::thread::sleep(wait.min(until_next));
+            done = take_ready();
         }
         done
     }
 
     fn abort(&self, token: u64) {
-        self.completed.borrow_mut().retain(|(t, _)| *t != token);
+        self.completed.borrow_mut().retain(|(t, _, _)| *t != token);
     }
 
     fn inflight(&self) -> usize {
@@ -556,4 +592,22 @@ fn header_guards_keep_forbidden_headers_out() {
         f.seen().is_empty(),
         "a bad port is refused before the network"
     );
+}
+
+#[test]
+fn timers_do_not_overtake_a_response_the_clock_ran_past() {
+    // A script that spins on performance.now() moves the virtual clock
+    // ahead of real time. The response below takes 100 ms of real time and
+    // the request's timeout is 150 ms on the page clock; in a browser the
+    // 200 ms the script spins would see the response arrive before the
+    // timeout, and so it must here.
+    let mut f = Fixture::new(&[(
+        "GET https://app.test/slow",
+        route(200, &[], "arrived").delayed(100),
+    )]);
+    assert_eq!(
+        f.run("var x = new XMLHttpRequest(); x.open('GET', '/slow', true); x.timeout = 150; var outcome = new Promise(function (r) { x.ontimeout = function () { r('timeout'); }; x.onload = function () { r('load ' + x.responseText); }; x.onerror = function () { r('error'); }; }); x.send(); var start = performance.now(); while (performance.now() - start < 200) {} return await outcome;"),
+        "load arrived"
+    );
+    assert!(f.errors().is_empty(), "{:?}", f.errors());
 }

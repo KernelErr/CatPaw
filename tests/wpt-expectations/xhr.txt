@@ -15,56 +15,17 @@ xhr/abort-during-navigation.window.html	-
 xhr/abort-during-navigation.window.html	XHR should not fire abort or error events when cancelled by navigation
 xhr/abort-during-upload.any.html	XMLHttpRequest: abort() while sending data
 xhr/abort-event-order.htm	XMLHttpRequest: The abort() method: abort and loadend events
-xhr/access-control-and-redirects-async-same-origin.any.html	Request with credentials is redirected to a cross-origin response with Access-Control-Allow-Origin=* (with star)
-xhr/access-control-and-redirects-async-same-origin.any.html	Request with credentials is redirected to a cross-origin response with a specific Access-Control-Allow-Origin
-xhr/access-control-and-redirects-async-same-origin.any.html	Request with credentials is redirected to a cross-origin response with a specific Access-Control-Allow-Origin (no credentials)
-xhr/access-control-and-redirects-async-same-origin.any.html	Request without credentials is redirected to a cross-origin response with Access-Control-Allow-Origin=* (with star)
-xhr/access-control-and-redirects-async-same-origin.any.html	Request without credentials is redirected to a cross-origin response with a specific Access-Control-Allow-Origin
-xhr/access-control-and-redirects-async-same-origin.any.html	Request without credentials is redirected to a cross-origin response with a specific Access-Control-Allow-Origin (no credentials)
-xhr/access-control-and-redirects-async.any.html	Request is redirect to a bad URL
-xhr/access-control-and-redirects-async.any.html	Request is redirected to a response with Access-Control-Allow-Origin=*
-xhr/access-control-and-redirects-async.any.html	Request is redirected to a same-origin resource file
 xhr/access-control-and-redirects-async.any.html	Request is redirected without CORS headers to a response with Access-Control-Allow-Origin=*
-xhr/access-control-and-redirects-async.any.html	Request with user info is redirected to a response with Access-Control-Allow-Origin=*
-xhr/access-control-and-redirects.any.html	Local sync redirect to remote origin
-xhr/access-control-and-redirects.any.html	Remote sync redirect to local origin
-xhr/access-control-and-redirects.any.html	Remote sync redirect to same remote origin
 xhr/access-control-basic-allow-access-control-origin-header-data-url.htm	-
 xhr/access-control-basic-allow-access-control-origin-header-data-url.htm	Access granted to null-origin iframe
-xhr/access-control-basic-allow-access-control-origin-header.any.html	Access control test with origin header
-xhr/access-control-basic-allow-async.any.html	Basic async cross-origin XHR request
-xhr/access-control-basic-allow-non-cors-safelisted-method-async.any.html	Allow async PUT request
-xhr/access-control-basic-allow-non-cors-safelisted-method.any.html	Allow PUT request
 xhr/access-control-basic-allow-preflight-cache-invalidation-by-header.any.html	Preflight cache should be invalidated in presence of custom header
 xhr/access-control-basic-allow-preflight-cache-invalidation-by-method.any.html	Preflight cache should be invalidated by changed method
 xhr/access-control-basic-allow-preflight-cache-timeout.any.html	Preflight cache should be invalidated on timeout
 xhr/access-control-basic-allow-preflight-cache.any.html	Preflight cache should allow second request
-xhr/access-control-basic-allow-star.any.html	Allow star
-xhr/access-control-basic-allow.any.html	Allow basic
-xhr/access-control-basic-cors-safelisted-request-headers.htm	Request with CORS-safelisted headers
-xhr/access-control-basic-cors-safelisted-response-headers.htm	Response with CORS-safelisted headers
-xhr/access-control-basic-denied.htm	Cross-origin request denied
-xhr/access-control-basic-non-cors-safelisted-content-type.htm	Deny cross-origin request with non-CORS-safelisted content type
 xhr/access-control-expose-headers-on-redirect.html	XHR should respect access-control-expose-headers header on redirect
-xhr/access-control-preflight-async-header-denied.htm	Async request denied at preflight
-xhr/access-control-preflight-async-method-denied.htm	Async request denied at preflight
-xhr/access-control-preflight-async-not-supported.htm	Async PUT request denied at preflight
 xhr/access-control-preflight-credential-async.htm	CORS async request with URL credentials
 xhr/access-control-preflight-credential-sync.htm	CORS sync request with URL credentials
-xhr/access-control-preflight-headers-async.htm	Preflighted async request with custom header
-xhr/access-control-preflight-headers-sync.htm	Preflighted sync request with custom header
-xhr/access-control-preflight-request-allow-headers-returns-star.any.html	Access-Control-Allow-Headers supports *
-xhr/access-control-preflight-request-header-lowercase.htm	Request with uppercase header set
-xhr/access-control-preflight-request-header-returns-origin.any.html	Access-Control-Request-Origin accept different origin between preflight and actual request
-xhr/access-control-preflight-request-header-sorted.htm	Tests that Access-Control-Request-Headers are sorted.
-xhr/access-control-preflight-request-headers-origin.htm	'Origin' should not be included in CORS Request-Headers
 xhr/access-control-preflight-request-must-not-contain-cookie.htm	Preflight request must not contain any cookie header
-xhr/access-control-preflight-sync-header-denied.htm	Sync request denied at preflight
-xhr/access-control-preflight-sync-method-denied.htm	Sync request denied at preflight because of non-CORS-safelisted method
-xhr/access-control-preflight-sync-not-supported.htm	Sync PUT request denied at preflight
-xhr/access-control-recursive-failed-request.htm	Recursively repeated CORS requests with failed preflights should never result in unexpected behavior
-xhr/access-control-response-with-body-sync.htm	Tests body from CORS preflight response and actual response with sync request
-xhr/access-control-response-with-body.htm	Tests that XHR doesn't prepend the body from CORS preflight response to the actual response
 xhr/access-control-response-with-exposed-headers.htm	Test CORS response with 'Access-Control-Expose-Headers' header
 xhr/access-control-sandboxed-iframe-allow-origin-null.htm	-
 xhr/access-control-sandboxed-iframe-allow-origin-null.htm	Tests that sandboxed iframe has CORS XHR access to a server that accepts null domain
@@ -104,14 +65,10 @@ xhr/blob-range.any.html	Blob range with whitespace after hyphen
 xhr/blob-range.any.html	Blob range with whitespace around equals sign
 xhr/blob-range.any.html	Blob range with whitespace before and after hyphen
 xhr/close-worker-with-xhr-in-progress.html	Terminating a worker with a XHR in progress doesn't crash
-xhr/content-type-unmodified.any.html	content-type-unmodified
 xhr/cookies.http.html	Basic non-cross-site cookie handling in XHR
 xhr/cors-expose-star.sub.any.html	* can be one of several values
 xhr/cors-expose-star.sub.any.html	* for credentialed fetches only matches literally
 xhr/cors-expose-star.sub.any.html	Basic Access-Control-Expose-Headers: * support
-xhr/cors-upload.any.html	-
-xhr/cors-upload.any.html	Cross-Origin POST FormData body but no preflight
-xhr/cors-upload.any.html	Cross-Origin POST with preflight and FormData body
 xhr/data-uri.htm	XHR method HEAD with MIME type text/plain
 xhr/event-error-order.sub.html	XMLHttpRequest: event - error (order of events)
 xhr/event-error.sub.any.html	-
@@ -119,7 +76,6 @@ xhr/event-error.sub.any.html	error while reading body should report zeros for lo
 xhr/event-error.sub.any.html	onerror should be called
 xhr/event-readystatechange-loaded.any.html	XMLHttpRequest: the LOADING state change may be emitted multiple times
 xhr/event-timeout-order.any.html	XMLHttpRequest: event - timeout (order of events)
-xhr/event-timeout.any.html	XMLHttpRequest: timeout event
 xhr/firing-events-http-content-length.html	ProgressEvent: firing events for HTTP with Content-Length
 xhr/firing-events-http-no-content-length.html	ProgressEvent: firing events for HTTP with no Content-Length
 xhr/formdata.html	Newly created FormData contains entries added to "formData" IDL attribute of FormDataEvent.
@@ -132,7 +88,6 @@ xhr/formdata.html	formdata with string
 xhr/formdata.html	|new FormData()| in formdata event handler should throw
 xhr/formdata/append-formelement.html	testFormDataAppendToFormString
 xhr/formdata/append-formelement.html	testFormDataAppendToFormWrongPlatformObject
-xhr/formdata/append.any.html	testFormDataAppendEmptyBlob
 xhr/formdata/constructor-formelement.html	test that FormData is correctly constructed from the form data set
 xhr/formdata/constructor-submitter-coordinate.html	The constructed FormData object should contain correct entries for Image Button submitter's dispatched coordinate
 xhr/formdata/constructor-submitter.html	FormData construction should throw a 'NotFoundError' DOMException if a non-null submitter is not owned by the form
@@ -147,7 +102,6 @@ xhr/formdata/set-formelement.html	testFormDataSetToFormString
 xhr/formdata/set-formelement.html	testFormDataSetToFormWrongPlatformObject
 xhr/formdata/submitter-coordinate-value.html	dispatched event coordinates should match user intention coordinates
 xhr/getallresponseheaders-after-reuse.html	getAllResponseHeaders() must not return the previous response's headers
-xhr/getallresponseheaders-cookies.htm	XMLHttpRequest: getAllResponseHeaders() excludes cookies
 xhr/getallresponseheaders.htm	XMLHttpRequest: getAllResponseHeaders()
 xhr/getallresponseheaders.htm	XMLHttpRequest: getAllResponseHeaders() 1
 xhr/getallresponseheaders.htm	XMLHttpRequest: getAllResponseHeaders() 2
@@ -155,9 +109,7 @@ xhr/getallresponseheaders.htm	XMLHttpRequest: getAllResponseHeaders() 3
 xhr/getallresponseheaders.htm	XMLHttpRequest: getAllResponseHeaders() 4
 xhr/getallresponseheaders.htm	XMLHttpRequest: getAllResponseHeaders() 5
 xhr/getallresponseheaders.htm	XMLHttpRequest: getAllResponseHeaders() 6
-xhr/getresponseheader-case-insensitive.htm	XMLHttpRequest: getResponseHeader() case-insensitive matching
 xhr/getresponseheader-chunked-trailer.htm	XMLHttpRequest: getResponseHeader() and HTTP trailer
-xhr/getresponseheader-cookies-and-more.htm	XMLHttpRequest: getResponseHeader() custom/non-existent headers and cookies
 xhr/getresponseheader-server-date.htm	XMLHttpRequest: getResponseHeader() server and date
 xhr/getresponseheader-special-characters.htm	XMLHttpRequest: getResponseHeader() funny characters
 xhr/getresponseheader.any.html	getResponseHeader('content-length') expects 0
@@ -166,9 +118,6 @@ xhr/getresponseheader.any.html	getResponseHeader('double-trouble') expects ,
 xhr/getresponseheader.any.html	getResponseHeader('foo-test') expects 1, 2, 3
 xhr/getresponseheader.any.html	getResponseHeader('heya') expects , , 1, , , 2
 xhr/getresponseheader.any.html	getResponseHeader('www-authenticate') expects 1, 2, 3, 4
-xhr/header-user-agent-async.htm	Async request has User-Agent header
-xhr/header-user-agent-sync.htm	Sync request has User-Agent header
-xhr/headers-normalize-response.htm	Header value: 
 xhr/headers-normalize-response.htm	Header value: [tab]
 xhr/headers-normalize-response.htm	Header value: [tab]hello_world
 xhr/headers-normalize-response.htm	Header value: [tab]hello_world[tab]
@@ -178,34 +127,16 @@ xhr/headers-normalize-response.htm	Header value: ___
 xhr/headers-normalize-response.htm	Header value: __hello_world
 xhr/headers-normalize-response.htm	Header value: __hello_world__
 xhr/headers-normalize-response.htm	Header value: hello world\\0
-xhr/headers-normalize-response.htm	Header value: hello[tab]world
 xhr/headers-normalize-response.htm	Header value: hello\\0world
-xhr/headers-normalize-response.htm	Header value: hello______world
 xhr/headers-normalize-response.htm	Header value: hello_world[tab]
 xhr/headers-normalize-response.htm	Header value: hello_world__
 xhr/idlharness.any.html	idl_test setup
 xhr/json.any.html	Ensure UTF-16 results in an error
-xhr/open-after-setrequestheader.htm	XMLHttpRequest: open() after setRequestHeader()
 xhr/open-after-stop.window.html	open() after window.stop()
 xhr/open-during-abort-event.htm	-
 xhr/open-during-abort-event.htm	XMLHttpRequest: open() during abort event - abort() called from upload.onloadstart
 xhr/open-during-abort-processing.htm	-
 xhr/open-during-abort-processing.htm	XMLHttpRequest: open() during abort processing - abort() called from onloadstart
-xhr/open-method-case-insensitive.htm	XMLHttpRequest: open() - case-insensitive methods test (DELETE)
-xhr/open-method-case-insensitive.htm	XMLHttpRequest: open() - case-insensitive methods test (GET)
-xhr/open-method-case-insensitive.htm	XMLHttpRequest: open() - case-insensitive methods test (HEAD)
-xhr/open-method-case-insensitive.htm	XMLHttpRequest: open() - case-insensitive methods test (OPTIONS)
-xhr/open-method-case-insensitive.htm	XMLHttpRequest: open() - case-insensitive methods test (POST)
-xhr/open-method-case-insensitive.htm	XMLHttpRequest: open() - case-insensitive methods test (PUT)
-xhr/open-method-case-sensitive.htm	XMLHttpRequest: open() - case-sensitive methods test (COpy)
-xhr/open-method-case-sensitive.htm	XMLHttpRequest: open() - case-sensitive methods test (PATCH)
-xhr/open-method-case-sensitive.htm	XMLHttpRequest: open() - case-sensitive methods test (XUNICORN)
-xhr/open-method-case-sensitive.htm	XMLHttpRequest: open() - case-sensitive methods test (chiCKEN)
-xhr/open-method-case-sensitive.htm	XMLHttpRequest: open() - case-sensitive methods test (copy)
-xhr/open-method-case-sensitive.htm	XMLHttpRequest: open() - case-sensitive methods test (inDEX)
-xhr/open-method-case-sensitive.htm	XMLHttpRequest: open() - case-sensitive methods test (movE)
-xhr/open-method-case-sensitive.htm	XMLHttpRequest: open() - case-sensitive methods test (patCH)
-xhr/open-method-case-sensitive.htm	XMLHttpRequest: open() - case-sensitive methods test (xUNIcorn)
 xhr/open-method-responsetype-set-sync.htm	XMLHttpRequest: open() sync request not allowed if responseType is set (arraybuffer)
 xhr/open-method-responsetype-set-sync.htm	XMLHttpRequest: open() sync request not allowed if responseType is set (blob)
 xhr/open-method-responsetype-set-sync.htm	XMLHttpRequest: open() sync request not allowed if responseType is set (document)
@@ -244,23 +175,15 @@ xhr/overridemimetype-blob.html	Loading data…
 xhr/overridemimetype-blob.html	Use text/xml as fallback MIME type
 xhr/overridemimetype-blob.html	Use text/xml as fallback MIME type, 2
 xhr/overridemimetype-done-state.any.html	overridemimetype-done-state
-xhr/overridemimetype-edge-cases.window.html	Charset can be overridden by overrideMimeType() with a bogus charset
 xhr/overridemimetype-edge-cases.window.html	If charset is not overridden by overrideMimeType() the original continues to be used
-xhr/overridemimetype-edge-cases.window.html	overrideMimeType() is not reset by open()
-xhr/overridemimetype-edge-cases.window.html	overrideMimeType() is not reset by open(), basic
-xhr/overridemimetype-headers-received-state-force-shiftjis.htm	XMLHttpRequest: overrideMimeType() in HEADERS RECEIVED state, enforcing Shift-JIS encoding
 xhr/overridemimetype-invalid-mime-type.htm	Bogus MIME type does not override encoding
 xhr/overridemimetype-invalid-mime-type.htm	Bogus MIME type does not override encoding, 2
 xhr/overridemimetype-invalid-mime-type.htm	Bogus MIME type does override MIME type
 xhr/overridemimetype-loading-state.htm	XMLHttpRequest: overrideMimeType() in LOADING state
-xhr/overridemimetype-open-state-force-utf-8.htm	-
-xhr/overridemimetype-open-state-force-utf-8.htm	XMLHttpRequest: overrideMimeType() in open state, enforcing UTF-8 encoding
 xhr/overridemimetype-open-state-force-xml.htm	-
 xhr/overridemimetype-open-state-force-xml.htm	XMLHttpRequest: overrideMimeType() in open state, XML MIME type with UTF-8 charset
-xhr/overridemimetype-unsent-state-force-shiftjis.any.html	XMLHttpRequest: overrideMimeType() in unsent state, enforcing Shift-JIS encoding
 xhr/preserve-ua-header-on-redirect.htm	XMLHttpRequest: User-Agent header is preserved on redirect
 xhr/preserve-ua-header-on-redirect.htm	XMLHttpRequest: User-Agent header is preserved on redirect 1
-xhr/progress-events-response-data-gzip.htm	XMLHttpRequest: progress events and GZIP encoding
 xhr/progressevent-constructor.html	Default event values.
 xhr/request-content-length.any.html	Uploads need to set the Content-Length header
 xhr/response-body-errors.any.html	Asynchronous XMLHttpRequest should clear response on bad chunk
@@ -271,14 +194,9 @@ xhr/response-data-deflate.htm	XMLHttpRequest: content-encoding:deflate response 
 xhr/response-data-gzip.htm	XMLHttpRequest: GZIP response was correctly inflated
 xhr/response-data-progress.htm	XMLHttpRequest: progress events grow response body size, known content-length
 xhr/response-data-progress.htm	XMLHttpRequest: progress events grow response body size, unknown content-length
-xhr/response-invalid-utf8.html	JSON response with invalid UTF-8 should parse with replacement characters
-xhr/response-json-bom.html	JSON response with UTF-8 BOM should be parsed correctly
-xhr/response-json-during-loading.html	xhr.response must be null during LOADING state for responseType json
 xhr/response-json.htm	JSON object roundtrip
 xhr/response-json.htm	JSON roundtrip with Japanese text
-xhr/response-method.htm	GET
 xhr/response-method.htm	HEAD
-xhr/response-method.htm	POST
 xhr/responseType-document-in-worker.html	-
 xhr/responseXML-unavailable-in-worker.html	-
 xhr/responseXML-xml-scripting-support-disabled.html	XMLHttpRequest responseXML, svg script, append adoptNode result
@@ -292,7 +210,6 @@ xhr/responsedocument-decoding.htm	XMLHttpRequest: response document decoding (ap
 xhr/responsedocument-decoding.htm	XMLHttpRequest: response document decoding (text/html %3C!doctype%20html%3E%3Cmeta%20charset%3Dwindows-1252%3E%3Cx%3E%e6%a9%9f%3C%2Fx%3E)
 xhr/responsedocument-decoding.htm	XMLHttpRequest: response document decoding (text/html;charset=utf-8 %3C!doctype%20html%3E%3Cmeta%20charset%3Dwindows-1252%3E%3Cx%3E%e6%a9%9f%3C%2Fx%3E)
 xhr/responsedocument-decoding.htm	XMLHttpRequest: response document decoding (text/html;charset=windows-1252 %3C!doctype%20html%3E%3Cmeta%20charset%3Dwindows-1252%3E%3Cx%3E%e6%a9%9f%3C%2Fx%3E)
-xhr/responsetext-decoding.htm	-
 xhr/responsetype.any.html	Set responseType to "" when readyState is DONE.
 xhr/responsetype.any.html	Set responseType to "" when readyState is OPENED and the sync flag is set.
 xhr/responsetype.any.html	Set responseType to "arraybuffer" when readyState is DONE.
@@ -308,7 +225,6 @@ xhr/responsetype.any.html	Set responseType to "text" when readyState is DONE.
 xhr/responsetype.any.html	Set responseType to "text" when readyState is OPENED and the sync flag is set.
 xhr/responseurl-after-abort.any.html	abort() during DONE clears responseURL (async)
 xhr/responseurl-after-abort.any.html	abort() during DONE clears responseURL (sync)
-xhr/responseurl.html	Redirected response has proper responseURL
 xhr/responsexml-basic.htm	XMLHttpRequest: responseXML basic test
 xhr/responsexml-basic.htm	responseXML on empty response documents
 xhr/responsexml-document-properties.htm	-
@@ -344,8 +260,6 @@ xhr/responsexml-non-well-formed.htm	XMLHttpRequest: responseXML non well-formed 
 xhr/responsexml-non-well-formed.htm	XMLHttpRequest: responseXML non well-formed tests 6
 xhr/security-consideration.sub.html	ProgressEvent: security consideration
 xhr/send-accept-language.htm	Send "sensible" default value, whatever that means
-xhr/send-accept-language.htm	XMLHttpRequest: send() - Accept-Language
-xhr/send-accept.htm	XMLHttpRequest: send() - Accept
 xhr/send-after-setting-document-domain.htm	-
 xhr/send-authentication-basic-repeat-no-args.htm	XMLHttpRequest: send() - "Basic" authenticated requests with user name and password passed to open() in first request, without in second
 xhr/send-authentication-basic-setrequestheader-and-arguments.htm	XMLHttpRequest: send() - "Basic" authenticated request using setRequestHeader() and open() arguments (asserts header wins)
@@ -371,36 +285,9 @@ xhr/send-authentication-cors-setrequestheader-no-cred.htm	CORS request with setR
 xhr/send-authentication-existing-session-manual.htm	-
 xhr/send-authentication-prompt-2-manual.htm	XMLHttpRequest: WWW-Authenticate challenge when user,pass are not passed to open()
 xhr/send-authentication-prompt-manual.htm	XMLHttpRequest: send() - "Basic" authentication gets 401 response
-xhr/send-blob-with-no-mime-type.html	Asynchronous blob loading with invalid mime type [POST]
-xhr/send-blob-with-no-mime-type.html	Asynchronous blob loading with invalid mime type [PUT]
-xhr/send-blob-with-no-mime-type.html	Asynchronous blob loading with no mime type [POST]
-xhr/send-blob-with-no-mime-type.html	Asynchronous blob loading with no mime type [PUT]
-xhr/send-blob-with-no-mime-type.html	Synchronous blob loading with invalid mime type [POST]
-xhr/send-blob-with-no-mime-type.html	Synchronous blob loading with invalid mime type [PUT]
-xhr/send-blob-with-no-mime-type.html	Synchronous blob loading with no mime type [POST]
-xhr/send-blob-with-no-mime-type.html	Synchronous blob loading with no mime type [PUT]
 xhr/send-conditional-cors.htm	304 with appropriate CORS header
 xhr/send-conditional-cors.htm	304 without appropriate CORS header
-xhr/send-conditional.htm	XMLHttpRequest: send() - conditional requests (date)
-xhr/send-conditional.htm	XMLHttpRequest: send() - conditional requests (tag)
-xhr/send-content-type-charset.htm	-
-xhr/send-content-type-string.htm	XMLHttpRequest: send() - Content-Type
-xhr/send-data-arraybuffer.any.html	XMLHttpRequest.send(arraybuffer)
-xhr/send-data-arraybufferview.any.html	XMLHttpRequest.send(arraybufferview)
-xhr/send-data-blob.htm	XMLHttpRequest: The send() method: Blob data
-xhr/send-data-es-object.any.html	object that stringifies to JSON string
-xhr/send-data-es-object.any.html	object that stringifies to query string
-xhr/send-data-es-object.any.html	object whose valueOf() returns a document - ignore valueOf(), stringify
-xhr/send-data-es-object.any.html	sending a new ReadableStream instance
-xhr/send-data-es-object.any.html	sending a new XHR instance
-xhr/send-data-es-object.any.html	sending a plain empty object
-xhr/send-data-es-object.any.html	sending object that stringifies to null
-xhr/send-data-es-object.any.html	sending object that stringifies to undefined
-xhr/send-data-es-object.any.html	sending the ES Math object
 xhr/send-data-formdata.any.html	XMLHttpRequest.send(formdata)
-xhr/send-data-isolation.html	Modifying a Uint8Array after send() does not affect the sent data
-xhr/send-data-isolation.html	Modifying a typed array view after send() does not affect the sent data
-xhr/send-data-isolation.html	Modifying an ArrayBuffer after send() does not affect the sent data
 xhr/send-data-sharedarraybuffer.any.html	sending a BigInt64Array backed by a SharedArrayBuffer
 xhr/send-data-sharedarraybuffer.any.html	sending a BigUint64Array backed by a SharedArrayBuffer
 xhr/send-data-sharedarraybuffer.any.html	sending a DataView backed by a SharedArrayBuffer
@@ -415,25 +302,6 @@ xhr/send-data-sharedarraybuffer.any.html	sending a Uint16Array backed by a Share
 xhr/send-data-sharedarraybuffer.any.html	sending a Uint32Array backed by a SharedArrayBuffer
 xhr/send-data-sharedarraybuffer.any.html	sending a Uint8Array backed by a SharedArrayBuffer
 xhr/send-data-sharedarraybuffer.any.html	sending a Uint8ClampedArray backed by a SharedArrayBuffer
-xhr/send-data-string-invalid-unicode.any.html	invalid unicode '\\u{d83d}' should be fixed with replacement character
-xhr/send-data-string-invalid-unicode.any.html	invalid unicode '\\u{d83d}ab' should be fixed with replacement character
-xhr/send-data-string-invalid-unicode.any.html	invalid unicode '\\u{dc94}' should be fixed with replacement character
-xhr/send-data-string-invalid-unicode.any.html	invalid unicode '\\u{dc94}ab' should be fixed with replacement character
-xhr/send-data-string-invalid-unicode.any.html	invalid unicode 'a\\u{d83d}b' should be fixed with replacement character
-xhr/send-data-string-invalid-unicode.any.html	invalid unicode 'a\\u{dc94}b' should be fixed with replacement character
-xhr/send-data-string-invalid-unicode.any.html	invalid unicode 'ab\\u{d83d}' should be fixed with replacement character
-xhr/send-data-string-invalid-unicode.any.html	invalid unicode 'ab\\u{dc94}' should be fixed with replacement character
-xhr/send-data-string-invalid-unicode.any.html	valid unicode should be sent correctly
-xhr/send-data-unexpected-tostring.htm	open() called from data stringification
-xhr/send-data-unexpected-tostring.htm	send() called from data stringification
-xhr/send-document-lone-surrogate.html	send() with Document containing lone surrogate should not throw
-xhr/send-entity-body-basic.htm	XMLHttpRequest: send() - data argument (1)
-xhr/send-entity-body-basic.htm	XMLHttpRequest: send() - data argument (10000000)
-xhr/send-entity-body-basic.htm	XMLHttpRequest: send() - data argument (1=2&3=4)
-xhr/send-entity-body-basic.htm	XMLHttpRequest: send() - data argument (2,2)
-xhr/send-entity-body-basic.htm	XMLHttpRequest: send() - data argument (A A)
-xhr/send-entity-body-basic.htm	XMLHttpRequest: send() - data argument (false)
-xhr/send-entity-body-document-bogus.htm	Serializing documents through XMLHttpRequest: ''
 xhr/send-entity-body-document-bogus.htm	Serializing documents through XMLHttpRequest: '<test:test test:test="gee" x="�"/>'
 xhr/send-entity-body-document-bogus.htm	Serializing documents through XMLHttpRequest: '<test:test test:test="gee"/>'
 xhr/send-entity-body-document-bogus.htm	Serializing documents through XMLHttpRequest: '<test:test/>'
@@ -445,38 +313,14 @@ xhr/send-entity-body-document.htm	empty div
 xhr/send-entity-body-document.htm	image file
 xhr/send-entity-body-document.htm	img tag
 xhr/send-entity-body-document.htm	plain text file
-xhr/send-entity-body-empty.htm	XMLHttpRequest: send("") - empty entity body (HEAD)
-xhr/send-entity-body-empty.htm	XMLHttpRequest: send("") - empty entity body (POST)
-xhr/send-entity-body-empty.htm	XMLHttpRequest: send("") - empty entity body (PUT)
-xhr/send-entity-body-get-head-async.htm	XMLHttpRequest: send() - non-empty data argument and GET/HEAD - async, no upload events should fire (GET)
-xhr/send-entity-body-get-head-async.htm	XMLHttpRequest: send() - non-empty data argument and GET/HEAD - async, no upload events should fire (HEAD)
-xhr/send-entity-body-get-head.htm	XMLHttpRequest: send() - non-empty data argument and GET/HEAD (GET)
-xhr/send-entity-body-get-head.htm	XMLHttpRequest: send() - non-empty data argument and GET/HEAD (HEAD)
-xhr/send-entity-body-none.htm	Explicit content type (HEAD)
 xhr/send-entity-body-none.htm	Explicit content type (POST)
 xhr/send-entity-body-none.htm	Explicit content type (PUT)
-xhr/send-entity-body-none.htm	No content type (HEAD)
 xhr/send-entity-body-none.htm	No content type (POST)
 xhr/send-entity-body-none.htm	No content type (PUT)
 xhr/send-network-error-async-events.sub.htm	XMLHttpRequest: The send() method: Fire a progress event named error when Network error happens (synchronous flag is unset)
-xhr/send-network-error-sync-events.sub.htm	http URL
-xhr/send-no-response-event-loadend.htm	XMLHttpRequest: The send() method: Fire a progress event named loadend (no response entity body)
 xhr/send-no-response-event-order.htm	XMLHttpRequest: The send() method: event order when there is no response entity body
 xhr/send-non-same-origin.htm	XMLHttpRequest: send() - non same-origin (folder.txt)
 xhr/send-non-same-origin.htm	XMLHttpRequest: send() - non same-origin (http://www1.web-platform.test:8000)
-xhr/send-receive-utf16.htm	UTF-16 without BOM, mislabelled as UTF-8 in content-type
-xhr/send-receive-utf16.htm	UTF-16 without BOM, with charset label in content-type
-xhr/send-redirect-bogus-sync.sub.htm	XMLHttpRequest: send() - Redirects (bogus Location header; sync) (301: foobar://abcd)
-xhr/send-redirect-bogus-sync.sub.htm	XMLHttpRequest: send() - Redirects (bogus Location header; sync) (302: http://{{hosts[][nonexistent]}})
-xhr/send-redirect-bogus-sync.sub.htm	XMLHttpRequest: send() - Redirects (bogus Location header; sync) (302: mailto:someone@example.org)
-xhr/send-redirect-bogus-sync.sub.htm	XMLHttpRequest: send() - Redirects (bogus Location header; sync) (303: http://{{hosts[][nonexistent]}})
-xhr/send-redirect-bogus-sync.sub.htm	XMLHttpRequest: send() - Redirects (bogus Location header; sync) (303: tel:1234567890)
-xhr/send-redirect-bogus.sub.htm	XMLHttpRequest: send() - Redirects (bogus Location header) (302: http://{{hosts[][nonexistent]}})
-xhr/send-redirect-bogus.sub.htm	XMLHttpRequest: send() - Redirects (bogus Location header) (302: mailto:someone@example.org)
-xhr/send-redirect-bogus.sub.htm	XMLHttpRequest: send() - Redirects (bogus Location header) (303: foobar:someone@example.org)
-xhr/send-redirect-bogus.sub.htm	XMLHttpRequest: send() - Redirects (bogus Location header) (303: http://{{hosts[][nonexistent]}})
-xhr/send-redirect-infinite-sync.htm	XMLHttpRequest: send() - Redirects (infinite loop; sync) (301)
-xhr/send-redirect-infinite.htm	XMLHttpRequest: send() - Redirects (infinite loop)
 xhr/send-redirect-no-location.htm	XMLHttpRequest: send() - Redirects (no Location header) (301)
 xhr/send-redirect-no-location.htm	XMLHttpRequest: send() - Redirects (no Location header) (302)
 xhr/send-redirect-no-location.htm	XMLHttpRequest: send() - Redirects (no Location header) (303)
@@ -484,178 +328,28 @@ xhr/send-redirect-no-location.htm	XMLHttpRequest: send() - Redirects (no Locatio
 xhr/send-redirect-post-upload.htm	XMLHttpRequest: The send() method: POSTing to URL that redirects (301)
 xhr/send-redirect-post-upload.htm	XMLHttpRequest: The send() method: POSTing to URL that redirects (302)
 xhr/send-redirect-post-upload.htm	XMLHttpRequest: The send() method: POSTing to URL that redirects (303)
-xhr/send-redirect-post-upload.htm	XMLHttpRequest: The send() method: POSTing to URL that redirects (307 (blob))
-xhr/send-redirect-post-upload.htm	XMLHttpRequest: The send() method: POSTing to URL that redirects (307 (string))
-xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (301 GET with explicit Content-Type safelisted)
 xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (301 GET with explicit Content-Type)
-xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (301 POST with string and explicit Content-Type safelisted)
-xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (301 POST with string and explicit Content-Type)
-xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (301)
-xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (302 FOO with string and explicit Content-Type safelisted)
-xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (302 POST with string and explicit Content-Type)
-xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (302)
-xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (303 FOO with string and explicit Content-Type safelisted)
-xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (303 GET with explicit Content-Type safelisted)
-xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (303)
 xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (307 FOO with string and explicit Content-Type)
-xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (307 POST with string and explicit Content-Type safelisted)
 xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (307 POST with string and explicit Content-Type)
-xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (307 post with null)
-xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (307 post with string)
-xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (307 post with typed array)
-xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (307)
-xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (308 FOO with string and explicit Content-Type multipart/form-data)
-xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (308 FOO with string and explicit Content-Type safelisted)
-xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (308 FOO with string and explicit Content-Type text/plain)
 xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (308 FOO with string and explicit Content-Type)
 xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (308 POST with string and explicit Content-Type)
-xhr/send-redirect-to-non-cors.htm	XMLHttpRequest: send() - Redirect to cross-origin resource, not CORS-enabled (301)
-xhr/send-redirect-to-non-cors.htm	XMLHttpRequest: send() - Redirect to cross-origin resource, not CORS-enabled (302)
-xhr/send-redirect-to-non-cors.htm	XMLHttpRequest: send() - Redirect to cross-origin resource, not CORS-enabled (303)
-xhr/send-redirect-to-non-cors.htm	XMLHttpRequest: send() - Redirect to cross-origin resource, not CORS-enabled (307)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (300, GET, content.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (301, GET, content.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (301, GET, redirect.py%3Flocation%3Dcontent.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (301, HEAD, content.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (301, HEAD, redirect.py%3Flocation%3Dcontent.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (301, POST, content.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (301, POST, redirect.py%3Flocation%3Dcontent.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (302, GET, content.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (302, GET, redirect.py%3Flocation%3Dcontent.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (302, HEAD, content.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (302, HEAD, redirect.py%3Flocation%3Dcontent.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (302, POST, content.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (302, POST, redirect.py%3Flocation%3Dcontent.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (303, CHICKEN, redirect.py%3Flocation%3Dcontent.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (303, GET, content.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (303, GET, redirect.py%3Flocation%3Dcontent.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (303, HEAD, content.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (303, HEAD, redirect.py%3Flocation%3Dcontent.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (303, POST, content.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (303, POST, redirect.py%3Flocation%3Dcontent.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (304, GET, content.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (305, GET, content.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (306, GET, content.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (307, GET, content.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (307, GET, redirect.py%3Flocation%3Dcontent.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (307, HEAD, content.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (307, HEAD, redirect.py%3Flocation%3Dcontent.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (307, POST, content.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (307, POST, redirect.py%3Flocation%3Dcontent.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (308, GET, content.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (309, GET, content.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (310, GET, content.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (350, GET, content.py)
-xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (399, GET, content.py)
 xhr/send-response-event-order.htm	XMLHttpRequest: The send() method: event order when synchronous flag is unset
-xhr/send-sync-blocks-async.htm	XMLHttpRequest: sync requests should block events on pending async requests
 xhr/send-sync-no-response-event-load.htm	XMLHttpRequest: The send() method: Fire an event named load (no response entity body and the synchronous flag is set)
 xhr/send-sync-no-response-event-loadend.htm	XMLHttpRequest: The send() method: Fire an event named loadend (no response entity body and the synchronous flag is set)
 xhr/send-sync-no-response-event-order.htm	XMLHttpRequest: The send() method: event order when synchronous flag is set and there is no response entity body
 xhr/send-sync-response-event-order.htm	XMLHttpRequest: The send() method: event order when synchronous flag is set
 xhr/send-timeout-events.htm	XMLHttpRequest: The send() method: timeout is not 0 
-xhr/send-usp.any.html	-
-xhr/setrequestheader-allow-empty-value.htm	XMLHttpRequest: setRequestHeader() - empty header ()
-xhr/setrequestheader-allow-empty-value.htm	XMLHttpRequest: setRequestHeader() - empty header (null)
-xhr/setrequestheader-allow-empty-value.htm	XMLHttpRequest: setRequestHeader() - empty header (undefined)
-xhr/setrequestheader-allow-whitespace-in-value.htm	XMLHttpRequest: setRequestHeader() - header value with whitespace ( )
-xhr/setrequestheader-allow-whitespace-in-value.htm	XMLHttpRequest: setRequestHeader() - header value with whitespace ( t )
-xhr/setrequestheader-allow-whitespace-in-value.htm	XMLHttpRequest: setRequestHeader() - header value with whitespace ( t)
-xhr/setrequestheader-allow-whitespace-in-value.htm	XMLHttpRequest: setRequestHeader() - header value with whitespace (t )
 xhr/setrequestheader-bogus-name.htm	setRequestHeader should throw with header name "X-ﾃｽﾄ".
 xhr/setrequestheader-bogus-name.htm	setRequestHeader should throw with header name "ﾃｽﾄ".
 xhr/setrequestheader-bogus-value.htm	XMLHttpRequest: setRequestHeader() value argument checks 3
-xhr/setrequestheader-case-insensitive.htm	XMLHttpRequest: setRequestHeader() - headers that differ in case
 xhr/setrequestheader-case-insensitive.htm	XMLHttpRequest: setRequestHeader() - headers that differ in case 1
-xhr/setrequestheader-combining.window.html	setRequestHeader() combining header values
-xhr/setrequestheader-content-type.htm	-
-xhr/setrequestheader-header-allowed.htm	XMLHttpRequest: setRequestHeader() - headers that are allowed (!#$%&'*+-.^_`|~0123456789abcdefghijklmnopqrstuvwxyz)
-xhr/setrequestheader-header-allowed.htm	XMLHttpRequest: setRequestHeader() - headers that are allowed (Authorization)
-xhr/setrequestheader-header-allowed.htm	XMLHttpRequest: setRequestHeader() - headers that are allowed (Content-Transfer-Encoding)
-xhr/setrequestheader-header-allowed.htm	XMLHttpRequest: setRequestHeader() - headers that are allowed (Content-Type)
-xhr/setrequestheader-header-allowed.htm	XMLHttpRequest: setRequestHeader() - headers that are allowed (If)
-xhr/setrequestheader-header-allowed.htm	XMLHttpRequest: setRequestHeader() - headers that are allowed (Overwrite)
-xhr/setrequestheader-header-allowed.htm	XMLHttpRequest: setRequestHeader() - headers that are allowed (Pragma)
-xhr/setrequestheader-header-allowed.htm	XMLHttpRequest: setRequestHeader() - headers that are allowed (Status-URI)
 xhr/setrequestheader-header-allowed.htm	XMLHttpRequest: setRequestHeader() - headers that are allowed (User-Agent)
-xhr/setrequestheader-header-allowed.htm	XMLHttpRequest: setRequestHeader() - headers that are allowed (X-Pink-Unicorn)
-xhr/setrequestheader-header-forbidden.htm	XMLHttpRequest: setRequestHeader() - headers that are forbidden
-xhr/setrequestheader-header-forbidden.htm	XMLHttpRequest: setRequestHeader() - headers that are forbidden 1
 xhr/setrequestheader-open-setrequestheader.htm	XMLHttpRequest: setRequestHeader() and open()
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 1 (GET 204)
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 10 (GET 402)
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 11 (HEAD 402)
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 12 (CHICKEN 402)
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 13 (GET 402)
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 14 (HEAD 402)
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 15 (CHICKEN 402)
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 16 (GET 502)
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 17 (HEAD 502)
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 18 (CHICKEN 502)
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 19 (GET 502)
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 2 (HEAD 204)
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 20 (HEAD 502)
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 21 (CHICKEN 502)
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 22 (GET 503)
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 23 (HEAD 503)
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 24 (CHICKEN 503)
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 25 (GET 699)
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 26 (HEAD 699)
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 27 (CHICKEN 699)
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 3 (CHICKEN 204)
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 4 (GET 401)
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 5 (HEAD 401)
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 6 (CHICKEN 401)
 xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 7 (GET 402)
-xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 8 (HEAD 402)
 xhr/status-async.htm	XMLHttpRequest: status/statusText - various responses 9 (CHICKEN 402)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 1 (GET 204)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 10 (GET 402)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 11 (HEAD 402)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 12 (CHICKEN 402)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 13 (GET 402)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 14 (HEAD 402)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 15 (CHICKEN 402)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 16 (GET 502)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 17 (HEAD 502)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 18 (CHICKEN 502)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 19 (GET 502)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 2 (HEAD 204)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 20 (HEAD 502)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 21 (CHICKEN 502)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 22 (GET 503)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 23 (HEAD 503)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 24 (CHICKEN 503)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 25 (GET 699)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 26 (HEAD 699)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 27 (CHICKEN 699)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 3 (CHICKEN 204)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 4 (GET 401)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 5 (HEAD 401)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 6 (CHICKEN 401)
 xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 7 (GET 402)
-xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 8 (HEAD 402)
 xhr/status-basic.htm	XMLHttpRequest: status/statusText - various responses 9 (CHICKEN 402)
 xhr/status-error.htm	POST on blob uri
-xhr/status-error.htm	XMLHttpRequest: status error handling GET 200
-xhr/status-error.htm	XMLHttpRequest: status error handling GET 400
-xhr/status-error.htm	XMLHttpRequest: status error handling GET 401
-xhr/status-error.htm	XMLHttpRequest: status error handling GET 404
-xhr/status-error.htm	XMLHttpRequest: status error handling GET 410
-xhr/status-error.htm	XMLHttpRequest: status error handling GET 500
-xhr/status-error.htm	XMLHttpRequest: status error handling GET 699
-xhr/status-error.htm	XMLHttpRequest: status error handling HEAD 200
-xhr/status-error.htm	XMLHttpRequest: status error handling HEAD 404
-xhr/status-error.htm	XMLHttpRequest: status error handling HEAD 500
-xhr/status-error.htm	XMLHttpRequest: status error handling HEAD 699
-xhr/status-error.htm	XMLHttpRequest: status error handling POST 200
-xhr/status-error.htm	XMLHttpRequest: status error handling POST 404
-xhr/status-error.htm	XMLHttpRequest: status error handling POST 500
-xhr/status-error.htm	XMLHttpRequest: status error handling POST 699
-xhr/status-error.htm	XMLHttpRequest: status error handling PUT 200
-xhr/status-error.htm	XMLHttpRequest: status error handling PUT 404
-xhr/status-error.htm	XMLHttpRequest: status error handling PUT 500
-xhr/status-error.htm	XMLHttpRequest: status error handling PUT 699
 xhr/status.h2.window.html	statusText over H2 for status 200 should be the empty string
 xhr/status.h2.window.html	statusText over H2 for status 210 should be the empty string
 xhr/status.h2.window.html	statusText over H2 for status 400 should be the empty string
@@ -668,10 +362,6 @@ xhr/sync-xhr-supported-by-permissions-policy.tentative.html	document.permissions
 xhr/template-element.html	XMLHttpRequest: template element parsing
 xhr/template-element.html	XMLHttpRequest: template element parsing 1
 xhr/template-element.html	XMLHttpRequest: template element parsing 2
-xhr/timeout-cors-async.htm	XMLHttpRequest: timeout event and cross-origin request
-xhr/timeout-multiple-fetches.html	-
-xhr/timeout-multiple-fetches.html	CORS preflights should not reset the timer
-xhr/timeout-multiple-fetches.html	Redirects should not reset the timer
 xhr/timeout-sync.htm	open() with async false when timeout is set
 xhr/timeout-sync.htm	setting timeout attribute on sync request
 xhr/xhr-authorization-redirect.any.html	-
@@ -692,7 +382,6 @@ xhr/xmlhttprequest-timeout-aborted.html	-
 xhr/xmlhttprequest-timeout-abortedonmain.html	-
 xhr/xmlhttprequest-timeout-overrides.html	-
 xhr/xmlhttprequest-timeout-overridesexpires.html	-
-xhr/xmlhttprequest-timeout-reused.html	-
 xhr/xmlhttprequest-timeout-simple.html	-
 xhr/xmlhttprequest-timeout-synconmain.html	-
 xhr/xmlhttprequest-timeout-twice.html	-

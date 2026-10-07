@@ -317,6 +317,24 @@ pub fn run(cx: &mut Cx<'_>, limits: &LoopLimits) -> LoopReport {
         }
 
         let now = cx.page.clock.peek();
+        let due_at = cx
+            .page
+            .timers
+            .borrow()
+            .next_deadline()
+            .filter(|t| *t <= now);
+        if let Some(due_at) = due_at
+            && cx.page.clock.is_virtual()
+            && let Some(wait) = net::real_time_before(cx.page, due_at)
+        {
+            // The clock ran ahead of real time while a response was on
+            // its way: give the response the time it would have had.
+            let wait = wait.min(limits.wall.saturating_sub(started.elapsed()));
+            if net::deliver(cx, Some(wait)) > 0 {
+                steps += 1;
+                continue;
+            }
+        }
         let due = cx.page.timers.borrow_mut().pop_due(now);
         if let Some((fired_at, timer)) = due {
             run_timer(cx, fired_at, timer);

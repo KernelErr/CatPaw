@@ -15,6 +15,7 @@ use std::any::Any;
 use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
+use std::time::Instant;
 
 use catpaw_dom::{Dom, NodeId};
 use catpaw_js::{EventTargetRef, Exception, Fallible, ObjectId, ScriptHost};
@@ -239,6 +240,10 @@ pub struct PageState {
 
     pub(crate) net: RefCell<Option<Rc<dyn NetHost>>>,
     pub(crate) net_callbacks: RefCell<HashMap<u64, NetCallback>>,
+    /// When each awaited request started, on the page clock and the real
+    /// one, so that timers do not overtake a response that would have
+    /// arrived first in real time.
+    pub(crate) net_started: RefCell<HashMap<u64, (f64, Instant)>>,
     /// How many of those are background requests (beacons), which do not
     /// keep the page from settling.
     pub(crate) background_requests: Cell<usize>,
@@ -325,6 +330,7 @@ impl PageState {
             raf: RefCell::new(RafState::default()),
             net: RefCell::new(None),
             net_callbacks: RefCell::new(HashMap::new()),
+            net_started: RefCell::new(HashMap::new()),
             background_requests: Cell::new(0),
             scripts: ScriptState::default(),
             storage: [RefCell::new(IndexMap::new()), RefCell::new(IndexMap::new())],

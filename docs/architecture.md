@@ -135,6 +135,10 @@ challenges → M5 scale & compat. Exit criteria live in the README.
 - `cargo xtask wpt --include <dir> …` — testharness.js tests from web-platform-tests
   run in CatPaw pages (the checkout served by an in-process stand-in for WPT's
   server; `.any.js` wrappers, `// META:` lines and `.sub.` substitutions as it
-  makes them), with the known failures in `tests/wpt-expectations/<dir>.txt`
+  makes them; `xtask/src/wpt_handlers.rs` stands in for the Python handlers
+  the fetch and XHR tests use), with the known failures in
+  `tests/wpt-expectations/<dir>.txt`. The expectations are recorded on
+  Linux, where CI runs the suites; the few tests whose outcome depends on
+  the platform are skipped.
 - Leak census after integration tests: force a GC, then assert the arena is
   empty.

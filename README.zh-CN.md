@@ -7,17 +7,17 @@ CatPaw 不是 Chromium 的封装，也不是"渲染引擎 + 自动化接口"。�
 agent 真正需要的东西——带稳定引用的紧凑语义快照、精确的"页面已稳定"信号、用 diff 代替
 重复输出、确定性的时间、廉价的隔离上下文。
 
-> 状态：**pre-alpha**。里程碑 M0（"抓取与阅读"）已完成，M1（基于 Boa 的 JavaScript）进行中。
+> 状态：**pre-alpha**。里程碑 M0（"抓取与阅读"）与 M1（"脚本运行"，基于 Boa 的 JavaScript）已完成，下一步是 M2（"交互"：布局、输入、导航、iframe）。
 >
-> M1 当前进展（通过 `catpaw fetch --js` 使用）：经典脚本（内联、外链、`defer`、`async`、
-> 脚本动态插入、`document.write`）与模块脚本（静态与动态 import、import map）在 Boa 上与解析器交错执行；核心 DOM（全部 HTML/SVG 元素接口、属性对象、树遍历、XPath、`DOMParser`、`document.implementation`）、
+> 通过 `catpaw fetch --js` 使用：经典脚本（内联、外链、`defer`、`async`、
+> 脚本动态插入、`document.write`）与模块脚本（静态与动态 import、import map）在 Boa 上与解析器交错执行；核心 DOM（全部 HTML/SVG 元素接口、属性对象、树遍历、XPath、`Range` 与 `Selection`、`DOMParser`、`document.implementation`、文档集合与具名访问如 `document.forms`、`document.myForm`）、
 > Shadow DOM 与 slot、Custom Elements、事件、`MutationObserver`/`IntersectionObserver`/`PerformanceObserver`、定时器、`URL`、
 > history、Navigation Timing、内联样式与计算样式（样式表会被抓取并由 Stylo 层叠）及 CSSOM（`CSSStyleSheet`、`adoptedStyleSheets`、`CSS.supports`）、
-> `fetch`/`XMLHttpRequest`（执行 CORS 检查）、Streams、`data:` URL、`sendBeacon`、storage、编码、`crypto` 随机数与摘要、
-> 无布局形态的字体加载与 Selection API，以及 console 等 API 的绑定由 Web IDL 生成；事件循环支持虚拟时间。
+> `fetch`/`XMLHttpRequest`（CORS、预检、重定向与 referrer policy 均按 Fetch 标准由页面处理）、Streams、`data:` URL、`sendBeacon`、storage、编码、`crypto` 随机数与摘要、
+> 无布局形态的字体加载 API，以及 console 等 API 的绑定由 Web IDL 生成；事件循环支持虚拟时间；墙钟脚本预算（`--script-budget`，默认 10 秒）会终止失控的脚本。
 > React、Vue、Svelte、Lit、htmx、Alpine 站点均可运行；Boa 引擎以附带修复的形式 vendor 在 `vendor/` 下（见其中说明）。
-> web-platform-tests 在 CI 中按记录的预期运行：`dom` 4243 个子测试通过 2928，`html/dom` 1066 通过 498，`fetch/api` 2172 通过 1037，`xhr` 974 通过 330（其余大多需要 iframe、布局或 WPT 的 Python 处理器）。
-> 尚未支持：布局、canvas、媒体、Worker、WebAssembly、`Range`，以及 HTML 元素中超出属性反射的成员。
+> web-platform-tests 在 CI 中按记录的预期运行，由进程内的 WPT 服务器替身提供服务（含 fetch/XHR 测试依赖的 Python 处理器的等价实现）：`dom` 4246 个子测试通过 2975，`html/dom` 1066 通过 582，`fetch/api` 2237 通过 1908，`xhr` 1200 通过 859（其余大多需要 iframe、布局，或替身尚未模拟的服务器行为）。
+> 尚未支持：布局、canvas、媒体、Worker、WebAssembly，以及 HTML 元素中超出属性反射的成员。
 >
 > 不依赖 JavaScript 即可用的部分：基于 rustls 的 HTTP/1.1 与 HTTP/2、重定向、cookie、
 > gzip/brotli/zstd 解压、编码嗅探、Web Bot Auth 请求签名（已通过 Cloudflare 测试端点验证）、
@@ -64,7 +64,7 @@ catpaw keygen --out ./agent-key.json
 | 里程碑 | 范围 | 完成标准 |
 |---|---|---|
 | M0 抓取与阅读（已完成） | HTTP/1.1+2、cookies、Web Bot Auth 签名、HTML 解析进 arena DOM、Stylo UA + 作者样式表、CST 快照 v0、markdown/文本/表单视图、CLI | `catpaw fetch … --snapshot` 在真实页面可用；WPT tree-construction 套件在 CI 中按记录的期望运行 |
-| M1 脚本运行 | Boa realm、生成的绑定、带虚拟时间的事件循环、解析器/脚本交错、fetch/XHR、给 WPT 用的最小 WebDriver | WPT `dom/`、`html/dom/`、`fetch/api/` 子集通过；Next.js 与 Vue 应用完成 hydration |
+| M1 脚本运行（已完成） | Boa realm、生成的绑定、带虚拟时间的事件循环、解析器/脚本交错、fetch/XHR、脚本预算、进程内 WPT runner（取代原计划的 WebDriver 子集） | WPT `dom/`、`html/dom/`、`fetch/api/`、`xhr/` 子集按记录的预期通过；React 与 Vue 应用完成服务端标记的 hydration（测试套件中计时） |
 | M2 交互 | 布局、命中测试、输入事件、表单、导航与历史、iframe 与弹窗、存储、observers、截图、Canvas 2D、Web Crypto、WebSocket、Workers | 在真实站点完成登录；Turnstile 勾选框点击生效 |
 | M3 agent API | JSON-RPC/WS、MCP、快照 diff、settled、动作后果、checkpoint、HAR 录制回放、SDK | agent 通过 MCP 完成 WebArena 任务 |
 | M4 保真与挑战 | 挑战检测、human hand-off、覆盖各种 Cloudflare 挑战模式的测试 zone、Signed Agent 注册 | 有通过率数据；hand-off 端到端可用 |
