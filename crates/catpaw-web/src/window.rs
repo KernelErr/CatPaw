@@ -193,11 +193,11 @@ impl web::WindowImpl for Web {
     }
 
     fn window(_cx: &mut Cx<'_>) -> Fallible<WindowRef> {
-        Ok(WindowRef)
+        Ok(WindowRef::Local)
     }
 
     fn self_(_cx: &mut Cx<'_>) -> Fallible<WindowRef> {
-        Ok(WindowRef)
+        Ok(WindowRef::Local)
     }
 
     fn document(cx: &mut Cx<'_>) -> Fallible<NodeId> {
@@ -229,15 +229,38 @@ impl web::WindowImpl for Web {
     }
 
     fn frames(_cx: &mut Cx<'_>) -> Fallible<WindowRef> {
-        Ok(WindowRef)
+        Ok(WindowRef::Local)
     }
 
-    fn top(_cx: &mut Cx<'_>) -> Fallible<Option<WindowRef>> {
-        Ok(Some(WindowRef))
+    fn top(cx: &mut Cx<'_>) -> Fallible<Option<WindowRef>> {
+        Ok(Some(crate::frames::top_window(cx)))
     }
 
-    fn parent(_cx: &mut Cx<'_>) -> Fallible<Option<WindowRef>> {
-        Ok(Some(WindowRef))
+    fn parent(cx: &mut Cx<'_>) -> Fallible<Option<WindowRef>> {
+        Ok(Some(crate::frames::parent_window(cx)))
+    }
+
+    fn frame_element(_cx: &mut Cx<'_>) -> Fallible<Option<NodeId>> {
+        // The element lives in the parent's document, which is another
+        // page: not reachable, as across origins.
+        Ok(None)
+    }
+
+    fn post_message(
+        cx: &mut Cx<'_>,
+        message: Value,
+        target_origin: String,
+        _transfer: Vec<Value>,
+    ) -> Fallible<()> {
+        crate::frames::post_to_frame(cx, None, message, target_origin)
+    }
+
+    fn post_message_overload2(
+        cx: &mut Cx<'_>,
+        message: Value,
+        options: web::WindowPostMessageOptions,
+    ) -> Fallible<()> {
+        crate::frames::post_to_frame(cx, None, message, options.target_origin)
     }
 
     fn navigator(cx: &mut Cx<'_>) -> Fallible<ObjectId> {

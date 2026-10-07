@@ -308,12 +308,12 @@ fn execute_fetched(
 }
 
 /// Delays the document's `load` event until a matching [`unblock_load`].
-pub(crate) fn block_load(page: &PageState) {
+pub fn block_load(page: &PageState) {
     let scripts = &page.scripts;
     scripts.load_blockers.set(scripts.load_blockers.get() + 1);
 }
 
-pub(crate) fn unblock_load(page: &PageState) {
+pub fn unblock_load(page: &PageState) {
     let scripts = &page.scripts;
     scripts
         .load_blockers
@@ -448,6 +448,7 @@ fn parse<R>(page: &PageState, run: impl FnOnce() -> R) -> R {
     for change in &changes {
         if let TreeChange::Inserted { node, .. } = *change {
             stylesheets::link_changed(page, node, true);
+            crate::frames::iframe_changed(page, node);
             inserted.push(node);
         }
     }
@@ -681,6 +682,7 @@ pub(crate) fn nodes_inserted(cx: &mut Cx<'_>, parent: NodeId, inserted: &[NodeId
         cx.page.document_names.changed();
     }
     crate::custom_elements::nodes_inserted(cx.page, inserted);
+    crate::frames::nodes_inserted(cx.page, inserted);
     for link in links {
         stylesheets::link_changed(cx.page, link, false);
     }

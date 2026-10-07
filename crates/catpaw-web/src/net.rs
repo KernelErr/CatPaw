@@ -13,6 +13,8 @@ use crate::page::{Cx, PageState};
 /// What a request is for. Hosts may use it for prioritisation and policy.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RequestKind {
+    /// A frame's document.
+    Document,
     Script,
     Style,
     Xhr,

@@ -214,9 +214,14 @@ impl<T: Into<Value>> From<Option<T>> for Value {
     }
 }
 
-/// The window, as a return or argument value (`WindowProxy`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
-pub struct WindowRef;
+/// A window as script sees it: this page's own, or another frame's,
+/// reached through a platform object that stands for it (`contentWindow`,
+/// `parent`, `event.source`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WindowRef {
+    Local,
+    Remote(ObjectId),
+}
 
 /// Bytes returned to script as an `ArrayBuffer`.
 #[derive(Clone, Debug, PartialEq, Eq, Default)]

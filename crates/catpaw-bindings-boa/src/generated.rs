@@ -1242,6 +1242,62 @@ impl IntoJs for web::KeyboardEventInit {
     }
 }
 
+impl FromJs for web::MessageEventInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "MessageEventInit")?;
+        Ok(Self {
+            bubbles: match rt::dictionary_member(&obj, "bubbles", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            cancelable: match rt::dictionary_member(&obj, "cancelable", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            composed: match rt::dictionary_member(&obj, "composed", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            data: match rt::dictionary_member(&obj, "data", ctx)? {
+                Some(m) => rt::value_from_js((&m), ctx)?,
+                None => Value::Null,
+            },
+            origin: match rt::dictionary_member(&obj, "origin", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "".to_string(),
+            },
+            last_event_id: match rt::dictionary_member(&obj, "lastEventId", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "".to_string(),
+            },
+            source: match rt::dictionary_member(&obj, "source", ctx)? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(rt::window_from_js((&m), ctx)?)
+                    }
+                }
+                None => None,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::MessageEventInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "bubbles", self.bubbles, ctx)?;
+        rt::set_member(&obj, "cancelable", self.cancelable, ctx)?;
+        rt::set_member(&obj, "composed", self.composed, ctx)?;
+        rt::set_member(&obj, "data", self.data, ctx)?;
+        rt::set_member(&obj, "origin", self.origin, ctx)?;
+        rt::set_member(&obj, "lastEventId", self.last_event_id, ctx)?;
+        rt::set_member(&obj, "source", self.source, ctx)?;
+        Ok(obj.into())
+    }
+}
+
 impl FromJs for web::MouseEventInit {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let obj = rt::dictionary_object(v, "MouseEventInit")?;
@@ -2696,6 +2752,33 @@ impl IntoJs for web::WheelEventInit {
     }
 }
 
+impl FromJs for web::WindowPostMessageOptions {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "WindowPostMessageOptions")?;
+        Ok(Self {
+            transfer: match rt::dictionary_member(&obj, "transfer", ctx)? {
+                Some(m) => {
+                    rt::sequence_from_js((&m), ctx, |v, ctx| Ok(rt::value_from_js(v, ctx)?))?
+                }
+                None => Vec::new(),
+            },
+            target_origin: match rt::dictionary_member(&obj, "targetOrigin", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "/".to_string(),
+            },
+        })
+    }
+}
+
+impl IntoJs for web::WindowPostMessageOptions {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "transfer", self.transfer, ctx)?;
+        rt::set_member(&obj, "targetOrigin", self.target_origin, ctx)?;
+        Ok(obj.into())
+    }
+}
+
 impl FromJs for web::AddEventListenerOptionsOrBoolean {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         if v.is_object() || v.is_null_or_undefined() {
@@ -4138,6 +4221,203 @@ pub mod css_style_properties {
             attribute_like: true,
             unenumerable_names: false,
         }),
+    };
+}
+
+pub mod cat_paw_remote_window {
+    use super::*;
+
+    fn get_closed(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CatPawRemoteWindow, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CatPawRemoteWindowImpl>::closed(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_parent(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CatPawRemoteWindow, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CatPawRemoteWindowImpl>::parent(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_top(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CatPawRemoteWindow, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CatPawRemoteWindowImpl>::top(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_self(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CatPawRemoteWindow, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CatPawRemoteWindowImpl>::self_(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_window(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CatPawRemoteWindow, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CatPawRemoteWindowImpl>::window(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_frames(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CatPawRemoteWindow, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CatPawRemoteWindowImpl>::frames(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_length(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CatPawRemoteWindow, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CatPawRemoteWindowImpl>::length(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_post_message(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CatPawRemoteWindow, ctx)?;
+        if args.len() >= 2 && true {
+            rt::require_args(args, 2, "CatPawRemoteWindow.postMessage")?;
+            let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+            let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
+            let a2 = if args.len() > 2 && !args[2].is_undefined() {
+                rt::sequence_from_js(rt::arg(args, 2), ctx, |v, ctx| {
+                    Ok(rt::value_from_js(v, ctx)?)
+                })?
+            } else {
+                Vec::new()
+            };
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::CatPawRemoteWindowImpl>::post_message(cx, this, a0, a1, a2)
+            });
+            rt::ret(r, ctx)
+        } else if args.len() >= 1 && true {
+            rt::require_args(args, 1, "CatPawRemoteWindow.postMessage")?;
+            let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+            let a1 = <web::WindowPostMessageOptions as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::CatPawRemoteWindowImpl>::post_message_overload2(cx, this, a0, a1)
+            });
+            rt::ret(r, ctx)
+        } else {
+            Err(rt::type_error(
+                "CatPawRemoteWindow.postMessage: no overload matches the arguments",
+            ))
+        }
+    }
+
+    fn op_focus(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CatPawRemoteWindow, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CatPawRemoteWindowImpl>::focus(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_blur(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CatPawRemoteWindow, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CatPawRemoteWindowImpl>::blur(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_close(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CatPawRemoteWindow, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CatPawRemoteWindowImpl>::close(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::CatPawRemoteWindow,
+        name: "CatPawRemoteWindow",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "closed",
+                getter: get_closed,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "parent",
+                getter: get_parent,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "top",
+                getter: get_top,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "self",
+                getter: get_self,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "window",
+                getter: get_window,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "frames",
+                getter: get_frames,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "length",
+                getter: get_length,
+                setter: None,
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "postMessage",
+                func: op_post_message,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "focus",
+                func: op_focus,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "blur",
+                func: op_blur,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "close",
+                func: op_close,
+                length: 0,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
     };
 }
 
@@ -7998,6 +8278,89 @@ pub mod media_query_list {
                 length: 1,
             },
         ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod message_event {
+    use super::*;
+
+    fn get_data(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MessageEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MessageEventImpl>::data(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_origin(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MessageEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MessageEventImpl>::origin(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_last_event_id(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MessageEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MessageEventImpl>::last_event_id(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_source(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MessageEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MessageEventImpl>::source(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "MessageEvent")?;
+        rt::require_args(args, 1, "MessageEvent constructor")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::MessageEventInit as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MessageEventImpl>::constructor(cx, a0, a1)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::MessageEvent, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::MessageEvent,
+        name: "MessageEvent",
+        parent: Some(I::Event),
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[
+            rt::AttrDef {
+                name: "data",
+                getter: get_data,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "origin",
+                getter: get_origin,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "lastEventId",
+                getter: get_last_event_id,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "source",
+                getter: get_source,
+                setter: None,
+            },
+        ],
+        ops: &[],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -15439,6 +15802,16 @@ pub mod window {
         Ok(JsValue::undefined())
     }
 
+    fn get_frame_element(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WindowImpl>::frame_element(cx));
+        rt::ret(r, ctx)
+    }
+
     fn get_navigator(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         rt::this_window(this_js, ctx)?;
         let r = rt::with_cx(ctx, |cx| <Web as web::WindowImpl>::navigator(cx));
@@ -18128,6 +18501,43 @@ pub mod window {
         rt::ret(r, ctx)
     }
 
+    fn op_post_message(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::this_window(this_js, ctx)?;
+        if args.len() >= 2 && true {
+            rt::require_args(args, 2, "Window.postMessage")?;
+            let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+            let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
+            let a2 = if args.len() > 2 && !args[2].is_undefined() {
+                rt::sequence_from_js(rt::arg(args, 2), ctx, |v, ctx| {
+                    Ok(rt::value_from_js(v, ctx)?)
+                })?
+            } else {
+                Vec::new()
+            };
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::WindowImpl>::post_message(cx, a0, a1, a2)
+            });
+            rt::ret(r, ctx)
+        } else if args.len() >= 1 && true {
+            rt::require_args(args, 1, "Window.postMessage")?;
+            let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+            let a1 = <web::WindowPostMessageOptions as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::WindowImpl>::post_message_overload2(cx, a0, a1)
+            });
+            rt::ret(r, ctx)
+        } else {
+            Err(rt::type_error(
+                "Window.postMessage: no overload matches the arguments",
+            ))
+        }
+    }
+
     fn op_get_selection(
         this_js: &JsValue,
         args: &[JsValue],
@@ -18463,6 +18873,11 @@ pub mod window {
                 name: "parent",
                 getter: get_parent,
                 setter: Some(set_parent),
+            },
+            rt::AttrDef {
+                name: "frameElement",
+                getter: get_frame_element,
+                setter: None,
             },
             rt::AttrDef {
                 name: "navigator",
@@ -19085,6 +19500,11 @@ pub mod window {
                 name: "prompt",
                 func: op_prompt,
                 length: 0,
+            },
+            rt::OpDef {
+                name: "postMessage",
+                func: op_post_message,
+                length: 1,
             },
             rt::OpDef {
                 name: "getSelection",
@@ -32556,6 +32976,32 @@ pub mod htmli_frame_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_srcdoc(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLIFrameElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLIFrameElementImpl>::srcdoc(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_srcdoc(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_srcdoc_body(this_js, args, ctx))
+    }
+
+    fn set_srcdoc_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLIFrameElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLIFrameElementImpl>::set_srcdoc(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
     fn get_name(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLIFrameElement, ctx)?;
         let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "name"));
@@ -32692,6 +33138,30 @@ pub mod htmli_frame_element {
         });
         rt::ret(r, ctx)?;
         Ok(JsValue::undefined())
+    }
+
+    fn get_content_document(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLIFrameElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLIFrameElementImpl>::content_document(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_content_window(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLIFrameElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLIFrameElementImpl>::content_window(cx, this)
+        });
+        rt::ret(r, ctx)
     }
 
     fn get_align(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
@@ -32884,6 +33354,11 @@ pub mod htmli_frame_element {
                 setter: Some(set_src),
             },
             rt::AttrDef {
+                name: "srcdoc",
+                getter: get_srcdoc,
+                setter: Some(set_srcdoc),
+            },
+            rt::AttrDef {
                 name: "name",
                 getter: get_name,
                 setter: Some(set_name),
@@ -32912,6 +33387,16 @@ pub mod htmli_frame_element {
                 name: "height",
                 getter: get_height,
                 setter: Some(set_height),
+            },
+            rt::AttrDef {
+                name: "contentDocument",
+                getter: get_content_document,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "contentWindow",
+                getter: get_content_window,
+                setter: None,
             },
             rt::AttrDef {
                 name: "align",
@@ -50823,6 +51308,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &css_rule_list::DEF,
     &css_style_declaration::DEF,
     &css_style_properties::DEF,
+    &cat_paw_remote_window::DEF,
     &crypto::DEF,
     &custom_element_registry::DEF,
     &dom_implementation::DEF,
@@ -50850,6 +51336,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &location::DEF,
     &media_list::DEF,
     &media_query_list::DEF,
+    &message_event::DEF,
     &mutation_observer::DEF,
     &mutation_record::DEF,
     &named_node_map::DEF,

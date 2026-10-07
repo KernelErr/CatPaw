@@ -25,7 +25,12 @@ isolated contexts.
 > sequences with focus, typing, activation (links, buttons, labels,
 > `details`), form submission in every encoding and the navigations that
 > follow, driven by `--action "click <selector>"`, `fill`, `type`, `press`,
-> `check`, `select`. Network: response bodies are capped on the wire and
+> `check`, `select`. Frames: every `iframe` is a page of its own (document,
+> scripts, event loop) in the same thread, sized by its element; frames
+> see each other only through `postMessage`, `parent`/`top`/`contentWindow`
+> and the `load` events, as cross-origin frames do; `--action "frame <selector>"`
+> addresses a frame for the actions and `--eval` that follow (`frame top`,
+> `frame parent` go back). Network: response bodies are capped on the wire and
 > after decoding (`--max-response-mb`), loopback and private addresses are
 > refused unless `--allow-private-network` says otherwise, HTTP `CONNECT`
 > and SOCKS5 proxies (`--proxy`), cookie files kept between runs

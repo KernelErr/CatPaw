@@ -58,3 +58,23 @@ interface Crypto {
 interface SubtleCrypto {
   Promise<any> digest(any algorithm, BufferSource data);
 };
+
+// A window of another frame (an iframe's `contentWindow`, a frame's
+// `parent` or `top`, a message's `source`). Frames run as separate pages,
+// so another frame's window offers what a cross-origin window does:
+// messages, the frame tree, focus, and no document.
+[Exposed=Window]
+interface CatPawRemoteWindow {
+  undefined postMessage(any message, USVString targetOrigin, optional sequence<object> transfer = []);
+  undefined postMessage(any message, optional WindowPostMessageOptions options = {});
+  readonly attribute boolean closed;
+  readonly attribute WindowProxy? parent;
+  readonly attribute WindowProxy? top;
+  readonly attribute WindowProxy self;
+  readonly attribute WindowProxy window;
+  readonly attribute WindowProxy frames;
+  readonly attribute unsigned long length;
+  undefined focus();
+  undefined blur();
+  undefined close();
+};

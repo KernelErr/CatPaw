@@ -29,6 +29,7 @@ pub enum InterfaceId {
     CSSRuleList,
     CSSStyleDeclaration,
     CSSStyleProperties,
+    CatPawRemoteWindow,
     Crypto,
     CustomElementRegistry,
     DOMImplementation,
@@ -56,6 +57,7 @@ pub enum InterfaceId {
     Location,
     MediaList,
     MediaQueryList,
+    MessageEvent,
     MutationObserver,
     MutationRecord,
     NamedNodeMap,
@@ -248,8 +250,8 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 223;
-    pub const ALL: [InterfaceId; 223] = [
+    pub const COUNT: usize = 225;
+    pub const ALL: [InterfaceId; 225] = [
         InterfaceId::AbortController,
         InterfaceId::AbstractRange,
         InterfaceId::Blob,
@@ -257,6 +259,7 @@ impl InterfaceId {
         InterfaceId::CSSRuleList,
         InterfaceId::CSSStyleDeclaration,
         InterfaceId::CSSStyleProperties,
+        InterfaceId::CatPawRemoteWindow,
         InterfaceId::Crypto,
         InterfaceId::CustomElementRegistry,
         InterfaceId::DOMImplementation,
@@ -284,6 +287,7 @@ impl InterfaceId {
         InterfaceId::Location,
         InterfaceId::MediaList,
         InterfaceId::MediaQueryList,
+        InterfaceId::MessageEvent,
         InterfaceId::MutationObserver,
         InterfaceId::MutationRecord,
         InterfaceId::NamedNodeMap,
@@ -484,6 +488,7 @@ impl InterfaceId {
             InterfaceId::CSSRuleList => "CSSRuleList",
             InterfaceId::CSSStyleDeclaration => "CSSStyleDeclaration",
             InterfaceId::CSSStyleProperties => "CSSStyleProperties",
+            InterfaceId::CatPawRemoteWindow => "CatPawRemoteWindow",
             InterfaceId::Crypto => "Crypto",
             InterfaceId::CustomElementRegistry => "CustomElementRegistry",
             InterfaceId::DOMImplementation => "DOMImplementation",
@@ -511,6 +516,7 @@ impl InterfaceId {
             InterfaceId::Location => "Location",
             InterfaceId::MediaList => "MediaList",
             InterfaceId::MediaQueryList => "MediaQueryList",
+            InterfaceId::MessageEvent => "MessageEvent",
             InterfaceId::MutationObserver => "MutationObserver",
             InterfaceId::MutationRecord => "MutationRecord",
             InterfaceId::NamedNodeMap => "NamedNodeMap",
@@ -712,6 +718,7 @@ impl InterfaceId {
             "CSSRuleList" => InterfaceId::CSSRuleList,
             "CSSStyleDeclaration" => InterfaceId::CSSStyleDeclaration,
             "CSSStyleProperties" => InterfaceId::CSSStyleProperties,
+            "CatPawRemoteWindow" => InterfaceId::CatPawRemoteWindow,
             "Crypto" => InterfaceId::Crypto,
             "CustomElementRegistry" => InterfaceId::CustomElementRegistry,
             "DOMImplementation" => InterfaceId::DOMImplementation,
@@ -739,6 +746,7 @@ impl InterfaceId {
             "Location" => InterfaceId::Location,
             "MediaList" => InterfaceId::MediaList,
             "MediaQueryList" => InterfaceId::MediaQueryList,
+            "MessageEvent" => InterfaceId::MessageEvent,
             "MutationObserver" => InterfaceId::MutationObserver,
             "MutationRecord" => InterfaceId::MutationRecord,
             "NamedNodeMap" => InterfaceId::NamedNodeMap,
@@ -941,6 +949,7 @@ impl InterfaceId {
             InterfaceId::CSSRuleList => None,
             InterfaceId::CSSStyleDeclaration => None,
             InterfaceId::CSSStyleProperties => Some(InterfaceId::CSSStyleDeclaration),
+            InterfaceId::CatPawRemoteWindow => None,
             InterfaceId::Crypto => None,
             InterfaceId::CustomElementRegistry => None,
             InterfaceId::DOMImplementation => None,
@@ -968,6 +977,7 @@ impl InterfaceId {
             InterfaceId::Location => None,
             InterfaceId::MediaList => None,
             InterfaceId::MediaQueryList => Some(InterfaceId::EventTarget),
+            InterfaceId::MessageEvent => Some(InterfaceId::Event),
             InterfaceId::MutationObserver => None,
             InterfaceId::MutationRecord => None,
             InterfaceId::NamedNodeMap => None,
@@ -2216,6 +2226,17 @@ pub struct KeyboardEventInit {
 }
 
 #[derive(Clone, Debug)]
+pub struct MessageEventInit {
+    pub bubbles: bool,
+    pub cancelable: bool,
+    pub composed: bool,
+    pub data: Value,
+    pub origin: String,
+    pub last_event_id: String,
+    pub source: Option<WindowRef>,
+}
+
+#[derive(Clone, Debug)]
 pub struct MouseEventInit {
     pub bubbles: bool,
     pub cancelable: bool,
@@ -2507,6 +2528,12 @@ pub struct WheelEventInit {
     pub delta_z: f64,
     pub delta_mode: u32,
     pub momentum: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct WindowPostMessageOptions {
+    pub transfer: Vec<Value>,
+    pub target_origin: String,
 }
 
 #[derive(Clone, Debug)]
@@ -2978,6 +3005,32 @@ pub trait CSSStylePropertiesImpl {
     fn named_set(cx: &mut Cx<'_>, this: ObjectId, name: &str, value: String) -> Fallible<()>;
 }
 
+pub trait CatPawRemoteWindowImpl {
+    fn post_message(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        message: Value,
+        target_origin: String,
+        transfer: Vec<Value>,
+    ) -> Fallible<()>;
+    fn post_message_overload2(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        message: Value,
+        options: WindowPostMessageOptions,
+    ) -> Fallible<()>;
+    fn closed(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn parent(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<WindowRef>>;
+    fn top(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<WindowRef>>;
+    fn self_(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<WindowRef>;
+    fn window(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<WindowRef>;
+    fn frames(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<WindowRef>;
+    fn length(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn focus(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn blur(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn close(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+}
+
 pub trait CryptoImpl {
     fn subtle(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
     fn random_uuid(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
@@ -3373,6 +3426,18 @@ pub trait MediaQueryListImpl {
     fn add_listener(cx: &mut Cx<'_>, this: ObjectId, callback: Option<Callback>) -> Fallible<()>;
     fn remove_listener(cx: &mut Cx<'_>, this: ObjectId, callback: Option<Callback>)
     -> Fallible<()>;
+}
+
+pub trait MessageEventImpl {
+    fn data(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
+    fn origin(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn last_event_id(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn source(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<WindowRef>>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        type_: String,
+        event_init_dict: MessageEventInit,
+    ) -> Fallible<ObjectId>;
 }
 
 pub trait MutationObserverImpl {
@@ -4114,11 +4179,23 @@ pub trait WindowImpl {
     fn frames(cx: &mut Cx<'_>) -> Fallible<WindowRef>;
     fn top(cx: &mut Cx<'_>) -> Fallible<Option<WindowRef>>;
     fn parent(cx: &mut Cx<'_>) -> Fallible<Option<WindowRef>>;
+    fn frame_element(cx: &mut Cx<'_>) -> Fallible<Option<NodeId>>;
     fn navigator(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
     fn alert(cx: &mut Cx<'_>) -> Fallible<()>;
     fn alert_overload2(cx: &mut Cx<'_>, message: String) -> Fallible<()>;
     fn confirm(cx: &mut Cx<'_>, message: String) -> Fallible<bool>;
     fn prompt(cx: &mut Cx<'_>, message: String, default: String) -> Fallible<Option<String>>;
+    fn post_message(
+        cx: &mut Cx<'_>,
+        message: Value,
+        target_origin: String,
+        transfer: Vec<Value>,
+    ) -> Fallible<()>;
+    fn post_message_overload2(
+        cx: &mut Cx<'_>,
+        message: Value,
+        options: WindowPostMessageOptions,
+    ) -> Fallible<()>;
     fn get_selection(cx: &mut Cx<'_>) -> Fallible<Option<ObjectId>>;
 }
 
@@ -4640,6 +4717,13 @@ pub trait HTMLFormElementImpl {
     fn reset(cx: &mut Cx<'_>, this: NodeId) -> Fallible<()>;
     fn check_validity(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool>;
     fn report_validity(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool>;
+}
+
+pub trait HTMLIFrameElementImpl {
+    fn srcdoc(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_srcdoc(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+    fn content_document(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
+    fn content_window(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<WindowRef>>;
 }
 
 pub trait HTMLInputElementImpl {

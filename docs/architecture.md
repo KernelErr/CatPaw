@@ -85,8 +85,16 @@ into Boa glue plus one `XImpl` trait per interface. Prototype chains are built
 with `ObjectInitializer`/`ConstructorBuilder`; exotic objects are proxies.
 
 **Event loop and threads.** N engine threads, each a plain OS thread with a
-message loop. One Boa `Context` per browsing-context group (top-level page +
-its iframes + popups); groups never migrate. Task sources with fixed priority,
+message loop. One Boa `Context` per frame (top-level page, each iframe,
+popups), all frames of a page on the same thread; groups never migrate.
+Frames are cross-origin to each other whatever their origins: a frame sees
+another's window as a remote window (`postMessage`, `parent`/`top`,
+`closed`, focus) and never its document, which keeps one realm per
+context and spares the WindowProxy machinery. Messages between frames
+cross as JSON. The engine runs the frames' loops in turns of virtual
+time, carries their commands (open, close, message) and tells a parent
+when a child has loaded; a document's `load` waits for its frames. Task
+sources with fixed priority,
 microtask checkpoints after every task and every re-entry from native code,
 own timer heap, rendering opportunities only when something animates or
 observes. A shared `Clock` offers real time or deterministic virtual time.

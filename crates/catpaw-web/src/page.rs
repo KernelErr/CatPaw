@@ -275,6 +275,8 @@ pub struct PageState {
     pub(crate) styles: crate::stylesheets::Styles,
     pub(crate) layouts: crate::layout::Layouts,
     pub(crate) input: crate::input::InputState,
+    /// The page's place in the frame tree and its child frames.
+    pub frames: crate::frames::FrameState,
     pub(crate) attrs: crate::attributes::AttrObjects,
     pub(crate) timeline: crate::performance::Timeline,
     pub(crate) traversers: crate::traversal::Traversers,
@@ -357,6 +359,7 @@ impl PageState {
             styles: Default::default(),
             layouts: Default::default(),
             input: Default::default(),
+            frames: Default::default(),
             attrs: Default::default(),
             timeline: Default::default(),
             traversers: Default::default(),

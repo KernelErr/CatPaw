@@ -121,9 +121,13 @@ struct FetchArgs {
     /// before it is stopped; 0 lets scripts run as long as they like.
     #[arg(long, default_value_t = 10_000, requires = "js")]
     script_budget: u64,
-    /// With --js: print the page's console output to stderr.
+    /// With --js: print the page's console output to stderr (the frames'
+    /// too).
     #[arg(long, requires = "js")]
     console: bool,
+    /// With --js: list the page's frames once it has settled.
+    #[arg(long, requires = "js")]
+    frames: bool,
     /// With --js: list every request the page made, with a preview of
     /// request bodies, on stderr.
     #[arg(long, requires = "js")]
@@ -135,7 +139,9 @@ struct FetchArgs {
     /// With --js: an action to take once the page has settled, before the
     /// output; may repeat. One of `click <selector>`, `fill <selector> <text>`,
     /// `type <text>`, `press <key>`, `check <selector>`, `uncheck <selector>`,
-    /// `select <selector> <value>`, `hover <selector>`, `focus <selector>`.
+    /// `select <selector> <value>`, `hover <selector>`, `focus <selector>`,
+    /// `frame <selector>` (address the frame of that iframe for the actions
+    /// and --eval that follow), `frame parent`, `frame top`.
     #[arg(long, requires = "js")]
     action: Vec<String>,
     /// With --js: write a PNG of the page (the viewport) to this path once
@@ -456,6 +462,34 @@ fn render(args: &FetchArgs, view: View, dom: &Dom, oracle: &dyn StyleOracle) -> 
     Ok(())
 }
 
+/// Lists the frames below the top one, with their console output.
+fn print_frames(page: &catpaw_engine::Page, list: bool, console: bool) {
+    for frame in page.frames().into_iter().skip(1) {
+        let id = frame.id.0;
+        if list {
+            let stop = page
+                .frame_report(frame.id)
+                .map(describe_stop)
+                .unwrap_or_default();
+            eprintln!(
+                "[frame {id}] parent={} depth={} {} ({stop})",
+                frame.parent.map(|p| p.0).unwrap_or(0),
+                frame.depth,
+                frame.url
+            );
+        }
+        if console && let Some(state) = page.frame_state(frame.id) {
+            for message in state.console_messages() {
+                eprintln!(
+                    "[frame {id} console.{}] {}",
+                    message.level.as_str(),
+                    message.text
+                );
+            }
+        }
+    }
+}
+
 fn describe_stop(report: &catpaw_engine::LoopReport) -> String {
     match report.stop {
         StopReason::Idle => "settled".to_string(),
@@ -500,6 +534,17 @@ fn run_action(page: &mut catpaw_engine::Page, spec: &str) -> Result<()> {
         }
         "hover" => page.hover(rest),
         "focus" => page.focus(rest),
+        "frame" => match rest {
+            "top" => {
+                page.select_top_frame();
+                Ok(())
+            }
+            "parent" => {
+                page.select_parent_frame();
+                Ok(())
+            }
+            selector => page.select_frame(selector).map(drop),
+        },
         other => bail!("unknown action {other:?} in {spec:?}"),
     };
     outcome.with_context(|| format!("action {spec:?}"))?;
@@ -597,6 +642,9 @@ fn fetch_with_scripts_on(
             for error in state.errors.borrow().iter().take(5) {
                 eprintln!("[page error] {}", error.lines().next().unwrap_or_default());
             }
+        }
+        if args.frames || args.console {
+            print_frames(page, args.frames, args.console);
         }
 
         for spec in &args.action {

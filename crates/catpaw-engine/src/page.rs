@@ -1,8 +1,14 @@
 //! One page: fetch the document, parse it while running its scripts, and
 //! drive the event loop until the page settles.
+//!
+//! A page is a tree of frames. Each frame is a page state and script
+//! realm of its own (see `catpaw_web::frames`), all on this thread; the
+//! engine opens the frames the documents ask for, runs their event loops
+//! in turns, and carries messages between them.
 
 use std::cell::{Ref, RefCell};
 use std::rc::Rc;
+use std::time::Instant;
 
 use catpaw_bindings_boa::BoaPage;
 use catpaw_dom::Dom;
@@ -11,11 +17,20 @@ use catpaw_fetch::{FetchedDocument, fetch_document, fetch_document_with};
 use catpaw_js::Value;
 use catpaw_net::{NetConfig, NetError};
 use catpaw_web::event_loop::{self, LoopLimits, LoopReport, StopReason};
+use catpaw_web::frames::{self, FrameCommand, FrameId, FrameTree};
+use catpaw_web::generated::DocumentReadyState;
 use catpaw_web::page::NavigationRequest;
-use catpaw_web::{PageConfig, PageState, promises, scripting};
+use catpaw_web::{ConsoleLevel, PageConfig, PageState, promises, scripting};
 use url::Url;
 
 use crate::net::EngineNet;
+
+/// How many frames a page may have besides the top one.
+pub const MAX_FRAMES: usize = 32;
+/// How deep frames may nest (the top page is at depth 0).
+pub const MAX_FRAME_DEPTH: u32 = 8;
+/// Virtual time one frame may advance before the others get a turn.
+const FRAME_SLICE_MS: f64 = 1000.0;
 
 /// The stack of a page thread. Deeply nested documents and scripts recurse
 /// in native code; the memory is only committed as it is used.
@@ -108,16 +123,53 @@ impl DocumentInfo {
     }
 }
 
+/// A frame below the top one.
+struct Frame {
+    id: FrameId,
+    parent: FrameId,
+    /// The `iframe` element in the parent's document.
+    element: NodeId,
+    depth: u32,
+    // Dropped before `net`: the page state refers to it.
+    boa: BoaPage,
+    #[allow(dead_code)]
+    net: Rc<EngineNet>,
+    /// The serialized origin its messages carry (`srcdoc` and blank
+    /// frames take their parent's).
+    origin: String,
+    report: LoopReport,
+    virtual_used: f64,
+    /// Whether the parent has been told the frame loaded.
+    load_reported: bool,
+    navigations: usize,
+}
+
+/// A frame of a page, as the embedder sees it.
+#[derive(Clone, Debug)]
+pub struct FrameInfo {
+    pub id: FrameId,
+    pub parent: Option<FrameId>,
+    pub url: Url,
+    pub depth: u32,
+}
+
 /// A loaded page. Lives on the thread that created it.
 pub struct Page {
     // Dropped before `net`: the page state refers to it.
     boa: BoaPage,
+    /// The frames below the top one, in opening order.
+    frames: Vec<Frame>,
+    /// The tree the frames' pages share.
+    tree: Rc<RefCell<FrameTree>>,
+    /// The frame actions and evaluations address.
+    current: FrameId,
     net: Rc<EngineNet>,
     document: DocumentInfo,
     /// The documents loaded on the way here, oldest first.
     navigations: Vec<Url>,
     options: PageOptions,
     report: LoopReport,
+    top_virtual_used: f64,
 }
 
 /// Why an action could not be carried out.
@@ -131,19 +183,36 @@ pub enum ActionError {
     Input(#[from] catpaw_web::input::InputError),
     #[error(transparent)]
     Engine(#[from] EngineError),
+    #[error("no frame is open for {0:?}")]
+    NoFrame(String),
 }
 
+/// Where a document goes in the frame tree.
+struct Placement {
+    frame: FrameId,
+    tree: Rc<RefCell<FrameTree>>,
+    viewport: Option<(u32, u32)>,
+}
+
+/// Parses `html` as the document at `info.url` in a new realm, running its
+/// scripts. The event loop is left to the frame scheduler.
 fn load(
     net: &Rc<EngineNet>,
     info: &DocumentInfo,
     html: &str,
     referrer: Option<&Url>,
     options: &PageOptions,
-) -> Result<(BoaPage, LoopReport), EngineError> {
+    placement: Placement,
+) -> Result<BoaPage, EngineError> {
     let mut config = options.page.clone();
     config.user_agent = options.net.user_agent.clone();
+    if let Some((width, height)) = placement.viewport {
+        config.viewport_width = width;
+        config.viewport_height = height;
+    }
     let state = Rc::new(PageState::new(info.url.clone(), config));
     state.set_net(net.clone());
+    state.frames.place(placement.frame, placement.tree);
     {
         let mut document = state.document_state.borrow_mut();
         document.charset = info.encoding.to_string();
@@ -155,11 +224,31 @@ fn load(
         }
     }
     let mut boa = BoaPage::new(state).map_err(EngineError::Script)?;
-    let report = boa.with_cx(|cx| {
-        scripting::load_document(cx, html);
-        event_loop::run(cx, &options.limits)
-    });
-    Ok((boa, report))
+    boa.with_cx(|cx| scripting::load_document(cx, html));
+    Ok(boa)
+}
+
+fn idle_report() -> LoopReport {
+    LoopReport {
+        stop: StopReason::Idle,
+        steps: 0,
+        virtual_advanced_ms: 0.0,
+        pending_timers: 0,
+        inflight_requests: 0,
+    }
+}
+
+fn top_placement(tree: &Rc<RefCell<FrameTree>>) -> Placement {
+    Placement {
+        frame: FrameId(0),
+        tree: tree.clone(),
+        viewport: None,
+    }
+}
+
+/// Whether a run of the event loop did anything.
+fn progressed(report: &LoopReport) -> bool {
+    report.steps > 0 || report.virtual_advanced_ms > 0.0 || report.stop == StopReason::Navigation
 }
 
 impl Page {
@@ -171,17 +260,40 @@ impl Page {
         let net = Rc::new(EngineNet::new(options.net.clone())?);
         let fetched = net.block_on(fetch_document(net.client(), url))?;
         let info = DocumentInfo::from_fetch(&fetched);
-        let (boa, report) = load(&net, &info, fetched.html(), None, options)?;
-        let mut page = Self {
+        let tree = Rc::new(RefCell::new(FrameTree::default()));
+        let boa = load(
+            &net,
+            &info,
+            fetched.html(),
+            None,
+            options,
+            top_placement(&tree),
+        )?;
+        let mut page = Self::with_top(boa, tree, net, info, options);
+        page.run_frames();
+        page.follow_navigations()?;
+        Ok(page)
+    }
+
+    fn with_top(
+        boa: BoaPage,
+        tree: Rc<RefCell<FrameTree>>,
+        net: Rc<EngineNet>,
+        info: DocumentInfo,
+        options: &PageOptions,
+    ) -> Self {
+        Self {
             boa,
+            frames: Vec::new(),
+            tree,
+            current: FrameId(0),
             net,
             document: info.clone(),
             navigations: vec![info.url],
             options: options.clone(),
-            report,
-        };
-        page.follow_navigations()?;
-        Ok(page)
+            report: idle_report(),
+            top_virtual_used: 0.0,
+        }
     }
 
     /// Loads the document a navigation request asks for, in place of the
@@ -196,17 +308,24 @@ impl Page {
             Some(&referrer),
         ))?;
         let info = DocumentInfo::from_fetch(&fetched);
-        let (boa, report) = load(
+        let tree = Rc::new(RefCell::new(FrameTree::default()));
+        let boa = load(
             &self.net,
             &info,
             fetched.html(),
             Some(&referrer),
             &self.options,
+            top_placement(&tree),
         )?;
+        // The frames belonged to the old document.
+        self.frames.clear();
+        self.tree = tree;
+        self.current = FrameId(0);
         self.boa = boa;
-        self.report = report;
+        self.top_virtual_used = 0.0;
         self.navigations.push(info.url.clone());
         self.document = info;
+        self.run_frames();
         Ok(())
     }
 
@@ -232,19 +351,496 @@ impl Page {
     pub fn from_html(url: &Url, html: &str, options: &PageOptions) -> Result<Self, EngineError> {
         let net = Rc::new(EngineNet::new(options.net.clone())?);
         let info = DocumentInfo::local(url, html);
-        let (boa, report) = load(&net, &info, html, None, options)?;
-        Ok(Self {
-            boa,
-            net,
-            document: info,
-            navigations: vec![url.clone()],
-            options: options.clone(),
-            report,
-        })
+        let tree = Rc::new(RefCell::new(FrameTree::default()));
+        let boa = load(&net, &info, html, None, options, top_placement(&tree))?;
+        let mut page = Self::with_top(boa, tree, net, info, options);
+        page.run_frames();
+        page.follow_navigations()?;
+        Ok(page)
     }
 
+    /// The top frame's state.
     pub fn state(&self) -> &Rc<PageState> {
         self.boa.page()
+    }
+
+    // ---- frames -----------------------------------------------------------
+
+    fn frame(&self, id: FrameId) -> Option<&Frame> {
+        self.frames.iter().find(|f| f.id == id)
+    }
+
+    fn frame_mut(&mut self, id: FrameId) -> Option<&mut Frame> {
+        self.frames.iter_mut().find(|f| f.id == id)
+    }
+
+    /// The state of a frame, the top one for `FrameId(0)`.
+    fn page_of(&self, id: FrameId) -> Option<&Rc<PageState>> {
+        if id == FrameId(0) {
+            Some(self.boa.page())
+        } else {
+            self.frame(id).map(|f| f.boa.page())
+        }
+    }
+
+    fn boa_of(&mut self, id: FrameId) -> Option<&mut BoaPage> {
+        if id == FrameId(0) {
+            Some(&mut self.boa)
+        } else {
+            self.frame_mut(id).map(|f| &mut f.boa)
+        }
+    }
+
+    fn origin_of(&self, id: FrameId) -> String {
+        match self.frame(id) {
+            Some(frame) => frame.origin.clone(),
+            None => frames::origin_of(&self.url()),
+        }
+    }
+
+    fn depth_of(&self, id: FrameId) -> u32 {
+        self.frame(id).map(|f| f.depth).unwrap_or(0)
+    }
+
+    /// The state of a frame's page, the top one for `FrameId(0)`.
+    pub fn frame_state(&self, id: FrameId) -> Option<&Rc<PageState>> {
+        self.page_of(id)
+    }
+
+    /// How the most recent event loop run of a frame ended.
+    pub fn frame_report(&self, id: FrameId) -> Option<&LoopReport> {
+        if id == FrameId(0) {
+            Some(&self.report)
+        } else {
+            self.frame(id).map(|f| &f.report)
+        }
+    }
+
+    /// The frames of the page, the top one first.
+    pub fn frames(&self) -> Vec<FrameInfo> {
+        let mut out = vec![FrameInfo {
+            id: FrameId(0),
+            parent: None,
+            url: self.url(),
+            depth: 0,
+        }];
+        out.extend(self.frames.iter().map(|f| FrameInfo {
+            id: f.id,
+            parent: Some(f.parent),
+            url: f.boa.page().url.borrow().clone(),
+            depth: f.depth,
+        }));
+        out
+    }
+
+    /// The frame actions and evaluations address; the top one at first.
+    pub fn current_frame(&self) -> FrameId {
+        self.current
+    }
+
+    /// Addresses the frame of the first `iframe` matching `selector` in
+    /// the current frame's document.
+    pub fn select_frame(&mut self, selector: &str) -> Result<FrameId, ActionError> {
+        let el = self.find(selector)?;
+        let frame = self
+            .page_of(self.current)
+            .and_then(|page| page.frames.child_of(el))
+            .filter(|id| self.frame(*id).is_some())
+            .ok_or_else(|| ActionError::NoFrame(selector.to_string()))?;
+        self.current = frame;
+        Ok(frame)
+    }
+
+    /// Addresses the parent of the current frame.
+    pub fn select_parent_frame(&mut self) -> FrameId {
+        self.current = self
+            .frame(self.current)
+            .map(|f| f.parent)
+            .unwrap_or(FrameId(0));
+        self.current
+    }
+
+    /// Addresses the top frame again.
+    pub fn select_top_frame(&mut self) {
+        self.current = FrameId(0);
+    }
+
+    /// Opens the frame `id` for `element` in the frame `parent`.
+    fn open_frame(
+        &mut self,
+        parent: FrameId,
+        id: FrameId,
+        element: NodeId,
+        url: Option<Url>,
+        srcdoc: Option<String>,
+    ) {
+        let Some(parent_page) = self.page_of(parent).cloned() else {
+            return;
+        };
+        if parent_page.frames.child_of(element) != Some(id) {
+            // Pointed elsewhere or removed since: a later command covers it.
+            return;
+        }
+        let depth = self.depth_of(parent) + 1;
+        if depth > MAX_FRAME_DEPTH || self.frames.len() >= MAX_FRAMES {
+            parent_page.log(
+                ConsoleLevel::Warn,
+                format!(
+                    "Not loading a frame for {}: too many frames",
+                    describe_frame(&url, &srcdoc)
+                ),
+            );
+            frames::frame_failed(&parent_page, element);
+            return;
+        }
+        let referrer = parent_page.url.borrow().clone();
+        let parent_origin = self.origin_of(parent);
+        let (info, html, origin) = match (srcdoc, url) {
+            (Some(html), _) => {
+                let url = Url::parse("about:srcdoc").expect("about:srcdoc parses");
+                (DocumentInfo::local(&url, &html), html, parent_origin)
+            }
+            (None, Some(url)) => {
+                let fetched = self.net.block_on(fetch_document_with(
+                    self.net.client(),
+                    "GET",
+                    &url,
+                    None,
+                    Some(&referrer),
+                ));
+                match fetched {
+                    Ok(fetched) => {
+                        let info = DocumentInfo::from_fetch(&fetched);
+                        self.net.record_document("GET", &url, Some(info.status));
+                        let origin = frames::origin_of(&info.url);
+                        (info, fetched.html().to_string(), origin)
+                    }
+                    Err(e) => {
+                        self.net.record_document("GET", &url, None);
+                        parent_page.log(
+                            ConsoleLevel::Error,
+                            format!("Failed to load frame {url}: {e}"),
+                        );
+                        frames::frame_failed(&parent_page, element);
+                        return;
+                    }
+                }
+            }
+            (None, None) => {
+                let url = Url::parse("about:blank").expect("about:blank parses");
+                (DocumentInfo::local(&url, ""), String::new(), parent_origin)
+            }
+        };
+        let placement = Placement {
+            frame: id,
+            tree: self.tree.clone(),
+            viewport: Some(frames::frame_viewport(&parent_page, element)),
+        };
+        let net = Rc::new(self.net.child());
+        let boa = match load(
+            &net,
+            &info,
+            &html,
+            Some(&referrer),
+            &self.options,
+            placement,
+        ) {
+            Ok(boa) => boa,
+            Err(e) => {
+                parent_page.log(ConsoleLevel::Error, format!("Failed to open frame: {e}"));
+                frames::frame_failed(&parent_page, element);
+                return;
+            }
+        };
+        self.frames.push(Frame {
+            id,
+            parent,
+            element,
+            depth,
+            boa,
+            net,
+            origin,
+            report: idle_report(),
+            virtual_used: 0.0,
+            load_reported: false,
+            navigations: 0,
+        });
+    }
+
+    /// Closes a frame and the frames inside it.
+    fn close_frame(&mut self, id: FrameId) {
+        let inner: Vec<FrameId> = self
+            .frames
+            .iter()
+            .filter(|f| f.parent == id)
+            .map(|f| f.id)
+            .collect();
+        for child in inner {
+            self.close_frame(child);
+        }
+        self.tree.borrow_mut().remove(id);
+        if let Some(index) = self.frames.iter().position(|f| f.id == id) {
+            let frame = self.frames.remove(index);
+            if self.current == id {
+                self.current = frame.parent;
+            }
+        }
+    }
+
+    /// Loads the document a frame's navigation request asks for, in place
+    /// of its current one.
+    fn navigate_frame(&mut self, id: FrameId, request: NavigationRequest) {
+        let Some(index) = self.frames.iter().position(|f| f.id == id) else {
+            return;
+        };
+        let (parent, element) = (self.frames[index].parent, self.frames[index].element);
+        let Some(parent_page) = self.page_of(parent).cloned() else {
+            return;
+        };
+        if self.frames[index].navigations >= self.options.max_navigations {
+            parent_page.log(
+                ConsoleLevel::Warn,
+                format!(
+                    "Frame navigated too many times; not loading {}",
+                    request.url
+                ),
+            );
+            return;
+        }
+        let referrer = self.frames[index].boa.page().url.borrow().clone();
+        let fetched = self.net.block_on(fetch_document_with(
+            self.net.client(),
+            &request.method,
+            &request.url,
+            request.body,
+            Some(&referrer),
+        ));
+        let fetched = match fetched {
+            Ok(fetched) => fetched,
+            Err(e) => {
+                self.net
+                    .record_document(&request.method, &request.url, None);
+                parent_page.log(
+                    ConsoleLevel::Error,
+                    format!("Failed to load frame {}: {e}", request.url),
+                );
+                return;
+            }
+        };
+        let info = DocumentInfo::from_fetch(&fetched);
+        self.net
+            .record_document(&request.method, &request.url, Some(info.status));
+        let inner: Vec<FrameId> = self
+            .frames
+            .iter()
+            .filter(|f| f.parent == id)
+            .map(|f| f.id)
+            .collect();
+        for child in inner {
+            self.close_frame(child);
+        }
+        let index = self
+            .frames
+            .iter()
+            .position(|f| f.id == id)
+            .expect("frame still open");
+        let depth = self.frames[index].depth;
+        let placement = Placement {
+            frame: id,
+            tree: self.tree.clone(),
+            viewport: Some(frames::frame_viewport(&parent_page, element)),
+        };
+        let net = Rc::new(self.net.child());
+        match load(
+            &net,
+            &info,
+            fetched.html(),
+            Some(&referrer),
+            &self.options,
+            placement,
+        ) {
+            Ok(boa) => {
+                let frame = &mut self.frames[index];
+                frame.boa = boa;
+                frame.net = net;
+                frame.origin = frames::origin_of(&info.url);
+                frame.depth = depth;
+                frame.virtual_used = 0.0;
+                frame.load_reported = false;
+                frame.navigations += 1;
+            }
+            Err(e) => {
+                parent_page.log(ConsoleLevel::Error, format!("Failed to open frame: {e}"));
+            }
+        }
+    }
+
+    /// Carries out what the frames asked for since the last pump. Returns
+    /// whether anything was done.
+    fn pump_frames(&mut self) -> bool {
+        let mut did = false;
+        let ids: Vec<FrameId> = std::iter::once(FrameId(0))
+            .chain(self.frames.iter().map(|f| f.id))
+            .collect();
+        for id in ids {
+            let Some(page) = self.page_of(id).cloned() else {
+                continue;
+            };
+            for command in page.frames.take_commands() {
+                did = true;
+                match command {
+                    FrameCommand::Open {
+                        frame,
+                        element,
+                        url,
+                        srcdoc,
+                    } => self.open_frame(id, frame, element, url, srcdoc),
+                    FrameCommand::Close { frame } => self.close_frame(frame),
+                    FrameCommand::PostMessage {
+                        to,
+                        data,
+                        target_origin,
+                    } => {
+                        let origin = self.origin_of(id);
+                        if let Some(target) = self.page_of(to)
+                            && frames::origin_allows(&target_origin, &self.origin_of(to))
+                        {
+                            frames::deliver_message(target, data, origin, Some(id));
+                        }
+                    }
+                }
+            }
+            // A frame that navigates loads another document in place.
+            if id != FrameId(0)
+                && let Some(request) = page.navigation.borrow_mut().take()
+            {
+                did = true;
+                if !request.reload {
+                    self.navigate_frame(id, request);
+                }
+            }
+        }
+        // Frames whose documents finished loading are reported to their
+        // parents.
+        let mut loaded = Vec::new();
+        for frame in self.frames.iter_mut().filter(|f| !f.load_reported) {
+            if frame.boa.page().document_state.borrow().ready_state == DocumentReadyState::Complete
+            {
+                frame.load_reported = true;
+                loaded.push((frame.parent, frame.element));
+            }
+        }
+        for (parent, element) in loaded {
+            did = true;
+            if let Some(parent) = self.page_of(parent) {
+                frames::frame_loaded(parent, element);
+            }
+        }
+        did
+    }
+
+    /// Runs one frame's event loop within `limits`. The frame's report
+    /// adds up what its runs did since the scheduler started.
+    fn run_one(&mut self, id: FrameId, limits: &LoopLimits) -> LoopReport {
+        let Some(boa) = self.boa_of(id) else {
+            return idle_report();
+        };
+        let report = boa.with_cx(|cx| event_loop::run(cx, limits));
+        let (used, total) = match self.frame_mut(id) {
+            Some(frame) => (&mut frame.virtual_used, &mut frame.report),
+            None => (&mut self.top_virtual_used, &mut self.report),
+        };
+        *used += report.virtual_advanced_ms;
+        total.stop = report.stop;
+        total.steps += report.steps;
+        total.virtual_advanced_ms += report.virtual_advanced_ms;
+        total.pending_timers = report.pending_timers;
+        total.inflight_requests = report.inflight_requests;
+        report
+    }
+
+    fn virtual_left(&self, id: FrameId) -> f64 {
+        let used = match self.frame(id) {
+            Some(frame) => frame.virtual_used,
+            None => self.top_virtual_used,
+        };
+        (self.options.limits.virtual_ms - used).max(0.0)
+    }
+
+    /// Runs the event loops of all frames, in turns, until they are idle
+    /// or the limits are reached. The top frame's report is kept as the
+    /// page's.
+    fn run_frames(&mut self) {
+        let limits = self.options.limits.clone();
+        let started = Instant::now();
+        let mut steps_left = limits.max_steps;
+        self.report = idle_report();
+        for frame in &mut self.frames {
+            frame.report = idle_report();
+        }
+        loop {
+            let remaining = limits.wall.saturating_sub(started.elapsed());
+            if remaining.is_zero() || steps_left == 0 {
+                break;
+            }
+            let ids: Vec<FrameId> = std::iter::once(FrameId(0))
+                .chain(self.frames.iter().map(|f| f.id))
+                .collect();
+            let mut progress = false;
+            let mut starved = Vec::new();
+            for id in ids {
+                if self.page_of(id).is_none() {
+                    continue;
+                }
+                let remaining = limits.wall.saturating_sub(started.elapsed());
+                let report = self.run_one(
+                    id,
+                    &LoopLimits {
+                        wall: remaining,
+                        virtual_ms: FRAME_SLICE_MS.min(self.virtual_left(id)),
+                        max_steps: steps_left,
+                    },
+                );
+                steps_left = steps_left.saturating_sub(report.steps);
+                if progressed(&report) {
+                    progress = true;
+                } else if report.stop == StopReason::VirtualBudget {
+                    starved.push(id);
+                }
+                if id == FrameId(0) && report.stop == StopReason::Navigation {
+                    return;
+                }
+                if self.pump_frames() {
+                    progress = true;
+                }
+            }
+            if progress {
+                continue;
+            }
+            // Nothing ran: frames waiting on timers past their slice get
+            // the rest of their virtual budget.
+            let mut woke = false;
+            for id in starved {
+                let remaining = limits.wall.saturating_sub(started.elapsed());
+                let report = self.run_one(
+                    id,
+                    &LoopLimits {
+                        wall: remaining,
+                        virtual_ms: self.virtual_left(id),
+                        max_steps: steps_left,
+                    },
+                );
+                steps_left = steps_left.saturating_sub(report.steps);
+                woke |= progressed(&report);
+                if id == FrameId(0) && report.stop == StopReason::Navigation {
+                    return;
+                }
+                woke |= self.pump_frames();
+            }
+            if !woke {
+                break;
+            }
+        }
     }
 
     /// A PNG of the page: the viewport, or the whole document.
@@ -281,12 +877,27 @@ impl Page {
     /// Whether the page had nothing left to do when the event loop stopped.
     pub fn is_settled(&self) -> bool {
         self.report.stop == StopReason::Idle
+            && self
+                .frames
+                .iter()
+                .all(|f| f.report.stop == StopReason::Idle)
     }
 
-    /// Evaluates a script in the page and renders its completion value the
-    /// way a console would. `Err` describes an uncaught exception.
+    /// The script realm of the current frame.
+    fn current_boa(&mut self) -> &mut BoaPage {
+        let current = self.current;
+        if self.boa_of(current).is_none() {
+            self.current = FrameId(0);
+        }
+        self.boa_of(self.current)
+            .expect("the top frame is always open")
+    }
+
+    /// Evaluates a script in the current frame and renders its completion
+    /// value the way a console would. `Err` describes an uncaught
+    /// exception.
     pub fn eval(&mut self, source: &str) -> Result<String, String> {
-        self.boa.eval_to_string(source)
+        self.current_boa().eval_to_string(source)
     }
 
     /// Evaluates a script and, when its value is a promise, runs the event
@@ -294,49 +905,58 @@ impl Page {
     /// outcome: what `await` would give. `Err` describes an exception or
     /// a rejection, or says that the promise never settled.
     pub fn eval_awaited(&mut self, source: &str, limits: &LoopLimits) -> Result<String, String> {
-        let value = self.boa.eval(source)?;
+        let value = self.current_boa().eval(source)?;
         let outcome: Rc<RefCell<Option<Result<Value, Value>>>> = Rc::default();
         let slot = outcome.clone();
-        self.boa.with_cx(|cx| {
+        self.current_boa().with_cx(|cx| {
             promises::when_settled(cx, value, move |_, result| {
                 *slot.borrow_mut() = Some(result);
             });
         });
-        self.report = self.boa.with_cx(|cx| event_loop::run(cx, limits));
+        self.settle(limits);
         let settled = outcome.borrow_mut().take();
         match settled {
-            Some(Ok(value)) => Ok(self.boa.with_cx(|cx| cx.script.display(&[value]))),
-            Some(Err(reason)) => Err(self.boa.with_cx(|cx| {
+            Some(Ok(value)) => Ok(self.current_boa().with_cx(|cx| cx.script.display(&[value]))),
+            Some(Err(reason)) => Err(self.current_boa().with_cx(|cx| {
                 format!("the promise was rejected: {}", cx.script.display(&[reason]))
             })),
             None => Err("the promise did not settle".to_string()),
         }
     }
 
-    /// Runs the event loop again (after `eval` queued more work, say).
+    /// Runs the event loops again (after `eval` queued more work, say),
+    /// within `limits`; every frame gets the virtual budget anew.
     pub fn settle(&mut self, limits: &LoopLimits) -> &LoopReport {
-        self.report = self.boa.with_cx(|cx| event_loop::run(cx, limits));
+        let saved = std::mem::replace(&mut self.options.limits, limits.clone());
+        self.top_virtual_used = 0.0;
+        for frame in &mut self.frames {
+            frame.virtual_used = 0.0;
+        }
+        self.run_frames();
+        self.options.limits = saved;
         &self.report
     }
 
-    /// The first element matching a CSS selector.
+    /// The first element matching a CSS selector in the current frame.
     pub fn find(&self, selector: &str) -> Result<NodeId, ActionError> {
         let selectors = catpaw_style::Selectors::parse(selector)
             .ok_or_else(|| ActionError::BadSelector(selector.to_string()))?;
-        let dom = self.dom();
+        let page = self
+            .page_of(self.current)
+            .unwrap_or_else(|| self.boa.page());
+        let dom = page.dom.borrow();
         catpaw_style::query::query_first(&dom, dom.document(), &selectors)
             .ok_or_else(|| ActionError::NotFound(selector.to_string()))
     }
 
-    /// Runs an input action, settles the page and follows any navigation
-    /// it started.
+    /// Runs an input action in the current frame, settles the page and
+    /// follows any navigation it started.
     fn act(
         &mut self,
         action: impl FnOnce(&mut catpaw_web::page::Cx<'_>) -> Result<(), catpaw_web::input::InputError>,
     ) -> Result<(), ActionError> {
-        self.boa.with_cx(action)?;
-        let limits = self.options.limits.clone();
-        self.settle(&limits);
+        self.current_boa().with_cx(action)?;
+        self.run_frames();
         self.follow_navigations()?;
         Ok(())
     }
@@ -418,6 +1038,14 @@ pub fn with_html<R: Send + 'static>(
         let mut page = Page::from_html(&url, &html, &options)?;
         Ok(f(&mut page))
     })
+}
+
+fn describe_frame(url: &Option<Url>, srcdoc: &Option<String>) -> String {
+    match (url, srcdoc) {
+        (_, Some(_)) => "a srcdoc frame".to_string(),
+        (Some(url), None) => url.to_string(),
+        (None, None) => "about:blank".to_string(),
+    }
 }
 
 fn on_page_thread<R: Send + 'static>(

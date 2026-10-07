@@ -7,6 +7,7 @@
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::future::Future;
+use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
 use std::time::Duration;
@@ -36,13 +37,14 @@ pub struct RequestRecord {
 const BODY_PREVIEW_BYTES: usize = 4096;
 
 pub struct EngineNet {
-    runtime: Runtime,
+    runtime: Arc<Runtime>,
     client: Arc<NetClient>,
     tx: Sender<(u64, NetResult)>,
     rx: Receiver<(u64, NetResult)>,
     next_token: Cell<u64>,
     inflight: RefCell<HashMap<u64, (AbortHandle, usize)>>,
-    log: RefCell<Vec<RequestRecord>>,
+    /// Shared with the hosts of the page's frames: one log per page.
+    log: Rc<RefCell<Vec<RequestRecord>>>,
 }
 
 async fn perform(client: &NetClient, request: NetRequest) -> NetResult {
@@ -113,14 +115,29 @@ impl EngineNet {
         };
         let (tx, rx) = channel();
         Ok(Self {
-            runtime,
+            runtime: Arc::new(runtime),
             client: Arc::new(client),
             tx,
             rx,
             next_token: Cell::new(1),
             inflight: RefCell::new(HashMap::new()),
-            log: RefCell::new(Vec::new()),
+            log: Rc::new(RefCell::new(Vec::new())),
         })
+    }
+
+    /// A host for another frame of the same page: the same runtime, client
+    /// (cookies included) and request log, with requests of its own.
+    pub fn child(&self) -> Self {
+        let (tx, rx) = channel();
+        Self {
+            runtime: self.runtime.clone(),
+            client: self.client.clone(),
+            tx,
+            rx,
+            next_token: Cell::new(1),
+            inflight: RefCell::new(HashMap::new()),
+            log: self.log.clone(),
+        }
     }
 
     pub fn client(&self) -> &NetClient {
@@ -136,6 +153,17 @@ impl EngineNet {
     /// Every request made through this host so far.
     pub fn requests(&self) -> Vec<RequestRecord> {
         self.log.borrow().clone()
+    }
+
+    /// Logs a document fetch made outside the host (a frame's document).
+    pub(crate) fn record_document(&self, method: &str, url: &Url, status: Option<u16>) {
+        self.log.borrow_mut().push(RequestRecord {
+            method: method.to_string(),
+            url: url.clone(),
+            kind: RequestKind::Document,
+            status,
+            body_preview: None,
+        });
     }
 
     fn record(&self, request: &NetRequest) -> usize {

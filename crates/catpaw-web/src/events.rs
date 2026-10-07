@@ -5,7 +5,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use catpaw_dom::{FragmentKind, NodeId, NodeKind};
-use catpaw_js::{Callback, EventTargetRef, Exception, Fallible, ObjectId, Value};
+use catpaw_js::{Callback, EventTargetRef, Exception, Fallible, ObjectId, Value, WindowRef};
 
 use crate::generated::{self as web, InterfaceId};
 use crate::page::{Cx, PageState};
@@ -53,6 +53,13 @@ pub enum EventData {
     /// `formdata`: the entry list as a `FormData`, pinned by the form.
     FormData {
         form_data: ObjectId,
+    },
+    /// `message`: see `frames`.
+    Message {
+        data: Value,
+        origin: String,
+        last_event_id: String,
+        source: Option<WindowRef>,
     },
 }
 

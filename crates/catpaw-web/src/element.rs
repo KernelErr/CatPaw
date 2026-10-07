@@ -84,6 +84,9 @@ fn attribute_changed(
     if matches!(local, "href" | "rel" | "disabled") {
         crate::stylesheets::link_changed(cx.page, el, false);
     }
+    if matches!(local, "src" | "srcdoc") && cx.dom().is_html_element(el, "iframe") {
+        crate::frames::iframe_changed(cx.page, el);
+    }
 }
 
 /// Sets the null-namespace attribute `local`.

@@ -250,7 +250,7 @@ macro_rules! mouse_state {
 
 impl web::UIEventImpl for Web {
     fn view(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<WindowRef>> {
-        ui(cx, this, |s| s.has_view.then_some(WindowRef))
+        ui(cx, this, |s| s.has_view.then_some(WindowRef::Local))
     }
 
     fn detail(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<i32> {

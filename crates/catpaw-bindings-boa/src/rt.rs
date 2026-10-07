@@ -671,14 +671,17 @@ impl IntoJs for ObjectId {
 
 impl IntoJs for WindowRef {
     fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
-        Ok(ctx.global_object().into())
+        match self {
+            WindowRef::Local => Ok(ctx.global_object().into()),
+            WindowRef::Remote(id) => id.into_js(ctx),
+        }
     }
 }
 
 impl IntoJs for EventTargetRef {
     fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
         match self {
-            EventTargetRef::Window => WindowRef.into_js(ctx),
+            EventTargetRef::Window => WindowRef::Local.into_js(ctx),
             EventTargetRef::Node(id) => id.into_js(ctx),
             EventTargetRef::Object(id) => id.into_js(ctx),
         }
@@ -955,9 +958,16 @@ pub fn object_from_js(v: &JsValue, iface: I, ctx: &mut Context) -> JsResult<Obje
 
 pub fn window_from_js(v: &JsValue, ctx: &mut Context) -> JsResult<WindowRef> {
     if is_window(v, ctx) {
-        Ok(WindowRef)
-    } else {
-        Err(type_error("The value is not of type 'Window'."))
+        return Ok(WindowRef::Local);
+    }
+    let native = v
+        .as_object()
+        .and_then(|obj| runtime(ctx).native_of(&obj, ctx));
+    match native {
+        Some(Native::Object(id, actual)) if actual.is_a(I::CatPawRemoteWindow) => {
+            Ok(WindowRef::Remote(id))
+        }
+        _ => Err(type_error("The value is not of type 'Window'.")),
     }
 }
 

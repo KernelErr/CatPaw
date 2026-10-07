@@ -839,7 +839,7 @@ impl web::DocumentImpl for Web {
     }
 
     fn default_view(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<WindowRef>> {
-        Ok(has_window(cx, this).then_some(WindowRef))
+        Ok(has_window(cx, this).then_some(WindowRef::Local))
     }
 
     fn has_focus(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool> {

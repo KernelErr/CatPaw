@@ -69,6 +69,10 @@ members = ["view", "detail", "which"]
 constructor = true
 members = ["relatedTarget"]
 
+[interfaces.MessageEvent]
+constructor = true
+members = ["data", "origin", "lastEventId", "source"]
+
 [interfaces.SubmitEvent]
 members = ["submitter"]
 
@@ -461,7 +465,11 @@ members = ["selected", "defaultSelected", "value", "text", "index", "form"]
 [interfaces.HTMLTableSectionElement]
 [interfaces.HTMLTableRowElement]
 [interfaces.HTMLTableCellElement]
+[interfaces.CatPawRemoteWindow]
+members = ["postMessage", "closed", "parent", "top", "self", "window", "frames", "length", "focus", "blur", "close"]
+
 [interfaces.HTMLIFrameElement]
+members = ["srcdoc", "contentWindow", "contentDocument"]
 
 [interfaces.HTMLTitleElement]
 members = ["text"]
@@ -485,6 +493,7 @@ members = [
   "window", "self", "document", "location", "history", "navigator", "frames", "top", "parent",
   "closed", "focus", "blur", "alert", "confirm", "prompt", "innerWidth", "innerHeight",
   "scrollX", "scrollY", "pageXOffset", "pageYOffset", "scroll", "scrollTo", "scrollBy",
+  "postMessage", "frameElement",
   "getSelection",
   "devicePixelRatio", "event", "matchMedia", "screen", "outerWidth", "outerHeight", "screenX",
   "screenY", "screenLeft", "screenTop", "getComputedStyle", "customElements",
