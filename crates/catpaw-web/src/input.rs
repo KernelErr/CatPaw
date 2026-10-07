@@ -61,6 +61,7 @@ pub struct InputState {
 // ------------------------------------------------------------------ events
 
 fn trusted(cx: &Cx<'_>, id: ObjectId) -> ObjectId {
+    cx.page.note_user_activation();
     let _ = cx.page.with::<Event, _>(id, |e| e.trusted = true);
     id
 }

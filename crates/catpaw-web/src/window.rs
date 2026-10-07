@@ -216,8 +216,43 @@ impl web::WindowImpl for Web {
         ))
     }
 
-    fn closed(_cx: &mut Cx<'_>) -> Fallible<bool> {
-        Ok(false)
+    fn closed(cx: &mut Cx<'_>) -> Fallible<bool> {
+        Ok(cx.page.frames.is_closing())
+    }
+
+    fn close(cx: &mut Cx<'_>) -> Fallible<()> {
+        crate::frames::close_self(cx.page);
+        Ok(())
+    }
+
+    fn open(
+        cx: &mut Cx<'_>,
+        url: String,
+        _target: String,
+        _features: String,
+    ) -> Fallible<Option<WindowRef>> {
+        let resolved = if url.is_empty() {
+            None
+        } else {
+            Some(cx.page.resolve_url(&url).ok_or_else(|| {
+                Exception::dom("SyntaxError", format!("'{url}' is not a valid URL"))
+            })?)
+        };
+        Ok(crate::frames::open_popup(cx, resolved))
+    }
+
+    fn opener(cx: &mut Cx<'_>) -> Fallible<Value> {
+        Ok(match crate::frames::opener_window(cx) {
+            Some(WindowRef::Remote(id)) => Value::Object(id),
+            Some(WindowRef::Local) => Value::Window,
+            None => Value::Null,
+        })
+    }
+
+    fn set_opener(_cx: &mut Cx<'_>, _value: Value) -> Fallible<()> {
+        // Pages set `opener = null` to cut the link; nothing here reaches
+        // back through it anyway.
+        Ok(())
     }
 
     fn focus(_cx: &mut Cx<'_>) -> Fallible<()> {

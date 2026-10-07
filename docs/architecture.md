@@ -94,6 +94,9 @@ context and spares the WindowProxy machinery. Messages between frames
 cross as JSON. The engine runs the frames' loops in turns of virtual
 time, carries their commands (open, close, message) and tells a parent
 when a child has loaded; a document's `load` waits for its frames. A
+popup (`window.open()`, allowed within five seconds of a trusted click
+or key press, as browsers gate it) is a frame without an element: a top
+of its own in the same tree, with an opener instead of a parent. A
 dedicated worker is a realm of the same kind, with a
 `DedicatedWorkerGlobalScope` global: the bindings are installed per
 `[Exposed]` set, so a worker sees neither `window` nor `document`; it

@@ -19828,6 +19828,20 @@ pub mod window {
         rt::ret(r, ctx)
     }
 
+    fn get_opener(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WindowImpl>::opener(cx));
+        rt::ret(r, ctx)
+    }
+
+    fn set_opener(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WindowImpl>::set_opener(cx, a0));
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
     fn get_parent(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         rt::this_window(this_js, ctx)?;
         let r = rt::with_cx(ctx, |cx| <Web as web::WindowImpl>::parent(cx));
@@ -22477,6 +22491,13 @@ pub mod window {
         rt::ret(r, ctx)
     }
 
+    fn op_close(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WindowImpl>::close(cx));
+        rt::ret(r, ctx)
+    }
+
     fn op_focus(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         rt::this_window(this_js, ctx)?;
@@ -22488,6 +22509,28 @@ pub mod window {
         let _ = (this_js, args);
         rt::this_window(this_js, ctx)?;
         let r = rt::with_cx(ctx, |cx| <Web as web::WindowImpl>::blur(cx));
+        rt::ret(r, ctx)
+    }
+
+    fn op_open(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::this_window(this_js, ctx)?;
+        let a0 = if args.len() > 0 && !args[0].is_undefined() {
+            rt::string_from_js(rt::arg(args, 0), ctx)?
+        } else {
+            "".to_string()
+        };
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            rt::string_from_js(rt::arg(args, 1), ctx)?
+        } else {
+            "_blank".to_string()
+        };
+        let a2 = if args.len() > 2 && !args[2].is_undefined() {
+            rt::string_from_js_null_empty(rt::arg(args, 2), ctx)?
+        } else {
+            "".to_string()
+        };
+        let r = rt::with_cx(ctx, |cx| <Web as web::WindowImpl>::open(cx, a0, a1, a2));
         rt::ret(r, ctx)
     }
 
@@ -22909,6 +22952,11 @@ pub mod window {
                 name: "top",
                 getter: get_top,
                 setter: None,
+            },
+            rt::AttrDef {
+                name: "opener",
+                getter: get_opener,
+                setter: Some(set_opener),
             },
             rt::AttrDef {
                 name: "parent",
@@ -23518,6 +23566,11 @@ pub mod window {
                 length: 1,
             },
             rt::OpDef {
+                name: "close",
+                func: op_close,
+                length: 0,
+            },
+            rt::OpDef {
                 name: "focus",
                 func: op_focus,
                 length: 0,
@@ -23525,6 +23578,11 @@ pub mod window {
             rt::OpDef {
                 name: "blur",
                 func: op_blur,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "open",
+                func: op_open,
                 length: 0,
             },
             rt::OpDef {

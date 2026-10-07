@@ -585,7 +585,7 @@ members = ["content"]
 [interfaces.Window]
 members = [
   "window", "self", "document", "location", "history", "navigator", "frames", "top", "parent",
-  "closed", "focus", "blur", "alert", "confirm", "prompt", "innerWidth", "innerHeight",
+  "closed", "close", "open", "opener", "focus", "blur", "alert", "confirm", "prompt", "innerWidth", "innerHeight",
   "scrollX", "scrollY", "pageXOffset", "pageYOffset", "scroll", "scrollTo", "scrollBy",
   "postMessage", "frameElement",
   "getSelection",

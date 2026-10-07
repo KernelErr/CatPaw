@@ -145,8 +145,8 @@ struct FetchArgs {
     /// `type <text>`, `press <key>`, `check <selector>`, `uncheck <selector>`,
     /// `select <selector> <value>`, `hover <selector>`, `focus <selector>`,
     /// `frame <selector>` (address the frame of that iframe for the actions
-    /// and --eval that follow), `frame parent`, `frame top`, `back`,
-    /// `forward`.
+    /// and --eval that follow), `frame parent`, `frame top`, `frame popup`
+    /// (the window opened last), `back`, `forward`.
     #[arg(long, requires = "js")]
     action: Vec<String>,
     /// With --js: write a PNG of the page (the viewport) to this path once
@@ -477,7 +477,8 @@ fn print_frames(page: &catpaw_engine::Page, list: bool, console: bool) {
                 .map(describe_stop)
                 .unwrap_or_default();
             eprintln!(
-                "[frame {id}] parent={} depth={} {} ({stop})",
+                "[frame {id}] {}={} depth={} {} ({stop})",
+                if frame.popup { "opener" } else { "parent" },
                 frame.parent.map(|p| p.0).unwrap_or(0),
                 frame.depth,
                 frame.url
@@ -588,6 +589,7 @@ fn run_action(page: &mut catpaw_engine::Page, spec: &str) -> Result<()> {
                 page.select_parent_frame();
                 Ok(())
             }
+            "popup" => page.select_latest_popup().map(drop),
             selector => page.select_frame(selector).map(drop),
         },
         other => bail!("unknown action {other:?} in {spec:?}"),

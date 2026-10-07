@@ -30,7 +30,9 @@ isolated contexts.
 > see each other only through `postMessage`, `parent`/`top`/`contentWindow`
 > and the `load` events, as cross-origin frames do; `--action "frame <selector>"`
 > addresses a frame for the actions and `--eval` that follow (`frame top`,
-> `frame parent` go back). Canvas: `getContext('2d')` draws with tiny-skia (paths, arcs,
+> `frame parent` go back). Popups: `window.open()` after a click or key press
+> opens a page of its own with `opener` set; `frame popup` addresses the one
+> opened last, and `window.close()` closes it. Canvas: `getContext('2d')` draws with tiny-skia (paths, arcs,
 > rounded rects, fills, strokes, dashes, clips, gradients, transforms,
 > compositing, text through the same fonts as layout, `drawImage` from
 > other canvases, `getImageData`/`putImageData`, `toDataURL`/`toBlob`),

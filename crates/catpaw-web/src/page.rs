@@ -301,6 +301,9 @@ pub struct PageState {
     pub(crate) input: crate::input::InputState,
     /// The page's place in the frame tree and its child frames.
     pub frames: crate::frames::FrameState,
+    /// When the user last activated the page (a trusted click or key),
+    /// on the page clock: transient activation lasts five seconds.
+    pub user_activation: Cell<Option<f64>>,
     /// The page's dedicated workers, or its role as one.
     pub workers: crate::workers::WorkerState,
     pub(crate) channels: crate::channels::Channels,
@@ -392,6 +395,7 @@ impl PageState {
             layouts: Default::default(),
             input: Default::default(),
             frames: Default::default(),
+            user_activation: Cell::new(None),
             workers: Default::default(),
             channels: Default::default(),
             sockets: Default::default(),
@@ -472,6 +476,28 @@ impl PageState {
     /// Records a call to a member that is defined but not implemented.
     pub fn count_stub(&self, name: &'static str) {
         *self.stub_calls.borrow_mut().entry(name).or_insert(0) += 1;
+    }
+
+    // ---- user activation ------------------------------------------------
+
+    /// A trusted click or key press happened.
+    pub fn note_user_activation(&self) {
+        self.user_activation.set(Some(self.clock.peek()));
+    }
+
+    /// Whether the user acted on the page in the last five seconds
+    /// (HTML's transient activation).
+    pub fn has_transient_activation(&self) -> bool {
+        self.user_activation
+            .get()
+            .is_some_and(|at| self.clock.peek() - at <= 5000.0)
+    }
+
+    /// Spends the transient activation (popups, downloads).
+    pub fn consume_user_activation(&self) -> bool {
+        let had = self.has_transient_activation();
+        self.user_activation.set(None);
+        had
     }
 
     // ---- storage --------------------------------------------------------

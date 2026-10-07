@@ -5196,13 +5196,22 @@ pub trait WindowImpl {
     fn location(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
     fn history(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
     fn custom_elements(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
+    fn close(cx: &mut Cx<'_>) -> Fallible<()>;
     fn closed(cx: &mut Cx<'_>) -> Fallible<bool>;
     fn focus(cx: &mut Cx<'_>) -> Fallible<()>;
     fn blur(cx: &mut Cx<'_>) -> Fallible<()>;
     fn frames(cx: &mut Cx<'_>) -> Fallible<WindowRef>;
     fn top(cx: &mut Cx<'_>) -> Fallible<Option<WindowRef>>;
+    fn opener(cx: &mut Cx<'_>) -> Fallible<Value>;
+    fn set_opener(cx: &mut Cx<'_>, value: Value) -> Fallible<()>;
     fn parent(cx: &mut Cx<'_>) -> Fallible<Option<WindowRef>>;
     fn frame_element(cx: &mut Cx<'_>) -> Fallible<Option<NodeId>>;
+    fn open(
+        cx: &mut Cx<'_>,
+        url: String,
+        target: String,
+        features: String,
+    ) -> Fallible<Option<WindowRef>>;
     fn navigator(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
     fn alert(cx: &mut Cx<'_>) -> Fallible<()>;
     fn alert_overload2(cx: &mut Cx<'_>, message: String) -> Fallible<()>;

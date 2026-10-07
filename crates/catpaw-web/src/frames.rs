@@ -44,7 +44,10 @@ pub enum MessageData {
 #[derive(Debug)]
 pub struct FrameTree {
     next: u32,
+    /// The parent of each frame; for a popup, its opener.
     parents: HashMap<FrameId, FrameId>,
+    /// Popups: tops of their own, with an opener rather than a parent.
+    popups: HashSet<FrameId>,
 }
 
 impl Default for FrameTree {
@@ -52,6 +55,7 @@ impl Default for FrameTree {
         Self {
             next: 1,
             parents: HashMap::new(),
+            popups: HashSet::new(),
         }
     }
 }
@@ -64,8 +68,30 @@ impl FrameTree {
         id
     }
 
+    fn allocate_popup(&mut self, opener: FrameId) -> FrameId {
+        let id = self.allocate(opener);
+        self.popups.insert(id);
+        id
+    }
+
     pub fn parent_of(&self, frame: FrameId) -> Option<FrameId> {
+        if self.popups.contains(&frame) {
+            return None;
+        }
         self.parents.get(&frame).copied()
+    }
+
+    /// The frame that opened a popup.
+    pub fn opener_of(&self, frame: FrameId) -> Option<FrameId> {
+        if self.popups.contains(&frame) {
+            self.parents.get(&frame).copied()
+        } else {
+            None
+        }
+    }
+
+    pub fn is_popup(&self, frame: FrameId) -> bool {
+        self.popups.contains(&frame)
     }
 
     /// Whether the frame is open (the top one always is).
@@ -84,12 +110,14 @@ impl FrameTree {
         children
     }
 
-    /// Forgets a frame and the frames inside it.
+    /// Forgets a frame and the frames inside it (and the popups it
+    /// opened).
     pub fn remove(&mut self, frame: FrameId) {
         for child in self.children_of(frame) {
             self.remove(child);
         }
         self.parents.remove(&frame);
+        self.popups.remove(&frame);
     }
 
     fn is_ancestor(&self, ancestor: FrameId, of: FrameId) -> bool {
@@ -125,9 +153,12 @@ pub enum FrameCommand {
         url: Option<Url>,
         srcdoc: Option<String>,
     },
-    /// The frame's element left the document, or was pointed elsewhere:
-    /// the frame and the frames inside it go.
+    /// The frame's element left the document, or was pointed elsewhere,
+    /// or a popup closed itself: the frame and the frames inside it go.
     Close { frame: FrameId },
+    /// `window.open()`: a popup, a top-level page of its own with this
+    /// page as its opener. The page has placed it in the tree.
+    OpenPopup { frame: FrameId, url: Url },
     /// A message for another frame's window.
     PostMessage {
         to: FrameId,
@@ -153,6 +184,8 @@ pub struct FrameState {
     /// The `iframe` elements whose frames the embedder has been asked to
     /// open and has not reported loaded: each delays the document's `load`.
     pending: RefCell<HashSet<NodeId>>,
+    /// The page asked to close itself (`window.close()` in a popup).
+    closing: Cell<bool>,
     commands: RefCell<Vec<FrameCommand>>,
 }
 
@@ -174,6 +207,22 @@ impl FrameState {
 
     pub fn parent(&self) -> Option<FrameId> {
         self.id().and_then(|id| self.tree().borrow().parent_of(id))
+    }
+
+    /// The frame that opened this page as a popup.
+    pub fn opener(&self) -> Option<FrameId> {
+        self.id().and_then(|id| self.tree().borrow().opener_of(id))
+    }
+
+    /// Whether this page is a popup (`window.open()` made it).
+    pub fn is_popup(&self) -> bool {
+        self.id()
+            .is_some_and(|id| self.tree().borrow().is_popup(id))
+    }
+
+    /// Whether the page closed itself.
+    pub fn is_closing(&self) -> bool {
+        self.closing.get()
     }
 
     pub fn top(&self) -> Option<FrameId> {
@@ -281,6 +330,40 @@ pub(crate) fn parent_window(cx: &mut Cx<'_>) -> WindowRef {
     match cx.page.frames.parent() {
         Some(parent) => window_of(cx, parent),
         None => WindowRef::Local,
+    }
+}
+
+/// `opener` as the page sees it: the window that opened it, for a popup.
+pub(crate) fn opener_window(cx: &mut Cx<'_>) -> Option<WindowRef> {
+    let opener = cx.page.frames.opener()?;
+    Some(window_of(cx, opener))
+}
+
+/// `window.open(url)`: a popup, when the user just acted on the page
+/// (browsers block popups otherwise). Returns its window.
+pub(crate) fn open_popup(cx: &mut Cx<'_>, url: Option<Url>) -> Option<WindowRef> {
+    let me = cx.page.frames.id()?;
+    if !cx.page.consume_user_activation() {
+        cx.page.log(
+            crate::page::ConsoleLevel::Warn,
+            "window.open() was blocked: no user activation",
+        );
+        return None;
+    }
+    let url = url.unwrap_or_else(|| Url::parse("about:blank").expect("about:blank parses"));
+    let frame = cx.page.frames.tree().borrow_mut().allocate_popup(me);
+    cx.page.frames.push(FrameCommand::OpenPopup { frame, url });
+    Some(window_of(cx, frame))
+}
+
+/// `window.close()`: a popup goes away; other pages ignore it, as
+/// browsers do for windows script did not open.
+pub(crate) fn close_self(page: &PageState) {
+    if !page.frames.is_popup() || page.frames.closing.replace(true) {
+        return;
+    }
+    if let Some(me) = page.frames.id() {
+        page.frames.push(FrameCommand::Close { frame: me });
     }
 }
 

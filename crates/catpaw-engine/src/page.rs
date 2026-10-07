@@ -135,9 +135,10 @@ impl DocumentInfo {
 /// A frame below the top one.
 struct Frame {
     id: FrameId,
+    /// The parent frame, or the opener of a popup.
     parent: FrameId,
-    /// The `iframe` element in the parent's document.
-    element: NodeId,
+    /// The `iframe` element in the parent's document; `None` for a popup.
+    element: Option<NodeId>,
     depth: u32,
     // Dropped before `net`: the page state refers to it.
     boa: BoaPage,
@@ -192,6 +193,8 @@ pub struct FrameInfo {
     pub parent: Option<FrameId>,
     pub url: Url,
     pub depth: u32,
+    /// A popup (`window.open()`), a top-level page of its own.
+    pub popup: bool,
 }
 
 /// A loaded page. Lives on the thread that created it.
@@ -587,14 +590,29 @@ impl Page {
             parent: None,
             url: self.url(),
             depth: 0,
+            popup: false,
         }];
         out.extend(self.frames.iter().map(|f| FrameInfo {
             id: f.id,
             parent: Some(f.parent),
             url: f.boa.page().url.borrow().clone(),
             depth: f.depth,
+            popup: f.element.is_none(),
         }));
         out
+    }
+
+    /// Addresses the popup opened last, if one is open.
+    pub fn select_latest_popup(&mut self) -> Result<FrameId, ActionError> {
+        let popup = self
+            .frames
+            .iter()
+            .rev()
+            .find(|f| f.element.is_none())
+            .map(|f| f.id)
+            .ok_or_else(|| ActionError::NoFrame("popup".to_string()))?;
+        self.current = popup;
+        Ok(popup)
     }
 
     /// The frame actions and evaluations address; the top one at first.
@@ -629,23 +647,40 @@ impl Page {
         self.current = FrameId(0);
     }
 
-    /// Opens the frame `id` for `element` in the frame `parent`.
+    /// Opens the frame `id` for `element` in the frame `parent`, or a
+    /// popup of `parent` when there is no element.
     fn open_frame(
         &mut self,
         parent: FrameId,
         id: FrameId,
-        element: NodeId,
+        element: Option<NodeId>,
         url: Option<Url>,
         srcdoc: Option<String>,
     ) {
         let Some(parent_page) = self.page_of(parent).cloned() else {
             return;
         };
-        if parent_page.frames.child_of(element) != Some(id) {
-            // Pointed elsewhere or removed since: a later command covers it.
-            return;
+        match element {
+            Some(element) if parent_page.frames.child_of(element) != Some(id) => {
+                // Pointed elsewhere or removed since: a later command
+                // covers it.
+                return;
+            }
+            None if !self.tree.borrow().contains(id) => return,
+            _ => {}
         }
-        let depth = self.depth_of(parent) + 1;
+        let fail = |page: &PageState| {
+            if let Some(element) = element {
+                frames::frame_failed(page, element);
+            } else {
+                page.frames.tree().borrow_mut().remove(id);
+            }
+        };
+        let depth = if element.is_some() {
+            self.depth_of(parent) + 1
+        } else {
+            0
+        };
         if depth > MAX_FRAME_DEPTH || self.frames.len() >= MAX_FRAMES {
             parent_page.log(
                 ConsoleLevel::Warn,
@@ -654,7 +689,7 @@ impl Page {
                     describe_frame(&url, &srcdoc)
                 ),
             );
-            frames::frame_failed(&parent_page, element);
+            fail(&parent_page);
             return;
         }
         let referrer = parent_page.url.borrow().clone();
@@ -685,7 +720,7 @@ impl Page {
                             ConsoleLevel::Error,
                             format!("Failed to load frame {url}: {e}"),
                         );
-                        frames::frame_failed(&parent_page, element);
+                        fail(&parent_page);
                         return;
                     }
                 }
@@ -698,7 +733,7 @@ impl Page {
         let placement = Placement {
             frame: id,
             tree: self.tree.clone(),
-            viewport: Some(frames::frame_viewport(&parent_page, element)),
+            viewport: element.map(|element| frames::frame_viewport(&parent_page, element)),
             history: (0, 0),
         };
         let net = Rc::new(self.net.child());
@@ -714,7 +749,7 @@ impl Page {
             Ok(boa) => boa,
             Err(e) => {
                 parent_page.log(ConsoleLevel::Error, format!("Failed to open frame: {e}"));
-                frames::frame_failed(&parent_page, element);
+                fail(&parent_page);
                 return;
             }
         };
@@ -1016,6 +1051,7 @@ impl Page {
         let Some(parent_page) = self.page_of(parent).cloned() else {
             return;
         };
+        let referrer_page = parent_page.clone();
         if self.frames[index].navigations >= self.options.max_navigations {
             parent_page.log(
                 ConsoleLevel::Warn,
@@ -1074,7 +1110,7 @@ impl Page {
         let placement = Placement {
             frame: id,
             tree: self.tree.clone(),
-            viewport: Some(frames::frame_viewport(&parent_page, element)),
+            viewport: element.map(|element| frames::frame_viewport(&referrer_page, element)),
             history: (0, 0),
         };
         let net = Rc::new(self.net.child());
@@ -1122,7 +1158,10 @@ impl Page {
                         element,
                         url,
                         srcdoc,
-                    } => self.open_frame(id, frame, element, url, srcdoc),
+                    } => self.open_frame(id, frame, Some(element), url, srcdoc),
+                    FrameCommand::OpenPopup { frame, url } => {
+                        self.open_frame(id, frame, None, Some(url), None)
+                    }
                     FrameCommand::Close { frame } => self.close_frame(frame),
                     FrameCommand::PostMessage {
                         to,
@@ -1155,7 +1194,9 @@ impl Page {
             if frame.boa.page().document_state.borrow().ready_state == DocumentReadyState::Complete
             {
                 frame.load_reported = true;
-                loaded.push((frame.parent, frame.element));
+                if let Some(element) = frame.element {
+                    loaded.push((frame.parent, element));
+                }
             }
         }
         for (parent, element) in loaded {
