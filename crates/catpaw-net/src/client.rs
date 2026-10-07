@@ -192,6 +192,12 @@ struct Hop {
 /// An HTTP client with its own cookie jar and identity.
 pub struct NetClient {
     inner: Client<Connector, Full<Bytes>>,
+    /// The same transport offering HTTP/1.1 only, for hosts whose HTTP/2
+    /// stalls.
+    h1: Client<Connector, Full<Bytes>>,
+    /// Hosts (authorities) seen answering over HTTP/2, and those moved to
+    /// HTTP/1.1 after a stall.
+    protocols: std::sync::Mutex<HostProtocols>,
     /// The transport again, for connections hyper does not make
     /// (WebSockets).
     connector: Connector,
@@ -199,6 +205,19 @@ pub struct NetClient {
     cookies: CookieJar,
     signer: Option<BotAuthSigner>,
 }
+
+/// What the client has learnt about the HTTP versions of hosts.
+#[derive(Default, Debug)]
+struct HostProtocols {
+    h2: std::collections::HashSet<String>,
+    stalled: std::collections::HashSet<String>,
+}
+
+/// How long a request to a host known to speak HTTP/2 may wait for its
+/// response headers before it is sent again over HTTP/1.1. Some servers
+/// (Heroku's router among them) at times leave multiplexed streams
+/// unanswered while separate connections are served in a second.
+const HTTP2_STALL: Duration = Duration::from_secs(5);
 
 impl std::fmt::Debug for NetClient {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -320,12 +339,18 @@ impl NetClient {
             }
         };
         let https = hyper_rustls::HttpsConnectorBuilder::new()
-            .with_tls_config(tls)
+            .with_tls_config(tls.clone())
             .https_or_http()
             .enable_http1()
             .enable_http2()
-            .wrap_connector(transport);
+            .wrap_connector(transport.clone());
         let inner = Client::builder(TokioExecutor::new()).build(https.clone());
+        let https_h1 = hyper_rustls::HttpsConnectorBuilder::new()
+            .with_tls_config(tls)
+            .https_or_http()
+            .enable_http1()
+            .wrap_connector(transport);
+        let h1 = Client::builder(TokioExecutor::new()).build(https_h1);
         let signer = config
             .bot_auth
             .as_ref()
@@ -339,6 +364,8 @@ impl NetClient {
         }
         Ok(Self {
             inner,
+            h1,
+            protocols: Default::default(),
             connector: https,
             config,
             cookies,
@@ -484,16 +511,60 @@ impl NetClient {
         // hyper sets Host from the URI; never let callers inject a stale one.
         headers.remove(HOST);
 
-        let mut request = Request::builder().method(method.clone()).uri(uri);
-        if let Some(h) = request.headers_mut() {
-            *h = headers;
-        }
-        let request = request.body(Full::new(body.unwrap_or_default()))?;
-
+        let authority = uri
+            .authority()
+            .map(|a| a.as_str().to_string())
+            .unwrap_or_default();
+        let build = |uri: Uri, headers: HeaderMap, body: Option<Bytes>| {
+            let mut request = Request::builder().method(method.clone()).uri(uri);
+            if let Some(h) = request.headers_mut() {
+                *h = headers;
+            }
+            request.body(Full::new(body.unwrap_or_default()))
+        };
         let timeout = self.config.timeout;
-        let response = tokio::time::timeout(timeout, self.inner.request(request))
-            .await
-            .map_err(|_| NetError::Timeout(timeout))??;
+        let (stalled, speaks_h2) = {
+            let known = self.protocols.lock().expect("not poisoned");
+            (
+                known.stalled.contains(&authority),
+                known.h2.contains(&authority),
+            )
+        };
+        let idempotent = matches!(*method, Method::GET | Method::HEAD | Method::OPTIONS);
+        let response = if stalled {
+            tokio::time::timeout(timeout, self.h1.request(build(uri, headers, body)?))
+                .await
+                .map_err(|_| NetError::Timeout(timeout))??
+        } else if idempotent && speaks_h2 && timeout > HTTP2_STALL {
+            let first = build(uri.clone(), headers.clone(), body.clone())?;
+            match tokio::time::timeout(HTTP2_STALL, self.inner.request(first)).await {
+                Ok(response) => response?,
+                Err(_) => {
+                    // No headers yet on a multiplexed stream: ask again on a
+                    // connection of its own, and keep to HTTP/1.1 there.
+                    self.protocols
+                        .lock()
+                        .expect("not poisoned")
+                        .stalled
+                        .insert(authority.clone());
+                    let rest = timeout - HTTP2_STALL;
+                    tokio::time::timeout(rest, self.h1.request(build(uri, headers, body)?))
+                        .await
+                        .map_err(|_| NetError::Timeout(timeout))??
+                }
+            }
+        } else {
+            tokio::time::timeout(timeout, self.inner.request(build(uri, headers, body)?))
+                .await
+                .map_err(|_| NetError::Timeout(timeout))??
+        };
+        if response.version() == http::Version::HTTP_2 && !speaks_h2 {
+            self.protocols
+                .lock()
+                .expect("not poisoned")
+                .h2
+                .insert(authority);
+        }
         let (parts, incoming) = response.into_parts();
         if credentials {
             self.cookies.store_response(url, &parts.headers);
