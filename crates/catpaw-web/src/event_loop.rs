@@ -4,10 +4,11 @@
 use std::collections::{BTreeMap, HashMap};
 use std::time::{Duration, Instant};
 
-use catpaw_js::{Callback, Value};
+use catpaw_js::{Callback, SourceSite, Value};
 
 use crate::net;
 use crate::page::{Cx, PageState};
+use crate::settle::{self, Initiator, PendingReport, SettlePolicy};
 
 /// A unit of work run by the event loop with script quiescent.
 pub struct Task {
@@ -22,9 +23,16 @@ pub fn run_one_task(cx: &mut Cx<'_>) -> bool {
     let Some(task) = task else {
         return false;
     };
-    (task.run)(cx);
-    cx.checkpoint();
+    run_task(cx, task);
     true
+}
+
+fn run_task(cx: &mut Cx<'_>, task: Task) {
+    let page = cx.page;
+    settle::with_initiator(page, Initiator::Task(task.label), || {
+        (task.run)(cx);
+        cx.checkpoint();
+    });
 }
 
 /// Queues `f` to run as a task.
@@ -50,6 +58,10 @@ pub struct Timer {
     /// `Some` for `setInterval`: the repeat interval in milliseconds.
     pub interval: Option<f64>,
     pub nesting: u32,
+    /// The delay asked for, in milliseconds.
+    pub delay_ms: f64,
+    /// Where script set it (an index into the page's timer sites).
+    pub site: Option<usize>,
 }
 
 /// Pending timers, ordered by deadline and then by creation.
@@ -98,6 +110,14 @@ impl Timers {
         self.by_time.len()
     }
 
+    /// The timers with their deadlines (milliseconds since the time
+    /// origin), soonest first.
+    pub fn iter(&self) -> impl Iterator<Item = (f64, &Timer)> {
+        self.by_time
+            .iter()
+            .map(|((t, _), timer)| (*t as f64 / 1000.0, timer))
+    }
+
     pub fn is_empty(&self) -> bool {
         self.by_time.is_empty()
     }
@@ -115,10 +135,23 @@ fn clamp_delay(delay: f64, nesting: u32) -> f64 {
     }
 }
 
-/// `setTimeout` / `setInterval`.
+/// `setTimeout` / `setInterval`, for the platform's own timers.
 pub fn set_timer(page: &PageState, action: TimerAction, delay_ms: i32, repeat: bool) -> i32 {
+    set_timer_at(page, action, delay_ms, repeat, None)
+}
+
+/// `setTimeout` / `setInterval` from script at `site`.
+pub fn set_timer_at(
+    page: &PageState,
+    action: TimerAction,
+    delay_ms: i32,
+    repeat: bool,
+    site: Option<SourceSite>,
+) -> i32 {
     let nesting = page.timer_nesting.get() + 1;
-    let delay = clamp_delay(f64::from(delay_ms.max(0)), nesting);
+    let asked = f64::from(delay_ms.max(0));
+    let delay = clamp_delay(asked, nesting);
+    let site = site.map(|site| settle::arm_site(page, site, asked, repeat));
     let mut timers = page.timers.borrow_mut();
     timers.next_id += 1;
     let id = timers.next_id;
@@ -128,8 +161,10 @@ pub fn set_timer(page: &PageState, action: TimerAction, delay_ms: i32, repeat: b
         Timer {
             id,
             action,
-            interval: repeat.then_some(f64::from(delay_ms.max(0))),
+            interval: repeat.then_some(asked),
             nesting,
+            delay_ms: asked,
+            site,
         },
     );
     id
@@ -145,6 +180,9 @@ fn run_timer(cx: &mut Cx<'_>, fired_at: f64, timer: Timer) {
     if let Some(interval) = timer.interval {
         let nesting = timer.nesting + 1;
         let next = fired_at + clamp_delay(interval, nesting).max(0.001);
+        if let Some(site) = timer.site {
+            settle::rearm_site(cx.page, site);
+        }
         cx.page.timers.borrow_mut().insert(
             next,
             Timer {
@@ -152,9 +190,18 @@ fn run_timer(cx: &mut Cx<'_>, fired_at: f64, timer: Timer) {
                 action: timer.action.clone(),
                 interval: timer.interval,
                 nesting,
+                delay_ms: timer.delay_ms,
+                site: timer.site,
             },
         );
     }
+    let page = cx.page;
+    settle::with_initiator(page, Initiator::Timer { site: timer.site }, || {
+        fire_timer(cx, timer);
+    });
+}
+
+fn fire_timer(cx: &mut Cx<'_>, timer: Timer) {
     cx.page.timer_nesting.set(timer.nesting);
     let result = match &timer.action {
         TimerAction::Call(callback, args) => {
@@ -191,6 +238,13 @@ pub struct RafState {
 
 /// Makes sure a frame is coming: animation frame callbacks, then the
 /// observers that look at the rendered document.
+impl RafState {
+    /// Whether a frame is coming.
+    pub fn is_requested(&self) -> bool {
+        self.deadline.is_some()
+    }
+}
+
 pub(crate) fn request_frame(page: &PageState) {
     let mut raf = page.raf.borrow_mut();
     if raf.deadline.is_none() {
@@ -218,6 +272,20 @@ pub fn cancel_animation_frame(page: &PageState, id: u32) {
 }
 
 fn run_frame(cx: &mut Cx<'_>) {
+    let page = cx.page;
+    let before = settle::content_changes(page);
+    settle::with_initiator(page, Initiator::Frame, || run_frame_callbacks(cx));
+    // Frames that change no content (a canvas animation, a spinner) stop
+    // holding the page up after a few.
+    let quiet = &page.settle.quiet_frames;
+    if settle::content_changes(page) == before {
+        quiet.set(quiet.get().saturating_add(1));
+    } else {
+        quiet.set(0);
+    }
+}
+
+fn run_frame_callbacks(cx: &mut Cx<'_>) {
     let callbacks = {
         let mut raf = cx.page.raf.borrow_mut();
         raf.deadline = None;
@@ -251,6 +319,10 @@ pub struct LoopLimits {
     pub virtual_ms: f64,
     /// Number of tasks, timers and frames the run may execute.
     pub max_steps: u64,
+    /// With a policy the run stops as soon as only work the policy ignores
+    /// is left ([`StopReason::Settled`]); without one, only when nothing at
+    /// all is.
+    pub settle: Option<SettlePolicy>,
 }
 
 impl Default for LoopLimits {
@@ -259,6 +331,7 @@ impl Default for LoopLimits {
             wall: Duration::from_secs(15),
             virtual_ms: 10_000.0,
             max_steps: 200_000,
+            settle: None,
         }
     }
 }
@@ -267,6 +340,9 @@ impl Default for LoopLimits {
 pub enum StopReason {
     /// Nothing left to do: no tasks, timers, frames or requests.
     Idle,
+    /// Only work the settle policy ignores is left (polling, far timers,
+    /// analytics requests).
+    Settled,
     WallBudget,
     VirtualBudget,
     StepBudget,
@@ -281,13 +357,23 @@ pub struct LoopReport {
     pub virtual_advanced_ms: f64,
     pub pending_timers: usize,
     pub inflight_requests: usize,
+    /// What was still going on, when the run had a settle policy.
+    pub pending: Option<PendingReport>,
+}
+
+impl StopReason {
+    /// Whether the page was done: idle, or settled by the policy.
+    pub fn is_settled(self) -> bool {
+        matches!(self, StopReason::Idle | StopReason::Settled)
+    }
 }
 
 /// How long the loop listens to open WebSockets with nothing else to do
 /// before the page counts as idle.
 const SOCKET_GRACE: Duration = Duration::from_secs(1);
 
-/// Runs the event loop until the page is idle or a limit is reached.
+/// Runs the event loop until the page is idle (or, with a settle policy,
+/// settled) or a limit is reached.
 pub fn run(cx: &mut Cx<'_>, limits: &LoopLimits) -> LoopReport {
     let started = Instant::now();
     let mut steps = 0u64;
@@ -295,6 +381,10 @@ pub fn run(cx: &mut Cx<'_>, limits: &LoopLimits) -> LoopReport {
     // Real time spent listening to sockets since the last step.
     let mut socket_silence = Duration::ZERO;
     let mut steps_at_silence = 0u64;
+    let policy = limits.settle.as_ref();
+    if policy.is_some() {
+        settle::reset_targets(cx.page);
+    }
     // Whatever ran before the loop (a script evaluated by the embedder,
     // say) may have queued microtasks; they run before the loop can be
     // found idle.
@@ -318,8 +408,7 @@ pub fn run(cx: &mut Cx<'_>, limits: &LoopLimits) -> LoopReport {
 
         let task = cx.page.tasks.borrow_mut().pop_front();
         if let Some(task) = task {
-            (task.run)(cx);
-            cx.checkpoint();
+            run_task(cx, task);
             steps += 1;
             continue;
         }
@@ -333,7 +422,7 @@ pub fn run(cx: &mut Cx<'_>, limits: &LoopLimits) -> LoopReport {
             .filter(|t| *t <= now);
         if let Some(due_at) = due_at
             && cx.page.clock.is_virtual()
-            && let Some(wait) = net::real_time_before(cx.page, due_at)
+            && let Some(wait) = net::real_time_before(cx.page, due_at, policy)
         {
             // The clock ran ahead of real time while a response was on
             // its way: give the response the time it would have had.
@@ -359,15 +448,26 @@ pub fn run(cx: &mut Cx<'_>, limits: &LoopLimits) -> LoopReport {
             continue;
         }
 
-        // Nothing is runnable right now: wait for whatever comes next.
-        let next_timer = cx.page.timers.borrow().next_deadline();
-        let next = match (next_timer, frame) {
+        // Nothing is runnable right now: wait for whatever comes next. A
+        // policy leaves out what it does not wait for.
+        let (next_timer, frame) = match policy {
+            Some(policy) => (
+                settle::next_blocking_timer(cx.page, policy, now),
+                frame.filter(|_| settle::frames_active(cx.page, policy)),
+            ),
+            None => (cx.page.timers.borrow().next_deadline(), frame),
+        };
+        let mut next = match (next_timer, frame) {
             (Some(a), Some(b)) => Some(a.min(b)),
             (a, b) => a.or(b),
         };
         let remaining = limits.wall.saturating_sub(started.elapsed());
 
-        if net::inflight(cx.page) > 0 {
+        let inflight = match policy {
+            Some(policy) => settle::blocking_requests(cx.page, policy),
+            None => net::inflight(cx.page),
+        };
+        if inflight > 0 {
             // The network runs in real time. While waiting for it, a virtual
             // clock follows real time instead of jumping ahead: timers then
             // neither overtake a response that is about to arrive nor stall
@@ -412,12 +512,30 @@ pub fn run(cx: &mut Cx<'_>, limits: &LoopLimits) -> LoopReport {
             continue;
         }
 
+        // A document still being changed may be changed again: it has to
+        // go quiet for a moment first.
+        if let Some(policy) = policy
+            && let Some(quiet) = settle::quiet_at(cx.page, policy, now)
+        {
+            next = Some(next.map_or(quiet, |n| n.min(quiet)));
+        }
+
         let Some(next) = next else {
-            break StopReason::Idle;
+            break match policy {
+                Some(_) if !nothing_left(cx.page) => StopReason::Settled,
+                _ => StopReason::Idle,
+            };
         };
         if cx.page.clock.is_virtual() {
             let jump = (next - now).max(0.0);
             if advanced + jump > limits.virtual_ms {
+                // The page's time still moves on by what the budget has
+                // left, so that runs in slices reach a distant timer.
+                let rest = limits.virtual_ms - advanced;
+                if rest > 0.0 {
+                    advanced += rest;
+                    cx.page.clock.advance_to(now + rest);
+                }
                 break StopReason::VirtualBudget;
             }
             advanced += jump;
@@ -438,5 +556,14 @@ pub fn run(cx: &mut Cx<'_>, limits: &LoopLimits) -> LoopReport {
         virtual_advanced_ms: advanced,
         pending_timers: cx.page.timers.borrow().len(),
         inflight_requests: net::inflight(cx.page),
+        pending: policy.map(|policy| settle::report(cx.page, policy)),
     }
+}
+
+/// Whether the page has nothing at all left to do.
+fn nothing_left(page: &PageState) -> bool {
+    page.timers.borrow().is_empty()
+        && !page.raf.borrow().is_requested()
+        && net::inflight(page) == 0
+        && net::open_sockets(page) == 0
 }

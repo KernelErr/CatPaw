@@ -48,6 +48,8 @@ pub struct FrameTree {
     parents: HashMap<FrameId, FrameId>,
     /// Popups: tops of their own, with an opener rather than a parent.
     popups: HashSet<FrameId>,
+    /// How the dialogs of every frame in the tree are answered.
+    pub dialog_policy: crate::page::DialogPolicy,
 }
 
 impl Default for FrameTree {
@@ -56,6 +58,7 @@ impl Default for FrameTree {
             next: 1,
             parents: HashMap::new(),
             popups: HashSet::new(),
+            dialog_policy: Default::default(),
         }
     }
 }

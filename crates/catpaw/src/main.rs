@@ -613,6 +613,10 @@ fn print_frames(page: &catpaw_engine::Page, list: bool, console: bool) {
 fn describe_stop(report: &catpaw_engine::LoopReport) -> String {
     match report.stop {
         StopReason::Idle => "settled".to_string(),
+        StopReason::Settled => format!(
+            "settled with {} timer(s) and {} request(s) left that it does not wait for",
+            report.pending_timers, report.inflight_requests
+        ),
         StopReason::VirtualBudget => format!(
             "stopped at the time budget with {} timer(s) pending",
             report.pending_timers

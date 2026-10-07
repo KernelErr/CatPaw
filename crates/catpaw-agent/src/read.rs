@@ -27,9 +27,15 @@ pub struct ReadOptions {
     /// Render only the main content (`<main>`, `[role=main]`, or the first
     /// `<article>`) when the page has one.
     pub main_only: bool,
+    /// Render only this element and what is inside it.
+    pub root: Option<NodeId>,
 }
 
-fn content_root(dom: &Dom, main_only: bool) -> NodeId {
+fn content_root(dom: &Dom, options: &ReadOptions) -> NodeId {
+    if let Some(root) = options.root {
+        return root;
+    }
+    let main_only = options.main_only;
     let doc = dom.document();
     if main_only {
         let candidates = ["main", "article"];
@@ -80,7 +86,7 @@ fn markdown_with(
     options: &ReadOptions,
     plain: bool,
 ) -> String {
-    let root = content_root(dom, options.main_only);
+    let root = content_root(dom, options);
     let mut w = MdWriter {
         dom,
         oracle,

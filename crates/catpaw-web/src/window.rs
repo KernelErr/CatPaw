@@ -13,7 +13,9 @@ use url::Url;
 
 use crate::event_loop::{self, TimerAction};
 use crate::generated::{self as web, StringOrFunction};
-use crate::page::{ConsoleLevel, Cx, DialogRecord, NavigationRequest, PageState, Singletons};
+use crate::page::{
+    ConsoleLevel, Cx, DialogAnswer, DialogRecord, NavigationRequest, PageState, Singletons,
+};
 use crate::{Web, performance, platform_object};
 
 pub struct LocationObject;
@@ -57,13 +59,29 @@ fn resolved_promise(cx: &mut Cx<'_>) -> PromiseRef {
     promise
 }
 
-fn dialog(cx: &mut Cx<'_>, kind: &'static str, message: String) {
+/// Answers a dialog by the policy of the page's frame tree (dismissed
+/// unless the embedder said otherwise) and records it.
+fn dialog(cx: &mut Cx<'_>, kind: &'static str, message: String, default: &str) -> DialogAnswer {
     cx.page
         .log(ConsoleLevel::Info, format!("[{kind}] {message}"));
-    cx.page
-        .dialogs
-        .borrow_mut()
-        .push(DialogRecord { kind, message });
+    let policy = cx.page.frames.tree().borrow().dialog_policy.clone();
+    let answer = match (kind, policy.accept) {
+        ("alert", _) => DialogAnswer::Dismissed,
+        (_, false) => DialogAnswer::Dismissed,
+        ("prompt", true) => DialogAnswer::Text(
+            policy
+                .prompt_text
+                .clone()
+                .unwrap_or_else(|| default.to_string()),
+        ),
+        (_, true) => DialogAnswer::Accepted,
+    };
+    cx.page.dialogs.borrow_mut().push(DialogRecord {
+        kind,
+        message,
+        answer: answer.clone(),
+    });
+    answer
 }
 
 /// A finite scroll coordinate; NaN and infinities count as zero.
@@ -309,23 +327,24 @@ impl web::WindowImpl for Web {
     // Dialogs never block: they are recorded and answered at once. An alert
     // is acknowledged; confirm and prompt are dismissed.
     fn alert(cx: &mut Cx<'_>) -> Fallible<()> {
-        dialog(cx, "alert", String::new());
+        dialog(cx, "alert", String::new(), "");
         Ok(())
     }
 
     fn alert_overload2(cx: &mut Cx<'_>, message: String) -> Fallible<()> {
-        dialog(cx, "alert", message);
+        dialog(cx, "alert", message, "");
         Ok(())
     }
 
     fn confirm(cx: &mut Cx<'_>, message: String) -> Fallible<bool> {
-        dialog(cx, "confirm", message);
-        Ok(false)
+        Ok(dialog(cx, "confirm", message, "") == DialogAnswer::Accepted)
     }
 
-    fn prompt(cx: &mut Cx<'_>, message: String, _default: String) -> Fallible<Option<String>> {
-        dialog(cx, "prompt", message);
-        Ok(None)
+    fn prompt(cx: &mut Cx<'_>, message: String, default: String) -> Fallible<Option<String>> {
+        Ok(match dialog(cx, "prompt", message, &default) {
+            DialogAnswer::Text(text) => Some(text),
+            _ => None,
+        })
     }
 }
 
@@ -450,7 +469,10 @@ impl web::WindowOrWorkerGlobalScopeImpl for Web {
         arguments: Vec<Value>,
     ) -> Fallible<i32> {
         let action = timer_action(handler, arguments);
-        Ok(event_loop::set_timer(cx.page, action, timeout, false))
+        let site = cx.script.caller_site();
+        Ok(event_loop::set_timer_at(
+            cx.page, action, timeout, false, site,
+        ))
     }
 
     fn clear_timeout(cx: &mut Cx<'_>, id: i32) -> Fallible<()> {
@@ -465,7 +487,10 @@ impl web::WindowOrWorkerGlobalScopeImpl for Web {
         arguments: Vec<Value>,
     ) -> Fallible<i32> {
         let action = timer_action(handler, arguments);
-        Ok(event_loop::set_timer(cx.page, action, timeout, true))
+        let site = cx.script.caller_site();
+        Ok(event_loop::set_timer_at(
+            cx.page, action, timeout, true, site,
+        ))
     }
 
     fn clear_interval(cx: &mut Cx<'_>, id: i32) -> Fallible<()> {

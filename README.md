@@ -82,7 +82,7 @@ isolated contexts.
 > against recorded expectations, served by an in-process stand-in for WPT's
 > server and the Python handlers its fetch and XHR tests use: `dom` 3019 of
 > 4246 subtests pass, `html/dom` 582 of 1066, `fetch/api` 1908 of 2237,
-> `xhr` 870 of 1205, `css/cssom-view` 478 of 1198 (much of the rest needs
+> `xhr` 868 of 1203, `css/cssom-view` 478 of 1198 (much of the rest needs
 > frames or workers the test harness does not run, layout, or server
 > behaviour the stand-in does not emulate). Not there yet: images,
 > gradients and rounded corners in screenshots, tables as a grid, images' intrinsic sizes, media,
@@ -152,31 +152,31 @@ claude mcp add catpaw -- "$PWD/target/release/catpaw" mcp --stdio
 ```
 
 The tools are `navigate`, `snapshot`, `click`, `type`, `press`, `select`,
-`act` (hover, check, uncheck, focus, clear, scroll), `read` (markdown, text,
-links, forms), `screenshot`, `evaluate` and `tabs`; windows a page opens
-become tabs. Elements are named by refs that stay valid until the element
-leaves the page, and every action answers with what happened and a fresh
-snapshot:
+`act` (hover, check, uncheck, focus, clear, scroll), `wait`, `read`
+(markdown, text, links, forms, tables, find, html), `screenshot`,
+`evaluate`, `tabs` and `logs`; windows a page opens become tabs. Elements
+are named by refs that stay valid until the element leaves the page. An
+action answers with what happened and what changed on the page, once the
+page has settled (analytics and polling are not waited for):
 
 ```text
-ok click e11 link "Travel" → https://books.toscrape.com/catalogue/category/books/travel_2/index.html (200)
-# s2 tab=t1 doc=d2 url=https://books.toscrape.com/catalogue/category/books/travel_2/index.html title="Travel | Books to Scrape - Sandbox" vp=1280x720 scroll=0,0 filter=interesting nodes=143/366 settled=yes
-e207 banner
-  e208 link "Books to Scrape"
-  text: We love being scraped!
-e209 list
-  e210 link "Home"
-  e211 link "Books"
-  e212 listitem: Travel
-…
+ok click e16 button "Add to cart"
+# s4 diff-from=s3 tab=t1 doc=d1 url=(same) scroll=0,0 settled=yes changed=1 added=1 removed=1 unchanged=27
+~ e11 button "Cart, empty" → "Cart, 1 items"
++ e37 button "Remove" (in e13, after e15)
+- e16 button "Add to cart"
 ```
+
+A new document comes back whole. When something is still loading,
+`wait({"for":"text","text":"Order placed"})` runs the page until it shows;
+time a page spends only on timers passes at once.
 
 Errors say what to try next (`error StaleRef e13 button "Remove"
 (removed)`, then the likely replacement and an `advice:` line). The format
 and the protocol are described in
 [ADR 0005](docs/adr/0005-cst-snapshot-format.md) and
 [ADR 0006](docs/adr/0006-agent-protocol.md);
-`cargo xtask snapshot-bench --features bench` measures snapshot sizes on
+`cargo run -p xtask --features bench -- snapshot-bench` measures snapshot sizes on
 live pages.
 
 The library crates are published too: `catpaw-net`, `catpaw-fetch`, `catpaw-dom`,

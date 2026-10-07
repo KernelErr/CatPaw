@@ -1,5 +1,5 @@
 {
-  "instructions": "CatPaw is a headless browser. Navigate to a URL, read the snapshot that comes back, act on elements by their ref, read the result, repeat. Every action returns its outcome and a fresh snapshot, so a separate snapshot call is rarely needed.\n\nSnapshot lines: `e12 link \"Sign in\"` is an element (ref, role, name), followed by its state in brackets: [value=...], [checked], [disabled], [expanded]; [clickable] marks an element that looks clickable without a role. `text: ...` lines are page text. Indentation is nesting. The first line gives the snapshot id, tab, document, URL and title, and settled=no when the page was still busy.\n\nRefs: an element keeps its ref across snapshots until it leaves the page, and refs are never reused. A ref that went stale gives `error StaleRef` naming the likely replacement. Prefer refs; use css:<selector> for elements no snapshot shows and xy:<x>,<y> as a last resort.\n\nResults start with `ok`, `error <Code>` (nothing happened; the message says why and what to try), `needs_confirmation` (the user must approve; follow the message) or `blocked` (not allowed; do not retry). Lines starting with `!` report consequences: navigations, new tabs, dialogs, console errors.\n\ntype replaces a field's value unless append is true. Dialogs (alert, confirm, prompt) are dismissed and reported. Windows a page opens become tabs; switch to them with tabs. To read content rather than act on it, use read: markdown for articles, links for URLs, forms for field values. Screenshots cost many tokens; take them when layout or images matter.\n",
+  "instructions": "CatPaw is a headless browser. Navigate to a URL, read the snapshot that comes back, act on elements by their ref, read the result, repeat.\n\nSnapshot lines: `e12 link \"Sign in\"` is an element (ref, role, name), followed by its state in brackets: [value=...], [checked], [disabled], [expanded]; [clickable] marks an element that looks clickable without a role. `text: ...` lines are page text. Indentation is nesting. The first line gives the snapshot id, tab, document, URL and title, and settled=no when the page was still busy.\n\nAfter an action you get what changed since the last snapshot: `~` changed, `+` added (new refs are usable at once), `-` removed, `>` moved; `(replaces e13)` means the page re-rendered that element under a new ref. A new document comes back whole. Pass snapshot:\"full\" for the whole page.\n\nRefs: an element keeps its ref across snapshots until it leaves the page, and refs are never reused. A ref that went stale gives `error StaleRef` naming the likely replacement. Prefer refs; use css:<selector> for elements no snapshot shows and xy:<x>,<y> as a last resort.\n\nResults start with `ok`, `error <Code>` (nothing happened; the message says why and what to try), `needs_confirmation` (the user must approve; follow the message) or `blocked` (not allowed; do not retry). Lines starting with `!` report consequences: navigations, new tabs, dialogs, requests, console errors, and what kept the page busy.\n\ntype replaces a field's value unless append is true. Dialogs are dismissed unless the action says dialog:\"accept\" (promptText answers a prompt). Windows a page opens become tabs. When something is still loading, wait for it. To read content rather than act on it, use read; logs shows console messages and requests. Screenshots cost many tokens; take them when layout or images matter.\n",
   "protocolVersions": [
     "2025-06-18",
     "2025-03-26",
@@ -20,6 +20,14 @@
             ],
             "type": "string"
           },
+          "snapshot": {
+            "enum": [
+              "full",
+              "diff",
+              "none"
+            ],
+            "type": "string"
+          },
           "url": {
             "description": "https:// is assumed when no scheme is given",
             "type": "string"
@@ -34,7 +42,7 @@
       "annotations": {
         "readOnlyHint": true
       },
-      "description": "Show the current tab as a tree: one line per element worth reading or acting on, each with a ref (e12) that other tools take as target. Actions already return a fresh snapshot; call this to change the filter, focus on a subtree, or look again later.\nExample: {\"filter\":\"interactive\"}",
+      "description": "Show the current tab as a tree: one line per element worth reading or acting on, each with a ref (e12) that other tools take as target. Actions already return what changed; call this to see the whole page again, with another filter, or one part of it.\nExample: {\"filter\":\"interactive\"}",
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
@@ -49,6 +57,10 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "diff": {
+            "description": "Only what changed since the last snapshot",
+            "type": "boolean"
           },
           "filter": {
             "description": "interesting (default): controls, headings, landmarks and text; interactive: controls only; all: every element",
@@ -83,10 +95,28 @@
       "title": "Snapshot"
     },
     {
-      "description": "Click an element: scroll it into view, check that nothing covers it, click its centre. Returns the outcome and a fresh snapshot.\nExample: {\"target\":\"e12\"}",
+      "description": "Click an element: scroll it into view, check that nothing covers it, click its centre. Returns the outcome and what changed on the page.\nExample: {\"target\":\"e12\"}",
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
+          "dialog": {
+            "enum": [
+              "accept",
+              "dismiss"
+            ],
+            "type": "string"
+          },
+          "promptText": {
+            "type": "string"
+          },
+          "snapshot": {
+            "enum": [
+              "diff",
+              "full",
+              "none"
+            ],
+            "type": "string"
+          },
           "target": {
             "description": "Ref (e12), css:<selector> or xy:<x>,<y>",
             "type": "string"
@@ -108,6 +138,24 @@
           "append": {
             "description": "Keep the current value and add to it",
             "type": "boolean"
+          },
+          "dialog": {
+            "enum": [
+              "accept",
+              "dismiss"
+            ],
+            "type": "string"
+          },
+          "promptText": {
+            "type": "string"
+          },
+          "snapshot": {
+            "enum": [
+              "diff",
+              "full",
+              "none"
+            ],
+            "type": "string"
           },
           "submit": {
             "description": "Press Enter afterwards",
@@ -134,13 +182,31 @@
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
+          "dialog": {
+            "enum": [
+              "accept",
+              "dismiss"
+            ],
+            "type": "string"
+          },
           "key": {
+            "type": "string"
+          },
+          "promptText": {
             "type": "string"
           },
           "repeat": {
             "maximum": 50,
             "minimum": 1,
             "type": "integer"
+          },
+          "snapshot": {
+            "enum": [
+              "diff",
+              "full",
+              "none"
+            ],
+            "type": "string"
           },
           "target": {
             "description": "Ref (e12) or css:<selector>",
@@ -160,6 +226,13 @@
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
+          "dialog": {
+            "enum": [
+              "accept",
+              "dismiss"
+            ],
+            "type": "string"
+          },
           "option": {
             "anyOf": [
               {
@@ -172,6 +245,17 @@
                 "type": "array"
               }
             ]
+          },
+          "promptText": {
+            "type": "string"
+          },
+          "snapshot": {
+            "enum": [
+              "diff",
+              "full",
+              "none"
+            ],
+            "type": "string"
           },
           "target": {
             "description": "Ref (e12) or css:<selector>",
@@ -192,6 +276,13 @@
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
+          "dialog": {
+            "enum": [
+              "accept",
+              "dismiss"
+            ],
+            "type": "string"
+          },
           "dy": {
             "description": "Page scroll in pixels; negative scrolls up",
             "type": "number"
@@ -204,6 +295,17 @@
               "focus",
               "clear",
               "scroll"
+            ],
+            "type": "string"
+          },
+          "promptText": {
+            "type": "string"
+          },
+          "snapshot": {
+            "enum": [
+              "diff",
+              "full",
+              "none"
             ],
             "type": "string"
           },
@@ -224,7 +326,7 @@
       "annotations": {
         "readOnlyHint": true
       },
-      "description": "Read the current tab as text rather than a tree. markdown: the content, links as [text](ref:e12); text: plain text; links: ref, text and URL per line; forms: each form's fields with refs, values and options. Long output stops at maxTokens and says which offset continues it.\nExample: {\"view\":\"markdown\"}",
+      "description": "Read the current tab as text rather than a tree. markdown: the content, links as [text](ref:e12); text: plain text; links: ref, text and URL per line; forms: fields with refs, values and options; tables: Markdown tables with row refs; find: where query (text or /regex/) occurs, with refs; html: the markup. Long output stops at maxTokens and says which offset continues it.\nExample: {\"view\":\"markdown\"}",
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
@@ -241,12 +343,23 @@
             "minimum": 0,
             "type": "integer"
           },
+          "query": {
+            "description": "For find",
+            "type": "string"
+          },
+          "root": {
+            "description": "Ref of the part to read",
+            "type": "string"
+          },
           "view": {
             "enum": [
               "markdown",
               "text",
               "links",
-              "forms"
+              "forms",
+              "tables",
+              "find",
+              "html"
             ],
             "type": "string"
           }
@@ -327,6 +440,110 @@
       },
       "name": "tabs",
       "title": "Tabs"
+    },
+    {
+      "description": "Let the page run until it settles, a text appears or goes, an element is visible, the URL contains a string, or ms milliseconds pass. Time the page spends only waiting on timers passes at once. Returns what changed.\nExample: {\"for\":\"text\",\"text\":\"Order placed\"}",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "for": {
+            "enum": [
+              "settled",
+              "text",
+              "gone",
+              "visible",
+              "url",
+              "time"
+            ],
+            "type": "string"
+          },
+          "ms": {
+            "description": "For time",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "snapshot": {
+            "enum": [
+              "diff",
+              "full",
+              "none"
+            ],
+            "type": "string"
+          },
+          "target": {
+            "description": "For visible and gone: ref or css:<selector>",
+            "type": "string"
+          },
+          "text": {
+            "description": "For text and gone",
+            "type": "string"
+          },
+          "timeoutMs": {
+            "description": "Default 10000",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "url": {
+            "description": "For url: part of the URL",
+            "type": "string"
+          }
+        },
+        "required": [
+          "for"
+        ],
+        "type": "object"
+      },
+      "name": "wait",
+      "title": "Wait"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "The current tab's console messages, requests, or events (navigations, new tabs, dialogs), oldest first.\nExample: {\"kind\":\"console\",\"level\":\"error\"}",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "console",
+              "network",
+              "events"
+            ],
+            "type": "string"
+          },
+          "level": {
+            "description": "console: this level and above",
+            "enum": [
+              "error",
+              "warn",
+              "info",
+              "log",
+              "debug"
+            ],
+            "type": "string"
+          },
+          "limit": {
+            "maximum": 200,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "match": {
+            "description": "Only entries containing this",
+            "type": "string"
+          },
+          "since": {
+            "description": "Only entries after snapshot sN",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "type": "object"
+      },
+      "name": "logs",
+      "title": "Logs"
     }
   ]
 }

@@ -21,6 +21,8 @@ pub enum ErrorCode {
     NavigationFailed,
     /// The script threw or its promise was rejected.
     ScriptError,
+    /// What was waited for did not happen in time.
+    Timeout,
     /// Not something this version can do.
     Unsupported,
     /// The engine failed while running the call; the tab is gone.
@@ -38,6 +40,7 @@ impl ErrorCode {
             ErrorCode::Occluded => "Occluded",
             ErrorCode::NavigationFailed => "NavigationFailed",
             ErrorCode::ScriptError => "ScriptError",
+            ErrorCode::Timeout => "Timeout",
             ErrorCode::Unsupported => "Unsupported",
             ErrorCode::Crashed => "Crashed",
         }
@@ -66,6 +69,10 @@ pub mod advice {
         "advice: select works on <select>; for custom dropdowns click the option instead";
     pub const SNAPSHOT_TRUNCATED: &str = "advice: snapshot({root:\"eN\"}) shows one part; filter:\"interactive\" shows controls only";
     pub const READ_CONTINUES: &str = "continues";
+    pub const WAIT: &str =
+        "advice: wait({\"for\":\"settled\"}) gives it more time, or wait for the text you expect";
+    pub const IDLE: &str =
+        "advice: the page has nothing left to do; what you wait for will not come on its own";
 }
 
 /// Words that start consequence lines (`! <word> ...`), in the order the
@@ -76,5 +83,7 @@ pub mod consequence {
     pub const POPUP: &str = "popup";
     pub const TAB_CLOSED: &str = "tab-closed";
     pub const DIALOG: &str = "dialog";
+    pub const NETWORK: &str = "network";
     pub const CONSOLE: &str = "console";
+    pub const NOT_SETTLED: &str = "not-settled";
 }

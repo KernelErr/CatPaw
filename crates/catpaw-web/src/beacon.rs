@@ -47,6 +47,7 @@ impl web::NavigatorImpl for Web {
             referrer: Some(cx.page.url.borrow().clone()),
             referrer_policy: ReferrerPolicy::Empty,
             kind: RequestKind::Beacon,
+            site: cx.script.caller_site(),
         };
         let page = cx.page;
         page.background_requests

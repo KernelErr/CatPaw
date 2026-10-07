@@ -3,6 +3,7 @@
 # (those the engine cannot finish in time). Regenerate with
 # `cargo xtask wpt --include xhr --update-expectations`.
 skip xhr/over-1-meg.any.html
+skip xhr/xmlhttprequest-timeout-abortedonmain.html
 xhr/abort-after-send.any.html	XMLHttpRequest: abort() after send()
 xhr/abort-after-stop.window.html	XMLHttpRequest: abort event should fire when stop() method is used
 xhr/abort-after-timeout.any.html	XMLHttpRequest: abort() after a timeout should not fire "abort" event

@@ -26,34 +26,57 @@ const NEXT: &str = r#"<!doctype html><title>Next</title><h1>Next page</h1>
 <p id="q"></p><script>document.getElementById('q').textContent = location.search</script>
 <a href="/">Home</a>"#;
 
-/// Serves `pages` by path (the query is ignored), one request per
-/// connection.
+/// Dynamic loading, requests, dialogs, logs and tables.
+const LAB: &str = r#"<!doctype html><title>Lab</title>
+<button id=start onclick="document.getElementById('status').textContent = 'Loading...'; setTimeout(() => { document.getElementById('status').textContent = 'Hello World!'; }, 3000)">Start</button>
+<p id=status>idle</p>
+<button id=fetch onclick="fetch('/slow/data').then(r => r.text()).then(t => { document.getElementById('status').textContent = 'got ' + t; })">Fetch</button>
+<button id=hang onclick="fetch('/hang')">Hang</button>
+<button id=log onclick="console.error('boom happened')">Log</button>
+<button id=ask onclick="document.getElementById('status').textContent = confirm('Sure?') + ' ' + prompt('Name?', 'anon')">Ask</button>
+<table><caption>Prices</caption><tr><th>Item<th>Price</tr><tr><td>Socks<td>$5</tr><tr><td>Hat<td>$12</tr></table>
+<p>Shipping is free over $50.</p>"#;
+
+/// Serves `pages` by path (the query is ignored), a thread per
+/// connection; `/slow…` answers after 300 ms and `/hang…` after 3 s.
 fn serve(pages: HashMap<&'static str, &'static str>) -> u16 {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let port = listener.local_addr().unwrap().port();
     std::thread::spawn(move || {
         for stream in listener.incoming() {
             let Ok(mut stream) = stream else { return };
-            let mut buf = vec![0u8; 8192];
-            let n = stream.read(&mut buf).unwrap_or(0);
-            let request = String::from_utf8_lossy(&buf[..n]);
-            let target = request
-                .lines()
-                .next()
-                .and_then(|l| l.split_whitespace().nth(1))
-                .unwrap_or("/")
-                .to_string();
-            let path = target.split('?').next().unwrap_or("/");
-            let (status, body) = match pages.get(path) {
-                Some(body) => ("200 OK", body.to_string()),
-                None => ("404 Not Found", "<p>not found</p>".to_string()),
-            };
-            let head = format!(
-                "HTTP/1.1 {status}\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
-                body.len()
-            );
-            let _ = stream.write_all(head.as_bytes());
-            let _ = stream.write_all(body.as_bytes());
+            let pages = pages.clone();
+            std::thread::spawn(move || {
+                let mut buf = vec![0u8; 8192];
+                let n = stream.read(&mut buf).unwrap_or(0);
+                let request = String::from_utf8_lossy(&buf[..n]);
+                let target = request
+                    .lines()
+                    .next()
+                    .and_then(|l| l.split_whitespace().nth(1))
+                    .unwrap_or("/")
+                    .to_string();
+                let path = target.split('?').next().unwrap_or("/").to_string();
+                if path.starts_with("/slow") {
+                    std::thread::sleep(std::time::Duration::from_millis(300));
+                }
+                if path.starts_with("/hang") {
+                    std::thread::sleep(std::time::Duration::from_secs(3));
+                }
+                let (status, body) = match pages.get(path.as_str()) {
+                    Some(body) => ("200 OK", body.to_string()),
+                    None if path.starts_with("/slow") || path.starts_with("/hang") => {
+                        ("200 OK", "data".to_string())
+                    }
+                    None => ("404 Not Found", "<p>not found</p>".to_string()),
+                };
+                let head = format!(
+                    "HTTP/1.1 {status}\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                    body.len()
+                );
+                let _ = stream.write_all(head.as_bytes());
+                let _ = stream.write_all(body.as_bytes());
+            });
         }
     });
     port
@@ -67,9 +90,18 @@ struct Client {
 
 impl Client {
     fn new() -> Self {
-        let port = serve(HashMap::from([("/", INDEX), ("/next", NEXT)]));
+        Self::with(|_| {})
+    }
+
+    fn with(adjust: impl FnOnce(&mut SessionConfig)) -> Self {
+        let port = serve(HashMap::from([
+            ("/", INDEX),
+            ("/next", NEXT),
+            ("/lab", LAB),
+        ]));
         let mut config = SessionConfig::default();
         config.options.net.allow_private_network = true;
+        adjust(&mut config);
         let session = Session::new(config).unwrap();
         Self {
             server: McpServer::new(session),
@@ -172,7 +204,10 @@ fn a_form_is_filled_and_submitted_by_ref() {
 
     let search = ref_of(&page, "textbox \"Search\"");
     let typed = client.ok("type", json!({"target": search, "text": "wool socks"}));
-    assert!(typed.contains("[value=\"wool socks\"]"), "{typed}");
+    assert!(
+        typed.contains("~ e3 textbox \"Search\" [value=- → \"wool socks\"]"),
+        "{typed}"
+    );
 
     let sort = ref_of(&page, "combobox \"Sort\"");
     let chosen = client.ok(
@@ -189,7 +224,7 @@ fn a_form_is_filled_and_submitted_by_ref() {
     let stock = ref_of(&page, "checkbox \"In stock\"");
     let checked = client.ok("act", json!({"kind": "check", "target": stock}));
     assert!(
-        checked.contains("checkbox \"In stock\" [checked]"),
+        checked.contains("~ e5 checkbox \"In stock\" [- → checked]"),
         "{checked}"
     );
 
@@ -219,7 +254,7 @@ fn clicks_report_dialogs_and_clickable_generics() {
     let page = client.ok("navigate", json!({"url": url}));
     let buy = ref_of(&page, "[clickable]: Buy now");
     let bought = client.ok("click", json!({"target": buy}));
-    assert!(bought.contains("paragraph: bought"), "{bought}");
+    assert!(bought.contains("paragraph: idle → bought"), "{bought}");
 
     let asked = client.ok("click", json!({"target": "css:#ask"}));
     assert!(asked.starts_with("ok click e"), "{asked}");
@@ -227,7 +262,7 @@ fn clicks_report_dialogs_and_clickable_generics() {
         asked.contains("! dialog confirm \"Sure?\" → dismissed"),
         "{asked}"
     );
-    assert!(asked.contains("paragraph: no"), "{asked}");
+    assert!(asked.contains("paragraph: bought → no"), "{asked}");
 }
 
 #[test]
@@ -318,4 +353,167 @@ fn evaluate_binds_refs_and_screenshot_returns_an_image() {
     let links = client.ok("read", json!({"view": "links"}));
     let home = format!("\"Home\" {}/", client.base);
     assert!(links.contains(&home), "{links}");
+}
+
+fn lab(client: &mut Client) -> String {
+    let url = format!("{}/lab", client.base);
+    client.ok("navigate", json!({ "url": url }))
+}
+
+#[test]
+fn actions_answer_with_diffs_unless_told_otherwise() {
+    let mut client = Client::new();
+    let page = lab(&mut client);
+    assert!(page.starts_with("ok navigate → "), "{page}");
+    assert!(page.contains("# s1 tab=t1 doc=d1 url="), "{page}");
+
+    let log = ref_of(&page, "button \"Log\"");
+    let none = client.ok("click", json!({"target": log, "snapshot": "none"}));
+    assert_eq!(
+        none,
+        format!("ok click {log} button \"Log\"\n! console error: boom happened")
+    );
+    let full = client.ok("click", json!({"target": log, "snapshot": "full"}));
+    assert!(full.contains("\n# s2 tab=t1 doc=d1 url="), "{full}");
+    let same = client.ok("snapshot", json!({"diff": true}));
+    assert!(
+        same.starts_with("ok snapshot\n# s3 diff-from=s2 "),
+        "{same}"
+    );
+    assert!(same.ends_with("settled=yes no changes"), "{same}");
+}
+
+#[test]
+fn wait_lets_page_time_pass_and_says_when_nothing_will_come() {
+    let mut client = Client::new();
+    let page = lab(&mut client);
+    let start = ref_of(&page, "button \"Start\"");
+    // The three-second timer is not part of the click.
+    let clicked = client.ok("click", json!({"target": start}));
+    assert!(clicked.contains(": idle → Loading..."), "{clicked}");
+    assert!(clicked.contains("settled=yes"), "{clicked}");
+
+    let waited = client.ok("wait", json!({"for": "text", "text": "hello world!"}));
+    // The click's quiet window already took 100 ms of the three seconds.
+    assert!(
+        waited.starts_with("ok wait text \"hello world!\" (2.9s)"),
+        "{waited}"
+    );
+    assert!(waited.contains(": Loading... → Hello World!"), "{waited}");
+
+    let never = client.error("wait", json!({"for": "text", "text": "Goodbye"}));
+    assert!(
+        never.starts_with(
+            "error Timeout text \"Goodbye\": not met, and the page has nothing left to do"
+        ),
+        "{never}"
+    );
+    let gone = client.ok("wait", json!({"for": "gone", "text": "Loading"}));
+    assert!(gone.starts_with("ok wait gone text \"Loading\""), "{gone}");
+    let time = client.ok("wait", json!({"for": "time", "ms": 1500}));
+    assert!(time.starts_with("ok wait 1500ms (1.5s)"), "{time}");
+}
+
+#[test]
+fn dialogs_follow_the_action_options() {
+    let mut client = Client::new();
+    let page = lab(&mut client);
+    let ask = ref_of(&page, "button \"Ask\"");
+    let dismissed = client.ok("click", json!({"target": ask}));
+    assert!(
+        dismissed.contains("! dialog confirm \"Sure?\" → dismissed"),
+        "{dismissed}"
+    );
+    assert!(
+        dismissed.contains("! dialog prompt \"Name?\" → dismissed"),
+        "{dismissed}"
+    );
+    assert!(dismissed.contains(": idle → false null"), "{dismissed}");
+    let accepted = client.ok("click", json!({"target": ask, "promptText": "catpaw"}));
+    assert!(
+        accepted.contains("! dialog confirm \"Sure?\" → accepted"),
+        "{accepted}"
+    );
+    assert!(
+        accepted.contains("! dialog prompt \"Name?\" → accepted \"catpaw\""),
+        "{accepted}"
+    );
+    assert!(
+        accepted.contains(": false null → true catpaw"),
+        "{accepted}"
+    );
+}
+
+#[test]
+fn requests_are_reported_and_a_busy_page_says_why() {
+    let mut client = Client::with(|config| {
+        config.options.limits.wall = std::time::Duration::from_millis(800);
+    });
+    let page = lab(&mut client);
+    let fetch = ref_of(&page, "button \"Fetch\"");
+    let fetched = client.ok("click", json!({"target": fetch}));
+    assert!(
+        fetched.contains("! network GET /slow/data 200"),
+        "{fetched}"
+    );
+    assert!(fetched.contains(": idle → got data"), "{fetched}");
+
+    let hang = ref_of(&page, "button \"Hang\"");
+    let busy = client.ok("click", json!({"target": hang}));
+    assert!(busy.contains("! network GET /hang pending"), "{busy}");
+    assert!(
+        busy.contains("! not-settled still busy at the time limit"),
+        "{busy}"
+    );
+    assert!(busy.contains("  pending fetch GET /hang ("), "{busy}");
+    assert!(busy.contains("from lab:"), "{busy}");
+    assert!(busy.contains("settled=no pending=requests:1"), "{busy}");
+}
+
+#[test]
+fn logs_list_console_requests_and_events() {
+    let mut client = Client::new();
+    let page = lab(&mut client);
+    let log = ref_of(&page, "button \"Log\"");
+    client.ok("click", json!({"target": log}));
+    let console = client.ok("logs", json!({"kind": "console", "level": "error"}));
+    assert_eq!(console, "ok logs console\nerror: boom happened");
+    let since = client.ok("logs", json!({"kind": "console", "since": "s2"}));
+    assert_eq!(since, "ok logs console\n(none)");
+    let network = client.ok("logs", json!({"kind": "network"}));
+    assert!(network.contains("GET /lab 200 (document)"), "{network}");
+    let events = client.ok("logs", json!({"kind": "events"}));
+    assert!(
+        events.contains("navigated GET http://127.0.0.1:"),
+        "{events}"
+    );
+    let old = client.error("logs", json!({"kind": "events", "since": "s99"}));
+    assert!(old.contains("s99 is not remembered"), "{old}");
+}
+
+#[test]
+fn read_finds_text_and_shows_tables_and_html() {
+    let mut client = Client::new();
+    lab(&mut client);
+    let tables = client.ok("read", json!({"view": "tables"}));
+    assert!(
+        tables.contains("\"Prices\" (3 rows)\n| ref | Item | Price |"),
+        "{tables}"
+    );
+    assert!(tables.contains(" | Hat | $12 |"), "{tables}");
+    let found = client.ok("read", json!({"view": "find", "query": "FREE"}));
+    assert!(
+        found.starts_with("ok read find \"FREE\" (1 match)\n"),
+        "{found}"
+    );
+    assert!(
+        found.contains(" paragraph: Shipping is **free** over $50."),
+        "{found}"
+    );
+    let regex = client.ok("read", json!({"view": "find", "query": "/\\$\\d+/"}));
+    assert!(regex.contains("(3 matches)"), "{regex}");
+    let html = client.ok("read", json!({"view": "html"}));
+    assert!(html.contains("<button id=\"start\" onclick="), "{html}");
+    let bad = client.error("read", json!({"view": "find", "query": "/(/"}));
+    assert!(bad.contains("is not a valid regex"), "{bad}");
 }

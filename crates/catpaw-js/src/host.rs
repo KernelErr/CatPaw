@@ -3,6 +3,32 @@
 use crate::exception::{Exception, Fallible};
 use crate::value::{Callback, ObjectId, PromiseRef, Value};
 
+/// A place in script source: where a timer was set or a request made.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct SourceSite {
+    /// The URL that labels the script.
+    pub url: String,
+    pub line: u32,
+    pub column: u32,
+    /// The function the call was made in (empty at a script's top level).
+    pub function: String,
+}
+
+impl std::fmt::Display for SourceSite {
+    /// `app.js:1203` (the last path segment of the URL), with the function
+    /// when there is one: `poll (app.js:1203)`.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let path = self.url.split(['?', '#']).next().unwrap_or("");
+        let file = path.rsplit('/').find(|s| !s.is_empty()).unwrap_or(path);
+        let file = if file.is_empty() { "script" } else { file };
+        if self.function.is_empty() {
+            write!(f, "{file}:{}", self.line)
+        } else {
+            write!(f, "{} ({file}:{})", self.function, self.line)
+        }
+    }
+}
+
 /// The engine, as seen from engine-neutral code. One instance exists per
 /// page; it is handed to implementations inside `catpaw_web::Cx`.
 ///
@@ -100,4 +126,11 @@ pub trait ScriptHost {
 
     /// Requests a garbage collection (tests and leak checks).
     fn collect_garbage(&mut self);
+
+    /// Where the script running now is: the innermost script frame's source
+    /// and position. `None` when no script is running or the engine cannot
+    /// tell.
+    fn caller_site(&mut self) -> Option<SourceSite> {
+        None
+    }
 }

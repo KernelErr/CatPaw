@@ -495,6 +495,7 @@ impl web::XMLHttpRequestImpl for Web {
             referrer: Some(cx.page.url.borrow().clone()),
             referrer_policy: ReferrerPolicy::Empty,
             kind: RequestKind::Xhr,
+            site: cx.script.caller_site(),
         };
 
         if !is_async {

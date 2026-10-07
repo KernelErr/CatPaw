@@ -1136,6 +1136,7 @@ impl Web {
             },
             referrer_policy: request.referrer_policy,
             kind: RequestKind::Fetch,
+            site: cx.script.caller_site(),
         };
 
         let settled = promise.clone();

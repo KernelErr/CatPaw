@@ -178,7 +178,7 @@ const ATTR_ORDER: &[&str] = &[
     "more",
 ];
 
-fn attr_rank(key: &str) -> usize {
+pub(crate) fn attr_rank(key: &str) -> usize {
     ATTR_ORDER
         .iter()
         .position(|k| *k == key)
@@ -306,6 +306,10 @@ pub struct Header {
     pub budget_hit: bool,
     /// Why a full snapshot was returned where a diff was asked for.
     pub full: Option<String>,
+    /// The URL is the one of the snapshot diffed from (`url=(same)`).
+    pub same_url: bool,
+    /// A diff's counts (`changed=3 added=1 …`, or `no changes`).
+    pub stats: Option<String>,
 }
 
 impl Header {
@@ -323,7 +327,9 @@ impl Header {
         if let Some(from) = self.navigated_from {
             let _ = write!(out, " navigated-from=d{from}");
         }
-        if let Some(url) = &self.url {
+        if self.same_url {
+            out.push_str(" url=(same)");
+        } else if let Some(url) = &self.url {
             let _ = write!(out, " url={}", truncate(url, 120));
         }
         if let Some(title) = &self.title {
@@ -365,6 +371,10 @@ impl Header {
         }
         if let Some(full) = &self.full {
             let _ = write!(out, " full={full}");
+        }
+        if let Some(stats) = &self.stats {
+            out.push(' ');
+            out.push_str(stats);
         }
         out
     }

@@ -59,6 +59,7 @@ pub mod reflect;
 mod resize_observer;
 pub mod scripting;
 mod selection;
+pub mod settle;
 mod shadow;
 mod streams;
 mod style;
@@ -78,8 +79,8 @@ mod xpath;
 pub use element::interface_for_node;
 pub use generated::InterfaceId;
 pub use page::{
-    ConsoleLevel, ConsoleMessage, Cx, DialogRecord, NativeMicrotask, NavigationRequest, PageConfig,
-    PageState, PlatformObject,
+    ConsoleLevel, ConsoleMessage, Cx, DialogAnswer, DialogPolicy, DialogRecord, NativeMicrotask,
+    NavigationRequest, PageConfig, PageState, PlatformObject,
 };
 
 /// The type every generated `XImpl` trait is implemented on.

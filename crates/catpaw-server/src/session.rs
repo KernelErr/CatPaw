@@ -172,6 +172,14 @@ impl Session {
                 self.on_tab(tab, move |g, tab, _| g.evaluate(tab, p, &action_limits()))
             }
             Call::Tabs(p) => self.tabs(p),
+            Call::Wait(p) => {
+                let tab = self.current_tab()?;
+                self.on_tab(tab, move |g, tab, view| g.wait(tab, p, view))
+            }
+            Call::Logs(p) => {
+                let tab = self.current_tab()?;
+                self.on_tab(tab, move |g, tab, _| g.logs(tab, p))
+            }
         }
     }
 
@@ -328,6 +336,7 @@ impl Session {
                         let p = params::Navigate {
                             url: Some(url),
                             go: None,
+                            snapshot: None,
                         };
                         let mut output =
                             self.on_tab(tab, move |g, tab, view| g.navigate(tab, p, view))?;

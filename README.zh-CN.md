@@ -18,7 +18,7 @@ agent 真正需要的东西——带稳定引用的紧凑语义快照、精确�
 > `fetch`/`XMLHttpRequest`（CORS、预检、重定向与 referrer policy 均按 Fetch 标准由页面处理）、Streams、`data:` URL、`sendBeacon`、storage、编码、`crypto` 随机数与摘要、
 > 无布局形态的字体加载 API，以及 console 等 API 的绑定由 Web IDL 生成；事件循环支持虚拟时间；墙钟脚本预算（`--script-budget`，默认 10 秒）会终止失控的脚本。
 > React、Vue、Svelte、Lit、htmx、Alpine 站点均可运行；Boa 引擎以附带修复的形式 vendor 在 `vendor/` 下（见其中说明）。
-> web-platform-tests 在 CI 中按记录的预期运行，由进程内的 WPT 服务器替身提供服务（含 fetch/XHR 测试依赖的 Python 处理器的等价实现）：`dom` 4246 个子测试通过 3019，`html/dom` 1066 通过 582，`fetch/api` 2237 通过 1908，`xhr` 1205 通过 870，`css/cssom-view` 1198 通过 478（其余大多需要测试替身不运行的框架或 worker、布局，或替身尚未模拟的服务器行为）。
+> web-platform-tests 在 CI 中按记录的预期运行，由进程内的 WPT 服务器替身提供服务（含 fetch/XHR 测试依赖的 Python 处理器的等价实现）：`dom` 4246 个子测试通过 3019，`html/dom` 1066 通过 582，`fetch/api` 2237 通过 1908，`xhr` 1203 通过 868，`css/cssom-view` 1198 通过 478（其余大多需要测试替身不运行的框架或 worker、布局，或替身尚未模拟的服务器行为）。
 > 尚未支持：截图中的图片、渐变与圆角，表格的网格布局、图片的固有尺寸、媒体、WebAssembly，以及 HTML 元素中超出属性反射的成员。
 >
 > 不依赖 JavaScript 即可用的部分：基于 rustls 的 HTTP/1.1 与 HTTP/2、重定向、cookie、
@@ -71,22 +71,19 @@ cargo build --release -p catpaw
 claude mcp add catpaw -- "$PWD/target/release/catpaw" mcp --stdio
 ```
 
-工具有 `navigate`、`snapshot`、`click`、`type`、`press`、`select`、`act`（hover、check、uncheck、focus、clear、scroll）、`read`（markdown、text、links、forms）、`screenshot`、`evaluate` 和 `tabs`；页面打开的窗口成为新 tab。元素用 ref 指代，ref 在元素离开页面前一直有效；每个动作都返回发生了什么以及一份新快照：
+工具有 `navigate`、`snapshot`、`click`、`type`、`press`、`select`、`act`（hover、check、uncheck、focus、clear、scroll）、`wait`、`read`（markdown、text、links、forms、tables、find、html）、`screenshot`、`evaluate`、`tabs` 和 `logs`；页面打开的窗口成为新 tab。元素用 ref 指代，ref 在元素离开页面前一直有效。每个动作在页面稳定后（统计与轮询不在等待之列）返回发生了什么以及页面上变了什么：
 
 ```text
-ok click e11 link "Travel" → https://books.toscrape.com/catalogue/category/books/travel_2/index.html (200)
-# s2 tab=t1 doc=d2 url=https://books.toscrape.com/catalogue/category/books/travel_2/index.html title="Travel | Books to Scrape - Sandbox" vp=1280x720 scroll=0,0 filter=interesting nodes=143/366 settled=yes
-e207 banner
-  e208 link "Books to Scrape"
-  text: We love being scraped!
-e209 list
-  e210 link "Home"
-  e211 link "Books"
-  e212 listitem: Travel
-…
+ok click e16 button "Add to cart"
+# s4 diff-from=s3 tab=t1 doc=d1 url=(same) scroll=0,0 settled=yes changed=1 added=1 removed=1 unchanged=27
+~ e11 button "Cart, empty" → "Cart, 1 items"
++ e37 button "Remove" (in e13, after e15)
+- e16 button "Add to cart"
 ```
 
-错误会说明下一步怎么做（`error StaleRef e13 button "Remove" (removed)`，随后是可能的替代 ref 和一行 `advice:`）。格式与协议见 [ADR 0005](docs/adr/0005-cst-snapshot-format.md) 和 [ADR 0006](docs/adr/0006-agent-protocol.md)；`cargo xtask snapshot-bench --features bench` 在真实页面上测量快照大小。
+换了新文档时返回完整快照。还有内容在加载时，`wait({"for":"text","text":"Order placed"})` 会让页面一直运行到它出现；页面只在等定时器的时间会瞬间过去。
+
+错误会说明下一步怎么做（`error StaleRef e13 button "Remove" (removed)`，随后是可能的替代 ref 和一行 `advice:`）。格式与协议见 [ADR 0005](docs/adr/0005-cst-snapshot-format.md) 和 [ADR 0006](docs/adr/0006-agent-protocol.md)；`cargo run -p xtask --features bench -- snapshot-bench` 在真实页面上测量快照大小。
 
 库 crate 同样已发布：`catpaw-net`、`catpaw-fetch`、`catpaw-dom`、`catpaw-style`、`catpaw-agent`。
 

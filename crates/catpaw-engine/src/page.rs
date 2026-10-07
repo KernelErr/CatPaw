@@ -21,8 +21,9 @@ use catpaw_web::event_loop::{self, LoopLimits, LoopReport, StopReason};
 use catpaw_web::frames::{self, FrameCommand, FrameId, FrameTree};
 use catpaw_web::generated::DocumentReadyState;
 use catpaw_web::page::NavigationRequest;
+use catpaw_web::settle::PendingReport;
 use catpaw_web::workers::{self, WorkerCommand, WorkerId};
-use catpaw_web::{ConsoleLevel, PageConfig, PageState, promises, scripting};
+use catpaw_web::{ConsoleLevel, DialogPolicy, PageConfig, PageState, promises, scripting};
 use url::Url;
 
 use crate::net::{EngineNet, SharedNet};
@@ -328,6 +329,7 @@ fn idle_report() -> LoopReport {
         virtual_advanced_ms: 0.0,
         pending_timers: 0,
         inflight_requests: 0,
+        pending: None,
     }
 }
 
@@ -1399,6 +1401,7 @@ impl Page {
                         wall: remaining,
                         virtual_ms: FRAME_SLICE_MS.min(self.virtual_left(scope)),
                         max_steps: steps_left,
+                        settle: limits.settle.clone(),
                     },
                 );
                 steps_left = steps_left.saturating_sub(report.steps);
@@ -1428,6 +1431,7 @@ impl Page {
                         wall: remaining,
                         virtual_ms: self.virtual_left(scope),
                         max_steps: steps_left,
+                        settle: limits.settle.clone(),
                     },
                 );
                 steps_left = steps_left.saturating_sub(report.steps);
@@ -1474,8 +1478,17 @@ impl Page {
         &self.report
     }
 
-    /// Whether the page had nothing left to do when the event loop stopped.
-    pub fn is_settled(&self) -> bool {
+    /// Whether the last run of the event loops did anything: ran a task,
+    /// a timer or a frame, or moved a page clock on.
+    pub fn last_run_progressed(&self) -> bool {
+        progressed(&self.report)
+            || self.frames.iter().any(|f| progressed(&f.report))
+            || self.workers.iter().any(|w| progressed(&w.report))
+    }
+
+    /// Whether the page and its frames had nothing at all left to do when
+    /// their event loops stopped.
+    pub fn is_idle(&self) -> bool {
         self.report.stop == StopReason::Idle
             && self
                 .frames
@@ -1485,6 +1498,14 @@ impl Page {
                 .workers
                 .iter()
                 .all(|w| w.report.stop == StopReason::Idle)
+    }
+
+    /// Whether the page had nothing left to do when the event loop stopped
+    /// (or, under a settle policy, nothing it waits for).
+    pub fn is_settled(&self) -> bool {
+        self.report.stop.is_settled()
+            && self.frames.iter().all(|f| f.report.stop.is_settled())
+            && self.workers.iter().all(|w| w.report.stop.is_settled())
     }
 
     /// The script realm of the current frame.
@@ -1556,6 +1577,19 @@ impl Page {
             .ok_or_else(|| ActionError::NotFound(selector.to_string()))
     }
 
+    /// What a frame's page was still doing, judged by the settle policy of
+    /// the page's limits (the default policy when they have none).
+    pub fn pending_of(&self, frame: FrameId) -> Option<PendingReport> {
+        let policy = self.options.limits.settle.clone().unwrap_or_default();
+        self.page_of(frame)
+            .map(|page| catpaw_web::settle::report(page, &policy))
+    }
+
+    /// How the dialogs of every frame and popup are answered from now on.
+    pub fn set_dialog_policy(&mut self, policy: DialogPolicy) {
+        self.tree.borrow_mut().dialog_policy = policy;
+    }
+
     /// The document epoch of a frame (see `PageState::epoch`).
     pub fn document_epoch(&self, frame: FrameId) -> Option<u64> {
         self.page_of(frame).map(|page| page.epoch)
@@ -1597,7 +1631,13 @@ impl Page {
         let boa = self
             .boa_of(frame)
             .ok_or_else(|| ActionError::NoFrame(format!("frame {}", frame.0)))?;
-        let result = boa.with_cx(action)?;
+        // What the action starts (requests, timers) is the agent's doing.
+        let state = boa.page().clone();
+        let result = catpaw_web::settle::with_initiator(
+            &state,
+            catpaw_web::settle::Initiator::Input,
+            || boa.with_cx(action),
+        )?;
         self.user_acted();
         self.run_frames();
         self.follow_navigations()?;
@@ -1644,6 +1684,11 @@ impl Page {
             .ok_or_else(|| format!("frame {} is closed", frame.0))?;
         let outcome: Rc<RefCell<Option<Result<Value, Value>>>> = Rc::default();
         let slot = outcome.clone();
+        let state = boa.page().clone();
+        let _embedder = catpaw_web::settle::InitiatorGuard::new(
+            &state,
+            catpaw_web::settle::Initiator::Embedder,
+        );
         boa.with_cx(|cx| -> Result<(), String> {
             let url = cx.page.url.borrow().to_string();
             let function = cx
@@ -1660,6 +1705,27 @@ impl Page {
             Ok(())
         })?;
         self.settle(limits);
+        // A settle policy stops at work it does not wait for (a timer due
+        // later); the promise asked for is waited for, in slices, within
+        // the same budgets.
+        if limits.settle.is_some() && outcome.borrow().is_none() {
+            let started = Instant::now();
+            let mut used = 0.0;
+            while outcome.borrow().is_none()
+                && used < limits.virtual_ms
+                && started.elapsed() < limits.wall
+                && !self.is_idle()
+            {
+                let slice = LoopLimits {
+                    wall: limits.wall.saturating_sub(started.elapsed()),
+                    virtual_ms: 250.0_f64.min(limits.virtual_ms - used),
+                    max_steps: limits.max_steps,
+                    settle: None,
+                };
+                self.settle(&slice);
+                used += slice.virtual_ms;
+            }
+        }
         let settled = outcome.borrow_mut().take();
         let boa = self
             .boa_of(frame)

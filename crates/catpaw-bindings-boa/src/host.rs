@@ -249,8 +249,18 @@ impl ScriptHost for BoaHost<'_> {
         let _ = promise.then(Some(on_fulfilled), Some(on_rejected), self.ctx);
     }
 
-    fn eval_script(&mut self, source: &str, url: &str, _line: u32) -> Fallible<Value> {
+    fn eval_script(&mut self, source: &str, url: &str, line: u32) -> Fallible<Value> {
         self.enter();
+        // Boa numbers lines from the start of the source: a script that
+        // starts further down its document (an inline one) is padded so
+        // that positions in stacks and timer sites are the document's.
+        let padded;
+        let source = if line > 1 {
+            padded = format!("{}{source}", "\n".repeat(line as usize - 1));
+            padded.as_str()
+        } else {
+            source
+        };
         let result = self
             .ctx
             .eval(Source::from_bytes(source).with_path(Path::new(url)));
@@ -427,5 +437,24 @@ impl ScriptHost for BoaHost<'_> {
     fn collect_garbage(&mut self) {
         boa_gc::force_collect();
         self.rt.sweep(self.ctx);
+    }
+
+    fn caller_site(&mut self) -> Option<catpaw_js::SourceSite> {
+        // Native functions push no frame: the innermost frame is the
+        // script that called into the platform.
+        let frame = self.ctx.stack_trace().next()?;
+        let location = frame.position();
+        let position = location.position?;
+        let url = match &location.path {
+            boa_engine::vm::SourcePath::Path(path) => path.to_string_lossy().into_owned(),
+            boa_engine::vm::SourcePath::Eval => "eval".to_string(),
+            _ => String::new(),
+        };
+        Some(catpaw_js::SourceSite {
+            url,
+            line: position.line_number(),
+            column: position.column_number(),
+            function: location.function_name.to_std_string_escaped(),
+        })
     }
 }

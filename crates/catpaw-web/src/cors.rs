@@ -53,6 +53,8 @@ pub struct Outgoing {
     pub referrer: Option<Url>,
     pub referrer_policy: ReferrerPolicy,
     pub kind: RequestKind,
+    /// Where script made the request.
+    pub site: Option<catpaw_js::SourceSite>,
 }
 
 /// How much of a response script may see.
@@ -309,6 +311,8 @@ struct Transfer {
     tainting: Tainting,
     /// The URLs requested so far; the last one is current.
     urls: Vec<Url>,
+    /// Where script made the request.
+    site: Option<catpaw_js::SourceSite>,
 }
 
 /// What to do once a hop answered.
@@ -349,6 +353,7 @@ impl Transfer {
             body: out.body,
             tainting: Tainting::Basic,
             urls: vec![out.url],
+            site: out.site,
         };
         transfer.enter_url()?;
         Ok(transfer)
@@ -494,6 +499,7 @@ impl Transfer {
             referrer: referrer.clone(),
             credentials: self.with_credentials(),
             follow_redirects: false,
+            site: self.site.clone(),
         };
         let preflight = self.needs_preflight().then(|| {
             let mut headers = vec![
@@ -519,6 +525,7 @@ impl Transfer {
                 referrer,
                 credentials: false,
                 follow_redirects: false,
+                site: self.site.clone(),
             }
         });
         (request, preflight)

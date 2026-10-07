@@ -15,7 +15,6 @@ use std::any::Any;
 use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
-use std::time::Instant;
 
 use catpaw_dom::{Dom, NodeId};
 use catpaw_js::{EventTargetRef, Exception, Fallible, ObjectId, ScriptHost};
@@ -179,6 +178,28 @@ impl NavigationRequest {
 pub struct DialogRecord {
     pub kind: &'static str,
     pub message: String,
+    pub answer: DialogAnswer,
+}
+
+/// How a dialog was answered.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum DialogAnswer {
+    /// Cancelled (`confirm` false, `prompt` null), or an alert closed.
+    Dismissed,
+    /// `confirm` true.
+    Accepted,
+    /// `prompt` answered with this text.
+    Text(String),
+}
+
+/// How the dialogs of a frame tree are answered: dismissed by default.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct DialogPolicy {
+    /// Accept `confirm` and `prompt` dialogs.
+    pub accept: bool,
+    /// What a `prompt` is answered with when accepted (its default value
+    /// when `None`).
+    pub prompt_text: Option<String>,
 }
 
 /// Document state that is not part of the node tree.
@@ -271,10 +292,12 @@ pub struct PageState {
 
     pub(crate) net: RefCell<Option<Rc<dyn NetHost>>>,
     pub(crate) net_callbacks: RefCell<HashMap<u64, NetCallback>>,
-    /// When each awaited request started, on the page clock and the real
-    /// one, so that timers do not overtake a response that would have
-    /// arrived first in real time.
-    pub(crate) net_started: RefCell<HashMap<u64, (f64, Instant)>>,
+    /// What each awaited request is and when it started, on the page clock
+    /// and the real one (so that timers do not overtake a response that
+    /// would have arrived first in real time).
+    pub(crate) net_started: RefCell<HashMap<u64, crate::settle::RequestInfo>>,
+    /// Who started what, timer sites, document activity.
+    pub(crate) settle: crate::settle::SettleState,
     /// How many of those are background requests (beacons), which do not
     /// keep the page from settling.
     pub(crate) background_requests: Cell<usize>,
@@ -386,6 +409,7 @@ impl PageState {
             net: RefCell::new(None),
             net_callbacks: RefCell::new(HashMap::new()),
             net_started: RefCell::new(HashMap::new()),
+            settle: Default::default(),
             background_requests: Cell::new(0),
             scripts: ScriptState::default(),
             storage: [RefCell::new(IndexMap::new()), RefCell::new(IndexMap::new())],

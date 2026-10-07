@@ -13,8 +13,11 @@ pub use catpaw_js::Value;
 pub use catpaw_web::event_loop::{LoopLimits, LoopReport, StopReason};
 pub use catpaw_web::frames::FrameId;
 pub use catpaw_web::input::InputError;
+pub use catpaw_web::settle::{
+    Initiator, PendingReport, PendingRequest, PendingTimer, RequestClass, SettlePolicy, TimerClass,
+};
 pub use catpaw_web::workers::WorkerId;
-pub use catpaw_web::{ConsoleLevel, ConsoleMessage, PageConfig};
+pub use catpaw_web::{ConsoleLevel, ConsoleMessage, DialogAnswer, DialogPolicy, PageConfig};
 pub use group::GroupHandle;
 pub use net::{EngineNet, RequestRecord, SharedNet};
 pub use page::{

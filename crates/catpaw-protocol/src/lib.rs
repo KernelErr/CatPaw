@@ -16,17 +16,18 @@ pub use tools::{TOOLS, ToolDef, tool};
 /// What `initialize` tells the host about using the tools (MCP
 /// `instructions`; hosts usually put it in the system prompt).
 pub const INSTRUCTIONS: &str = "\
-CatPaw is a headless browser. Navigate to a URL, read the snapshot that comes back, act on elements by their ref, read the result, repeat. Every action returns its outcome and a fresh snapshot, so a separate snapshot call is rarely needed.
+CatPaw is a headless browser. Navigate to a URL, read the snapshot that comes back, act on elements by their ref, read the result, repeat.
 
 Snapshot lines: `e12 link \"Sign in\"` is an element (ref, role, name), followed by its state in brackets: [value=...], [checked], [disabled], [expanded]; [clickable] marks an element that looks clickable without a role. `text: ...` lines are page text. Indentation is nesting. The first line gives the snapshot id, tab, document, URL and title, and settled=no when the page was still busy.
 
+After an action you get what changed since the last snapshot: `~` changed, `+` added (new refs are usable at once), `-` removed, `>` moved; `(replaces e13)` means the page re-rendered that element under a new ref. A new document comes back whole. Pass snapshot:\"full\" for the whole page.
+
 Refs: an element keeps its ref across snapshots until it leaves the page, and refs are never reused. A ref that went stale gives `error StaleRef` naming the likely replacement. Prefer refs; use css:<selector> for elements no snapshot shows and xy:<x>,<y> as a last resort.
 
-Results start with `ok`, `error <Code>` (nothing happened; the message says why and what to try), `needs_confirmation` (the user must approve; follow the message) or `blocked` (not allowed; do not retry). Lines starting with `!` report consequences: navigations, new tabs, dialogs, console errors.
+Results start with `ok`, `error <Code>` (nothing happened; the message says why and what to try), `needs_confirmation` (the user must approve; follow the message) or `blocked` (not allowed; do not retry). Lines starting with `!` report consequences: navigations, new tabs, dialogs, requests, console errors, and what kept the page busy.
 
-type replaces a field's value unless append is true. Dialogs (alert, confirm, prompt) are dismissed and reported. Windows a page opens become tabs; switch to them with tabs. To read content rather than act on it, use read: markdown for articles, links for URLs, forms for field values. Screenshots cost many tokens; take them when layout or images matter.
+type replaces a field's value unless append is true. Dialogs are dismissed unless the action says dialog:\"accept\" (promptText answers a prompt). Windows a page opens become tabs. When something is still loading, wait for it. To read content rather than act on it, use read; logs shows console messages and requests. Screenshots cost many tokens; take them when layout or images matter.
 ";
-
 /// The protocol versions this server speaks, newest first.
 pub const PROTOCOL_VERSIONS: &[&str] = &["2025-06-18", "2025-03-26", "2024-11-05"];
 

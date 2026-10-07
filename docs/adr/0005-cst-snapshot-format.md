@@ -86,5 +86,11 @@ Playwright form one option away.
    Until containers collapse (M3 phase 2), a snapshot over budget ends in
    `[truncated: N more nodes]` and advice; `root` shows one subtree. The
    `cursor=` continuation of the original decision becomes `root`/`after`.
-8. **Diffs** (M3 phase 1) add `>` for moved nodes, `text[i]` for the i-th
-   text of a parent, and `(replaces eN)` for a re-rendered node.
+8. **Diffs** are what actions return (ADR 0006). They compare the trees
+   two snapshots describe, elements by ref and texts by parent and
+   position, and add `>` for moved nodes, `text[i]` for the i-th text of a
+   parent, and `(replaces eN)` for a node the page rendered again (same
+   place, role and name, new ref). Their header gives `diff-from=sN`,
+   `url=(same)` when the URL did not change, and the counts
+   (`changed=3 added=1 removed=1 unchanged=33`, or `no changes`). Diff
+   lines use the compact form whatever form snapshots use.

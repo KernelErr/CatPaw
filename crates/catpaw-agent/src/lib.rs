@@ -10,11 +10,15 @@
 //! styles alone and is what a parse-only pipeline uses.
 
 pub mod a11y;
+pub mod diff;
+pub mod extract;
 pub mod read;
 pub mod refs;
 pub mod snapshot;
 pub mod visibility;
 
+pub use diff::{Diff, diff};
+pub use extract::{FindHit, find, html, tables};
 pub use read::{
     FieldInfo, FormInfo, LinkInfo, LinkStyle, ReadOptions, forms, links, markdown, text, text_with,
 };

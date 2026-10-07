@@ -225,7 +225,9 @@ fn fire_simple(cx: &mut Cx<'_>, el: NodeId, type_: &'static str) {
 }
 
 /// Runs a classic script and reports an uncaught exception.
-fn execute(cx: &mut Cx<'_>, el: NodeId, source: &str, url: &str, parser_inserted: bool) {
+/// Runs a classic script whose source starts on line `line` of `url`
+/// (inline scripts start where their element does).
+fn execute(cx: &mut Cx<'_>, el: NodeId, source: &str, url: &str, parser_inserted: bool, line: u32) {
     let scripts = &cx.page.scripts;
     let previous = cx
         .page
@@ -238,7 +240,7 @@ fn execute(cx: &mut Cx<'_>, el: NodeId, source: &str, url: &str, parser_inserted
             .parser_script_depth
             .set(scripts.parser_script_depth.get() + 1);
     }
-    let result = cx.script.eval_script(source, url, 1);
+    let result = cx.script.eval_script(source, url, line);
     if parser_inserted {
         scripts
             .parser_script_depth
@@ -287,7 +289,7 @@ fn execute_fetched(
         }
         Ok(response) if response.is_success() => {
             let source = decode_text(&response.body, response.header("content-type"));
-            execute(cx, el, &source, response.url.as_str(), parser_inserted);
+            execute(cx, el, &source, response.url.as_str(), parser_inserted, 1);
             fire_simple(cx, el, "load");
         }
         Ok(response) => {
@@ -363,7 +365,18 @@ fn prepare(cx: &mut Cx<'_>, el: NodeId, parser_inserted: bool) {
         let source = child_text_content(&cx.dom(), el);
         let url = cx.page.url.borrow().clone();
         if !module {
-            execute(cx, el, &source, url.as_str(), parser_inserted);
+            // The parser stands at the end tag: the source began as many
+            // lines up as it has line breaks.
+            let line = if parser_inserted {
+                let parser = cx.page.scripts.parser.borrow().clone();
+                parser.map_or(1, |p| {
+                    let breaks = source.matches('\n').count() as u64;
+                    p.current_line().saturating_sub(breaks).max(1) as u32
+                })
+            } else {
+                1
+            };
+            execute(cx, el, &source, url.as_str(), parser_inserted, line);
         } else if parser_inserted && !is_async {
             // Module scripts are deferred, inline ones included.
             cx.page.scripts.deferred.borrow_mut().push(Deferred {
@@ -587,9 +600,12 @@ fn new_stream(cx: &Cx<'_>) -> Rc<HtmlStream> {
 pub fn load_document(cx: &mut Cx<'_>, html: &str) {
     let stream = new_stream(cx);
     *cx.page.scripts.parser.borrow_mut() = Some(stream.clone());
-    stream.push(html);
-    pump(cx, &stream);
-    parse(cx.page, || stream.finish());
+    let page = cx.page;
+    crate::settle::with_initiator(page, crate::settle::Initiator::Parser, || {
+        stream.push(html);
+        pump(cx, &stream);
+        parse(page, || stream.finish());
+    });
     *cx.page.scripts.parser.borrow_mut() = None;
     if cx.page.navigation.borrow().is_some() {
         return;

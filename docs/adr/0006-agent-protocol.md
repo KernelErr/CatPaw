@@ -21,9 +21,9 @@ of the model on every turn.
    their own so that later versions can answer cancellations and
    elicitations while a call runs.
 2. **Tools.** `navigate`, `snapshot`, `click`, `type`, `press`, `select`,
-   `act` (hover, check, uncheck, focus, clear, scroll), `read` (markdown,
-   text, links, forms), `screenshot`, `evaluate`, `tabs`; `wait`, `logs`,
-   `handoff` and a hidden `session` follow. Frequent actions are tools of
+   `act` (hover, check, uncheck, focus, clear, scroll), `wait`, `read`
+   (markdown, text, links, forms, tables, find, html), `screenshot`,
+   `evaluate`, `tabs` and `logs`; `handoff` and a hidden `session` follow. Frequent actions are tools of
    their own because their required fields differ: a schema that requires
    `text` catches the commonest small-model mistake (the right action with
    a field missing) before it reaches the page. Rare actions share `act`.
@@ -46,11 +46,12 @@ of the model on every turn.
    and how the page moved: `→ <url> (200)`, `(POST, 302)`, or
    `(same document)` for `pushState`. Lines starting with `!` report
    consequences in a fixed order (navigation failures, new tabs, closed
-   tabs, dialogs, console errors). A fresh snapshot follows (a diff from
-   M3 phase 1 on). Errors say what to try next on an `advice:` line; the
+   tabs, dialogs, requests the page made, console errors, and what kept the
+   page busy when it did not settle). What changed on the page follows
+   (decision 9). Errors say what to try next on an `advice:` line; the
    codes are `BadArgument`, `NoTab`, `StaleRef`, `NotFound`,
    `NotActionable`, `Occluded`, `NavigationFailed`, `ScriptError`,
-   `Unsupported` and `Crashed`.
+   `Timeout`, `Unsupported` and `Crashed`.
 6. **Byte stability.** Header keys, attributes, consequence lines and diff
    lines come in fixed orders; ids are never reused; no wall-clock time
    appears; defaults are not printed; all wording comes from one table
@@ -71,6 +72,33 @@ of the model on every turn.
    re-issues the same call with `confirmation: "cN"` once the user has
    approved. Approval needs a secret the agent never sees. Presets:
    `default` (POST navigations and uploads), `strict`, `open`.
+
+9. **Diffs after actions.** An action answers with what changed since
+   the tab's last snapshot (ADR 0005, amended): `~` changed, `+` added
+   with its subtree, `-` removed, `>` moved, `(replaces eN)` for a node
+   the page rendered again. A new document, a page that changed more than
+   it stayed (the diff over 60% of the whole), or no snapshot to compare
+   with gives the whole snapshot, its header saying why (`full=navigated`,
+   `full=large`, `full=no-baseline`). `snapshot: "full" | "none"` on any
+   action says otherwise. A tab keeps its last eight snapshots.
+10. **Settling.** An action is done when the page has settled under a
+    policy, not when its event loop is empty (real pages never empty
+    it). The policy waits for requests the page waits on, timers due
+    within a second, animation frames that change the document, and a
+    document quiet for 100 ms of page time. It does not wait for
+    analytics and telemetry hosts, beacons, requests started by polling
+    timers (a site that armed five timers of 100 ms or more), style sheets
+    and fonts slower than two seconds, requests to other sites slower than
+    three, or anything open ten seconds. Timers and requests remember the
+    script position that made them, so a page that did not settle is
+    reported with its causes (`pending fetch GET /api/cart (9.8s, from
+    recalc (app.js:1203))`). `wait` runs the page on until a text appears
+    or goes, an element shows, the URL changes, or some time passes; page
+    time spent only on timers passes at once, and a wait for what an idle
+    page cannot bring fails at once.
+11. **Dialogs** are dismissed unless the action says `dialog: "accept"`
+    (`promptText` answers a prompt and implies accepting); each is a
+    consequence line with its answer.
 
 ## Consequences
 

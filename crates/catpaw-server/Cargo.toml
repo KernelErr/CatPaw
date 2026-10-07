@@ -16,5 +16,6 @@ catpaw-protocol = { path = "../catpaw-protocol", version = "0.0.1" }
 catpaw-style = { path = "../catpaw-style", version = "0.0.1" }
 catpaw-web = { path = "../catpaw-web", version = "0.0.1" }
 base64.workspace = true
+regex.workspace = true
 serde_json.workspace = true
 url.workspace = true

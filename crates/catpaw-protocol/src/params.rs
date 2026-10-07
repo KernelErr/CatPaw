@@ -9,7 +9,51 @@ use serde::de::DeserializeOwned;
 pub struct Navigate {
     pub url: Option<String>,
     pub go: Option<Go>,
+    pub snapshot: Option<SnapshotMode>,
 }
+
+/// What an action returns of the page after it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SnapshotMode {
+    /// What changed since the last snapshot (the default after actions).
+    Diff,
+    /// A whole snapshot.
+    Full,
+    /// Nothing: the status and consequence lines only.
+    None,
+}
+
+/// How dialogs raised during an action are answered.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DialogChoice {
+    Accept,
+    Dismiss,
+}
+
+/// The options every page action takes.
+#[derive(Debug, Clone, Default)]
+pub struct ActionOptions {
+    pub snapshot: Option<SnapshotMode>,
+    pub dialog: Option<DialogChoice>,
+    pub prompt_text: Option<String>,
+}
+
+macro_rules! action_options {
+    ($($t:ty),*) => {$(
+        impl $t {
+            pub fn options(&self) -> ActionOptions {
+                ActionOptions {
+                    snapshot: self.snapshot,
+                    dialog: self.dialog,
+                    prompt_text: self.prompt_text.clone(),
+                }
+            }
+        }
+    )*};
+}
+action_options!(Click, Type, Press, Select, Act);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -27,6 +71,9 @@ pub struct Snapshot {
     pub max_tokens: Option<u32>,
     pub attrs: Option<Vec<Attr>>,
     pub format: Option<Format>,
+    /// Only what changed since the last snapshot.
+    #[serde(default)]
+    pub diff: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -56,6 +103,9 @@ pub enum Format {
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct Click {
     pub target: String,
+    pub snapshot: Option<SnapshotMode>,
+    pub dialog: Option<DialogChoice>,
+    pub prompt_text: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -67,6 +117,9 @@ pub struct Type {
     pub append: bool,
     #[serde(default)]
     pub submit: bool,
+    pub snapshot: Option<SnapshotMode>,
+    pub dialog: Option<DialogChoice>,
+    pub prompt_text: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -75,6 +128,9 @@ pub struct Press {
     pub key: String,
     pub target: Option<String>,
     pub repeat: Option<u32>,
+    pub snapshot: Option<SnapshotMode>,
+    pub dialog: Option<DialogChoice>,
+    pub prompt_text: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -82,6 +138,9 @@ pub struct Press {
 pub struct Select {
     pub target: String,
     pub option: OneOrMany,
+    pub snapshot: Option<SnapshotMode>,
+    pub dialog: Option<DialogChoice>,
+    pub prompt_text: Option<String>,
 }
 
 /// A string, or an array of them.
@@ -107,6 +166,9 @@ pub struct Act {
     pub kind: ActKind,
     pub target: Option<String>,
     pub dy: Option<f64>,
+    pub snapshot: Option<SnapshotMode>,
+    pub dialog: Option<DialogChoice>,
+    pub prompt_text: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -139,6 +201,8 @@ pub struct Read {
     pub view: ReadView,
     #[serde(default)]
     pub main: bool,
+    pub root: Option<String>,
+    pub query: Option<String>,
     pub offset: Option<usize>,
     pub max_tokens: Option<u32>,
 }
@@ -150,6 +214,9 @@ pub enum ReadView {
     Text,
     Links,
     Forms,
+    Tables,
+    Find,
+    Html,
 }
 
 impl ReadView {
@@ -159,8 +226,77 @@ impl ReadView {
             ReadView::Text => "text",
             ReadView::Links => "links",
             ReadView::Forms => "forms",
+            ReadView::Tables => "tables",
+            ReadView::Find => "find",
+            ReadView::Html => "html",
         }
     }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct Wait {
+    #[serde(rename = "for")]
+    pub until: WaitFor,
+    pub text: Option<String>,
+    pub target: Option<String>,
+    pub url: Option<String>,
+    pub ms: Option<u64>,
+    pub timeout_ms: Option<u64>,
+    pub snapshot: Option<SnapshotMode>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum WaitFor {
+    Settled,
+    Text,
+    Gone,
+    Url,
+    Visible,
+    Time,
+}
+
+impl WaitFor {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            WaitFor::Settled => "settled",
+            WaitFor::Text => "text",
+            WaitFor::Gone => "gone",
+            WaitFor::Url => "url",
+            WaitFor::Visible => "visible",
+            WaitFor::Time => "time",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct Logs {
+    pub kind: LogKind,
+    pub level: Option<LogLevel>,
+    #[serde(rename = "match")]
+    pub pattern: Option<String>,
+    pub since: Option<String>,
+    pub limit: Option<u32>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LogKind {
+    Console,
+    Network,
+    Events,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LogLevel {
+    Debug,
+    Log,
+    Info,
+    Warn,
+    Error,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -208,6 +344,8 @@ pub enum Call {
     Screenshot(Screenshot),
     Evaluate(Evaluate),
     Tabs(Tabs),
+    Wait(Wait),
+    Logs(Logs),
 }
 
 fn args<T: DeserializeOwned>(value: serde_json::Value) -> Result<T, String> {
@@ -233,6 +371,8 @@ pub fn parse(name: &str, value: serde_json::Value) -> Result<Call, String> {
         "screenshot" => Call::Screenshot(args(value)?),
         "evaluate" => Call::Evaluate(args(value)?),
         "tabs" => Call::Tabs(args(value)?),
+        "wait" => Call::Wait(args(value)?),
+        "logs" => Call::Logs(args(value)?),
         other => return Err(format!("no tool is called {other:?}")),
     })
 }

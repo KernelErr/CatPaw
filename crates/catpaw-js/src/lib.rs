@@ -15,7 +15,7 @@ pub mod value;
 
 pub use catpaw_dom::NodeId;
 pub use exception::{Exception, Fallible};
-pub use host::ScriptHost;
+pub use host::{ScriptHost, SourceSite};
 pub use value::{
     ArrayBufferData, Callback, CallbackKind, EventTargetRef, ObjectId, PromiseRef, Rooted,
     Uint8ArrayData, Value, WindowRef, drain_released, next_root_id,

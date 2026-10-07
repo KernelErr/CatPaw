@@ -50,6 +50,7 @@ fn options(storage: HashMap<String, Vec<(String, String)>>) -> PageOptions {
             wall: std::time::Duration::from_secs(10),
             virtual_ms: 5_000.0,
             max_steps: 100_000,
+            settle: None,
         },
         storage,
         ..PageOptions::default()

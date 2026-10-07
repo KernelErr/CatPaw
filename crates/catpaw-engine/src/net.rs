@@ -36,6 +36,10 @@ pub struct RequestRecord {
     pub status: Option<u16>,
     /// The start of the request body, when there is one.
     pub body_preview: Option<String>,
+    /// Whether an answer (or a failure) came.
+    pub finished: bool,
+    /// Why the request failed, when it did.
+    pub error: Option<String>,
 }
 
 /// How much of a request body a record keeps.
@@ -264,6 +268,16 @@ impl EngineNet {
         self.log.borrow().clone()
     }
 
+    /// How many requests the log holds.
+    pub fn requests_len(&self) -> usize {
+        self.log.borrow().len()
+    }
+
+    /// The requests from index `from` on.
+    pub fn requests_since(&self, from: usize) -> Vec<RequestRecord> {
+        self.log.borrow().iter().skip(from).cloned().collect()
+    }
+
     /// Logs a document fetch made outside the host (a frame's document).
     pub(crate) fn record_document(&self, method: &str, url: &Url, status: Option<u16>) {
         self.log.borrow_mut().push(RequestRecord {
@@ -272,6 +286,8 @@ impl EngineNet {
             kind: RequestKind::Document,
             status,
             body_preview: None,
+            finished: true,
+            error: None,
         });
     }
 
@@ -286,13 +302,19 @@ impl EngineNet {
                 let end = body.len().min(BODY_PREVIEW_BYTES);
                 String::from_utf8_lossy(&body[..end]).into_owned()
             }),
+            finished: false,
+            error: None,
         });
         log.len() - 1
     }
 
     fn finish(&self, index: usize, result: &NetResult) {
-        if let (Some(record), Ok(response)) = (self.log.borrow_mut().get_mut(index), result) {
-            record.status = Some(response.status);
+        if let Some(record) = self.log.borrow_mut().get_mut(index) {
+            record.finished = true;
+            match result {
+                Ok(response) => record.status = Some(response.status),
+                Err(e) => record.error = Some(e.clone()),
+            }
         }
     }
 

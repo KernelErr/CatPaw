@@ -41,6 +41,8 @@ pub struct NetRequest {
     /// Whether the host follows redirects itself. Script-initiated
     /// requests follow them in the page, which checks each hop.
     pub follow_redirects: bool,
+    /// Where script started the request (`fetch`, `XMLHttpRequest.send`).
+    pub site: Option<catpaw_js::SourceSite>,
 }
 
 impl NetRequest {
@@ -54,6 +56,7 @@ impl NetRequest {
             referrer: None,
             credentials: true,
             follow_redirects: true,
+            site: None,
         }
     }
 }
@@ -283,10 +286,17 @@ pub fn start_request(
         });
         return None;
     };
+    let info = crate::settle::RequestInfo {
+        method: request.method.clone(),
+        url: request.url.clone(),
+        kind: request.kind,
+        initiator: crate::settle::current_initiator(page),
+        site: request.site.clone(),
+        virtual_start: page.clock.peek(),
+        real_start: Instant::now(),
+    };
     let token = net.start(request);
-    page.net_started
-        .borrow_mut()
-        .insert(token, (page.clock.peek(), Instant::now()));
+    page.net_started.borrow_mut().insert(token, info);
     page.net_callbacks
         .borrow_mut()
         .insert(token, Box::new(callback));
@@ -324,16 +334,22 @@ pub fn open_sockets(page: &PageState) -> usize {
 /// the page clock followed real time since the request started. A virtual
 /// clock runs ahead of real time while script reads it in a loop; the
 /// event loop waits this long for the network before firing the timer.
-/// `None` when no request is in flight or real time has caught up.
-pub fn real_time_before(page: &PageState, deadline_ms: f64) -> Option<Duration> {
+/// `None` when no request is in flight or real time has caught up. With
+/// a settle policy, only requests it waits for count.
+pub fn real_time_before(
+    page: &PageState,
+    deadline_ms: f64,
+    policy: Option<&crate::settle::SettlePolicy>,
+) -> Option<Duration> {
     let now = Instant::now();
     let started = page.net_started.borrow();
     started
         .iter()
         .filter(|(token, _)| page.net_callbacks.borrow().contains_key(token))
-        .filter_map(|(_, &(virtual_start, real_start))| {
-            let would_fire = real_start
-                + Duration::from_secs_f64((deadline_ms - virtual_start).max(0.0) / 1000.0);
+        .filter(|(_, info)| policy.is_none_or(|p| crate::settle::waits_for(page, p, info)))
+        .filter_map(|(_, info)| {
+            let would_fire = info.real_start
+                + Duration::from_secs_f64((deadline_ms - info.virtual_start).max(0.0) / 1000.0);
             let wait = would_fire.saturating_duration_since(now);
             (!wait.is_zero()).then_some(wait)
         })
@@ -347,18 +363,25 @@ pub fn deliver(cx: &mut Cx<'_>, wait: Option<Duration>) -> usize {
         return 0;
     };
     let mut delivered = 0;
+    let page = cx.page;
     for (token, result) in net.poll(wait) {
-        cx.page.net_started.borrow_mut().remove(&token);
-        let callback = cx.page.net_callbacks.borrow_mut().remove(&token);
+        page.net_started.borrow_mut().remove(&token);
+        let callback = page.net_callbacks.borrow_mut().remove(&token);
         if let Some(callback) = callback {
-            callback(cx, result);
-            cx.checkpoint();
+            let initiator = crate::settle::Initiator::Task("network");
+            crate::settle::with_initiator(page, initiator, || {
+                callback(cx, result);
+                cx.checkpoint();
+            });
             delivered += 1;
         }
     }
     for (token, event) in net.poll_sockets() {
-        crate::websocket::on_event(cx, token, event);
-        cx.checkpoint();
+        let initiator = crate::settle::Initiator::Task("socket");
+        crate::settle::with_initiator(page, initiator, || {
+            crate::websocket::on_event(cx, token, event);
+            cx.checkpoint();
+        });
         delivered += 1;
     }
     delivered

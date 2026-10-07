@@ -233,6 +233,11 @@ pub(crate) fn queue_attribute(
     namespace: Option<&str>,
     old: Option<&str>,
 ) {
+    if namespace.is_none() && matches!(name, "style" | "class") {
+        crate::settle::note_cosmetic(page, element);
+    } else {
+        crate::settle::note_content(page, element);
+    }
     if active(page) {
         let change = Change::Attributes {
             name,
@@ -245,6 +250,7 @@ pub(crate) fn queue_attribute(
 
 /// Queues a `characterData` record. `old` is the data the node had.
 pub(crate) fn queue_character_data(page: &PageState, node: NodeId, old: &str) {
+    crate::settle::note_content(page, node);
     if active(page) {
         queue(page, node, Change::CharacterData { old });
     }
@@ -260,6 +266,9 @@ pub(crate) fn queue_child_list(
     previous: Option<NodeId>,
     next: Option<NodeId>,
 ) {
+    if !(added.is_empty() && removed.is_empty()) {
+        crate::settle::note_content(page, target);
+    }
     if active(page) && !(added.is_empty() && removed.is_empty()) {
         let change = Change::ChildList {
             added,
@@ -325,6 +334,12 @@ pub(crate) fn node_removed(page: &PageState, node: NodeId, parent: NodeId) {
 
 /// Reports the tree changes the parser made.
 pub(crate) fn parser_changed(page: &PageState, changes: &[TreeChange]) {
+    if let Some(change) = changes.first() {
+        let target = match *change {
+            TreeChange::Inserted { parent, .. } | TreeChange::Removed { parent, .. } => parent,
+        };
+        crate::settle::note_content(page, target);
+    }
     if !active(page) {
         return;
     }
