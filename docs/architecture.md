@@ -93,8 +93,13 @@ another's window as a remote window (`postMessage`, `parent`/`top`,
 context and spares the WindowProxy machinery. Messages between frames
 cross as JSON. The engine runs the frames' loops in turns of virtual
 time, carries their commands (open, close, message) and tells a parent
-when a child has loaded; a document's `load` waits for its frames. Task
-sources with fixed priority,
+when a child has loaded; a document's `load` waits for its frames. A
+dedicated worker is a realm of the same kind, with a
+`DedicatedWorkerGlobalScope` global: the bindings are installed per
+`[Exposed]` set, so a worker sees neither `window` nor `document`; it
+shares its owner's object-URL store and network client, and the engine
+schedules it in the same turns (a worker that spins without yielding
+blocks its page, as a long script does). Task sources with fixed priority,
 microtask checkpoints after every task and every re-entry from native code,
 own timer heap, rendering opportunities only when something animates or
 observes. A shared `Clock` offers real time or deterministic virtual time.

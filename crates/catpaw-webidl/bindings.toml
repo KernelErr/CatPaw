@@ -69,6 +69,23 @@ members = ["view", "detail", "which"]
 constructor = true
 members = ["relatedTarget"]
 
+# ---------------------------------------------------------------- workers
+
+[interfaces.Worker]
+constructor = true
+members = ["terminate", "postMessage"]
+
+[interfaces.WorkerGlobalScope]
+members = ["self", "location", "navigator", "importScripts"]
+
+[interfaces.DedicatedWorkerGlobalScope]
+members = ["name", "postMessage", "close"]
+
+[interfaces.WorkerLocation]
+members = ["href", "origin", "protocol", "host", "hostname", "port", "pathname", "search", "hash"]
+
+[interfaces.WorkerNavigator]
+
 [interfaces.MessageEvent]
 constructor = true
 members = ["data", "origin", "lastEventId", "source"]

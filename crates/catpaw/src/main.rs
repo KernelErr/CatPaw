@@ -125,7 +125,7 @@ struct FetchArgs {
     /// too).
     #[arg(long, requires = "js")]
     console: bool,
-    /// With --js: list the page's frames once it has settled.
+    /// With --js: list the page's frames and workers once it has settled.
     #[arg(long, requires = "js")]
     frames: bool,
     /// With --js: list every request the page made, with a preview of
@@ -492,6 +492,35 @@ fn print_frames(page: &catpaw_engine::Page, list: bool, console: bool) {
             for error in state.errors.borrow().iter().take(5) {
                 eprintln!(
                     "[frame {id} error] {}",
+                    error.lines().next().unwrap_or_default()
+                );
+            }
+        }
+    }
+    for worker in page.workers() {
+        let key = worker.key;
+        if list {
+            let stop = page
+                .worker_report(key)
+                .map(describe_stop)
+                .unwrap_or_default();
+            let owner = match worker.owner {
+                catpaw_engine::ScopeId::Frame(f) => format!("frame {}", f.0),
+                catpaw_engine::ScopeId::Worker(w) => format!("worker {w}"),
+            };
+            eprintln!("[worker {key}] owner={owner} {} ({stop})", worker.url);
+        }
+        if console && let Some(state) = page.worker_state(key) {
+            for message in state.console_messages() {
+                eprintln!(
+                    "[worker {key} console.{}] {}",
+                    message.level.as_str(),
+                    message.text
+                );
+            }
+            for error in state.errors.borrow().iter().take(5) {
+                eprintln!(
+                    "[worker {key} error] {}",
                     error.lines().next().unwrap_or_default()
                 );
             }

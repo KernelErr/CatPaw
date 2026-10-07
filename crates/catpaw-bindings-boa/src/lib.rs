@@ -27,6 +27,7 @@ use catpaw_js::Value;
 use catpaw_js_boa::{Jobs, inspect};
 use catpaw_web::{Cx, PageState};
 
+pub use crate::rt::Realm;
 use crate::rt::{Prelude, Runtime};
 
 const PRELUDE: &str = include_str!("prelude.js");
@@ -80,8 +81,20 @@ pub struct BoaPage {
 
 impl BoaPage {
     /// Creates the realm for `page`: the global object becomes its
-    /// `Window`, and every interface in the binding manifest is installed.
+    /// `Window`, and every window interface in the binding manifest is
+    /// installed.
     pub fn new(page: Rc<PageState>) -> Result<Self, String> {
+        Self::with_realm(page, Realm::Window)
+    }
+
+    /// Creates the realm of a dedicated worker whose state is `page`: the
+    /// global object becomes its `DedicatedWorkerGlobalScope`, with the
+    /// worker interfaces.
+    pub fn new_worker(page: Rc<PageState>) -> Result<Self, String> {
+        Self::with_realm(page, Realm::Worker)
+    }
+
+    fn with_realm(page: Rc<PageState>, realm: Realm) -> Result<Self, String> {
         let jobs = Jobs::new();
         let mut context = Context::builder()
             .job_executor(jobs.clone())
@@ -104,7 +117,7 @@ impl BoaPage {
         });
         let runtime = Runtime::new(page, jobs);
         runtime.attach(&mut context);
-        rt::install(&mut context, &runtime)
+        rt::install(&mut context, &runtime, realm)
             .map_err(|e| format!("failed to install the bindings: {e}"))?;
 
         let exports = context
@@ -126,11 +139,18 @@ impl BoaPage {
             json_parse: export("jsonParse")?,
             json_stringify: export("jsonStringify")?,
         });
-        // `globalThis` must be the window object scripts see as `window`.
+        // `globalThis` must be the global object scripts see as `window`
+        // or `self`.
         debug_assert!(
             context
                 .global_object()
-                .has_property(js_string!("window"), &mut context)
+                .has_property(
+                    js_string!(match realm {
+                        Realm::Window => "window",
+                        Realm::Worker => "self",
+                    }),
+                    &mut context
+                )
                 .unwrap_or(false)
         );
         Ok(Self { context, runtime })

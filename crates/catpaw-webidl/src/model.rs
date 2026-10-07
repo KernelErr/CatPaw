@@ -284,7 +284,7 @@ pub struct Idl {
 /// Rewrites syntax newer than the parser understands into equivalent forms it
 /// accepts:
 ///
-/// - `[Exposed=*]` becomes `[Exposed=Window]`;
+/// - `[Exposed=*]` becomes `[Exposed=AllGlobals]` (the parser takes no `*`);
 /// - numeric and parenthesised values of the HTML `Reflect*` attributes become
 ///   strings (`ReflectDefault=2` → `ReflectDefault="2"`,
 ///   `ReflectRange=(1, 1000)` → `ReflectRange="1,1000"`);
@@ -340,7 +340,7 @@ pub fn preprocess(text: &str) -> String {
     while i < bytes.len() {
         let rest = &text[i..];
         if rest.starts_with("Exposed=*") {
-            out.push_str("Exposed=Window");
+            out.push_str("Exposed=AllGlobals");
             i += "Exposed=*".len();
             continue;
         }
@@ -1007,7 +1007,7 @@ mod tests {
         let out = preprocess(
             "[Exposed=*] interface A { [Reflect, ReflectDefault=2, ReflectRange=(1, 1000)] attribute unsigned long span; attribute ObservableArray<B> xs; [ReflectDefault=1.0] attribute double v; };",
         );
-        assert!(out.contains("[Exposed=Window]"));
+        assert!(out.contains("[Exposed=AllGlobals]"));
         assert!(out.contains("ReflectDefault=\"2\""));
         assert!(out.contains("ReflectRange=\"1,1000\""));
         assert!(out.contains("FrozenArray<B>"));

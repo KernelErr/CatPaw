@@ -9,8 +9,8 @@ use anyhow::{Result, bail};
 use serde::Deserialize;
 
 use crate::model::{
-    Argument, Attribute, ConstValue, DefaultValue, Idl, InterfaceKind, Member, Operation, Special,
-    Type,
+    Argument, Attribute, ConstValue, DefaultValue, ExtAttrs, ExtValue, Idl, InterfaceKind, Member,
+    Operation, Special, Type,
 };
 use crate::names::snake;
 
@@ -197,6 +197,32 @@ pub enum Stringifier {
     Method,
 }
 
+/// The global scopes an interface is installed in (`[Exposed]`).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Exposure {
+    pub window: bool,
+    pub worker: bool,
+}
+
+impl Exposure {
+    /// Reads `[Exposed=Window]`, `[Exposed=(Window,Worker)]`,
+    /// `[Exposed=DedicatedWorker]`, `[Exposed=AllGlobals]` (`*`). Without
+    /// the attribute an interface is taken to be a window one.
+    pub fn of(ext: &ExtAttrs) -> Self {
+        let names: Vec<&str> = match ext.get("Exposed") {
+            Some(ExtValue::Ident(s)) => vec![s.as_str()],
+            Some(ExtValue::IdentList(list)) => list.iter().map(String::as_str).collect(),
+            _ => vec!["Window"],
+        };
+        Self {
+            window: names.iter().any(|n| matches!(*n, "Window" | "AllGlobals")),
+            worker: names
+                .iter()
+                .any(|n| matches!(*n, "Worker" | "DedicatedWorker" | "AllGlobals")),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct PInterface {
     pub name: String,
@@ -205,6 +231,7 @@ pub struct PInterface {
     pub handle: Handle,
     pub kind: InterfaceKind,
     pub global: bool,
+    pub exposed: Exposure,
     pub constructor: Option<Vec<POverload>>,
     /// `[HTMLConstructor]`: the constructor serves custom element classes
     /// that extend the interface.
@@ -353,6 +380,16 @@ impl<'a> Planner<'a> {
         }
         if name == "EventTarget" {
             return Named::EventTarget;
+        }
+        let global = self
+            .idl
+            .interfaces
+            .get(name)
+            .is_some_and(|i| i.ext.has("Global"));
+        if global || self.is_global_ancestor(name) {
+            // `WorkerGlobalScope`, `DedicatedWorkerGlobalScope`: the
+            // global of another realm, seen as a window reference.
+            return Named::Window;
         }
         if let Some(i) = self.idl.interfaces.get(name) {
             return match i.kind {
@@ -765,6 +802,23 @@ impl<'a> Planner<'a> {
             .collect()
     }
 
+    /// Whether a `[Global]` interface inherits from `name`.
+    fn is_global_ancestor(&self, name: &str) -> bool {
+        self.idl.interfaces.values().any(|i| {
+            if !i.ext.has("Global") {
+                return false;
+            }
+            let mut at = i.parent.as_deref();
+            while let Some(p) = at {
+                if p == name {
+                    return true;
+                }
+                at = self.idl.interfaces.get(p).and_then(|i| i.parent.as_deref());
+            }
+            false
+        })
+    }
+
     fn interface_handle(&self, name: &str) -> Handle {
         let global = self
             .idl
@@ -775,6 +829,10 @@ impl<'a> Planner<'a> {
             Handle::Window
         } else if name == "EventTarget" {
             Handle::EventTarget
+        } else if self.is_global_ancestor(name) {
+            // `WorkerGlobalScope`: its members run with the global as
+            // `this`, like those of the global interface below it.
+            Handle::Window
         } else if self.is_node_interface(name) {
             Handle::Node
         } else {
@@ -822,6 +880,7 @@ impl<'a> Planner<'a> {
                         html_constructor: false,
                         kind: InterfaceKind::Mixin,
                         global: false,
+                        exposed: Exposure::default(),
                         constructor: None,
                         consts: Vec::new(),
                         attrs: Vec::new(),
@@ -1049,6 +1108,7 @@ impl<'a> Planner<'a> {
                 html_constructor,
                 kind: InterfaceKind::Interface,
                 global: def.ext.has("Global"),
+                exposed: Exposure::of(&def.ext),
                 constructor,
                 consts,
                 attrs,
@@ -1064,6 +1124,12 @@ impl<'a> Planner<'a> {
         // Namespaces.
         for (name, cfg) in &self.manifest.namespaces {
             let (attrs, ops, traits, consts) = self.members(name, Some(cfg))?;
+            let exposed = self
+                .idl
+                .interfaces
+                .get(name)
+                .map(|def| Exposure::of(&def.ext))
+                .unwrap_or_default();
             plan.namespaces.push(PInterface {
                 name: name.clone(),
                 parent: None,
@@ -1071,6 +1137,7 @@ impl<'a> Planner<'a> {
                 html_constructor: false,
                 kind: InterfaceKind::Namespace,
                 global: false,
+                exposed,
                 constructor: None,
                 consts,
                 attrs,

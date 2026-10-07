@@ -105,6 +105,10 @@ pub enum InterfaceId {
     URL,
     URLSearchParams,
     Window,
+    Worker,
+    WorkerGlobalScope,
+    WorkerLocation,
+    WorkerNavigator,
     WritableStream,
     WritableStreamDefaultController,
     WritableStreamDefaultWriter,
@@ -123,6 +127,7 @@ pub enum InterfaceId {
     Comment,
     CustomEvent,
     DOMRect,
+    DedicatedWorkerGlobalScope,
     Document,
     DocumentFragment,
     DocumentType,
@@ -250,8 +255,8 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 225;
-    pub const ALL: [InterfaceId; 225] = [
+    pub const COUNT: usize = 230;
+    pub const ALL: [InterfaceId; 230] = [
         InterfaceId::AbortController,
         InterfaceId::AbstractRange,
         InterfaceId::Blob,
@@ -335,6 +340,10 @@ impl InterfaceId {
         InterfaceId::URL,
         InterfaceId::URLSearchParams,
         InterfaceId::Window,
+        InterfaceId::Worker,
+        InterfaceId::WorkerGlobalScope,
+        InterfaceId::WorkerLocation,
+        InterfaceId::WorkerNavigator,
         InterfaceId::WritableStream,
         InterfaceId::WritableStreamDefaultController,
         InterfaceId::WritableStreamDefaultWriter,
@@ -353,6 +362,7 @@ impl InterfaceId {
         InterfaceId::Comment,
         InterfaceId::CustomEvent,
         InterfaceId::DOMRect,
+        InterfaceId::DedicatedWorkerGlobalScope,
         InterfaceId::Document,
         InterfaceId::DocumentFragment,
         InterfaceId::DocumentType,
@@ -564,6 +574,10 @@ impl InterfaceId {
             InterfaceId::URL => "URL",
             InterfaceId::URLSearchParams => "URLSearchParams",
             InterfaceId::Window => "Window",
+            InterfaceId::Worker => "Worker",
+            InterfaceId::WorkerGlobalScope => "WorkerGlobalScope",
+            InterfaceId::WorkerLocation => "WorkerLocation",
+            InterfaceId::WorkerNavigator => "WorkerNavigator",
             InterfaceId::WritableStream => "WritableStream",
             InterfaceId::WritableStreamDefaultController => "WritableStreamDefaultController",
             InterfaceId::WritableStreamDefaultWriter => "WritableStreamDefaultWriter",
@@ -582,6 +596,7 @@ impl InterfaceId {
             InterfaceId::Comment => "Comment",
             InterfaceId::CustomEvent => "CustomEvent",
             InterfaceId::DOMRect => "DOMRect",
+            InterfaceId::DedicatedWorkerGlobalScope => "DedicatedWorkerGlobalScope",
             InterfaceId::Document => "Document",
             InterfaceId::DocumentFragment => "DocumentFragment",
             InterfaceId::DocumentType => "DocumentType",
@@ -794,6 +809,10 @@ impl InterfaceId {
             "URL" => InterfaceId::URL,
             "URLSearchParams" => InterfaceId::URLSearchParams,
             "Window" => InterfaceId::Window,
+            "Worker" => InterfaceId::Worker,
+            "WorkerGlobalScope" => InterfaceId::WorkerGlobalScope,
+            "WorkerLocation" => InterfaceId::WorkerLocation,
+            "WorkerNavigator" => InterfaceId::WorkerNavigator,
             "WritableStream" => InterfaceId::WritableStream,
             "WritableStreamDefaultController" => InterfaceId::WritableStreamDefaultController,
             "WritableStreamDefaultWriter" => InterfaceId::WritableStreamDefaultWriter,
@@ -812,6 +831,7 @@ impl InterfaceId {
             "Comment" => InterfaceId::Comment,
             "CustomEvent" => InterfaceId::CustomEvent,
             "DOMRect" => InterfaceId::DOMRect,
+            "DedicatedWorkerGlobalScope" => InterfaceId::DedicatedWorkerGlobalScope,
             "Document" => InterfaceId::Document,
             "DocumentFragment" => InterfaceId::DocumentFragment,
             "DocumentType" => InterfaceId::DocumentType,
@@ -1025,6 +1045,10 @@ impl InterfaceId {
             InterfaceId::URL => None,
             InterfaceId::URLSearchParams => None,
             InterfaceId::Window => Some(InterfaceId::EventTarget),
+            InterfaceId::Worker => Some(InterfaceId::EventTarget),
+            InterfaceId::WorkerGlobalScope => Some(InterfaceId::EventTarget),
+            InterfaceId::WorkerLocation => None,
+            InterfaceId::WorkerNavigator => None,
             InterfaceId::WritableStream => None,
             InterfaceId::WritableStreamDefaultController => None,
             InterfaceId::WritableStreamDefaultWriter => None,
@@ -1043,6 +1067,7 @@ impl InterfaceId {
             InterfaceId::Comment => Some(InterfaceId::CharacterData),
             InterfaceId::CustomEvent => Some(InterfaceId::Event),
             InterfaceId::DOMRect => Some(InterfaceId::DOMRectReadOnly),
+            InterfaceId::DedicatedWorkerGlobalScope => Some(InterfaceId::WorkerGlobalScope),
             InterfaceId::Document => Some(InterfaceId::Node),
             InterfaceId::DocumentFragment => Some(InterfaceId::Node),
             InterfaceId::DocumentType => Some(InterfaceId::Node),
@@ -2010,6 +2035,29 @@ impl SlotAssignmentMode {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum WorkerType {
+    Classic,
+    Module,
+}
+
+impl WorkerType {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            WorkerType::Classic => "classic",
+            WorkerType::Module => "module",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "classic" => WorkerType::Classic,
+            "module" => WorkerType::Module,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum XMLHttpRequestResponseType {
     Empty,
     Arraybuffer,
@@ -2537,6 +2585,13 @@ pub struct WindowPostMessageOptions {
 }
 
 #[derive(Clone, Debug)]
+pub struct WorkerOptions {
+    pub name: String,
+    pub type_: WorkerType,
+    pub credentials: RequestCredentials,
+}
+
+#[derive(Clone, Debug)]
 pub enum AddEventListenerOptionsOrBoolean {
     AddEventListenerOptions(AddEventListenerOptions),
     Boolean(bool),
@@ -2729,8 +2784,12 @@ pub trait ElementCSSInlineStyleImpl {
     fn style(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
 }
 
-pub trait FontFaceSourceImpl {
+pub trait FontFaceSourceForNodeImpl {
     fn fonts(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
+}
+
+pub trait FontFaceSourceForWindowImpl {
+    fn fonts(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
 }
 
 pub trait HTMLOrSVGOrMathMLElementImpl {
@@ -4199,6 +4258,46 @@ pub trait WindowImpl {
     fn get_selection(cx: &mut Cx<'_>) -> Fallible<Option<ObjectId>>;
 }
 
+pub trait WorkerImpl {
+    fn terminate(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn post_message(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        message: Value,
+        transfer: Vec<Value>,
+    ) -> Fallible<()>;
+    fn post_message_overload2(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        message: Value,
+        options: StructuredSerializeOptions,
+    ) -> Fallible<()>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        script_url: String,
+        options: WorkerOptions,
+    ) -> Fallible<ObjectId>;
+}
+
+pub trait WorkerGlobalScopeImpl {
+    fn self_(cx: &mut Cx<'_>) -> Fallible<WindowRef>;
+    fn location(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
+    fn navigator(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
+    fn import_scripts(cx: &mut Cx<'_>, urls: Vec<String>) -> Fallible<()>;
+}
+
+pub trait WorkerLocationImpl {
+    fn href(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn origin(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn protocol(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn host(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn hostname(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn port(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn pathname(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn search(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn hash(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+}
+
 pub trait WritableStreamImpl {
     fn locked(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
     fn abort(cx: &mut Cx<'_>, this: ObjectId, reason: Value) -> Fallible<PromiseRef>;
@@ -4358,6 +4457,17 @@ pub trait DOMRectImpl {
     fn height(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
     fn set_height(cx: &mut Cx<'_>, this: ObjectId, value: f64) -> Fallible<()>;
     fn constructor(cx: &mut Cx<'_>, x: f64, y: f64, width: f64, height: f64) -> Fallible<ObjectId>;
+}
+
+pub trait DedicatedWorkerGlobalScopeImpl {
+    fn name(cx: &mut Cx<'_>) -> Fallible<String>;
+    fn post_message(cx: &mut Cx<'_>, message: Value, transfer: Vec<Value>) -> Fallible<()>;
+    fn post_message_overload2(
+        cx: &mut Cx<'_>,
+        message: Value,
+        options: StructuredSerializeOptions,
+    ) -> Fallible<()>;
+    fn close(cx: &mut Cx<'_>) -> Fallible<()>;
 }
 
 pub trait DocumentImpl {

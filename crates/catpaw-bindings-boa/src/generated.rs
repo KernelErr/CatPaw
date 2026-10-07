@@ -356,6 +356,20 @@ impl IntoJs for web::SlotAssignmentMode {
     }
 }
 
+impl FromJs for web::WorkerType {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::WorkerType::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid WorkerType")))
+    }
+}
+
+impl IntoJs for web::WorkerType {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
 impl FromJs for web::XMLHttpRequestResponseType {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let s = rt::string_from_js(v, ctx)?;
@@ -2779,6 +2793,36 @@ impl IntoJs for web::WindowPostMessageOptions {
     }
 }
 
+impl FromJs for web::WorkerOptions {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "WorkerOptions")?;
+        Ok(Self {
+            name: match rt::dictionary_member(&obj, "name", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "".to_string(),
+            },
+            type_: match rt::dictionary_member(&obj, "type", ctx)? {
+                Some(m) => <web::WorkerType as FromJs>::from_js((&m), ctx)?,
+                None => web::WorkerType::Classic,
+            },
+            credentials: match rt::dictionary_member(&obj, "credentials", ctx)? {
+                Some(m) => <web::RequestCredentials as FromJs>::from_js((&m), ctx)?,
+                None => web::RequestCredentials::SameOrigin,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::WorkerOptions {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "name", self.name, ctx)?;
+        rt::set_member(&obj, "type", self.type_, ctx)?;
+        rt::set_member(&obj, "credentials", self.credentials, ctx)?;
+        Ok(obj.into())
+    }
+}
+
 impl FromJs for web::AddEventListenerOptionsOrBoolean {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         if v.is_object() || v.is_null_or_undefined() {
@@ -3470,6 +3514,10 @@ pub mod abort_controller {
         name: "AbortController",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -3554,6 +3602,10 @@ pub mod abstract_range {
         name: "AbstractRange",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -3685,6 +3737,10 @@ pub mod blob {
         name: "Blob",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -3786,6 +3842,10 @@ pub mod css_rule {
         name: "CSSRule",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -3870,6 +3930,10 @@ pub mod css_rule_list {
         name: "CSSRuleList",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -4055,6 +4119,10 @@ pub mod css_style_declaration {
         name: "CSSStyleDeclaration",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -4198,6 +4266,10 @@ pub mod css_style_properties {
         name: "CSSStyleProperties",
         parent: Some(I::CSSStyleDeclaration),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -4352,6 +4424,10 @@ pub mod cat_paw_remote_window {
         name: "CatPawRemoteWindow",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -4447,6 +4523,10 @@ pub mod crypto {
         name: "Crypto",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -4538,6 +4618,10 @@ pub mod custom_element_registry {
         name: "CustomElementRegistry",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -4652,6 +4736,10 @@ pub mod dom_implementation {
         name: "DOMImplementation",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -4716,6 +4804,10 @@ pub mod dom_parser {
         name: "DOMParser",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[],
@@ -4773,6 +4865,10 @@ pub mod dom_rect_list {
         name: "DOMRectList",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -4872,6 +4968,10 @@ pub mod dom_rect_read_only {
         name: "DOMRectReadOnly",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -4975,6 +5075,10 @@ pub mod dom_string_map {
         name: "DOMStringMap",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -5154,6 +5258,10 @@ pub mod dom_token_list {
         name: "DOMTokenList",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -5459,6 +5567,10 @@ pub mod event {
         name: "Event",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 1,
         attrs: &[
@@ -5660,6 +5772,10 @@ pub mod event_target {
         name: "EventTarget",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[],
@@ -5729,6 +5845,10 @@ pub mod file {
         name: "File",
         parent: Some(I::Blob),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 2,
         attrs: &[
@@ -5983,6 +6103,10 @@ pub mod file_reader {
         name: "FileReader",
         parent: Some(I::EventTarget),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -6343,6 +6467,10 @@ pub mod font_face {
         name: "FontFace",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 2,
         attrs: &[
@@ -6592,6 +6720,10 @@ pub mod font_face_set {
         name: "FontFaceSet",
         parent: Some(I::EventTarget),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -6789,6 +6921,10 @@ pub mod form_data {
         name: "FormData",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[],
@@ -6848,6 +6984,10 @@ pub mod form_data_event {
         name: "FormDataEvent",
         parent: Some(I::Event),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -6934,6 +7074,10 @@ pub mod html_collection {
         name: "HTMLCollection",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -7024,6 +7168,10 @@ pub mod html_form_controls_collection {
         name: "HTMLFormControlsCollection",
         parent: Some(I::HTMLCollection),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -7092,6 +7240,10 @@ pub mod html_options_collection {
         name: "HTMLOptionsCollection",
         parent: Some(I::HTMLCollection),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -7150,6 +7302,10 @@ pub mod hash_change_event {
         name: "HashChangeEvent",
         parent: Some(I::Event),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 1,
         attrs: &[
@@ -7266,6 +7422,10 @@ pub mod headers {
         name: "Headers",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[],
@@ -7430,6 +7590,10 @@ pub mod history {
         name: "History",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -7592,6 +7756,10 @@ pub mod intersection_observer {
         name: "IntersectionObserver",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 1,
         attrs: &[
@@ -7730,6 +7898,10 @@ pub mod intersection_observer_entry {
         name: "IntersectionObserverEntry",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -7937,6 +8109,10 @@ pub mod location {
         name: "Location",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -8107,6 +8283,10 @@ pub mod media_list {
         name: "MediaList",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -8247,6 +8427,10 @@ pub mod media_query_list {
         name: "MediaQueryList",
         parent: Some(I::EventTarget),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -8336,6 +8520,10 @@ pub mod message_event {
         name: "MessageEvent",
         parent: Some(I::Event),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 1,
         attrs: &[
@@ -8422,6 +8610,10 @@ pub mod mutation_observer {
         name: "MutationObserver",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 1,
         attrs: &[],
@@ -8565,6 +8757,10 @@ pub mod mutation_record {
         name: "MutationRecord",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -8812,6 +9008,10 @@ pub mod named_node_map {
         name: "NamedNodeMap",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -9042,6 +9242,10 @@ pub mod navigator {
         name: "Navigator",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -9598,6 +9802,10 @@ pub mod node {
         name: "Node",
         parent: Some(I::EventTarget),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -9866,6 +10074,10 @@ pub mod node_iterator {
         name: "NodeIterator",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -9961,6 +10173,10 @@ pub mod node_list {
         name: "NodeList",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -10192,6 +10408,10 @@ pub mod performance {
         name: "Performance",
         parent: Some(I::EventTarget),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -10321,6 +10541,10 @@ pub mod performance_entry {
         name: "PerformanceEntry",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -10386,6 +10610,10 @@ pub mod performance_mark {
         name: "PerformanceMark",
         parent: Some(I::PerformanceEntry),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 1,
         attrs: &[rt::AttrDef {
@@ -10418,6 +10646,10 @@ pub mod performance_measure {
         name: "PerformanceMeasure",
         parent: Some(I::PerformanceEntry),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -10471,6 +10703,10 @@ pub mod performance_navigation {
         name: "PerformanceNavigation",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -10571,6 +10807,10 @@ pub mod performance_observer {
         name: "PerformanceObserver",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 1,
         attrs: &[],
@@ -10655,6 +10895,10 @@ pub mod performance_observer_entry_list {
         name: "PerformanceObserverEntryList",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -10916,6 +11160,10 @@ pub mod performance_resource_timing {
         name: "PerformanceResourceTiming",
         parent: Some(I::PerformanceEntry),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -11292,6 +11540,10 @@ pub mod performance_timing {
         name: "PerformanceTiming",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -11452,6 +11704,10 @@ pub mod pop_state_event {
         name: "PopStateEvent",
         parent: Some(I::Event),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 1,
         attrs: &[
@@ -11519,6 +11775,10 @@ pub mod progress_event {
         name: "ProgressEvent",
         parent: Some(I::Event),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 1,
         attrs: &[
@@ -11583,6 +11843,10 @@ pub mod promise_rejection_event {
         name: "PromiseRejectionEvent",
         parent: Some(I::Event),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 2,
         attrs: &[
@@ -11630,6 +11894,10 @@ pub mod radio_node_list {
         name: "RadioNodeList",
         parent: Some(I::NodeList),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -12024,6 +12292,10 @@ pub mod range {
         name: "Range",
         parent: Some(I::AbstractRange),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -12246,6 +12518,10 @@ pub mod readable_stream {
         name: "ReadableStream",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -12337,6 +12613,10 @@ pub mod readable_stream_default_controller {
         name: "ReadableStreamDefaultController",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -12428,6 +12708,10 @@ pub mod readable_stream_default_reader {
         name: "ReadableStreamDefaultReader",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 1,
         attrs: &[rt::AttrDef {
@@ -12640,6 +12924,10 @@ pub mod request {
         name: "Request",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 1,
         attrs: &[
@@ -12815,6 +13103,10 @@ pub mod resize_observer {
         name: "ResizeObserver",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 1,
         attrs: &[],
@@ -12907,6 +13199,10 @@ pub mod resize_observer_entry {
         name: "ResizeObserverEntry",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -12977,6 +13273,10 @@ pub mod resize_observer_size {
         name: "ResizeObserverSize",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -13183,6 +13483,10 @@ pub mod response {
         name: "Response",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -13327,6 +13631,10 @@ pub mod svg_animated_string {
         name: "SVGAnimatedString",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -13410,6 +13718,10 @@ pub mod screen {
         name: "Screen",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -13790,6 +14102,10 @@ pub mod selection {
         name: "Selection",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -13941,6 +14257,10 @@ pub mod static_range {
         name: "StaticRange",
         parent: Some(I::AbstractRange),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 1,
         attrs: &[],
@@ -14053,6 +14373,10 @@ pub mod storage {
         name: "Storage",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -14185,6 +14509,10 @@ pub mod style_sheet {
         name: "StyleSheet",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -14276,6 +14604,10 @@ pub mod style_sheet_list {
         name: "StyleSheetList",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -14320,6 +14652,10 @@ pub mod submit_event {
         name: "SubmitEvent",
         parent: Some(I::Event),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -14356,6 +14692,10 @@ pub mod subtle_crypto {
         name: "SubtleCrypto",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -14438,6 +14778,10 @@ pub mod text_decoder {
         name: "TextDecoder",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -14507,6 +14851,10 @@ pub mod text_encoder {
         name: "TextEncoder",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -14563,6 +14911,10 @@ pub mod transform_stream {
         name: "TransformStream",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -14635,6 +14987,10 @@ pub mod transform_stream_default_controller {
         name: "TransformStreamDefaultController",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -14801,6 +15157,10 @@ pub mod tree_walker {
         name: "TreeWalker",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -14906,6 +15266,10 @@ pub mod ui_event {
         name: "UIEvent",
         parent: Some(I::Event),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 1,
         attrs: &[
@@ -15182,6 +15546,10 @@ pub mod url {
         name: "URL",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 1,
         attrs: &[
@@ -15419,6 +15787,10 @@ pub mod url_search_params {
         name: "URLSearchParams",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -18746,6 +19118,10 @@ pub mod window {
         name: "Window",
         parent: Some(I::EventTarget),
         global: true,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -19580,6 +19956,1080 @@ pub mod window {
     };
 }
 
+pub mod worker {
+    use super::*;
+
+    fn get_onerror(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Worker, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "error")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onerror(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Worker, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "error", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onmessage(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Worker, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "message")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onmessage(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Worker, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "message", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onmessageerror(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Worker, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "messageerror")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onmessageerror(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Worker, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Object(this),
+                "messageerror",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn op_terminate(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Worker, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WorkerImpl>::terminate(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_post_message(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Worker, ctx)?;
+        if args.len() >= 2 && rt::arg(args, 1).is_object() {
+            rt::require_args(args, 2, "Worker.postMessage")?;
+            let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+            let a1 = rt::sequence_from_js(rt::arg(args, 1), ctx, |v, ctx| {
+                Ok(rt::value_from_js(v, ctx)?)
+            })?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::WorkerImpl>::post_message(cx, this, a0, a1)
+            });
+            rt::ret(r, ctx)
+        } else if args.len() >= 1 && true {
+            rt::require_args(args, 1, "Worker.postMessage")?;
+            let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+            let a1 = <web::StructuredSerializeOptions as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::WorkerImpl>::post_message_overload2(cx, this, a0, a1)
+            });
+            rt::ret(r, ctx)
+        } else {
+            Err(rt::type_error(
+                "Worker.postMessage: no overload matches the arguments",
+            ))
+        }
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "Worker")?;
+        rt::require_args(args, 1, "Worker constructor")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::WorkerOptions as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WorkerImpl>::constructor(cx, a0, a1));
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::Worker, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::Worker,
+        name: "Worker",
+        parent: Some(I::EventTarget),
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[
+            rt::AttrDef {
+                name: "onerror",
+                getter: get_onerror,
+                setter: Some(set_onerror),
+            },
+            rt::AttrDef {
+                name: "onmessage",
+                getter: get_onmessage,
+                setter: Some(set_onmessage),
+            },
+            rt::AttrDef {
+                name: "onmessageerror",
+                getter: get_onmessageerror,
+                setter: Some(set_onmessageerror),
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "terminate",
+                func: op_terminate,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "postMessage",
+                func: op_post_message,
+                length: 1,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod worker_global_scope {
+    use super::*;
+
+    fn get_self(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WorkerGlobalScopeImpl>::self_(cx));
+        rt::ret(r, ctx)
+    }
+
+    fn get_location(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WorkerGlobalScopeImpl>::location(cx));
+        rt::ret(r, ctx)
+    }
+
+    fn get_navigator(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WorkerGlobalScopeImpl>::navigator(cx));
+        rt::ret(r, ctx)
+    }
+
+    fn get_onerror(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Window, "error")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onerror(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Window, "error", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onlanguagechange(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Window, "languagechange")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onlanguagechange(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Window, "languagechange", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onoffline(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Window, "offline")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onoffline(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Window, "offline", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_ononline(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Window, "line")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_ononline(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Window, "line", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onrejectionhandled(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Window, "rejectionhandled")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onrejectionhandled(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Window,
+                "rejectionhandled",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onunhandledrejection(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Window, "unhandledrejection")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onunhandledrejection(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Window,
+                "unhandledrejection",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_fonts(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "fonts", ctx) {
+            return Ok(v);
+        }
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FontFaceSourceForWindowImpl>::fonts(cx)
+        });
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "fonts", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_performance(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WindowOrWorkerGlobalScopeImpl>::performance(cx)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_performance(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::replace_property(this_js, "performance", rt::arg(args, 0), ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_origin(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WindowOrWorkerGlobalScopeImpl>::origin(cx)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_origin(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::replace_property(this_js, "origin", rt::arg(args, 0), ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_is_secure_context(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WindowOrWorkerGlobalScopeImpl>::is_secure_context(cx)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_crypto(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "crypto", ctx) {
+            return Ok(v);
+        }
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WindowOrWorkerGlobalScopeImpl>::crypto(cx)
+        });
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "crypto", &v, ctx);
+        Ok(v)
+    }
+
+    fn op_import_scripts(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::this_window(this_js, ctx)?;
+        let a0 = args
+            .iter()
+            .skip(0)
+            .map(|v| Ok(rt::string_from_js(v, ctx)?))
+            .collect::<JsResult<Vec<_>>>()?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WorkerGlobalScopeImpl>::import_scripts(cx, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_fetch(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::this_window(this_js, ctx)?;
+        rt::require_args(args, 1, "WorkerGlobalScope.fetch")?;
+        let a0 = <web::RequestOrString as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::RequestInit as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WindowOrWorkerGlobalScopeImpl>::fetch(cx, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_report_error(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::this_window(this_js, ctx)?;
+        rt::require_args(args, 1, "WorkerGlobalScope.reportError")?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WindowOrWorkerGlobalScopeImpl>::report_error(cx, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_btoa(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::this_window(this_js, ctx)?;
+        rt::require_args(args, 1, "WorkerGlobalScope.btoa")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WindowOrWorkerGlobalScopeImpl>::btoa(cx, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_atob(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::this_window(this_js, ctx)?;
+        rt::require_args(args, 1, "WorkerGlobalScope.atob")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WindowOrWorkerGlobalScopeImpl>::atob(cx, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_set_timeout(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::this_window(this_js, ctx)?;
+        rt::require_args(args, 1, "WorkerGlobalScope.setTimeout")?;
+        let a0 = <web::StringOrFunction as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            rt::arg(args, 1).to_i32(ctx)?
+        } else {
+            (0) as i32
+        };
+        let a2 = args
+            .iter()
+            .skip(2)
+            .map(|v| Ok(rt::value_from_js(v, ctx)?))
+            .collect::<JsResult<Vec<_>>>()?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WindowOrWorkerGlobalScopeImpl>::set_timeout(cx, a0, a1, a2)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_clear_timeout(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::this_window(this_js, ctx)?;
+        let a0 = if args.len() > 0 && !args[0].is_undefined() {
+            rt::arg(args, 0).to_i32(ctx)?
+        } else {
+            (0) as i32
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WindowOrWorkerGlobalScopeImpl>::clear_timeout(cx, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_set_interval(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::this_window(this_js, ctx)?;
+        rt::require_args(args, 1, "WorkerGlobalScope.setInterval")?;
+        let a0 = <web::StringOrFunction as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            rt::arg(args, 1).to_i32(ctx)?
+        } else {
+            (0) as i32
+        };
+        let a2 = args
+            .iter()
+            .skip(2)
+            .map(|v| Ok(rt::value_from_js(v, ctx)?))
+            .collect::<JsResult<Vec<_>>>()?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WindowOrWorkerGlobalScopeImpl>::set_interval(cx, a0, a1, a2)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_clear_interval(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::this_window(this_js, ctx)?;
+        let a0 = if args.len() > 0 && !args[0].is_undefined() {
+            rt::arg(args, 0).to_i32(ctx)?
+        } else {
+            (0) as i32
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WindowOrWorkerGlobalScopeImpl>::clear_interval(cx, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_queue_microtask(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::this_window(this_js, ctx)?;
+        rt::require_args(args, 1, "WorkerGlobalScope.queueMicrotask")?;
+        let a0 = rt::callback_from_js(rt::arg(args, 0), CallbackKind::Function, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WindowOrWorkerGlobalScopeImpl>::queue_microtask(cx, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_structured_clone(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::this_window(this_js, ctx)?;
+        rt::require_args(args, 1, "WorkerGlobalScope.structuredClone")?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::StructuredSerializeOptions as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WindowOrWorkerGlobalScopeImpl>::structured_clone(cx, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::WorkerGlobalScope,
+        name: "WorkerGlobalScope",
+        parent: Some(I::EventTarget),
+        global: false,
+        exposed: rt::Exposure {
+            window: false,
+            worker: true,
+        },
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "self",
+                getter: get_self,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "location",
+                getter: get_location,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "navigator",
+                getter: get_navigator,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "onerror",
+                getter: get_onerror,
+                setter: Some(set_onerror),
+            },
+            rt::AttrDef {
+                name: "onlanguagechange",
+                getter: get_onlanguagechange,
+                setter: Some(set_onlanguagechange),
+            },
+            rt::AttrDef {
+                name: "onoffline",
+                getter: get_onoffline,
+                setter: Some(set_onoffline),
+            },
+            rt::AttrDef {
+                name: "ononline",
+                getter: get_ononline,
+                setter: Some(set_ononline),
+            },
+            rt::AttrDef {
+                name: "onrejectionhandled",
+                getter: get_onrejectionhandled,
+                setter: Some(set_onrejectionhandled),
+            },
+            rt::AttrDef {
+                name: "onunhandledrejection",
+                getter: get_onunhandledrejection,
+                setter: Some(set_onunhandledrejection),
+            },
+            rt::AttrDef {
+                name: "fonts",
+                getter: get_fonts,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "performance",
+                getter: get_performance,
+                setter: Some(set_performance),
+            },
+            rt::AttrDef {
+                name: "origin",
+                getter: get_origin,
+                setter: Some(set_origin),
+            },
+            rt::AttrDef {
+                name: "isSecureContext",
+                getter: get_is_secure_context,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "crypto",
+                getter: get_crypto,
+                setter: None,
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "importScripts",
+                func: op_import_scripts,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "fetch",
+                func: op_fetch,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "reportError",
+                func: op_report_error,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "btoa",
+                func: op_btoa,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "atob",
+                func: op_atob,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "setTimeout",
+                func: op_set_timeout,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "clearTimeout",
+                func: op_clear_timeout,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "setInterval",
+                func: op_set_interval,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "clearInterval",
+                func: op_clear_interval,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "queueMicrotask",
+                func: op_queue_microtask,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "structuredClone",
+                func: op_structured_clone,
+                length: 1,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod worker_location {
+    use super::*;
+
+    fn get_href(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WorkerLocation, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WorkerLocationImpl>::href(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_origin(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WorkerLocation, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WorkerLocationImpl>::origin(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_protocol(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WorkerLocation, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WorkerLocationImpl>::protocol(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_host(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WorkerLocation, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WorkerLocationImpl>::host(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_hostname(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WorkerLocation, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WorkerLocationImpl>::hostname(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_port(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WorkerLocation, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WorkerLocationImpl>::port(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_pathname(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WorkerLocation, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WorkerLocationImpl>::pathname(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_search(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WorkerLocation, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WorkerLocationImpl>::search(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_hash(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WorkerLocation, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WorkerLocationImpl>::hash(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::WorkerLocation,
+        name: "WorkerLocation",
+        parent: None,
+        global: false,
+        exposed: rt::Exposure {
+            window: false,
+            worker: true,
+        },
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "href",
+                getter: get_href,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "origin",
+                getter: get_origin,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "protocol",
+                getter: get_protocol,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "host",
+                getter: get_host,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "hostname",
+                getter: get_hostname,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "port",
+                getter: get_port,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "pathname",
+                getter: get_pathname,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "search",
+                getter: get_search,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "hash",
+                getter: get_hash,
+                setter: None,
+            },
+        ],
+        ops: &[rt::OpDef {
+            name: "toString",
+            func: get_href,
+            length: 0,
+        }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod worker_navigator {
+    use super::*;
+
+    fn get_app_code_name(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WorkerNavigator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NavigatorIDImpl>::app_code_name(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_app_name(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WorkerNavigator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::NavigatorIDImpl>::app_name(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_app_version(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WorkerNavigator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NavigatorIDImpl>::app_version(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_platform(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WorkerNavigator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::NavigatorIDImpl>::platform(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_product(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WorkerNavigator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::NavigatorIDImpl>::product(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_product_sub(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WorkerNavigator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NavigatorIDImpl>::product_sub(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_user_agent(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WorkerNavigator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NavigatorIDImpl>::user_agent(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_vendor(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WorkerNavigator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::NavigatorIDImpl>::vendor(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_vendor_sub(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WorkerNavigator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NavigatorIDImpl>::vendor_sub(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_language(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WorkerNavigator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NavigatorLanguageImpl>::language(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_languages(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WorkerNavigator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NavigatorLanguageImpl>::languages(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_on_line(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WorkerNavigator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NavigatorOnLineImpl>::on_line(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_hardware_concurrency(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WorkerNavigator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NavigatorConcurrentHardwareImpl>::hardware_concurrency(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::WorkerNavigator,
+        name: "WorkerNavigator",
+        parent: None,
+        global: false,
+        exposed: rt::Exposure {
+            window: false,
+            worker: true,
+        },
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "appCodeName",
+                getter: get_app_code_name,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "appName",
+                getter: get_app_name,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "appVersion",
+                getter: get_app_version,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "platform",
+                getter: get_platform,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "product",
+                getter: get_product,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "productSub",
+                getter: get_product_sub,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "userAgent",
+                getter: get_user_agent,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "vendor",
+                getter: get_vendor,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "vendorSub",
+                getter: get_vendor_sub,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "language",
+                getter: get_language,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "languages",
+                getter: get_languages,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "onLine",
+                getter: get_on_line,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "hardwareConcurrency",
+                getter: get_hardware_concurrency,
+                setter: None,
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod writable_stream {
     use super::*;
 
@@ -19631,6 +21081,10 @@ pub mod writable_stream {
         name: "WritableStream",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -19681,6 +21135,10 @@ pub mod writable_stream_default_controller {
         name: "WritableStreamDefaultController",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -19786,6 +21244,10 @@ pub mod writable_stream_default_writer {
         name: "WritableStreamDefaultWriter",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 1,
         attrs: &[
@@ -19981,6 +21443,10 @@ pub mod xml_http_request_event_target {
         name: "XMLHttpRequestEventTarget",
         parent: Some(I::EventTarget),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -20037,6 +21503,10 @@ pub mod xml_http_request_upload {
         name: "XMLHttpRequestUpload",
         parent: Some(I::XMLHttpRequestEventTarget),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -20079,6 +21549,10 @@ pub mod xml_serializer {
         name: "XMLSerializer",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[],
@@ -20192,6 +21666,10 @@ pub mod x_path_evaluator {
         name: "XPathEvaluator",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[],
@@ -20253,6 +21731,10 @@ pub mod x_path_expression {
         name: "XPathExpression",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -20389,6 +21871,10 @@ pub mod x_path_result {
         name: "XPathResult",
         parent: None,
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -20543,6 +22029,10 @@ pub mod abort_signal {
         name: "AbortSignal",
         parent: Some(I::EventTarget),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -20759,6 +22249,10 @@ pub mod attr {
         name: "Attr",
         parent: Some(I::Node),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -20850,6 +22344,10 @@ pub mod css_grouping_rule {
         name: "CSSGroupingRule",
         parent: Some(I::CSSRule),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -20896,6 +22394,10 @@ pub mod css_style_rule {
         name: "CSSStyleRule",
         parent: Some(I::CSSGroupingRule),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -21057,6 +22559,10 @@ pub mod css_style_sheet {
         name: "CSSStyleSheet",
         parent: Some(I::StyleSheet),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -21307,6 +22813,10 @@ pub mod character_data {
         name: "CharacterData",
         parent: Some(I::Node),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -21406,6 +22916,10 @@ pub mod comment {
         name: "Comment",
         parent: Some(I::CharacterData),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[],
@@ -21470,6 +22984,10 @@ pub mod custom_event {
         name: "CustomEvent",
         parent: Some(I::Event),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 1,
         attrs: &[rt::AttrDef {
@@ -21585,6 +23103,10 @@ pub mod dom_rect {
         name: "DOMRect",
         parent: Some(I::DOMRectReadOnly),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -21610,6 +23132,195 @@ pub mod dom_rect {
             },
         ],
         ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod dedicated_worker_global_scope {
+    use super::*;
+
+    fn get_name(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DedicatedWorkerGlobalScopeImpl>::name(cx)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_name(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::replace_property(this_js, "name", rt::arg(args, 0), ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onmessage(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Window, "message")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onmessage(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Window, "message", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onmessageerror(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Window, "messageerror")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onmessageerror(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::this_window(this_js, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Window, "messageerror", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn op_post_message(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::this_window(this_js, ctx)?;
+        if args.len() >= 2 && rt::arg(args, 1).is_object() {
+            rt::require_args(args, 2, "DedicatedWorkerGlobalScope.postMessage")?;
+            let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+            let a1 = rt::sequence_from_js(rt::arg(args, 1), ctx, |v, ctx| {
+                Ok(rt::value_from_js(v, ctx)?)
+            })?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::DedicatedWorkerGlobalScopeImpl>::post_message(cx, a0, a1)
+            });
+            rt::ret(r, ctx)
+        } else if args.len() >= 1 && true {
+            rt::require_args(args, 1, "DedicatedWorkerGlobalScope.postMessage")?;
+            let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+            let a1 = <web::StructuredSerializeOptions as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::DedicatedWorkerGlobalScopeImpl>::post_message_overload2(cx, a0, a1)
+            });
+            rt::ret(r, ctx)
+        } else {
+            Err(rt::type_error(
+                "DedicatedWorkerGlobalScope.postMessage: no overload matches the arguments",
+            ))
+        }
+    }
+
+    fn op_close(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::this_window(this_js, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DedicatedWorkerGlobalScopeImpl>::close(cx)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_request_animation_frame(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::this_window(this_js, ctx)?;
+        rt::require_args(args, 1, "DedicatedWorkerGlobalScope.requestAnimationFrame")?;
+        let a0 = rt::callback_from_js(rt::arg(args, 0), CallbackKind::Function, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::AnimationFrameProviderImpl>::request_animation_frame(cx, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_cancel_animation_frame(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::this_window(this_js, ctx)?;
+        rt::require_args(args, 1, "DedicatedWorkerGlobalScope.cancelAnimationFrame")?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::AnimationFrameProviderImpl>::cancel_animation_frame(cx, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::DedicatedWorkerGlobalScope,
+        name: "DedicatedWorkerGlobalScope",
+        parent: Some(I::WorkerGlobalScope),
+        global: true,
+        exposed: rt::Exposure {
+            window: false,
+            worker: true,
+        },
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "name",
+                getter: get_name,
+                setter: Some(set_name),
+            },
+            rt::AttrDef {
+                name: "onmessage",
+                getter: get_onmessage,
+                setter: Some(set_onmessage),
+            },
+            rt::AttrDef {
+                name: "onmessageerror",
+                getter: get_onmessageerror,
+                setter: Some(set_onmessageerror),
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "postMessage",
+                func: op_post_message,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "close",
+                func: op_close,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "requestAnimationFrame",
+                func: op_request_animation_frame,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "cancelAnimationFrame",
+                func: op_cancel_animation_frame,
+                length: 1,
+            },
+        ],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -22036,7 +23747,9 @@ pub mod document {
             return Ok(v);
         }
         let this = rt::this_node(this_js, I::Document, ctx)?;
-        let r = rt::with_cx(ctx, |cx| <Web as web::FontFaceSourceImpl>::fonts(cx, this));
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FontFaceSourceForNodeImpl>::fonts(cx, this)
+        });
         let v = rt::ret(r, ctx)?;
         rt::cache(this_js, "fonts", &v, ctx);
         Ok(v)
@@ -24935,6 +26648,10 @@ pub mod document {
         name: "Document",
         parent: Some(I::Node),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -25957,6 +27674,10 @@ pub mod document_fragment {
         name: "DocumentFragment",
         parent: Some(I::Node),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -26120,6 +27841,10 @@ pub mod document_type {
         name: "DocumentType",
         parent: Some(I::Node),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -27332,6 +29057,10 @@ pub mod element {
         name: "Element",
         parent: Some(I::Node),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -27736,6 +29465,10 @@ pub mod error_event {
         name: "ErrorEvent",
         parent: Some(I::Event),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 1,
         attrs: &[
@@ -27806,6 +29539,10 @@ pub mod focus_event {
         name: "FocusEvent",
         parent: Some(I::UIEvent),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 1,
         attrs: &[rt::AttrDef {
@@ -30396,6 +32133,10 @@ pub mod html_element {
         name: "HTMLElement",
         parent: Some(I::Element),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -31108,6 +32849,10 @@ pub mod html_embed_element {
         name: "HTMLEmbedElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -31209,6 +32954,10 @@ pub mod html_field_set_element {
         name: "HTMLFieldSetElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -31304,6 +33053,10 @@ pub mod html_font_element {
         name: "HTMLFontElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -31689,6 +33442,10 @@ pub mod html_form_element {
         name: "HTMLFormElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -32018,6 +33775,10 @@ pub mod html_frame_element {
         name: "HTMLFrameElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -32560,6 +34321,10 @@ pub mod html_frame_set_element {
         name: "HTMLFrameSetElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -32789,6 +34554,10 @@ pub mod htmlhr_element {
         name: "HTMLHRElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -32839,6 +34608,10 @@ pub mod html_head_element {
         name: "HTMLHeadElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[],
@@ -32883,6 +34656,10 @@ pub mod html_heading_element {
         name: "HTMLHeadingElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -32937,6 +34714,10 @@ pub mod html_html_element {
         name: "HTMLHtmlElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -33345,6 +35126,10 @@ pub mod htmli_frame_element {
         name: "HTMLIFrameElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -33826,6 +35611,10 @@ pub mod html_image_element {
         name: "HTMLImageElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -34720,6 +36509,10 @@ pub mod html_input_element {
         name: "HTMLInputElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -34946,6 +36739,10 @@ pub mod htmlli_element {
         name: "HTMLLIElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -35019,6 +36816,10 @@ pub mod html_label_element {
         name: "HTMLLabelElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -35079,6 +36880,10 @@ pub mod html_legend_element {
         name: "HTMLLegendElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -35465,6 +37270,10 @@ pub mod html_link_element {
         name: "HTMLLinkElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -35590,6 +37399,10 @@ pub mod html_map_element {
         name: "HTMLMapElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -35892,6 +37705,10 @@ pub mod html_marquee_element {
         name: "HTMLMarqueeElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -36087,6 +37904,10 @@ pub mod html_media_element {
         name: "HTMLMediaElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -36171,6 +37992,10 @@ pub mod html_menu_element {
         name: "HTMLMenuElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -36321,6 +38146,10 @@ pub mod html_meta_element {
         name: "HTMLMetaElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -36507,6 +38336,10 @@ pub mod html_meter_element {
         name: "HTMLMeterElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -36608,6 +38441,10 @@ pub mod html_mod_element {
         name: "HTMLModElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -36735,6 +38572,10 @@ pub mod htmlo_list_element {
         name: "HTMLOListElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -37156,6 +38997,10 @@ pub mod html_object_element {
         name: "HTMLObjectElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -37307,6 +39152,10 @@ pub mod html_opt_group_element {
         name: "HTMLOptGroupElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -37508,6 +39357,10 @@ pub mod html_option_element {
         name: "HTMLOptionElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -37611,6 +39464,10 @@ pub mod html_output_element {
         name: "HTMLOutputElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -37666,6 +39523,10 @@ pub mod html_paragraph_element {
         name: "HTMLParagraphElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -37784,6 +39645,10 @@ pub mod html_param_element {
         name: "HTMLParamElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -37829,6 +39694,10 @@ pub mod html_picture_element {
         name: "HTMLPictureElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[],
@@ -37875,6 +39744,10 @@ pub mod html_pre_element {
         name: "HTMLPreElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -37947,6 +39820,10 @@ pub mod html_progress_element {
         name: "HTMLProgressElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -38002,6 +39879,10 @@ pub mod html_quote_element {
         name: "HTMLQuoteElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -38252,6 +40133,10 @@ pub mod html_script_element {
         name: "HTMLScriptElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -38612,6 +40497,10 @@ pub mod html_select_element {
         name: "HTMLSelectElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -38749,6 +40638,10 @@ pub mod html_slot_element {
         name: "HTMLSlotElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -38942,6 +40835,10 @@ pub mod html_source_element {
         name: "HTMLSourceElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -39002,6 +40899,10 @@ pub mod html_span_element {
         name: "HTMLSpanElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[],
@@ -39090,6 +40991,10 @@ pub mod html_style_element {
         name: "HTMLStyleElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -39155,6 +41060,10 @@ pub mod html_table_caption_element {
         name: "HTMLTableCaptionElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -39489,6 +41398,10 @@ pub mod html_table_cell_element {
         name: "HTMLTableCellElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -39713,6 +41626,10 @@ pub mod html_table_col_element {
         name: "HTMLTableColElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -39994,6 +41911,10 @@ pub mod html_table_element {
         name: "HTMLTableElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -40182,6 +42103,10 @@ pub mod html_table_row_element {
         name: "HTMLTableRowElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -40324,6 +42249,10 @@ pub mod html_table_section_element {
         name: "HTMLTableSectionElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -40543,6 +42472,10 @@ pub mod html_template_element {
         name: "HTMLTemplateElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -40997,6 +42930,10 @@ pub mod html_text_area_element {
         name: "HTMLTextAreaElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -41127,6 +43064,10 @@ pub mod html_time_element {
         name: "HTMLTimeElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -41175,6 +43116,10 @@ pub mod html_title_element {
         name: "HTMLTitleElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -41293,6 +43238,10 @@ pub mod html_track_element {
         name: "HTMLTrackElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -41387,6 +43336,10 @@ pub mod htmlu_list_element {
         name: "HTMLUListElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -41418,6 +43371,10 @@ pub mod html_unknown_element {
         name: "HTMLUnknownElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -41548,6 +43505,10 @@ pub mod html_video_element {
         name: "HTMLVideoElement",
         parent: Some(I::HTMLMediaElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -41629,6 +43590,10 @@ pub mod input_event {
         name: "InputEvent",
         parent: Some(I::UIEvent),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 1,
         attrs: &[
@@ -41776,6 +43741,10 @@ pub mod keyboard_event {
         name: "KeyboardEvent",
         parent: Some(I::UIEvent),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 1,
         attrs: &[
@@ -41996,6 +43965,10 @@ pub mod mouse_event {
         name: "MouseEvent",
         parent: Some(I::UIEvent),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 1,
         attrs: &[
@@ -42231,6 +44204,10 @@ pub mod performance_navigation_timing {
         name: "PerformanceNavigationTiming",
         parent: Some(I::PerformanceResourceTiming),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -42402,6 +44379,10 @@ pub mod pointer_event {
         name: "PointerEvent",
         parent: Some(I::MouseEvent),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 1,
         attrs: &[
@@ -42487,6 +44468,10 @@ pub mod processing_instruction {
         name: "ProcessingInstruction",
         parent: Some(I::CharacterData),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -44735,6 +46720,10 @@ pub mod svg_element {
         name: "SVGElement",
         parent: Some(I::Element),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -45258,6 +47247,10 @@ pub mod svg_gradient_element {
         name: "SVGGradientElement",
         parent: Some(I::SVGElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -45287,6 +47280,10 @@ pub mod svg_graphics_element {
         name: "SVGGraphicsElement",
         parent: Some(I::SVGElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -45318,6 +47315,10 @@ pub mod svg_image_element {
         name: "SVGImageElement",
         parent: Some(I::SVGGraphicsElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -45342,6 +47343,10 @@ pub mod svg_linear_gradient_element {
         name: "SVGLinearGradientElement",
         parent: Some(I::SVGGradientElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -45362,6 +47367,10 @@ pub mod svg_marker_element {
         name: "SVGMarkerElement",
         parent: Some(I::SVGElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -45390,6 +47399,10 @@ pub mod svg_metadata_element {
         name: "SVGMetadataElement",
         parent: Some(I::SVGElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -45421,6 +47434,10 @@ pub mod svg_pattern_element {
         name: "SVGPatternElement",
         parent: Some(I::SVGElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -45445,6 +47462,10 @@ pub mod svg_radial_gradient_element {
         name: "SVGRadialGradientElement",
         parent: Some(I::SVGGradientElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -45902,6 +47923,10 @@ pub mod svgsvg_element {
         name: "SVGSVGElement",
         parent: Some(I::SVGGraphicsElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -46040,6 +48065,10 @@ pub mod svg_script_element {
         name: "SVGScriptElement",
         parent: Some(I::SVGElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -46071,6 +48100,10 @@ pub mod svg_stop_element {
         name: "SVGStopElement",
         parent: Some(I::SVGElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -46145,6 +48178,10 @@ pub mod svg_style_element {
         name: "SVGStyleElement",
         parent: Some(I::SVGElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -46186,6 +48223,10 @@ pub mod svg_switch_element {
         name: "SVGSwitchElement",
         parent: Some(I::SVGGraphicsElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -46206,6 +48247,10 @@ pub mod svg_symbol_element {
         name: "SVGSymbolElement",
         parent: Some(I::SVGGraphicsElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -46226,6 +48271,10 @@ pub mod svg_text_content_element {
         name: "SVGTextContentElement",
         parent: Some(I::SVGGraphicsElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -46261,6 +48310,10 @@ pub mod svg_text_path_element {
         name: "SVGTextPathElement",
         parent: Some(I::SVGTextContentElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -46292,6 +48345,10 @@ pub mod svg_text_positioning_element {
         name: "SVGTextPositioningElement",
         parent: Some(I::SVGTextContentElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -46312,6 +48369,10 @@ pub mod svg_title_element {
         name: "SVGTitleElement",
         parent: Some(I::SVGElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -46343,6 +48404,10 @@ pub mod svg_use_element {
         name: "SVGUseElement",
         parent: Some(I::SVGGraphicsElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -46367,6 +48432,10 @@ pub mod svg_view_element {
         name: "SVGViewElement",
         parent: Some(I::SVGElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -46552,6 +48621,10 @@ pub mod shadow_root {
         name: "ShadowRoot",
         parent: Some(I::DocumentFragment),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -46671,6 +48744,10 @@ pub mod text {
         name: "Text",
         parent: Some(I::CharacterData),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -46746,6 +48823,10 @@ pub mod wheel_event {
         name: "WheelEvent",
         parent: Some(I::MouseEvent),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 1,
         attrs: &[
@@ -46791,6 +48872,10 @@ pub mod xml_document {
         name: "XMLDocument",
         parent: Some(I::Document),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -47124,6 +49209,10 @@ pub mod xml_http_request {
         name: "XMLHttpRequest",
         parent: Some(I::XMLHttpRequestEventTarget),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -47786,6 +49875,10 @@ pub mod html_anchor_element {
         name: "HTMLAnchorElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -48431,6 +50524,10 @@ pub mod html_area_element {
         name: "HTMLAreaElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -48570,6 +50667,10 @@ pub mod html_audio_element {
         name: "HTMLAudioElement",
         parent: Some(I::HTMLMediaElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[],
@@ -48614,6 +50715,10 @@ pub mod htmlbr_element {
         name: "HTMLBRElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -48688,6 +50793,10 @@ pub mod html_base_element {
         name: "HTMLBaseElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -49304,6 +51413,10 @@ pub mod html_body_element {
         name: "HTMLBodyElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -49671,6 +51784,10 @@ pub mod html_button_element {
         name: "HTMLButtonElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -49789,6 +51906,10 @@ pub mod html_canvas_element {
         name: "HTMLCanvasElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -49848,6 +51969,10 @@ pub mod htmld_list_element {
         name: "HTMLDListElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -49896,6 +52021,10 @@ pub mod html_data_element {
         name: "HTMLDataElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -49924,6 +52053,10 @@ pub mod html_data_list_element {
         name: "HTMLDataListElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[],
@@ -49988,6 +52121,10 @@ pub mod html_details_element {
         name: "HTMLDetailsElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -50069,6 +52206,10 @@ pub mod html_dialog_element {
         name: "HTMLDialogElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
@@ -50128,6 +52269,10 @@ pub mod html_directory_element {
         name: "HTMLDirectoryElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -50176,6 +52321,10 @@ pub mod html_div_element {
         name: "HTMLDivElement",
         parent: Some(I::HTMLElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[rt::AttrDef {
@@ -50555,6 +52704,10 @@ pub mod svga_element {
         name: "SVGAElement",
         parent: Some(I::SVGGraphicsElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[
@@ -50661,6 +52814,10 @@ pub mod svg_defs_element {
         name: "SVGDefsElement",
         parent: Some(I::SVGGraphicsElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -50681,6 +52838,10 @@ pub mod svg_desc_element {
         name: "SVGDescElement",
         parent: Some(I::SVGElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -50701,6 +52862,10 @@ pub mod svg_foreign_object_element {
         name: "SVGForeignObjectElement",
         parent: Some(I::SVGGraphicsElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -50721,6 +52886,10 @@ pub mod svgg_element {
         name: "SVGGElement",
         parent: Some(I::SVGGraphicsElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -50741,6 +52910,10 @@ pub mod svg_geometry_element {
         name: "SVGGeometryElement",
         parent: Some(I::SVGGraphicsElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -50761,6 +52934,10 @@ pub mod svg_line_element {
         name: "SVGLineElement",
         parent: Some(I::SVGGeometryElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -50781,6 +52958,10 @@ pub mod svg_path_element {
         name: "SVGPathElement",
         parent: Some(I::SVGGeometryElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -50801,6 +52982,10 @@ pub mod svg_polygon_element {
         name: "SVGPolygonElement",
         parent: Some(I::SVGGeometryElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -50821,6 +53006,10 @@ pub mod svg_polyline_element {
         name: "SVGPolylineElement",
         parent: Some(I::SVGGeometryElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -50841,6 +53030,10 @@ pub mod svg_rect_element {
         name: "SVGRectElement",
         parent: Some(I::SVGGeometryElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -50861,6 +53054,10 @@ pub mod svgt_span_element {
         name: "SVGTSpanElement",
         parent: Some(I::SVGTextPositioningElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -50881,6 +53078,10 @@ pub mod svg_text_element {
         name: "SVGTextElement",
         parent: Some(I::SVGTextPositioningElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -50901,6 +53102,10 @@ pub mod svg_circle_element {
         name: "SVGCircleElement",
         parent: Some(I::SVGGeometryElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -50921,6 +53126,10 @@ pub mod svg_ellipse_element {
         name: "SVGEllipseElement",
         parent: Some(I::SVGGeometryElement),
         global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         constructor: None,
         constructor_length: 0,
         attrs: &[],
@@ -50966,6 +53175,10 @@ pub mod ns_css {
 
     pub static DEF: rt::NamespaceDef = rt::NamespaceDef {
         name: "CSS",
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
         ops: &[
             rt::OpDef {
                 name: "supports",
@@ -51199,6 +53412,10 @@ pub mod ns_console {
 
     pub static DEF: rt::NamespaceDef = rt::NamespaceDef {
         name: "console",
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
         ops: &[
             rt::OpDef {
                 name: "assert",
@@ -51384,6 +53601,10 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &url::DEF,
     &url_search_params::DEF,
     &window::DEF,
+    &worker::DEF,
+    &worker_global_scope::DEF,
+    &worker_location::DEF,
+    &worker_navigator::DEF,
     &writable_stream::DEF,
     &writable_stream_default_controller::DEF,
     &writable_stream_default_writer::DEF,
@@ -51402,6 +53623,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &comment::DEF,
     &custom_event::DEF,
     &dom_rect::DEF,
+    &dedicated_worker_global_scope::DEF,
     &document::DEF,
     &document_fragment::DEF,
     &document_type::DEF,

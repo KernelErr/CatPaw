@@ -20,6 +20,7 @@ use catpaw_web::event_loop::{self, LoopLimits, LoopReport, StopReason};
 use catpaw_web::frames::{self, FrameCommand, FrameId, FrameTree};
 use catpaw_web::generated::DocumentReadyState;
 use catpaw_web::page::NavigationRequest;
+use catpaw_web::workers::{self, WorkerCommand, WorkerId};
 use catpaw_web::{ConsoleLevel, PageConfig, PageState, promises, scripting};
 use url::Url;
 
@@ -29,7 +30,10 @@ use crate::net::EngineNet;
 pub const MAX_FRAMES: usize = 32;
 /// How deep frames may nest (the top page is at depth 0).
 pub const MAX_FRAME_DEPTH: u32 = 8;
-/// Virtual time one frame may advance before the others get a turn.
+/// How many workers a page (frames included) may run at once.
+pub const MAX_WORKERS: usize = 16;
+/// Virtual time one frame or worker may advance before the others get a
+/// turn.
 const FRAME_SLICE_MS: f64 = 1000.0;
 
 /// The stack of a page thread. Deeply nested documents and scripts recurse
@@ -144,6 +148,38 @@ struct Frame {
     navigations: usize,
 }
 
+/// A script realm the engine runs: the top page, a frame, or a worker.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ScopeId {
+    Frame(FrameId),
+    Worker(u32),
+}
+
+/// A running dedicated worker.
+struct WorkerRun {
+    key: u32,
+    /// The scope that made it.
+    owner: ScopeId,
+    /// Its number in the owner's page.
+    local: WorkerId,
+    // Dropped before `net`: the page state refers to it.
+    boa: BoaPage,
+    #[allow(dead_code)]
+    net: Rc<EngineNet>,
+    report: LoopReport,
+    virtual_used: f64,
+    /// How many of the scope's uncaught errors were relayed to the owner.
+    errors_seen: usize,
+}
+
+/// A worker of a page, as the embedder sees it.
+#[derive(Clone, Debug)]
+pub struct WorkerInfo {
+    pub key: u32,
+    pub owner: ScopeId,
+    pub url: Url,
+}
+
 /// A frame of a page, as the embedder sees it.
 #[derive(Clone, Debug)]
 pub struct FrameInfo {
@@ -161,6 +197,9 @@ pub struct Page {
     frames: Vec<Frame>,
     /// The tree the frames' pages share.
     tree: Rc<RefCell<FrameTree>>,
+    /// The dedicated workers of the page and its frames.
+    workers: Vec<WorkerRun>,
+    next_worker: u32,
     /// The frame actions and evaluations address.
     current: FrameId,
     net: Rc<EngineNet>,
@@ -286,6 +325,8 @@ impl Page {
             boa,
             frames: Vec::new(),
             tree,
+            workers: Vec::new(),
+            next_worker: 1,
             current: FrameId(0),
             net,
             document: info.clone(),
@@ -317,7 +358,8 @@ impl Page {
             &self.options,
             top_placement(&tree),
         )?;
-        // The frames belonged to the old document.
+        // The frames and workers belonged to the old document.
+        self.workers.clear();
         self.frames.clear();
         self.tree = tree;
         self.current = FrameId(0);
@@ -579,12 +621,259 @@ impl Page {
             self.close_frame(child);
         }
         self.tree.borrow_mut().remove(id);
+        self.drop_workers_of(ScopeId::Frame(id));
         if let Some(index) = self.frames.iter().position(|f| f.id == id) {
             let frame = self.frames.remove(index);
             if self.current == id {
                 self.current = frame.parent;
             }
         }
+    }
+
+    // ---- workers ----------------------------------------------------------
+
+    /// The page state of a scope.
+    fn scope_page(&self, scope: ScopeId) -> Option<&Rc<PageState>> {
+        match scope {
+            ScopeId::Frame(id) => self.page_of(id),
+            ScopeId::Worker(key) => self
+                .workers
+                .iter()
+                .find(|w| w.key == key)
+                .map(|w| w.boa.page()),
+        }
+    }
+
+    fn scope_boa(&mut self, scope: ScopeId) -> Option<&mut BoaPage> {
+        match scope {
+            ScopeId::Frame(id) => self.boa_of(id),
+            ScopeId::Worker(key) => self
+                .workers
+                .iter_mut()
+                .find(|w| w.key == key)
+                .map(|w| &mut w.boa),
+        }
+    }
+
+    /// Every scope: the top page first, then frames, then workers.
+    fn scopes(&self) -> Vec<ScopeId> {
+        std::iter::once(ScopeId::Frame(FrameId(0)))
+            .chain(self.frames.iter().map(|f| ScopeId::Frame(f.id)))
+            .chain(self.workers.iter().map(|w| ScopeId::Worker(w.key)))
+            .collect()
+    }
+
+    fn worker_key(&self, owner: ScopeId, local: WorkerId) -> Option<u32> {
+        self.workers
+            .iter()
+            .find(|w| w.owner == owner && w.local == local)
+            .map(|w| w.key)
+    }
+
+    /// Drops a worker and the workers it made.
+    fn drop_worker(&mut self, key: u32) {
+        self.drop_workers_of(ScopeId::Worker(key));
+        self.workers.retain(|w| w.key != key);
+    }
+
+    fn drop_workers_of(&mut self, owner: ScopeId) {
+        let owned: Vec<u32> = self
+            .workers
+            .iter()
+            .filter(|w| w.owner == owner)
+            .map(|w| w.key)
+            .collect();
+        for key in owned {
+            self.drop_worker(key);
+        }
+    }
+
+    /// The workers of the page, oldest first.
+    pub fn workers(&self) -> Vec<WorkerInfo> {
+        self.workers
+            .iter()
+            .map(|w| WorkerInfo {
+                key: w.key,
+                owner: w.owner,
+                url: w.boa.page().url.borrow().clone(),
+            })
+            .collect()
+    }
+
+    /// The state of a worker's global scope.
+    pub fn worker_state(&self, key: u32) -> Option<&Rc<PageState>> {
+        self.scope_page(ScopeId::Worker(key))
+    }
+
+    pub fn worker_report(&self, key: u32) -> Option<&LoopReport> {
+        self.workers
+            .iter()
+            .find(|w| w.key == key)
+            .map(|w| &w.report)
+    }
+
+    /// Starts the worker `local` of `owner` with the script at `url`.
+    fn spawn_worker(
+        &mut self,
+        owner: ScopeId,
+        local: WorkerId,
+        url: Url,
+        name: String,
+        module: bool,
+    ) {
+        let Some(owner_page) = self.scope_page(owner).cloned() else {
+            return;
+        };
+        if self.workers.len() >= MAX_WORKERS {
+            workers::worker_error(
+                &owner_page,
+                local,
+                format!("Not starting worker {url}: too many workers"),
+                true,
+            );
+            return;
+        }
+        let fetched = match catpaw_web::net::local_response(&owner_page, &url) {
+            Some(Ok(response)) => Ok((response.url, response.body)),
+            Some(Err(e)) => Err(e),
+            None => {
+                let result = self.net.block_on(self.net.client().get(&url));
+                self.net.record_document(
+                    "GET",
+                    &url,
+                    result.as_ref().ok().map(|r| r.status.as_u16()),
+                );
+                match result {
+                    Ok(response) => Ok((response.url, response.body.to_vec())),
+                    Err(e) => Err(e.to_string()),
+                }
+            }
+        };
+        let (script_url, body) = match fetched {
+            Ok(fetched) => fetched,
+            Err(e) => {
+                workers::worker_error(
+                    &owner_page,
+                    local,
+                    format!("Failed to load worker script {url}: {e}"),
+                    true,
+                );
+                return;
+            }
+        };
+        let mut config = self.options.page.clone();
+        config.user_agent = self.options.net.user_agent.clone();
+        let mut state = PageState::new(script_url.clone(), config);
+        // One object-URL store per origin: the worker resolves the blob
+        // URLs its owner makes.
+        state.blob_urls = owner_page.blob_urls.clone();
+        let state = Rc::new(state);
+        let net = Rc::new(self.net.child());
+        state.set_net(net.clone());
+        state.workers.set_role(local, name);
+        let mut boa = match BoaPage::new_worker(state) {
+            Ok(boa) => boa,
+            Err(e) => {
+                workers::worker_error(
+                    &owner_page,
+                    local,
+                    format!("Failed to start worker: {e}"),
+                    true,
+                );
+                return;
+            }
+        };
+        let source = String::from_utf8_lossy(&body).into_owned();
+        boa.with_cx(|cx| workers::run_script(cx, &source, &script_url, module));
+        let key = self.next_worker;
+        self.next_worker += 1;
+        self.workers.push(WorkerRun {
+            key,
+            owner,
+            local,
+            boa,
+            net,
+            report: idle_report(),
+            virtual_used: 0.0,
+            errors_seen: 0,
+        });
+    }
+
+    /// Carries out what the scopes asked of their workers. Returns whether
+    /// anything was done.
+    fn pump_workers(&mut self) -> bool {
+        let mut did = false;
+        for scope in self.scopes() {
+            let Some(page) = self.scope_page(scope).cloned() else {
+                continue;
+            };
+            for command in page.workers.take_commands() {
+                did = true;
+                match command {
+                    WorkerCommand::Spawn {
+                        worker,
+                        url,
+                        name,
+                        module,
+                    } => self.spawn_worker(scope, worker, url, name, module),
+                    WorkerCommand::PostMessage { worker, data } => {
+                        if let Some(key) = self.worker_key(scope, worker)
+                            && let Some(target) = self.scope_page(ScopeId::Worker(key))
+                        {
+                            workers::deliver_to_worker(target, data);
+                        }
+                    }
+                    WorkerCommand::Terminate { worker } => {
+                        if let Some(key) = self.worker_key(scope, worker) {
+                            self.drop_worker(key);
+                        }
+                    }
+                    WorkerCommand::ToOwner { data } => {
+                        if let ScopeId::Worker(key) = scope
+                            && let Some(run) = self.workers.iter().find(|w| w.key == key)
+                            && let Some(owner) = self.scope_page(run.owner)
+                        {
+                            workers::deliver_to_owner(owner, run.local, data);
+                        }
+                    }
+                    WorkerCommand::Close => {
+                        if let ScopeId::Worker(key) = scope
+                            && let Some(run) = self.workers.iter().find(|w| w.key == key)
+                            && let Some(owner) = self.scope_page(run.owner)
+                        {
+                            workers::worker_ended(owner, run.local);
+                            self.drop_worker(key);
+                        }
+                    }
+                }
+            }
+            // Uncaught errors in a worker reach its owner's `Worker`
+            // object, after the messages it posted before them.
+            if let ScopeId::Worker(key) = scope {
+                let mut relay = Vec::new();
+                if let Some(run) = self.workers.iter_mut().find(|w| w.key == key) {
+                    let errors = run.boa.page().errors.borrow();
+                    for text in errors.iter().skip(run.errors_seen) {
+                        let line = text.lines().next().unwrap_or_default().to_string();
+                        relay.push((run.owner, run.local, line));
+                    }
+                    run.errors_seen = errors.len();
+                }
+                for (owner, local, text) in relay {
+                    did = true;
+                    if let Some(owner) = self.scope_page(owner) {
+                        workers::worker_error(owner, local, text, false);
+                    }
+                }
+            }
+        }
+        did
+    }
+
+    fn pump_all(&mut self) -> bool {
+        let frames = self.pump_frames();
+        let workers = self.pump_workers();
+        frames || workers
     }
 
     /// Loads the document a frame's navigation request asks for, in place
@@ -739,16 +1028,23 @@ impl Page {
         did
     }
 
-    /// Runs one frame's event loop within `limits`. The frame's report
+    /// Runs one scope's event loop within `limits`. The scope's report
     /// adds up what its runs did since the scheduler started.
-    fn run_one(&mut self, id: FrameId, limits: &LoopLimits) -> LoopReport {
-        let Some(boa) = self.boa_of(id) else {
+    fn run_one(&mut self, scope: ScopeId, limits: &LoopLimits) -> LoopReport {
+        let Some(boa) = self.scope_boa(scope) else {
             return idle_report();
         };
         let report = boa.with_cx(|cx| event_loop::run(cx, limits));
-        let (used, total) = match self.frame_mut(id) {
-            Some(frame) => (&mut frame.virtual_used, &mut frame.report),
-            None => (&mut self.top_virtual_used, &mut self.report),
+        let (used, total) = match scope {
+            ScopeId::Frame(FrameId(0)) => (&mut self.top_virtual_used, &mut self.report),
+            ScopeId::Frame(id) => match self.frame_mut(id) {
+                Some(frame) => (&mut frame.virtual_used, &mut frame.report),
+                None => return report,
+            },
+            ScopeId::Worker(key) => match self.workers.iter_mut().find(|w| w.key == key) {
+                Some(run) => (&mut run.virtual_used, &mut run.report),
+                None => return report,
+            },
         };
         *used += report.virtual_advanced_ms;
         total.stop = report.stop;
@@ -759,17 +1055,23 @@ impl Page {
         report
     }
 
-    fn virtual_left(&self, id: FrameId) -> f64 {
-        let used = match self.frame(id) {
-            Some(frame) => frame.virtual_used,
-            None => self.top_virtual_used,
+    fn virtual_left(&self, scope: ScopeId) -> f64 {
+        let used = match scope {
+            ScopeId::Frame(FrameId(0)) => self.top_virtual_used,
+            ScopeId::Frame(id) => self.frame(id).map(|f| f.virtual_used).unwrap_or(0.0),
+            ScopeId::Worker(key) => self
+                .workers
+                .iter()
+                .find(|w| w.key == key)
+                .map(|w| w.virtual_used)
+                .unwrap_or(0.0),
         };
         (self.options.limits.virtual_ms - used).max(0.0)
     }
 
-    /// Runs the event loops of all frames, in turns, until they are idle
-    /// or the limits are reached. The top frame's report is kept as the
-    /// page's.
+    /// Runs the event loops of the page, its frames and its workers, in
+    /// turns, until they are idle or the limits are reached. The top
+    /// frame's report is kept as the page's.
     fn run_frames(&mut self) {
         let limits = self.options.limits.clone();
         let started = Instant::now();
@@ -778,26 +1080,27 @@ impl Page {
         for frame in &mut self.frames {
             frame.report = idle_report();
         }
+        for run in &mut self.workers {
+            run.report = idle_report();
+        }
+        let top = ScopeId::Frame(FrameId(0));
         loop {
             let remaining = limits.wall.saturating_sub(started.elapsed());
             if remaining.is_zero() || steps_left == 0 {
                 break;
             }
-            let ids: Vec<FrameId> = std::iter::once(FrameId(0))
-                .chain(self.frames.iter().map(|f| f.id))
-                .collect();
             let mut progress = false;
             let mut starved = Vec::new();
-            for id in ids {
-                if self.page_of(id).is_none() {
+            for scope in self.scopes() {
+                if self.scope_page(scope).is_none() {
                     continue;
                 }
                 let remaining = limits.wall.saturating_sub(started.elapsed());
                 let report = self.run_one(
-                    id,
+                    scope,
                     &LoopLimits {
                         wall: remaining,
-                        virtual_ms: FRAME_SLICE_MS.min(self.virtual_left(id)),
+                        virtual_ms: FRAME_SLICE_MS.min(self.virtual_left(scope)),
                         max_steps: steps_left,
                     },
                 );
@@ -805,37 +1108,37 @@ impl Page {
                 if progressed(&report) {
                     progress = true;
                 } else if report.stop == StopReason::VirtualBudget {
-                    starved.push(id);
+                    starved.push(scope);
                 }
-                if id == FrameId(0) && report.stop == StopReason::Navigation {
+                if scope == top && report.stop == StopReason::Navigation {
                     return;
                 }
-                if self.pump_frames() {
+                if self.pump_all() {
                     progress = true;
                 }
             }
             if progress {
                 continue;
             }
-            // Nothing ran: frames waiting on timers past their slice get
+            // Nothing ran: scopes waiting on timers past their slice get
             // the rest of their virtual budget.
             let mut woke = false;
-            for id in starved {
+            for scope in starved {
                 let remaining = limits.wall.saturating_sub(started.elapsed());
                 let report = self.run_one(
-                    id,
+                    scope,
                     &LoopLimits {
                         wall: remaining,
-                        virtual_ms: self.virtual_left(id),
+                        virtual_ms: self.virtual_left(scope),
                         max_steps: steps_left,
                     },
                 );
                 steps_left = steps_left.saturating_sub(report.steps);
                 woke |= progressed(&report);
-                if id == FrameId(0) && report.stop == StopReason::Navigation {
+                if scope == top && report.stop == StopReason::Navigation {
                     return;
                 }
-                woke |= self.pump_frames();
+                woke |= self.pump_all();
             }
             if !woke {
                 break;
@@ -881,6 +1184,10 @@ impl Page {
                 .frames
                 .iter()
                 .all(|f| f.report.stop == StopReason::Idle)
+            && self
+                .workers
+                .iter()
+                .all(|w| w.report.stop == StopReason::Idle)
     }
 
     /// The script realm of the current frame.
@@ -931,6 +1238,9 @@ impl Page {
         self.top_virtual_used = 0.0;
         for frame in &mut self.frames {
             frame.virtual_used = 0.0;
+        }
+        for run in &mut self.workers {
+            run.virtual_used = 0.0;
         }
         self.run_frames();
         self.options.limits = saved;

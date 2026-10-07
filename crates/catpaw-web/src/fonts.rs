@@ -242,8 +242,16 @@ pub(crate) fn fonts_of(cx: &mut Cx<'_>, document: NodeId) -> ObjectId {
     id
 }
 
-impl web::FontFaceSourceImpl for Web {
+impl web::FontFaceSourceForNodeImpl for Web {
     fn fonts(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId> {
         Ok(fonts_of(cx, this))
+    }
+}
+
+/// `self.fonts` in a worker: the font set of the scope's own document.
+impl web::FontFaceSourceForWindowImpl for Web {
+    fn fonts(cx: &mut Cx<'_>) -> Fallible<ObjectId> {
+        let document = cx.document();
+        Ok(fonts_of(cx, document))
     }
 }

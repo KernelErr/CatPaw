@@ -1429,6 +1429,12 @@ rt::ret(r, ctx)
             None => w!(out, "    parent: None,"),
         }
         w!(out, "    global: {},", iface.global);
+        w!(
+            out,
+            "    exposed: rt::Exposure {{ window: {}, worker: {} }},",
+            iface.exposed.window,
+            iface.exposed.worker
+        );
         match &iface.constructor {
             Some(o) => w!(
                 out,
@@ -1480,8 +1486,10 @@ rt::ret(r, ctx)
             .collect();
         w!(
             out,
-            "pub static DEF: rt::NamespaceDef = rt::NamespaceDef {{ name: {}, ops: &[{}] }};\n}}\n",
+            "pub static DEF: rt::NamespaceDef = rt::NamespaceDef {{ name: {}, exposed: rt::Exposure {{ window: {}, worker: {} }}, ops: &[{}] }};\n}}\n",
             lit(&ns.name),
+            ns.exposed.window,
+            ns.exposed.worker,
             ops.join(", ")
         );
     }

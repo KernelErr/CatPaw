@@ -108,12 +108,39 @@ pub struct OpDef {
     pub length: usize,
 }
 
+/// A kind of global scope a realm can be.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Realm {
+    /// A document's window.
+    Window,
+    /// A dedicated worker's global scope.
+    Worker,
+}
+
+/// The realms an interface is installed in (`[Exposed]`).
+#[derive(Clone, Copy, Debug)]
+pub struct Exposure {
+    pub window: bool,
+    pub worker: bool,
+}
+
+impl Exposure {
+    pub fn includes(&self, realm: Realm) -> bool {
+        match realm {
+            Realm::Window => self.window,
+            Realm::Worker => self.worker,
+        }
+    }
+}
+
 pub struct InterfaceDef {
     pub id: I,
     pub name: &'static str,
     pub parent: Option<I>,
-    /// The global object implements this interface (`Window`).
+    /// The global object implements this interface (`Window`,
+    /// `DedicatedWorkerGlobalScope`).
     pub global: bool,
+    pub exposed: Exposure,
     pub constructor: Option<NativeFunctionPointer>,
     pub constructor_length: usize,
     pub attrs: &'static [AttrDef],
@@ -127,6 +154,7 @@ pub struct InterfaceDef {
 
 pub struct NamespaceDef {
     pub name: &'static str,
+    pub exposed: Exposure,
     pub ops: &'static [OpDef],
 }
 
@@ -2075,18 +2103,21 @@ fn install_interface(
         hidden_descriptor(constructor.clone()),
     );
     if def.global {
-        // The named properties object sits between Window.prototype and
-        // EventTarget.prototype: the ids and names of the document's
-        // elements, reachable as globals (HTML, "named access on the
-        // Window object"), without shadowing anything the window has.
-        let target = JsObject::with_null_proto();
-        target.set_prototype(proto.prototype());
-        let named = JsProxy::builder(target)
-            .get(named_window_get)
-            .has(named_window_has)
-            .get_own_property_descriptor(named_window_descriptor)
-            .build(ctx)?;
-        proto.set_prototype(Some(named.into()));
+        if def.id == I::Window {
+            // The named properties object sits between Window.prototype
+            // and EventTarget.prototype: the ids and names of the
+            // document's elements, reachable as globals (HTML, "named
+            // access on the Window object"), without shadowing anything
+            // the window has.
+            let target = JsObject::with_null_proto();
+            target.set_prototype(proto.prototype());
+            let named = JsProxy::builder(target)
+                .get(named_window_get)
+                .has(named_window_has)
+                .get_own_property_descriptor(named_window_descriptor)
+                .build(ctx)?;
+            proto.set_prototype(Some(named.into()));
+        }
         global.set_prototype(Some(proto.clone()));
     }
     rt.protos.borrow_mut()[def.id as usize] = Some(proto);
@@ -2112,8 +2143,9 @@ fn install_namespace(ctx: &mut Context, def: &'static NamespaceDef) {
         .insert_property(JsString::from(def.name), hidden_descriptor(namespace));
 }
 
-/// Installs every interface and namespace into the context's realm.
-pub(crate) fn install(ctx: &mut Context, rt: &Runtime) -> JsResult<()> {
+/// Installs the interfaces and namespaces exposed in `realm` into the
+/// context's global.
+pub(crate) fn install(ctx: &mut Context, rt: &Runtime, realm: Realm) -> JsResult<()> {
     let weak_ref = ctx.intrinsics().constructors().weak_ref();
     let (weak_constructor, weak_prototype) = (weak_ref.constructor(), weak_ref.prototype());
     if let Some(deref) = weak_prototype.get(js_string!("deref"), ctx)?.as_object() {
@@ -2122,10 +2154,14 @@ pub(crate) fn install(ctx: &mut Context, rt: &Runtime) -> JsResult<()> {
 
     let mut constructors: Vec<Option<JsObject>> = vec![None; I::COUNT];
     for def in crate::generated::INTERFACES {
-        install_interface(ctx, rt, def, &mut constructors)?;
+        if def.exposed.includes(realm) {
+            install_interface(ctx, rt, def, &mut constructors)?;
+        }
     }
     for def in crate::generated::NAMESPACES {
-        install_namespace(ctx, def);
+        if def.exposed.includes(realm) {
+            install_namespace(ctx, def);
+        }
     }
     // Members whose glue is written by hand.
     if let Some(crypto) = rt.proto(I::Crypto) {

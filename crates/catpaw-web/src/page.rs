@@ -277,6 +277,8 @@ pub struct PageState {
     pub(crate) input: crate::input::InputState,
     /// The page's place in the frame tree and its child frames.
     pub frames: crate::frames::FrameState,
+    /// The page's dedicated workers, or its role as one.
+    pub workers: crate::workers::WorkerState,
     pub(crate) attrs: crate::attributes::AttrObjects,
     pub(crate) timeline: crate::performance::Timeline,
     pub(crate) traversers: crate::traversal::Traversers,
@@ -289,7 +291,9 @@ pub struct PageState {
     /// The document's named properties (`document.myForm`).
     pub(crate) document_names: crate::document::DocumentNames,
     /// The `blob:` URLs the page made.
-    pub blob_urls: RefCell<crate::file_api::BlobUrls>,
+    /// The object URLs (`blob:`) of the page's origin: shared with its
+    /// workers and same-origin frames, as one store per origin.
+    pub blob_urls: Rc<RefCell<crate::file_api::BlobUrls>>,
     pub(crate) reactions: crate::promises::Reactions,
     /// When the document's loading reached its milestones.
     pub timing: crate::navigation_timing::DocumentTiming,
@@ -360,6 +364,7 @@ impl PageState {
             layouts: Default::default(),
             input: Default::default(),
             frames: Default::default(),
+            workers: Default::default(),
             attrs: Default::default(),
             timeline: Default::default(),
             traversers: Default::default(),

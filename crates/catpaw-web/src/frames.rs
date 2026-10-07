@@ -315,6 +315,34 @@ pub fn origin_allows(target_origin: &str, origin: &str) -> bool {
 
 // --------------------------------------------------------------- messages
 
+/// Dispatches a trusted `message` event at `target`, `data` parsed in
+/// this realm.
+pub(crate) fn dispatch_message(
+    cx: &mut Cx<'_>,
+    target: EventTargetRef,
+    data: MessageData,
+    origin: String,
+    source: Option<WindowRef>,
+) {
+    let data = match data {
+        MessageData::Value(v) => v,
+        MessageData::Json(text) => cx.script.parse_json(&text).unwrap_or(Value::Undefined),
+    };
+    let mut event = Event::new("message", false, false, cx.page.clock.peek());
+    event.iface = InterfaceId::MessageEvent;
+    event.trusted = true;
+    event.data = EventData::Message {
+        data,
+        origin,
+        last_event_id: String::new(),
+        source,
+    };
+    let event = cx.page.alloc(event);
+    cx.pin(event);
+    events::dispatch(cx, target, event);
+    cx.unpin(event);
+}
+
 /// Queues a `message` event on the window: `data` from a frame at
 /// `origin`, `source` being that frame's window as this page sees it.
 pub fn deliver_message(
@@ -324,29 +352,13 @@ pub fn deliver_message(
     source: Option<FrameId>,
 ) {
     event_loop::queue_task(page, "message", move |cx| {
-        let data = match data {
-            MessageData::Value(v) => v,
-            MessageData::Json(text) => cx.script.parse_json(&text).unwrap_or(Value::Undefined),
-        };
         let source = source.map(|frame| window_of(cx, frame));
-        let mut event = Event::new("message", false, false, cx.page.clock.peek());
-        event.iface = InterfaceId::MessageEvent;
-        event.trusted = true;
-        event.data = EventData::Message {
-            data,
-            origin,
-            last_event_id: String::new(),
-            source,
-        };
-        let event = cx.page.alloc(event);
-        cx.pin(event);
-        events::dispatch(cx, EventTargetRef::Window, event);
-        cx.unpin(event);
+        dispatch_message(cx, EventTargetRef::Window, data, origin, source);
     });
 }
 
 /// `data` as it crosses to another realm.
-fn portable(cx: &mut Cx<'_>, data: &Value) -> Fallible<MessageData> {
+pub(crate) fn portable(cx: &mut Cx<'_>, data: &Value) -> Fallible<MessageData> {
     Ok(match data {
         Value::Undefined | Value::Null | Value::Bool(_) | Value::Number(_) | Value::String(_) => {
             MessageData::Value(data.clone())
