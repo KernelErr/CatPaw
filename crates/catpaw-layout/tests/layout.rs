@@ -357,3 +357,64 @@ fn atomic_boxes_inside_inline_elements_get_boxes() {
         "{i:?} after {r:?}"
     );
 }
+
+#[test]
+fn lines_flow_around_floats() {
+    let page = layout(
+        r#"<div style="width:400px;font:16px sans-serif"><div id=f style="float:left;width:100px;height:20px"></div><p id=p style="margin:0">one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen</p></div>"#,
+        "",
+    );
+    let f = page.rect("f");
+    let p = page.rect("p");
+    let first_line = page.rects("p");
+    assert_rect!(f, 8.0, 8.0, 100.0, 20.0);
+    // The paragraph's box starts at the top beside the float, its text
+    // starts after the float.
+    assert!(close(p.x, 8.0) && close(p.y, 8.0), "{p:?}");
+    let text_node = {
+        let p = page.find("p");
+        page.dom.children(p).next().unwrap()
+    };
+    let lines = page.tree.node_rects(&page.dom, text_node);
+    assert!(lines.len() >= 3, "{lines:?}");
+    assert!(
+        close(lines[0].x, 108.0),
+        "first line beside the float: {:?}",
+        lines[0]
+    );
+    assert!(lines[0].width <= 300.5, "{:?}", lines[0]);
+    let below: Vec<_> = lines.iter().filter(|l| l.y >= 28.0).collect();
+    assert!(
+        !below.is_empty() && below.iter().all(|l| close(l.x, 8.0)),
+        "{lines:?}"
+    );
+    let _ = first_line;
+}
+
+#[test]
+fn content_drops_below_floats_that_fill_the_width() {
+    let page = layout(
+        r#"<div style="width:400px"><div id=a style="float:left;width:50%;height:30px"></div><div id=b style="float:left;width:50%;height:30px"></div><button id=go style="display:inline-block;width:60px;height:20px"></button></div>"#,
+        "",
+    );
+    assert_rect!(page.rect("a"), 8.0, 8.0, 200.0, 30.0);
+    assert_rect!(page.rect("b"), 208.0, 8.0, 200.0, 30.0);
+    let go = page.rect("go");
+    assert!(close(go.x, 8.0) && go.y >= 38.0, "{go:?}");
+}
+
+#[test]
+fn a_clearfix_after_gives_a_row_its_floats_height() {
+    let page = layout(
+        r#"<div id=row><div id=col style="float:left;width:50px;height:30px"></div></div><div id=next style="height:10px"></div>"#,
+        "#row::after { content: \"\"; display: table; clear: both; }",
+    );
+    assert_rect!(page.rect("row"), 8.0, 8.0, 784.0, 30.0);
+    assert_rect!(page.rect("next"), 8.0, 38.0, 784.0, 10.0);
+    let plain = layout(
+        r#"<div id=row><div style="float:left;width:50px;height:30px"></div></div><div id=next style="height:10px"></div>"#,
+        "",
+    );
+    assert_rect!(plain.rect("row"), 8.0, 8.0, 784.0, 0.0);
+    assert_rect!(plain.rect("next"), 8.0, 8.0, 784.0, 10.0);
+}

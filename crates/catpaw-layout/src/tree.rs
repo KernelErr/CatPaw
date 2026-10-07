@@ -64,7 +64,9 @@ impl LayoutTree {
             BoxKind::Block => compute_block_layout(self, id, inputs, block_ctx),
             BoxKind::Flex => compute_flexbox_layout(self, id, inputs),
             BoxKind::Grid => compute_grid_layout(self, id, inputs),
-            BoxKind::InlineRoot => self.compute_inline_layout(BoxId::from_taffy(id), inputs),
+            BoxKind::InlineRoot => {
+                self.compute_inline_layout(BoxId::from_taffy(id), inputs, block_ctx)
+            }
             BoxKind::Replaced => {
                 let intrinsic = self.boxes[BoxId::from_taffy(id)].intrinsic;
                 let style = self.style_of(id);
@@ -104,7 +106,12 @@ impl LayoutTree {
 
     /// Lays out an inline root: shapes its text against the width it gets,
     /// places its atomic boxes where Parley put them.
-    fn compute_inline_layout(&mut self, id: BoxId, inputs: LayoutInput) -> LayoutOutput {
+    fn compute_inline_layout(
+        &mut self,
+        id: BoxId,
+        inputs: LayoutInput,
+        block_ctx: Option<&mut BlockContext<'_>>,
+    ) -> LayoutOutput {
         let (padding, border, box_sizing, size, min_size, max_size, aspect_ratio) = {
             let style = self.style_of(id.to_taffy());
             let parent_width = inputs.parent_size.width;
@@ -219,7 +226,34 @@ impl LayoutTree {
             })
             .max(0.0);
 
-        context.layout.break_all_lines(Some(width));
+        // Lines are broken against the floats of the block formatting
+        // context, when there is one to ask; a scroll container starts
+        // its own.
+        let is_scroll_container = {
+            let style = self.style_of(id.to_taffy());
+            let overflow = style.overflow();
+            overflow.x.is_scroll_container() || overflow.y.is_scroll_container()
+        };
+        fn break_in(
+            outer: &mut BlockContext<'_>,
+            layout: &mut parley::Layout<catpaw_text::Brush>,
+            pb: taffy::Rect<f32>,
+            width: f32,
+        ) -> f32 {
+            if outer.is_bfc_root() {
+                outer.set_width(width + pb.left + pb.right);
+            }
+            let ctx = outer.sub_context(pb.top, [pb.left, pb.right]);
+            break_lines_around_floats(layout, &ctx, width)
+        }
+        context.height = match block_ctx {
+            Some(ctx) if !is_scroll_container => break_in(ctx, &mut context.layout, pb, width),
+            _ => {
+                let mut own = taffy::BlockFormattingContext::new();
+                let mut root = own.root_block_context();
+                break_in(&mut root, &mut context.layout, pb, width)
+            }
+        };
         let (alignment, last_line) = {
             let style = &self.boxes[id].style;
             (
@@ -235,11 +269,7 @@ impl LayoutTree {
         );
         let _ = last_line;
         let has_content = !context.text.is_empty() || !atomic.is_empty();
-        let content_height = if has_content {
-            context.layout.height()
-        } else {
-            0.0
-        };
+        let content_height = if has_content { context.height } else { 0.0 };
         let measured = Size {
             width: width + pb_sum.width,
             height: content_height + pb_sum.height,
@@ -445,6 +475,77 @@ impl LayoutTree {
             margin,
         );
     }
+}
+
+/// Breaks the lines of an inline layout so that each takes the band free
+/// of floats at its height: the band's start and width come from the
+/// block context, and a band too narrow to hold anything is passed over
+/// for the next one down. Returns the bottom of the lowest line.
+fn break_lines_around_floats(
+    layout: &mut parley::Layout<catpaw_text::Brush>,
+    ctx: &BlockContext<'_>,
+    width: f32,
+) -> f32 {
+    // A band the floats leave no room in is passed over for the space
+    // below all of them.
+    let usable = |ctx: &BlockContext<'_>, slot: taffy::ContentSlot| {
+        if slot.segment_id.is_some() && slot.width < 1.0 {
+            ctx.find_content_slot(slot.y, taffy::Clear::Both, None)
+        } else {
+            slot
+        }
+    };
+    let mut breaker = layout.break_lines();
+    let first = usable(ctx, ctx.find_content_slot(0.0, taffy::Clear::None, None));
+    let mut beside_floats = first.segment_id.is_some();
+    {
+        let state = breaker.state_mut();
+        state.set_layout_max_advance(width);
+        state.set_line_max_advance(first.width.max(0.0));
+        state.set_line_x(first.x);
+        state.set_line_y(f64::from(first.y));
+    }
+    // The bottom of each line, for the height; a trailing empty line (from
+    // a final forced break) does not count, as Parley has it.
+    let mut bottoms: Vec<f32> = Vec::new();
+    while let Some(yielded) = breaker.break_next() {
+        match yielded {
+            parley::layout::YieldData::LineBreak(data) => {
+                bottoms.push(data.line_y_end as f32);
+                let state = breaker.state_mut();
+                if beside_floats {
+                    let min_y = state.line_y() as f32;
+                    let next = usable(ctx, ctx.find_content_slot(min_y, taffy::Clear::None, None));
+                    beside_floats = next.segment_id.is_some();
+                    state.set_line_max_advance(next.width.max(0.0));
+                    state.set_line_x(next.x);
+                    state.set_line_y(f64::from(next.y));
+                } else {
+                    state.set_line_x(0.0);
+                    state.set_line_max_advance(width);
+                }
+            }
+            parley::layout::YieldData::MaxHeightExceeded(_) => {}
+            parley::layout::YieldData::InlineBoxBreak(data) => {
+                // No floated inline boxes are made yet; one would sit on
+                // the line as an in-flow box.
+                let state = breaker.state_mut();
+                state.append_inline_box_to_line(data.advance, f32::NEG_INFINITY);
+            }
+        }
+    }
+    breaker.finish();
+    let last_is_empty = layout
+        .lines()
+        .last()
+        .is_some_and(|line| line.text_range().is_empty() && line.items().next().is_none());
+    if last_is_empty && layout.len() >= 2 {
+        bottoms.pop();
+    }
+    bottoms
+        .into_iter()
+        .fold(0.0_f32, f32::max)
+        .max(layout.height().min(0.0))
 }
 
 fn text_align(align: style::values::computed::TextAlign) -> parley::Alignment {

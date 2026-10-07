@@ -244,6 +244,9 @@ fn loaded(cx: &mut Cx<'_>, el: NodeId, url: &Url, outcome: NetResult) {
         }
     }
     page.styles.version.set(None);
+    // A sheet arriving changes the styles as a CSSOM edit would: layout
+    // and the observers keyed on the edit count follow.
+    page.styles.edits.set(page.styles.edits.get() + 1);
     if cx.dom().contains(el) {
         let type_ = if ok { "load" } else { "error" };
         events::fire(cx, EventTargetRef::Node(el), type_, false, false);

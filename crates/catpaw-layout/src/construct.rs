@@ -145,16 +145,70 @@ impl Builder<'_> {
             return;
         }
         let mut items = Vec::new();
-        if let Some(text) = self.pseudo_text(el, Pseudo::Before) {
-            items.push(FlowItem::Inline(InlineItem::Pseudo(text)));
-        }
+        self.collect_pseudo(container, el, Pseudo::Before, &mut items);
         for child in self.dom.rendered_children(el) {
             self.collect(container, child, &mut items);
         }
-        if let Some(text) = self.pseudo_text(el, Pseudo::After) {
-            items.push(FlowItem::Inline(InlineItem::Pseudo(text)));
-        }
+        self.collect_pseudo(container, el, Pseudo::After, &mut items);
         self.attach(container, items);
+    }
+
+    /// A `::before` or `::after` with content: block-level ones (the
+    /// clearfix `::after { display: table; clear: both }` above all) get
+    /// a box of their own holding their text; inline ones join the line.
+    fn collect_pseudo(
+        &mut self,
+        container: BoxId,
+        el: NodeId,
+        pseudo: Pseudo,
+        items: &mut Vec<FlowItem>,
+    ) {
+        let Some(text) = self.pseudo_text(el, pseudo) else {
+            return;
+        };
+        let display = text.style.get_box().display;
+        let block_level = display.outside() == DisplayOutside::Block
+            || text.style.get_box().float.is_floating()
+            || matches!(
+                Self::positioning(&text.style),
+                Positioning::Absolute | Positioning::Fixed
+            );
+        if !block_level {
+            items.push(FlowItem::Inline(InlineItem::Pseudo(text)));
+            return;
+        }
+        let positioning = Self::positioning(&text.style);
+        let id = self.tree.boxes.insert(LayoutBox {
+            node: None,
+            kind: self.kind_for(None, display),
+            style: text.style.clone(),
+            positioning,
+            children: Vec::new(),
+            parent: Some(container),
+            layout: taffy::Layout::new(),
+            cache: taffy::Cache::new(),
+            inline: None,
+            intrinsic: Intrinsic::default(),
+            origin: (0.0, 0.0),
+        });
+        let has_text = !text.text.trim().is_empty();
+        if has_text {
+            self.make_inline_root(id, vec![InlineItem::Pseudo(text)]);
+        }
+        if matches!(positioning, Positioning::Absolute | Positioning::Fixed) {
+            match self.containing_block(el, positioning) {
+                Some(cb) => {
+                    self.tree.boxes[id].parent = Some(cb);
+                    self.tree.boxes[cb].children.push(id);
+                }
+                None => {
+                    self.tree.boxes[id].parent = self.tree.root;
+                    self.tree.oof_root.push(id);
+                }
+            }
+            return;
+        }
+        items.push(FlowItem::Block(id));
     }
 
     /// The text a `::before` or `::after` adds, if its `content` is text.

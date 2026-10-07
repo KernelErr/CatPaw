@@ -205,7 +205,7 @@ impl LayoutTree {
         let mut bottom = client.height;
         if let Some(context) = &b.inline {
             right = right.max(context.layout.full_width() + inset.right);
-            bottom = bottom.max(context.layout.height() + inset.bottom);
+            bottom = bottom.max(context.height + inset.bottom);
         }
         for child in &b.children {
             let c = &self.boxes[*child];

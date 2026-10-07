@@ -48,6 +48,10 @@ pub(crate) struct InlineContext {
     pub text: String,
     /// The atomic boxes, in the order Parley knows them.
     pub boxes: Vec<BoxId>,
+    /// From the top of the content box to the bottom of the lowest line,
+    /// once the lines are broken (lines beside floats sit lower than
+    /// Parley's own height, a sum of line heights, says).
+    pub height: f32,
 }
 
 /// The brush of a run of text: the node whose text it is.
@@ -110,6 +114,7 @@ impl InlineContext {
             layout,
             text,
             boxes,
+            height: 0.0,
         }
     }
 }
