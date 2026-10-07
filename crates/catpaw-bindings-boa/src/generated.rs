@@ -2321,6 +2321,41 @@ impl IntoJs for web::ShadowRootInit {
     }
 }
 
+impl FromJs for web::StaticRangeInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "StaticRangeInit")?;
+        Ok(Self {
+            start_container: match rt::dictionary_member(&obj, "startContainer", ctx)? {
+                Some(m) => rt::node_from_js((&m), I::Node, ctx)?,
+                None => return Err(rt::type_error("StaticRangeInit.startContainer is required")),
+            },
+            start_offset: match rt::dictionary_member(&obj, "startOffset", ctx)? {
+                Some(m) => (&m).to_u32(ctx)?,
+                None => return Err(rt::type_error("StaticRangeInit.startOffset is required")),
+            },
+            end_container: match rt::dictionary_member(&obj, "endContainer", ctx)? {
+                Some(m) => rt::node_from_js((&m), I::Node, ctx)?,
+                None => return Err(rt::type_error("StaticRangeInit.endContainer is required")),
+            },
+            end_offset: match rt::dictionary_member(&obj, "endOffset", ctx)? {
+                Some(m) => (&m).to_u32(ctx)?,
+                None => return Err(rt::type_error("StaticRangeInit.endOffset is required")),
+            },
+        })
+    }
+}
+
+impl IntoJs for web::StaticRangeInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "startContainer", self.start_container, ctx)?;
+        rt::set_member(&obj, "startOffset", self.start_offset, ctx)?;
+        rt::set_member(&obj, "endContainer", self.end_container, ctx)?;
+        rt::set_member(&obj, "endOffset", self.end_offset, ctx)?;
+        Ok(obj.into())
+    }
+}
+
 impl FromJs for web::StreamPipeOptions {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let obj = rt::dictionary_object(v, "StreamPipeOptions")?;
@@ -3335,6 +3370,108 @@ pub mod abort_controller {
             func: op_abort,
             length: 0,
         }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod abstract_range {
+    use super::*;
+
+    fn get_start_container(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::AbstractRange, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::AbstractRangeImpl>::start_container(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_start_offset(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::AbstractRange, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::AbstractRangeImpl>::start_offset(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_end_container(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::AbstractRange, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::AbstractRangeImpl>::end_container(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_end_offset(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::AbstractRange, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::AbstractRangeImpl>::end_offset(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_collapsed(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::AbstractRange, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::AbstractRangeImpl>::collapsed(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::AbstractRange,
+        name: "AbstractRange",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "startContainer",
+                getter: get_start_container,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "startOffset",
+                getter: get_start_offset,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "endContainer",
+                getter: get_end_container,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "endOffset",
+                getter: get_end_offset,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "collapsed",
+                getter: get_collapsed,
+                setter: None,
+            },
+        ],
+        ops: &[],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -10831,6 +10968,508 @@ pub mod promise_rejection_event {
     };
 }
 
+pub mod range {
+    use super::*;
+
+    fn get_common_ancestor_container(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::RangeImpl>::common_ancestor_container(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_get_bounding_client_rect(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::RangeImpl>::get_bounding_client_rect(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_set_start(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        rt::require_args(args, 2, "Range.setStart")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let a1 = rt::arg(args, 1).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::RangeImpl>::set_start(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_set_end(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        rt::require_args(args, 2, "Range.setEnd")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let a1 = rt::arg(args, 1).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::RangeImpl>::set_end(cx, this, a0, a1));
+        rt::ret(r, ctx)
+    }
+
+    fn op_set_start_before(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        rt::require_args(args, 1, "Range.setStartBefore")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::RangeImpl>::set_start_before(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_set_start_after(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        rt::require_args(args, 1, "Range.setStartAfter")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::RangeImpl>::set_start_after(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_set_end_before(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        rt::require_args(args, 1, "Range.setEndBefore")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::RangeImpl>::set_end_before(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_set_end_after(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        rt::require_args(args, 1, "Range.setEndAfter")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::RangeImpl>::set_end_after(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_collapse(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        let a0 = if args.len() > 0 && !args[0].is_undefined() {
+            rt::arg(args, 0).to_boolean()
+        } else {
+            false
+        };
+        let r = rt::with_cx(ctx, |cx| <Web as web::RangeImpl>::collapse(cx, this, a0));
+        rt::ret(r, ctx)
+    }
+
+    fn op_select_node(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        rt::require_args(args, 1, "Range.selectNode")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::RangeImpl>::select_node(cx, this, a0));
+        rt::ret(r, ctx)
+    }
+
+    fn op_select_node_contents(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        rt::require_args(args, 1, "Range.selectNodeContents")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::RangeImpl>::select_node_contents(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_compare_boundary_points(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        rt::require_args(args, 2, "Range.compareBoundaryPoints")?;
+        let a0 = rt::arg(args, 0).to_uint16(ctx)?;
+        let a1 = rt::object_from_js(rt::arg(args, 1), I::Range, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::RangeImpl>::compare_boundary_points(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_delete_contents(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_delete_contents_body(this_js, args, ctx))
+    }
+
+    fn op_delete_contents_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::RangeImpl>::delete_contents(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_extract_contents(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_extract_contents_body(this_js, args, ctx))
+    }
+
+    fn op_extract_contents_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::RangeImpl>::extract_contents(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_clone_contents(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_clone_contents_body(this_js, args, ctx))
+    }
+
+    fn op_clone_contents_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::RangeImpl>::clone_contents(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_insert_node(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_insert_node_body(this_js, args, ctx))
+    }
+
+    fn op_insert_node_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        rt::require_args(args, 1, "Range.insertNode")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::RangeImpl>::insert_node(cx, this, a0));
+        rt::ret(r, ctx)
+    }
+
+    fn op_surround_contents(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_surround_contents_body(this_js, args, ctx))
+    }
+
+    fn op_surround_contents_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        rt::require_args(args, 1, "Range.surroundContents")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::RangeImpl>::surround_contents(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_clone_range(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::RangeImpl>::clone_range(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_detach(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::RangeImpl>::detach(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_is_point_in_range(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        rt::require_args(args, 2, "Range.isPointInRange")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let a1 = rt::arg(args, 1).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::RangeImpl>::is_point_in_range(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_compare_point(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        rt::require_args(args, 2, "Range.comparePoint")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let a1 = rt::arg(args, 1).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::RangeImpl>::compare_point(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_intersects_node(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        rt::require_args(args, 1, "Range.intersectsNode")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::RangeImpl>::intersects_node(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_create_contextual_fragment(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| {
+            op_create_contextual_fragment_body(this_js, args, ctx)
+        })
+    }
+
+    fn op_create_contextual_fragment_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        rt::require_args(args, 1, "Range.createContextualFragment")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::RangeImpl>::create_contextual_fragment(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "Range")?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::RangeImpl>::constructor(cx));
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::Range, ctx);
+    }
+
+    fn op_to_string(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::RangeImpl>::stringify(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::Range,
+        name: "Range",
+        parent: Some(I::AbstractRange),
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "commonAncestorContainer",
+            getter: get_common_ancestor_container,
+            setter: None,
+        }],
+        ops: &[
+            rt::OpDef {
+                name: "getBoundingClientRect",
+                func: op_get_bounding_client_rect,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "setStart",
+                func: op_set_start,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "setEnd",
+                func: op_set_end,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "setStartBefore",
+                func: op_set_start_before,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "setStartAfter",
+                func: op_set_start_after,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "setEndBefore",
+                func: op_set_end_before,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "setEndAfter",
+                func: op_set_end_after,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "collapse",
+                func: op_collapse,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "selectNode",
+                func: op_select_node,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "selectNodeContents",
+                func: op_select_node_contents,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "compareBoundaryPoints",
+                func: op_compare_boundary_points,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "deleteContents",
+                func: op_delete_contents,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "extractContents",
+                func: op_extract_contents,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "cloneContents",
+                func: op_clone_contents,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "insertNode",
+                func: op_insert_node,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "surroundContents",
+                func: op_surround_contents,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "cloneRange",
+                func: op_clone_range,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "detach",
+                func: op_detach,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "isPointInRange",
+                func: op_is_point_in_range,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "comparePoint",
+                func: op_compare_point,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "intersectsNode",
+                func: op_intersects_node,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "createContextualFragment",
+                func: op_create_contextual_fragment,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "toString",
+                func: op_to_string,
+                length: 0,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[
+            ("START_TO_START", 0_f64),
+            ("START_TO_END", 1_f64),
+            ("END_TO_END", 2_f64),
+            ("END_TO_START", 3_f64),
+        ],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod readable_stream {
     use super::*;
 
@@ -12368,6 +13007,35 @@ pub mod selection {
                 length: 0,
             },
         ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod static_range {
+    use super::*;
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "StaticRange")?;
+        rt::require_args(args, 1, "StaticRange constructor")?;
+        let a0 = <web::StaticRangeInit as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::StaticRangeImpl>::constructor(cx, a0));
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::StaticRange, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::StaticRange,
+        name: "StaticRange",
+        parent: Some(I::AbstractRange),
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[],
+        ops: &[],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -22737,6 +23405,17 @@ pub mod document {
         rt::ret(r, ctx)
     }
 
+    fn op_create_range(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::DocumentImpl>::create_range(cx, this));
+        rt::ret(r, ctx)
+    }
+
     fn op_create_node_iterator(
         this_js: &JsValue,
         args: &[JsValue],
@@ -23808,6 +24487,11 @@ pub mod document {
                 name: "createEvent",
                 func: op_create_event,
                 length: 1,
+            },
+            rt::OpDef {
+                name: "createRange",
+                func: op_create_range,
+                length: 0,
             },
             rt::OpDef {
                 name: "createNodeIterator",
@@ -48742,6 +49426,7 @@ pub mod ns_console {
 /// Interface definitions, parents before children.
 pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &abort_controller::DEF,
+    &abstract_range::DEF,
     &blob::DEF,
     &css_rule::DEF,
     &css_rule_list::DEF,
@@ -48789,6 +49474,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &pop_state_event::DEF,
     &progress_event::DEF,
     &promise_rejection_event::DEF,
+    &range::DEF,
     &readable_stream::DEF,
     &readable_stream_default_controller::DEF,
     &readable_stream_default_reader::DEF,
@@ -48798,6 +49484,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &svg_animated_string::DEF,
     &screen::DEF,
     &selection::DEF,
+    &static_range::DEF,
     &storage::DEF,
     &style_sheet::DEF,
     &style_sheet_list::DEF,

@@ -73,7 +73,12 @@ pub(crate) fn utf16_len(s: &str) -> u32 {
 }
 
 /// Replaces `count` code units of `data` at `offset` with `replacement`.
-fn replace_utf16(data: &str, offset: u32, count: u32, replacement: &str) -> Fallible<String> {
+pub(crate) fn replace_utf16(
+    data: &str,
+    offset: u32,
+    count: u32,
+    replacement: &str,
+) -> Fallible<String> {
     let units: Vec<u16> = data.encode_utf16().collect();
     let length = units.len() as u32;
     if offset > length {
@@ -89,7 +94,7 @@ fn replace_utf16(data: &str, offset: u32, count: u32, replacement: &str) -> Fall
     Ok(String::from_utf16_lossy(&out))
 }
 
-fn substring_utf16(data: &str, offset: u32, count: u32) -> Fallible<String> {
+pub(crate) fn substring_utf16(data: &str, offset: u32, count: u32) -> Fallible<String> {
     let units: Vec<u16> = data.encode_utf16().collect();
     let length = units.len() as u32;
     if offset > length {
@@ -114,6 +119,20 @@ pub(crate) fn char_data(dom: &Dom, id: NodeId) -> Option<&str> {
 }
 
 pub(crate) fn set_char_data(cx: &Cx<'_>, id: NodeId, value: String) -> Fallible<()> {
+    let old_len = char_data(&cx.dom(), id).map(utf16_len).unwrap_or(0);
+    set_char_data_span(cx, id, value, 0, old_len)
+}
+
+/// Replaces a node's data with `value`, which differs from the old data in
+/// the `count` code units at `offset`: live ranges follow that span.
+pub(crate) fn set_char_data_span(
+    cx: &Cx<'_>,
+    id: NodeId,
+    value: String,
+    offset: u32,
+    count: u32,
+) -> Fallible<()> {
+    let new_len = utf16_len(&value);
     let mut dom = cx.dom_mut();
     let old = match dom.get_mut(id).map(|n| &mut n.kind) {
         Some(NodeKind::Text(s) | NodeKind::Comment(s)) => std::mem::replace(s, value),
@@ -121,6 +140,9 @@ pub(crate) fn set_char_data(cx: &Cx<'_>, id: NodeId, value: String) -> Fallible<
         _ => return Err(stale()),
     };
     drop(dom);
+    let old_len = utf16_len(&old);
+    let data_len = (new_len + count).saturating_sub(old_len);
+    crate::range::data_replaced(cx.page, id, offset, count, data_len);
     crate::mutation_observer::queue_character_data(cx.page, id, &old);
     scripting::character_data_changed(cx, id);
     Ok(())
@@ -303,6 +325,14 @@ pub(crate) fn insert(
         // The node leaves the tree it was in.
         remove(cx, node, false);
     }
+    {
+        let dom = cx.dom();
+        let index = match child {
+            Some(child) => dom.children(parent).position(|c| c == child).unwrap_or(0),
+            None => dom.children(parent).count(),
+        };
+        crate::range::nodes_inserting(cx.page, parent, index as u32, nodes.len() as u32);
+    }
     let previous = {
         let mut dom = cx.dom_mut();
         let previous = match child {
@@ -375,6 +405,8 @@ pub(crate) fn remove(cx: &mut Cx<'_>, node: NodeId, suppress_observers: bool) {
             return;
         };
         let siblings = (dom.prev_sibling(node), dom.next_sibling(node));
+        let index = dom.children(parent).position(|c| c == node).unwrap_or(0) as u32;
+        crate::range::node_removing(cx.page, &dom, node, parent, index);
         dom.detach(node);
         (parent, siblings.0, siblings.1)
     };
@@ -1163,18 +1195,21 @@ impl web::CharacterDataImpl for Web {
 
     fn append_data(cx: &mut Cx<'_>, this: NodeId, data: String) -> Fallible<()> {
         let mut current = data_of(cx, this)?;
+        let at = utf16_len(&current);
         current.push_str(&data);
-        set_char_data(cx, this, current)
+        set_char_data_span(cx, this, current, at, 0)
     }
 
     fn insert_data(cx: &mut Cx<'_>, this: NodeId, offset: u32, data: String) -> Fallible<()> {
         let new = replace_utf16(&data_of(cx, this)?, offset, 0, &data)?;
-        set_char_data(cx, this, new)
+        set_char_data_span(cx, this, new, offset, 0)
     }
 
     fn delete_data(cx: &mut Cx<'_>, this: NodeId, offset: u32, count: u32) -> Fallible<()> {
-        let new = replace_utf16(&data_of(cx, this)?, offset, count, "")?;
-        set_char_data(cx, this, new)
+        let old = data_of(cx, this)?;
+        let count = count.min(utf16_len(&old).saturating_sub(offset));
+        let new = replace_utf16(&old, offset, count, "")?;
+        set_char_data_span(cx, this, new, offset, count)
     }
 
     fn replace_data(
@@ -1184,8 +1219,10 @@ impl web::CharacterDataImpl for Web {
         count: u32,
         data: String,
     ) -> Fallible<()> {
-        let new = replace_utf16(&data_of(cx, this)?, offset, count, &data)?;
-        set_char_data(cx, this, new)
+        let old = data_of(cx, this)?;
+        let count = count.min(utf16_len(&old).saturating_sub(offset));
+        let new = replace_utf16(&old, offset, count, &data)?;
+        set_char_data_span(cx, this, new, offset, count)
     }
 }
 
@@ -1208,7 +1245,23 @@ impl web::TextImpl for Web {
         if let Some((parent, next)) = position {
             insert(cx, new, parent, next, false);
         }
-        set_char_data(cx, this, head)?;
+        let index = position
+            .map(|(parent, _)| {
+                cx.dom()
+                    .children(parent)
+                    .position(|c| c == this)
+                    .unwrap_or(0) as u32
+            })
+            .unwrap_or(0);
+        crate::range::text_split(
+            cx.page,
+            this,
+            new,
+            offset,
+            position.map(|(parent, _)| parent),
+            index,
+        );
+        set_char_data_span(cx, this, head, offset, length - offset)?;
         Ok(new)
     }
 

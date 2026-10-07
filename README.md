@@ -28,7 +28,7 @@ isolated contexts.
 > no-layout forms, and console APIs, on an event loop with virtual time.
 > React, Vue, Svelte, Lit, htmx and Alpine sites run; the Boa engine is
 > vendored with fixes described in `vendor/`. web-platform-tests run in CI
-> against recorded expectations: `dom` 2753 of 4164 subtests pass, `html/dom`
+> against recorded expectations: `dom` 2928 of 4243 subtests pass, `html/dom`
 > 498 of 1066, `fetch/api` 1037 of 2172, `xhr` 330 of 974 (much of the rest
 > needs iframes, layout or WPT's Python handlers). Not there yet: layout,
 > canvas, media, workers, WebAssembly, `Range`, and the members of HTML
@@ -88,7 +88,7 @@ The library crates are published too: `catpaw-net`, `catpaw-fetch`, `catpaw-dom`
 Developer tasks: `cargo xtask tree-construction` runs the html5lib
 tree-construction suite from a pinned, sparse web-platform-tests checkout
 (`tests/wpt.lock`) against `tests/tree-construction-expectations.txt`;
-`cargo xtask wpt --include dom --include html/dom …` runs testharness.js
+`cargo xtask wpt --include dom --include html/dom …` (with `--features wpt`) runs testharness.js
 tests from the same checkout in CatPaw pages, served by an in-process stand-in
 for WPT's server, against `tests/wpt-expectations/<dir>.txt` (the known
 failures; `--update-expectations` rewrites them).

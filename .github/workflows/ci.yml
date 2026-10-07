@@ -38,4 +38,4 @@ jobs:
       - name: web-platform-tests (testharness.js subsets)
         # The engine is the same on every platform; one run of the suites is enough.
         if: runner.os == 'Linux'
-        run: cargo run -p xtask -- wpt --include dom --include html/dom --include fetch/api --include xhr --jobs 4 --kill-after 20
+        run: cargo run -p xtask --features wpt -- wpt --include dom --include html/dom --include fetch/api --include xhr --jobs 4 --kill-after 20

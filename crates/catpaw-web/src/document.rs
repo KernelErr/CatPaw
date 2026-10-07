@@ -145,6 +145,10 @@ impl web::DocumentImpl for Web {
         Ok(Some(crate::selection::selection(cx)))
     }
 
+    fn create_range(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId> {
+        Ok(crate::range::create_range(cx, this))
+    }
+
     /// <https://drafts.csswg.org/cssom-view/#dom-document-scrollingelement>
     fn scrolling_element(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>> {
         let dom = cx.dom();

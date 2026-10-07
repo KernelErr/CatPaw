@@ -1,6 +1,7 @@
 //! `cargo xtask`: developer tasks that need more than a shell one-liner.
 
 mod bindgen;
+#[cfg(feature = "wpt")]
 mod harness;
 mod tree_construction;
 mod wpt;
@@ -23,9 +24,11 @@ enum Cmd {
     /// Regenerate the Web IDL bindings (or verify them with --check).
     Bindgen(bindgen::Args),
     /// Run testharness.js tests from web-platform-tests in CatPaw pages and
-    /// compare the results with tests/wpt-expectations.
+    /// compare the results with tests/wpt-expectations (needs `--features wpt`).
+    #[cfg(feature = "wpt")]
     Wpt(harness::Args),
     /// One web-platform-test in this process (what `wpt` runs per test).
+    #[cfg(feature = "wpt")]
     #[command(hide = true)]
     WptOne(harness::OneArgs),
     /// Fetch the pinned web-platform-tests commit into tests/wpt-src as a sparse,
@@ -41,7 +44,9 @@ fn main() -> Result<()> {
     match Cli::parse().cmd {
         Cmd::TreeConstruction(args) => tree_construction::run(args),
         Cmd::Bindgen(args) => bindgen::run(args),
+        #[cfg(feature = "wpt")]
         Cmd::Wpt(args) => harness::run(args),
+        #[cfg(feature = "wpt")]
         Cmd::WptOne(args) => harness::run_one(args),
         Cmd::WptFetch { dirs } => {
             let root = wpt::workspace_root();

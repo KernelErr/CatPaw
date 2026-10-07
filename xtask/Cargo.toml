@@ -11,8 +11,14 @@ description = "CatPaw developer tasks: test runners, code generation, fixture fe
 anyhow.workspace = true
 clap.workspace = true
 catpaw-dom = { path = "../crates/catpaw-dom" }
-catpaw-bindings-boa = { path = "../crates/catpaw-bindings-boa" }
-catpaw-web = { path = "../crates/catpaw-web" }
-serde_json.workspace = true
-url.workspace = true
+# The web-platform-tests runner needs the engine; the other tasks do not,
+# so `cargo xtask bindgen` builds without it (and can regenerate bindings
+# the engine does not compile without).
+catpaw-bindings-boa = { path = "../crates/catpaw-bindings-boa", optional = true }
+catpaw-web = { path = "../crates/catpaw-web", optional = true }
+serde_json = { workspace = true, optional = true }
+url = { workspace = true, optional = true }
 catpaw-webidl = { path = "../crates/catpaw-webidl" }
+
+[features]
+wpt = ["dep:catpaw-bindings-boa", "dep:catpaw-web", "dep:serde_json", "dep:url"]

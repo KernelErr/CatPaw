@@ -548,7 +548,7 @@ fn dataset_attr(key: &str) -> String {
     out
 }
 
-fn zero_rect(cx: &Cx<'_>) -> ObjectId {
+pub(crate) fn zero_rect(cx: &Cx<'_>) -> ObjectId {
     cx.page.alloc(RectObject {
         iface: InterfaceId::DOMRect,
         x: 0.0,

@@ -44,6 +44,7 @@ mod node;
 pub mod page;
 mod performance;
 pub mod promises;
+mod range;
 pub mod reflect;
 mod resize_observer;
 pub mod scripting;

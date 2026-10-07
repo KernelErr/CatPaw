@@ -23,6 +23,7 @@ use crate::Cx;
 #[repr(u16)]
 pub enum InterfaceId {
     AbortController,
+    AbstractRange,
     Blob,
     CSSRule,
     CSSRuleList,
@@ -70,6 +71,7 @@ pub enum InterfaceId {
     PopStateEvent,
     ProgressEvent,
     PromiseRejectionEvent,
+    Range,
     ReadableStream,
     ReadableStreamDefaultController,
     ReadableStreamDefaultReader,
@@ -79,6 +81,7 @@ pub enum InterfaceId {
     SVGAnimatedString,
     Screen,
     Selection,
+    StaticRange,
     Storage,
     StyleSheet,
     StyleSheetList,
@@ -237,9 +240,10 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 212;
-    pub const ALL: [InterfaceId; 212] = [
+    pub const COUNT: usize = 215;
+    pub const ALL: [InterfaceId; 215] = [
         InterfaceId::AbortController,
+        InterfaceId::AbstractRange,
         InterfaceId::Blob,
         InterfaceId::CSSRule,
         InterfaceId::CSSRuleList,
@@ -287,6 +291,7 @@ impl InterfaceId {
         InterfaceId::PopStateEvent,
         InterfaceId::ProgressEvent,
         InterfaceId::PromiseRejectionEvent,
+        InterfaceId::Range,
         InterfaceId::ReadableStream,
         InterfaceId::ReadableStreamDefaultController,
         InterfaceId::ReadableStreamDefaultReader,
@@ -296,6 +301,7 @@ impl InterfaceId {
         InterfaceId::SVGAnimatedString,
         InterfaceId::Screen,
         InterfaceId::Selection,
+        InterfaceId::StaticRange,
         InterfaceId::Storage,
         InterfaceId::StyleSheet,
         InterfaceId::StyleSheetList,
@@ -456,6 +462,7 @@ impl InterfaceId {
     pub fn name(self) -> &'static str {
         match self {
             InterfaceId::AbortController => "AbortController",
+            InterfaceId::AbstractRange => "AbstractRange",
             InterfaceId::Blob => "Blob",
             InterfaceId::CSSRule => "CSSRule",
             InterfaceId::CSSRuleList => "CSSRuleList",
@@ -503,6 +510,7 @@ impl InterfaceId {
             InterfaceId::PopStateEvent => "PopStateEvent",
             InterfaceId::ProgressEvent => "ProgressEvent",
             InterfaceId::PromiseRejectionEvent => "PromiseRejectionEvent",
+            InterfaceId::Range => "Range",
             InterfaceId::ReadableStream => "ReadableStream",
             InterfaceId::ReadableStreamDefaultController => "ReadableStreamDefaultController",
             InterfaceId::ReadableStreamDefaultReader => "ReadableStreamDefaultReader",
@@ -512,6 +520,7 @@ impl InterfaceId {
             InterfaceId::SVGAnimatedString => "SVGAnimatedString",
             InterfaceId::Screen => "Screen",
             InterfaceId::Selection => "Selection",
+            InterfaceId::StaticRange => "StaticRange",
             InterfaceId::Storage => "Storage",
             InterfaceId::StyleSheet => "StyleSheet",
             InterfaceId::StyleSheetList => "StyleSheetList",
@@ -673,6 +682,7 @@ impl InterfaceId {
     pub fn from_name(name: &str) -> Option<InterfaceId> {
         Some(match name {
             "AbortController" => InterfaceId::AbortController,
+            "AbstractRange" => InterfaceId::AbstractRange,
             "Blob" => InterfaceId::Blob,
             "CSSRule" => InterfaceId::CSSRule,
             "CSSRuleList" => InterfaceId::CSSRuleList,
@@ -720,6 +730,7 @@ impl InterfaceId {
             "PopStateEvent" => InterfaceId::PopStateEvent,
             "ProgressEvent" => InterfaceId::ProgressEvent,
             "PromiseRejectionEvent" => InterfaceId::PromiseRejectionEvent,
+            "Range" => InterfaceId::Range,
             "ReadableStream" => InterfaceId::ReadableStream,
             "ReadableStreamDefaultController" => InterfaceId::ReadableStreamDefaultController,
             "ReadableStreamDefaultReader" => InterfaceId::ReadableStreamDefaultReader,
@@ -729,6 +740,7 @@ impl InterfaceId {
             "SVGAnimatedString" => InterfaceId::SVGAnimatedString,
             "Screen" => InterfaceId::Screen,
             "Selection" => InterfaceId::Selection,
+            "StaticRange" => InterfaceId::StaticRange,
             "Storage" => InterfaceId::Storage,
             "StyleSheet" => InterfaceId::StyleSheet,
             "StyleSheetList" => InterfaceId::StyleSheetList,
@@ -891,6 +903,7 @@ impl InterfaceId {
     pub fn parent(self) -> Option<InterfaceId> {
         match self {
             InterfaceId::AbortController => None,
+            InterfaceId::AbstractRange => None,
             InterfaceId::Blob => None,
             InterfaceId::CSSRule => None,
             InterfaceId::CSSRuleList => None,
@@ -938,6 +951,7 @@ impl InterfaceId {
             InterfaceId::PopStateEvent => Some(InterfaceId::Event),
             InterfaceId::ProgressEvent => Some(InterfaceId::Event),
             InterfaceId::PromiseRejectionEvent => Some(InterfaceId::Event),
+            InterfaceId::Range => Some(InterfaceId::AbstractRange),
             InterfaceId::ReadableStream => None,
             InterfaceId::ReadableStreamDefaultController => None,
             InterfaceId::ReadableStreamDefaultReader => None,
@@ -947,6 +961,7 @@ impl InterfaceId {
             InterfaceId::SVGAnimatedString => None,
             InterfaceId::Screen => None,
             InterfaceId::Selection => None,
+            InterfaceId::StaticRange => Some(InterfaceId::AbstractRange),
             InterfaceId::Storage => None,
             InterfaceId::StyleSheet => None,
             InterfaceId::StyleSheetList => None,
@@ -2377,6 +2392,14 @@ pub struct ShadowRootInit {
 }
 
 #[derive(Clone, Debug)]
+pub struct StaticRangeInit {
+    pub start_container: NodeId,
+    pub start_offset: u32,
+    pub end_container: NodeId,
+    pub end_offset: u32,
+}
+
+#[derive(Clone, Debug)]
 pub struct StreamPipeOptions {
     pub prevent_close: bool,
     pub prevent_abort: bool,
@@ -2837,6 +2860,14 @@ pub trait AbortControllerImpl {
     fn signal(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
     fn abort(cx: &mut Cx<'_>, this: ObjectId, reason: Value) -> Fallible<()>;
     fn constructor(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
+}
+
+pub trait AbstractRangeImpl {
+    fn start_container(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<NodeId>;
+    fn start_offset(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn end_container(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<NodeId>;
+    fn end_offset(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn collapsed(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
 }
 
 pub trait BlobImpl {
@@ -3590,6 +3621,48 @@ pub trait PromiseRejectionEventImpl {
     ) -> Fallible<ObjectId>;
 }
 
+pub trait RangeImpl {
+    fn get_bounding_client_rect(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn common_ancestor_container(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<NodeId>;
+    fn set_start(cx: &mut Cx<'_>, this: ObjectId, node: NodeId, offset: u32) -> Fallible<()>;
+    fn set_end(cx: &mut Cx<'_>, this: ObjectId, node: NodeId, offset: u32) -> Fallible<()>;
+    fn set_start_before(cx: &mut Cx<'_>, this: ObjectId, node: NodeId) -> Fallible<()>;
+    fn set_start_after(cx: &mut Cx<'_>, this: ObjectId, node: NodeId) -> Fallible<()>;
+    fn set_end_before(cx: &mut Cx<'_>, this: ObjectId, node: NodeId) -> Fallible<()>;
+    fn set_end_after(cx: &mut Cx<'_>, this: ObjectId, node: NodeId) -> Fallible<()>;
+    fn collapse(cx: &mut Cx<'_>, this: ObjectId, to_start: bool) -> Fallible<()>;
+    fn select_node(cx: &mut Cx<'_>, this: ObjectId, node: NodeId) -> Fallible<()>;
+    fn select_node_contents(cx: &mut Cx<'_>, this: ObjectId, node: NodeId) -> Fallible<()>;
+    fn compare_boundary_points(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        how: u16,
+        source_range: ObjectId,
+    ) -> Fallible<i16>;
+    fn delete_contents(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn extract_contents(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<NodeId>;
+    fn clone_contents(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<NodeId>;
+    fn insert_node(cx: &mut Cx<'_>, this: ObjectId, node: NodeId) -> Fallible<()>;
+    fn surround_contents(cx: &mut Cx<'_>, this: ObjectId, new_parent: NodeId) -> Fallible<()>;
+    fn clone_range(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn detach(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn is_point_in_range(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        node: NodeId,
+        offset: u32,
+    ) -> Fallible<bool>;
+    fn compare_point(cx: &mut Cx<'_>, this: ObjectId, node: NodeId, offset: u32) -> Fallible<i16>;
+    fn intersects_node(cx: &mut Cx<'_>, this: ObjectId, node: NodeId) -> Fallible<bool>;
+    fn create_contextual_fragment(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        string: String,
+    ) -> Fallible<NodeId>;
+    fn constructor(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
+    fn stringify(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+}
+
 pub trait ReadableStreamImpl {
     fn locked(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
     fn cancel(cx: &mut Cx<'_>, this: ObjectId, reason: Value) -> Fallible<PromiseRef>;
@@ -3745,6 +3818,10 @@ pub trait SelectionImpl {
         allow_partial_containment: bool,
     ) -> Fallible<bool>;
     fn stringify(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+}
+
+pub trait StaticRangeImpl {
+    fn constructor(cx: &mut Cx<'_>, init: StaticRangeInit) -> Fallible<ObjectId>;
 }
 
 pub trait StorageImpl {
@@ -4175,6 +4252,7 @@ pub trait DocumentImpl {
         qualified_name: String,
     ) -> Fallible<ObjectId>;
     fn create_event(cx: &mut Cx<'_>, this: NodeId, interface: String) -> Fallible<ObjectId>;
+    fn create_range(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
     fn create_node_iterator(
         cx: &mut Cx<'_>,
         this: NodeId,

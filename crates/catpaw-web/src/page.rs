@@ -261,6 +261,8 @@ pub struct PageState {
     pub(crate) traversers: crate::traversal::Traversers,
     pub(crate) custom_elements: crate::custom_elements::Registry,
     pub(crate) fonts: crate::fonts::FontSets,
+    /// The live ranges, kept up to date with the tree.
+    pub(crate) ranges: crate::range::Ranges,
     /// The elements the window's named properties refer to.
     pub(crate) named_elements: crate::window::NamedElements,
     /// The `blob:` URLs the page made.
@@ -333,6 +335,7 @@ impl PageState {
             traversers: Default::default(),
             custom_elements: Default::default(),
             fonts: Default::default(),
+            ranges: Default::default(),
             named_elements: Default::default(),
             blob_urls: Default::default(),
             reactions: Default::default(),

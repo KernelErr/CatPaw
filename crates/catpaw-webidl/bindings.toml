@@ -153,7 +153,25 @@ members = [
   "getElementsByName", "currentScript", "defaultView", "hasFocus", "hidden",
   "visibilityState", "write", "writeln", "open", "close", "implementation",
   "createAttribute", "createAttributeNS", "createNodeIterator", "createTreeWalker", "domain",
-  "scrollingElement", "getSelection",
+  "scrollingElement", "getSelection", "createRange",
+]
+
+# Live ranges follow the tree (`range`); there is no layout, so a range's
+# rectangle is empty and getClientRects() is absent.
+[interfaces.AbstractRange]
+members = ["startContainer", "startOffset", "endContainer", "endOffset", "collapsed"]
+
+[interfaces.StaticRange]
+constructor = true
+
+[interfaces.Range]
+constructor = true
+members = [
+  "commonAncestorContainer", "setStart", "setEnd", "setStartBefore", "setStartAfter",
+  "setEndBefore", "setEndAfter", "collapse", "selectNode", "selectNodeContents",
+  "compareBoundaryPoints", "deleteContents", "extractContents", "cloneContents", "insertNode",
+  "surroundContents", "cloneRange", "detach", "isPointInRange", "comparePoint",
+  "intersectsNode", "createContextualFragment", "getBoundingClientRect",
 ]
 
 # XPath 1.0 (`catpaw_dom::xpath`). Node results may be attributes, which are
