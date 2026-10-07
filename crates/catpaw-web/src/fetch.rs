@@ -286,35 +286,59 @@ fn body_is_used(cx: &Cx<'_>, this: ObjectId) -> Fallible<bool> {
     Ok(used || stream.is_some_and(|s| crate::streams::is_disturbed_or_locked(cx, s)))
 }
 
-/// Takes the body of a `Request` or `Response`, marking it used.
-fn consume_body(cx: &Cx<'_>, this: ObjectId) -> Fallible<Vec<u8>> {
+type BodyDone = Box<dyn FnOnce(&mut Cx<'_>, Result<Vec<u8>, Exception>)>;
+
+/// Takes the body of a `Request` or `Response`, marking it used: at once
+/// for bytes, and once it has all arrived for a body made of a stream.
+fn read_body(cx: &mut Cx<'_>, this: ObjectId, done: BodyDone) -> Fallible<()> {
     if body_is_used(cx, this)? {
         return Err(Exception::type_error("The body has already been read"));
     }
     let (bytes, stream) = with_body(cx, this, |body, used, stream| {
-        if body.is_some() {
-            *used = true;
-        }
-        (body.take().unwrap_or_default(), *stream)
+        *used = true;
+        (body.take(), *stream)
     })?;
-    // Reading here reads the stream handed out, as far as it is concerned.
-    if let Some(stream) = stream {
-        crate::streams::mark_disturbed(cx, stream);
+    match (bytes, stream) {
+        (Some(bytes), stream) => {
+            // Reading here reads the stream handed out, as far as it is
+            // concerned.
+            if let Some(stream) = stream {
+                crate::streams::mark_disturbed(cx, stream);
+            }
+            done(cx, Ok(bytes));
+        }
+        (None, Some(stream)) => {
+            crate::streams::read_all(
+                cx,
+                stream,
+                Box::new(move |cx, result| done(cx, result.map_err(Exception::Value))),
+            );
+        }
+        (None, None) => done(cx, Ok(Vec::new())),
     }
-    Ok(bytes)
+    Ok(())
 }
 
 /// A promise for the consumed body, converted by `convert`.
 fn body_promise(
     cx: &mut Cx<'_>,
     this: ObjectId,
-    convert: impl FnOnce(&mut Cx<'_>, Vec<u8>) -> Fallible<Value>,
+    convert: impl FnOnce(&mut Cx<'_>, Vec<u8>) -> Fallible<Value> + 'static,
 ) -> Fallible<PromiseRef> {
     let promise = cx.script.new_promise();
-    let result = consume_body(cx, this).and_then(|bytes| convert(cx, bytes));
-    match result {
-        Ok(value) => cx.script.resolve_promise(&promise, value),
-        Err(e) => cx.script.reject_promise(&promise, e),
+    let settled = promise.clone();
+    let started = read_body(
+        cx,
+        this,
+        Box::new(
+            move |cx, result| match result.and_then(|bytes| convert(cx, bytes)) {
+                Ok(value) => cx.script.resolve_promise(&settled, value),
+                Err(e) => cx.script.reject_promise(&settled, e),
+            },
+        ),
+    );
+    if let Err(e) = started {
+        cx.script.reject_promise(&promise, e);
     }
     Ok(promise)
 }
@@ -540,6 +564,15 @@ fn build_request(
             return Err(Exception::type_error(
                 "Request with GET/HEAD method cannot have body",
             ));
+        }
+        // A stream is read when the request is sent or its body read.
+        if let BodyInit::ReadableStream(stream) = body {
+            if crate::streams::is_disturbed_or_locked(cx, stream) {
+                return Err(Exception::type_error("The stream is disturbed or locked"));
+            }
+            request.body = None;
+            request.body_stream = Some(stream);
+            return Ok(request);
         }
         let (bytes, content_type) = extract_body(cx, body)?;
         request.body = Some(bytes);
@@ -864,11 +897,25 @@ impl web::ResponseImpl for Web {
         body: Option<BodyInit>,
         init: ResponseInit,
     ) -> Fallible<ObjectId> {
+        let stream = match body {
+            Some(BodyInit::ReadableStream(stream)) => {
+                if crate::streams::is_disturbed_or_locked(cx, stream) {
+                    return Err(Exception::type_error("The stream is disturbed or locked"));
+                }
+                Some(stream)
+            }
+            _ => None,
+        };
         let body = match body {
+            Some(BodyInit::ReadableStream(_)) => Some((Vec::new(), None)),
             Some(body) => Some(extract_body(cx, body)?),
             None => None,
         };
-        let response = synthetic_response(cx, body, init)?;
+        let mut response = synthetic_response(cx, body, init)?;
+        if stream.is_some() {
+            response.body = None;
+            response.body_stream = stream;
+        }
         Ok(cx.page.alloc(response))
     }
 }
@@ -922,6 +969,36 @@ impl Web {
         if let Some(reason) = request.signal.and_then(|s| abort::abort_reason(cx.page, s)) {
             return Err(Exception::Value(reason));
         }
+        // A body made of a stream is read in full before the request goes out.
+        if request.body.is_none()
+            && let Some(stream) = request.body_stream
+        {
+            let settled = promise.clone();
+            crate::streams::read_all(
+                cx,
+                stream,
+                Box::new(move |cx, result| {
+                    let mut request = request;
+                    request.body_stream = None;
+                    let outcome = match result {
+                        Ok(bytes) => {
+                            request.body = Some(bytes);
+                            Self::send_built(cx, &settled, request)
+                        }
+                        Err(reason) => Err(Exception::Value(reason)),
+                    };
+                    if let Err(e) = outcome {
+                        cx.script.reject_promise(&settled, e);
+                    }
+                }),
+            );
+            return Ok(());
+        }
+        Self::send_built(cx, promise, request)
+    }
+
+    /// Sends a built request and settles `promise` with the response.
+    fn send_built(cx: &mut Cx<'_>, promise: &PromiseRef, request: RequestObject) -> Fallible<()> {
         let url = request.url.clone();
         let out = Outgoing {
             method: request.method,

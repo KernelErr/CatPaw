@@ -641,6 +641,72 @@ fn acquire_reader(cx: &mut Cx<'_>, stream_id: ObjectId) -> Fallible<ObjectId> {
     Ok(reader_id)
 }
 
+/// What a read to the end gets: the bytes of every chunk, or the reason
+/// the stream errored (or a chunk was not bytes).
+pub(crate) type ReadAllDone = Box<dyn FnOnce(&mut Cx<'_>, Result<Vec<u8>, Value>)>;
+
+/// Reads a stream of `Uint8Array` chunks to its end on Rust's behalf,
+/// through a reader of its own: a body made of a stream is sent, or
+/// read, once it is all there.
+pub(crate) fn read_all(cx: &mut Cx<'_>, stream_id: ObjectId, done: ReadAllDone) {
+    let reader = match acquire_reader(cx, stream_id) {
+        Ok(reader) => reader,
+        Err(e) => {
+            let reason = cx.script.exception_value(&e);
+            done(cx, Err(reason));
+            return;
+        }
+    };
+    read_step(cx, reader, Vec::new(), done);
+}
+
+fn read_step(cx: &mut Cx<'_>, reader: ObjectId, mut collected: Vec<u8>, done: ReadAllDone) {
+    let request = match <Web as web::ReadableStreamDefaultReaderImpl>::read(cx, reader) {
+        Ok(request) => request,
+        Err(e) => {
+            let reason = cx.script.exception_value(&e);
+            done(cx, Err(reason));
+            return;
+        }
+    };
+    // The reader stays, as the specification has it: the stream remains
+    // locked once a body was read through it.
+    crate::promises::when_settled(cx, Value::Promise(request), move |cx, outcome| {
+        let result = match outcome {
+            Ok(result) => result,
+            Err(reason) => {
+                done(cx, Err(reason));
+                return;
+            }
+        };
+        let finished = cx
+            .script
+            .get_property(&result, "done")
+            .map(|v| v.as_bool().unwrap_or(false))
+            .unwrap_or(true);
+        if finished {
+            done(cx, Ok(collected));
+            return;
+        }
+        let value = cx
+            .script
+            .get_property(&result, "value")
+            .unwrap_or(Value::Undefined);
+        match cx.script.buffer_bytes(&value) {
+            Some(bytes) => {
+                collected.extend(bytes);
+                read_step(cx, reader, collected, done);
+            }
+            None => {
+                let reason = cx.script.exception_value(&Exception::type_error(
+                    "The stream's chunks must be Uint8Arrays",
+                ));
+                done(cx, Err(reason));
+            }
+        }
+    });
+}
+
 /// <https://streams.spec.whatwg.org/#abstract-opdef-readablestreamdefaultreaderrelease>
 fn release_reader(cx: &mut Cx<'_>, reader_id: ObjectId) -> Fallible<()> {
     let (stream_id, requests, closed) = reader(cx, reader_id, |r| {

@@ -285,3 +285,29 @@ fn strategy_objects_convert_to_dictionaries() {
         "3 3"
     );
 }
+
+#[test]
+fn bodies_made_of_streams_are_read_to_the_end() {
+    let mut page = load(FIXTURE);
+    assert_eq!(
+        step(
+            &mut page,
+            "var s = new ReadableStream({ start: function (c) { c.enqueue(new TextEncoder().encode('ab')); c.enqueue(new Uint8Array([99])); c.close(); } }); var r = new Response(s, { status: 201 }); log.push(r.body === s, r.bodyUsed); log.push(await r.text(), r.bodyUsed, s.locked); log.push(await r.text().catch(function (e) { return e.name; }));"
+        ),
+        "true / false / abc / true / true / TypeError"
+    );
+    assert_eq!(
+        step(
+            &mut page,
+            "var bad = new ReadableStream({ start: function (c) { c.enqueue('not bytes'); c.close(); } }); log.push(await new Response(bad).arrayBuffer().catch(function (e) { return e.name; })); var errored = new ReadableStream({ start: function (c) { c.error(new RangeError('boom')); } }); log.push(await new Response(errored).text().catch(function (e) { return e.name; })); var t = new ReadableStream(); t.getReader(); log.push(attempt(function () { return new Response(t); }), attempt(function () { return new Request('/x', { method: 'POST', body: new ReadableStream() }).bodyUsed; }), attempt(function () { return new Response(new ReadableStream(), { status: 204 }); }));"
+        ),
+        "TypeError / RangeError / TypeError / false / TypeError"
+    );
+    assert_eq!(
+        step(
+            &mut page,
+            "var req = new Request('/x', { method: 'POST', body: new ReadableStream({ start: function (c) { c.enqueue(new Uint8Array([104, 105])); c.close(); } }) }); log.push(req.body instanceof ReadableStream, await req.text(), req.bodyUsed); var piped = new Response('through').body.pipeThrough(new TransformStream()); log.push(await new Response(piped).text());"
+        ),
+        "true / hi / true / through"
+    );
+}

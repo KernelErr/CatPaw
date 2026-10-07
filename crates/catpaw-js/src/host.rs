@@ -34,6 +34,10 @@ pub trait ScriptHost {
     /// WebIDL `sequence<DOMString>` conversion.
     fn to_string_sequence(&mut self, value: &Value) -> Fallible<Vec<String>>;
 
+    /// The bytes of an `ArrayBuffer` or a view of one; `None` for anything
+    /// else.
+    fn buffer_bytes(&mut self, value: &Value) -> Option<Vec<u8>>;
+
     /// Arranges for the page's settlement handler to be called with
     /// `token` once `value` settles: at once (as a microtask) for a value
     /// that is not a promise, with the value as the fulfillment.

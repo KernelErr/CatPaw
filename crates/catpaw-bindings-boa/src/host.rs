@@ -190,6 +190,11 @@ impl ScriptHost for BoaHost<'_> {
         out
     }
 
+    fn buffer_bytes(&mut self, value: &Value) -> Option<Vec<u8>> {
+        let js = self.js_value(value);
+        rt::buffer_from_js(&js, self.ctx).ok()
+    }
+
     fn as_callback(&mut self, value: &Value) -> Option<Callback> {
         let target = self.js_value(value);
         target.is_callable().then(|| Callback {
