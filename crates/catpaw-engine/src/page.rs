@@ -6,10 +6,12 @@ use std::rc::Rc;
 
 use catpaw_bindings_boa::BoaPage;
 use catpaw_dom::Dom;
-use catpaw_fetch::{FetchedDocument, fetch_document};
+use catpaw_dom::NodeId;
+use catpaw_fetch::{FetchedDocument, fetch_document, fetch_document_with};
 use catpaw_js::Value;
 use catpaw_net::{NetConfig, NetError};
 use catpaw_web::event_loop::{self, LoopLimits, LoopReport, StopReason};
+use catpaw_web::page::NavigationRequest;
 use catpaw_web::{PageConfig, PageState, promises, scripting};
 use url::Url;
 
@@ -114,7 +116,21 @@ pub struct Page {
     document: DocumentInfo,
     /// The documents loaded on the way here, oldest first.
     navigations: Vec<Url>,
+    options: PageOptions,
     report: LoopReport,
+}
+
+/// Why an action could not be carried out.
+#[derive(Debug, thiserror::Error)]
+pub enum ActionError {
+    #[error("no element matches {0:?}")]
+    NotFound(String),
+    #[error("{0:?} is not a valid selector")]
+    BadSelector(String),
+    #[error("{0}")]
+    Input(#[from] catpaw_web::input::InputError),
+    #[error(transparent)]
+    Engine(#[from] EngineError),
 }
 
 fn load(
@@ -153,29 +169,61 @@ impl Page {
     /// see [`with_page`].
     pub fn open(url: &Url, options: &PageOptions) -> Result<Self, EngineError> {
         let net = Rc::new(EngineNet::new(options.net.clone())?);
-        let mut url = url.clone();
-        let mut navigations: Vec<Url> = Vec::new();
-        loop {
-            let fetched = net.block_on(fetch_document(net.client(), &url))?;
-            let info = DocumentInfo::from_fetch(&fetched);
-            let (boa, report) = load(&net, &info, fetched.html(), navigations.last(), options)?;
-            navigations.push(info.url.clone());
+        let fetched = net.block_on(fetch_document(net.client(), url))?;
+        let info = DocumentInfo::from_fetch(&fetched);
+        let (boa, report) = load(&net, &info, fetched.html(), None, options)?;
+        let mut page = Self {
+            boa,
+            net,
+            document: info.clone(),
+            navigations: vec![info.url],
+            options: options.clone(),
+            report,
+        };
+        page.follow_navigations()?;
+        Ok(page)
+    }
 
-            let requested = boa.page().navigation.borrow_mut().take();
-            if let Some(navigation) = requested
-                && !navigation.reload
-                && navigations.len() <= options.max_navigations
-            {
-                url = navigation.url;
-                continue;
+    /// Loads the document a navigation request asks for, in place of the
+    /// current one: the same network (cookies included), a new page.
+    fn navigate(&mut self, request: NavigationRequest) -> Result<(), EngineError> {
+        let referrer = self.url();
+        let fetched = self.net.block_on(fetch_document_with(
+            self.net.client(),
+            &request.method,
+            &request.url,
+            request.body,
+            Some(&referrer),
+        ))?;
+        let info = DocumentInfo::from_fetch(&fetched);
+        let (boa, report) = load(
+            &self.net,
+            &info,
+            fetched.html(),
+            Some(&referrer),
+            &self.options,
+        )?;
+        self.boa = boa;
+        self.report = report;
+        self.navigations.push(info.url.clone());
+        self.document = info;
+        Ok(())
+    }
+
+    /// Follows the navigations the page asks for (links, form submissions,
+    /// `location` assignments), up to the configured number.
+    pub fn follow_navigations(&mut self) -> Result<(), EngineError> {
+        loop {
+            let requested = self.boa.page().navigation.borrow_mut().take();
+            match requested {
+                Some(request)
+                    if !request.reload
+                        && self.navigations.len() <= self.options.max_navigations =>
+                {
+                    self.navigate(request)?;
+                }
+                _ => return Ok(()),
             }
-            return Ok(Self {
-                boa,
-                net,
-                document: info,
-                navigations,
-                report,
-            });
         }
     }
 
@@ -190,6 +238,7 @@ impl Page {
             net,
             document: info,
             navigations: vec![url.clone()],
+            options: options.clone(),
             report,
         })
     }
@@ -268,6 +317,79 @@ impl Page {
     pub fn settle(&mut self, limits: &LoopLimits) -> &LoopReport {
         self.report = self.boa.with_cx(|cx| event_loop::run(cx, limits));
         &self.report
+    }
+
+    /// The first element matching a CSS selector.
+    pub fn find(&self, selector: &str) -> Result<NodeId, ActionError> {
+        let selectors = catpaw_style::Selectors::parse(selector)
+            .ok_or_else(|| ActionError::BadSelector(selector.to_string()))?;
+        let dom = self.dom();
+        catpaw_style::query::query_first(&dom, dom.document(), &selectors)
+            .ok_or_else(|| ActionError::NotFound(selector.to_string()))
+    }
+
+    /// Runs an input action, settles the page and follows any navigation
+    /// it started.
+    fn act(
+        &mut self,
+        action: impl FnOnce(&mut catpaw_web::page::Cx<'_>) -> Result<(), catpaw_web::input::InputError>,
+    ) -> Result<(), ActionError> {
+        self.boa.with_cx(action)?;
+        let limits = self.options.limits.clone();
+        self.settle(&limits);
+        self.follow_navigations()?;
+        Ok(())
+    }
+
+    /// Clicks the first element matching `selector`.
+    pub fn click(&mut self, selector: &str) -> Result<(), ActionError> {
+        let el = self.find(selector)?;
+        self.act(|cx| catpaw_web::input::click_element(cx, el).map(drop))
+    }
+
+    /// Replaces the value of the first element matching `selector`.
+    pub fn fill(&mut self, selector: &str, text: &str) -> Result<(), ActionError> {
+        let el = self.find(selector)?;
+        let text = text.to_string();
+        self.act(move |cx| catpaw_web::input::fill(cx, el, &text))
+    }
+
+    /// Types into the focused element, key by key.
+    pub fn type_text(&mut self, text: &str) -> Result<(), ActionError> {
+        let text = text.to_string();
+        self.act(move |cx| catpaw_web::input::type_text(cx, &text))
+    }
+
+    /// Presses a key on the focused element.
+    pub fn press(&mut self, key: &str) -> Result<(), ActionError> {
+        let key = key.to_string();
+        self.act(move |cx| catpaw_web::input::press(cx, &key))
+    }
+
+    /// Focuses the first element matching `selector`.
+    pub fn focus(&mut self, selector: &str) -> Result<(), ActionError> {
+        let el = self.find(selector)?;
+        self.act(move |cx| catpaw_web::input::focus(cx, el))
+    }
+
+    /// Moves the pointer over the first element matching `selector`.
+    pub fn hover(&mut self, selector: &str) -> Result<(), ActionError> {
+        let el = self.find(selector)?;
+        self.act(move |cx| catpaw_web::input::hover_element(cx, el))
+    }
+
+    /// Checks or unchecks the first element matching `selector`.
+    pub fn set_checked(&mut self, selector: &str, checked: bool) -> Result<(), ActionError> {
+        let el = self.find(selector)?;
+        self.act(move |cx| catpaw_web::input::set_checked(cx, el, checked))
+    }
+
+    /// Selects the option with `value` in the first element matching
+    /// `selector`.
+    pub fn select(&mut self, selector: &str, value: &str) -> Result<(), ActionError> {
+        let el = self.find(selector)?;
+        let value = value.to_string();
+        self.act(move |cx| catpaw_web::input::select_option(cx, el, &value))
     }
 }
 

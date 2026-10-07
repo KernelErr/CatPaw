@@ -9,6 +9,7 @@ pub mod net;
 pub mod page;
 
 pub use catpaw_web::event_loop::{LoopLimits, LoopReport, StopReason};
+pub use catpaw_web::input::InputError;
 pub use catpaw_web::{ConsoleLevel, ConsoleMessage, PageConfig};
 pub use net::{EngineNet, RequestRecord};
-pub use page::{DocumentInfo, EngineError, Page, PageOptions, with_html, with_page};
+pub use page::{ActionError, DocumentInfo, EngineError, Page, PageOptions, with_html, with_page};

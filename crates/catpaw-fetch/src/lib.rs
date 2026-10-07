@@ -33,3 +33,32 @@ pub async fn fetch_document(client: &NetClient, url: &Url) -> Result<FetchedDocu
     let decoded = decode_document(&response.body, charset.as_deref());
     Ok(FetchedDocument { response, decoded })
 }
+
+/// A document request with a method and body (a form submission), the
+/// referrer it comes from, and redirects followed.
+pub async fn fetch_document_with(
+    client: &NetClient,
+    method: &str,
+    url: &Url,
+    body: Option<(String, Vec<u8>)>,
+    referrer: Option<&Url>,
+) -> Result<FetchedDocument, NetError> {
+    use catpaw_net::{HeaderValue, Method};
+    let method = Method::from_bytes(method.as_bytes()).unwrap_or(Method::GET);
+    let mut options = catpaw_net::RequestOptions::default();
+    if let Some((content_type, bytes)) = body {
+        if let Ok(value) = HeaderValue::from_str(&content_type) {
+            options.headers.insert("content-type", value);
+        }
+        options.body = Some(bytes.into());
+    }
+    if let Some(referrer) = referrer
+        && let Ok(value) = HeaderValue::from_str(referrer.as_str())
+    {
+        options.headers.insert("referer", value);
+    }
+    let response = client.request(method, url, options).await?;
+    let charset = response.charset();
+    let decoded = decode_document(&response.body, charset.as_deref());
+    Ok(FetchedDocument { response, decoded })
+}

@@ -44,7 +44,10 @@ pub enum InterfaceId {
     FontFace,
     FontFaceSet,
     FormData,
+    FormDataEvent,
     HTMLCollection,
+    HTMLFormControlsCollection,
+    HTMLOptionsCollection,
     HashChangeEvent,
     Headers,
     History,
@@ -72,6 +75,7 @@ pub enum InterfaceId {
     PopStateEvent,
     ProgressEvent,
     PromiseRejectionEvent,
+    RadioNodeList,
     Range,
     ReadableStream,
     ReadableStreamDefaultController,
@@ -88,6 +92,7 @@ pub enum InterfaceId {
     Storage,
     StyleSheet,
     StyleSheetList,
+    SubmitEvent,
     SubtleCrypto,
     TextDecoder,
     TextEncoder,
@@ -243,8 +248,8 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 218;
-    pub const ALL: [InterfaceId; 218] = [
+    pub const COUNT: usize = 223;
+    pub const ALL: [InterfaceId; 223] = [
         InterfaceId::AbortController,
         InterfaceId::AbstractRange,
         InterfaceId::Blob,
@@ -267,7 +272,10 @@ impl InterfaceId {
         InterfaceId::FontFace,
         InterfaceId::FontFaceSet,
         InterfaceId::FormData,
+        InterfaceId::FormDataEvent,
         InterfaceId::HTMLCollection,
+        InterfaceId::HTMLFormControlsCollection,
+        InterfaceId::HTMLOptionsCollection,
         InterfaceId::HashChangeEvent,
         InterfaceId::Headers,
         InterfaceId::History,
@@ -295,6 +303,7 @@ impl InterfaceId {
         InterfaceId::PopStateEvent,
         InterfaceId::ProgressEvent,
         InterfaceId::PromiseRejectionEvent,
+        InterfaceId::RadioNodeList,
         InterfaceId::Range,
         InterfaceId::ReadableStream,
         InterfaceId::ReadableStreamDefaultController,
@@ -311,6 +320,7 @@ impl InterfaceId {
         InterfaceId::Storage,
         InterfaceId::StyleSheet,
         InterfaceId::StyleSheetList,
+        InterfaceId::SubmitEvent,
         InterfaceId::SubtleCrypto,
         InterfaceId::TextDecoder,
         InterfaceId::TextEncoder,
@@ -489,7 +499,10 @@ impl InterfaceId {
             InterfaceId::FontFace => "FontFace",
             InterfaceId::FontFaceSet => "FontFaceSet",
             InterfaceId::FormData => "FormData",
+            InterfaceId::FormDataEvent => "FormDataEvent",
             InterfaceId::HTMLCollection => "HTMLCollection",
+            InterfaceId::HTMLFormControlsCollection => "HTMLFormControlsCollection",
+            InterfaceId::HTMLOptionsCollection => "HTMLOptionsCollection",
             InterfaceId::HashChangeEvent => "HashChangeEvent",
             InterfaceId::Headers => "Headers",
             InterfaceId::History => "History",
@@ -517,6 +530,7 @@ impl InterfaceId {
             InterfaceId::PopStateEvent => "PopStateEvent",
             InterfaceId::ProgressEvent => "ProgressEvent",
             InterfaceId::PromiseRejectionEvent => "PromiseRejectionEvent",
+            InterfaceId::RadioNodeList => "RadioNodeList",
             InterfaceId::Range => "Range",
             InterfaceId::ReadableStream => "ReadableStream",
             InterfaceId::ReadableStreamDefaultController => "ReadableStreamDefaultController",
@@ -533,6 +547,7 @@ impl InterfaceId {
             InterfaceId::Storage => "Storage",
             InterfaceId::StyleSheet => "StyleSheet",
             InterfaceId::StyleSheetList => "StyleSheetList",
+            InterfaceId::SubmitEvent => "SubmitEvent",
             InterfaceId::SubtleCrypto => "SubtleCrypto",
             InterfaceId::TextDecoder => "TextDecoder",
             InterfaceId::TextEncoder => "TextEncoder",
@@ -712,7 +727,10 @@ impl InterfaceId {
             "FontFace" => InterfaceId::FontFace,
             "FontFaceSet" => InterfaceId::FontFaceSet,
             "FormData" => InterfaceId::FormData,
+            "FormDataEvent" => InterfaceId::FormDataEvent,
             "HTMLCollection" => InterfaceId::HTMLCollection,
+            "HTMLFormControlsCollection" => InterfaceId::HTMLFormControlsCollection,
+            "HTMLOptionsCollection" => InterfaceId::HTMLOptionsCollection,
             "HashChangeEvent" => InterfaceId::HashChangeEvent,
             "Headers" => InterfaceId::Headers,
             "History" => InterfaceId::History,
@@ -740,6 +758,7 @@ impl InterfaceId {
             "PopStateEvent" => InterfaceId::PopStateEvent,
             "ProgressEvent" => InterfaceId::ProgressEvent,
             "PromiseRejectionEvent" => InterfaceId::PromiseRejectionEvent,
+            "RadioNodeList" => InterfaceId::RadioNodeList,
             "Range" => InterfaceId::Range,
             "ReadableStream" => InterfaceId::ReadableStream,
             "ReadableStreamDefaultController" => InterfaceId::ReadableStreamDefaultController,
@@ -756,6 +775,7 @@ impl InterfaceId {
             "Storage" => InterfaceId::Storage,
             "StyleSheet" => InterfaceId::StyleSheet,
             "StyleSheetList" => InterfaceId::StyleSheetList,
+            "SubmitEvent" => InterfaceId::SubmitEvent,
             "SubtleCrypto" => InterfaceId::SubtleCrypto,
             "TextDecoder" => InterfaceId::TextDecoder,
             "TextEncoder" => InterfaceId::TextEncoder,
@@ -936,7 +956,10 @@ impl InterfaceId {
             InterfaceId::FontFace => None,
             InterfaceId::FontFaceSet => Some(InterfaceId::EventTarget),
             InterfaceId::FormData => None,
+            InterfaceId::FormDataEvent => Some(InterfaceId::Event),
             InterfaceId::HTMLCollection => None,
+            InterfaceId::HTMLFormControlsCollection => Some(InterfaceId::HTMLCollection),
+            InterfaceId::HTMLOptionsCollection => Some(InterfaceId::HTMLCollection),
             InterfaceId::HashChangeEvent => Some(InterfaceId::Event),
             InterfaceId::Headers => None,
             InterfaceId::History => None,
@@ -964,6 +987,7 @@ impl InterfaceId {
             InterfaceId::PopStateEvent => Some(InterfaceId::Event),
             InterfaceId::ProgressEvent => Some(InterfaceId::Event),
             InterfaceId::PromiseRejectionEvent => Some(InterfaceId::Event),
+            InterfaceId::RadioNodeList => Some(InterfaceId::NodeList),
             InterfaceId::Range => Some(InterfaceId::AbstractRange),
             InterfaceId::ReadableStream => None,
             InterfaceId::ReadableStreamDefaultController => None,
@@ -980,6 +1004,7 @@ impl InterfaceId {
             InterfaceId::Storage => None,
             InterfaceId::StyleSheet => None,
             InterfaceId::StyleSheetList => None,
+            InterfaceId::SubmitEvent => Some(InterfaceId::Event),
             InterfaceId::SubtleCrypto => None,
             InterfaceId::TextDecoder => None,
             InterfaceId::TextEncoder => None,
@@ -2569,6 +2594,12 @@ pub enum NodeOrString {
 }
 
 #[derive(Clone, Debug)]
+pub enum RadioNodeListOrElement {
+    RadioNodeList(ObjectId),
+    Element(NodeId),
+}
+
+#[derive(Clone, Debug)]
 pub enum ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString {
     ReadableStream(ObjectId),
     Blob(ObjectId),
@@ -3198,12 +3229,30 @@ pub trait FormDataImpl {
     fn iterate(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<(String, FileOrString)>>;
 }
 
+pub trait FormDataEventImpl {
+    fn form_data(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+}
+
 pub trait HTMLCollectionImpl {
     fn length(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
     fn item(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<NodeId>>;
     fn named_item(cx: &mut Cx<'_>, this: ObjectId, name: String) -> Fallible<Option<NodeId>>;
     fn indexed_get(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<NodeId>>;
     fn named_get(cx: &mut Cx<'_>, this: ObjectId, name: &str) -> Fallible<Option<NodeId>>;
+    fn named_properties(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<String>>;
+}
+
+pub trait HTMLFormControlsCollectionImpl {
+    fn named_item(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        name: String,
+    ) -> Fallible<Option<RadioNodeListOrElement>>;
+    fn named_get(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        name: &str,
+    ) -> Fallible<Option<RadioNodeListOrElement>>;
     fn named_properties(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<String>>;
 }
 
@@ -3642,6 +3691,11 @@ pub trait PromiseRejectionEventImpl {
     ) -> Fallible<ObjectId>;
 }
 
+pub trait RadioNodeListImpl {
+    fn value(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_value(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+}
+
 pub trait RangeImpl {
     fn get_client_rects(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
     fn get_bounding_client_rect(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
@@ -3893,6 +3947,10 @@ pub trait StyleSheetListImpl {
     fn item(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<ObjectId>>;
     fn length(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
     fn indexed_get(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<ObjectId>>;
+}
+
+pub trait SubmitEventImpl {
+    fn submitter(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
 }
 
 pub trait SubtleCryptoImpl {
@@ -4564,16 +4622,71 @@ pub trait HTMLElementImpl {
     fn set_outer_text(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
 }
 
+pub trait HTMLFormElementImpl {
+    fn action(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_action(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+    fn enctype(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_enctype(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+    fn encoding(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_encoding(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+    fn method(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_method(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+    fn target(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_target(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+    fn elements(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
+    fn length(cx: &mut Cx<'_>, this: NodeId) -> Fallible<u32>;
+    fn submit(cx: &mut Cx<'_>, this: NodeId) -> Fallible<()>;
+    fn request_submit(cx: &mut Cx<'_>, this: NodeId, submitter: Option<NodeId>) -> Fallible<()>;
+    fn reset(cx: &mut Cx<'_>, this: NodeId) -> Fallible<()>;
+    fn check_validity(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool>;
+    fn report_validity(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool>;
+}
+
 pub trait HTMLInputElementImpl {
     fn checked(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool>;
     fn set_checked(cx: &mut Cx<'_>, this: NodeId, value: bool) -> Fallible<()>;
+    fn form(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
+    fn default_value(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_default_value(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
     fn value(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
     fn set_value(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+    fn select(cx: &mut Cx<'_>, this: NodeId) -> Fallible<()>;
+}
+
+pub trait HTMLLabelElementImpl {
+    fn form(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
+    fn control(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
+}
+
+pub trait HTMLOptionElementImpl {
+    fn form(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
+    fn default_selected(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool>;
+    fn set_default_selected(cx: &mut Cx<'_>, this: NodeId, value: bool) -> Fallible<()>;
+    fn selected(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool>;
+    fn set_selected(cx: &mut Cx<'_>, this: NodeId, value: bool) -> Fallible<()>;
+    fn value(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_value(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+    fn text(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_text(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+    fn index(cx: &mut Cx<'_>, this: NodeId) -> Fallible<i32>;
 }
 
 pub trait HTMLScriptElementImpl {
     fn text(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
     fn set_text(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+}
+
+pub trait HTMLSelectElementImpl {
+    fn form(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
+    fn options(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
+    fn length(cx: &mut Cx<'_>, this: NodeId) -> Fallible<u32>;
+    fn set_length(cx: &mut Cx<'_>, this: NodeId, value: u32) -> Fallible<()>;
+    fn item(cx: &mut Cx<'_>, this: NodeId, index: u32) -> Fallible<Option<NodeId>>;
+    fn selected_options(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
+    fn selected_index(cx: &mut Cx<'_>, this: NodeId) -> Fallible<i32>;
+    fn set_selected_index(cx: &mut Cx<'_>, this: NodeId, value: i32) -> Fallible<()>;
+    fn value(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_value(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
 }
 
 pub trait HTMLSlotElementImpl {
@@ -4594,8 +4707,12 @@ pub trait HTMLTemplateElementImpl {
 }
 
 pub trait HTMLTextAreaElementImpl {
+    fn form(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
+    fn default_value(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_default_value(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
     fn value(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
     fn set_value(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+    fn select(cx: &mut Cx<'_>, this: NodeId) -> Fallible<()>;
 }
 
 pub trait HTMLTitleElementImpl {
@@ -4784,6 +4901,10 @@ pub trait XMLHttpRequestImpl {
 pub trait HTMLAnchorElementImpl {
     fn text(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
     fn set_text(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+}
+
+pub trait HTMLButtonElementImpl {
+    fn form(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
 }
 
 pub trait HTMLCanvasElementImpl {

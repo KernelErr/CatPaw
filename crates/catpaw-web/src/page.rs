@@ -143,6 +143,10 @@ pub struct NavigationRequest {
     pub url: Url,
     pub replace: bool,
     pub reload: bool,
+    /// `GET`, or `POST` for a form submission.
+    pub method: String,
+    /// A request body with its content type (form submissions).
+    pub body: Option<(String, Vec<u8>)>,
 }
 
 /// A dialog (`alert`, `confirm`, `prompt`) the page opened. Dialogs never
@@ -270,6 +274,7 @@ pub struct PageState {
     pub(crate) resize: crate::resize_observer::Observers,
     pub(crate) styles: crate::stylesheets::Styles,
     pub(crate) layouts: crate::layout::Layouts,
+    pub(crate) input: crate::input::InputState,
     pub(crate) attrs: crate::attributes::AttrObjects,
     pub(crate) timeline: crate::performance::Timeline,
     pub(crate) traversers: crate::traversal::Traversers,
@@ -299,6 +304,8 @@ pub struct PageState {
 pub struct FormControlState {
     pub value: Option<String>,
     pub checked: Option<bool>,
+    /// An option's selectedness, once script or the user set it.
+    pub selected: Option<bool>,
 }
 
 #[derive(Default, Debug)]
@@ -349,6 +356,7 @@ impl PageState {
             resize: Default::default(),
             styles: Default::default(),
             layouts: Default::default(),
+            input: Default::default(),
             attrs: Default::default(),
             timeline: Default::default(),
             traversers: Default::default(),

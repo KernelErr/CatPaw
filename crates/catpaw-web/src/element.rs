@@ -419,7 +419,7 @@ pub(crate) fn child_text_content(dom: &Dom, node: NodeId) -> String {
 
 // ---- focus ----------------------------------------------------------------
 
-fn is_focusable(dom: &Dom, el: NodeId) -> bool {
+pub(crate) fn is_focusable(dom: &Dom, el: NodeId) -> bool {
     let Some(data) = dom.element(el) else {
         return false;
     };
@@ -442,7 +442,7 @@ fn is_focusable(dom: &Dom, el: NodeId) -> bool {
     }
 }
 
-fn move_focus(cx: &mut Cx<'_>, to: Option<NodeId>) {
+pub(crate) fn move_focus(cx: &mut Cx<'_>, to: Option<NodeId>) {
     let from = cx.page.document_state.borrow().focused;
     if from == to {
         return;
@@ -1603,6 +1603,28 @@ pub(crate) fn set_checked(cx: &Cx<'_>, el: NodeId, value: bool) {
 }
 
 impl web::HTMLInputElementImpl for Web {
+    fn form(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>> {
+        node::check(cx, this)?;
+        Ok(crate::forms::form_owner(&cx.dom(), this))
+    }
+
+    fn default_value(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {
+        node::check(cx, this)?;
+        Ok(get_attr(cx, this, "value").unwrap_or_default())
+    }
+
+    fn set_default_value(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()> {
+        node::check(cx, this)?;
+        set_attr(cx, this, "value", value)
+    }
+
+    fn select(cx: &mut Cx<'_>, this: NodeId) -> Fallible<()> {
+        node::check(cx, this)?;
+        // Selection within a text control is not modelled yet; selecting
+        // it all is what typing into a focused control assumes anyway.
+        Ok(())
+    }
+
     fn checked(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool> {
         node::check(cx, this)?;
         Ok(is_checked(cx, this))
@@ -1660,6 +1682,26 @@ impl web::HTMLInputElementImpl for Web {
 }
 
 impl web::HTMLTextAreaElementImpl for Web {
+    fn form(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>> {
+        node::check(cx, this)?;
+        Ok(crate::forms::form_owner(&cx.dom(), this))
+    }
+
+    fn default_value(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {
+        node::check(cx, this)?;
+        Ok(child_text_content(&cx.dom(), this))
+    }
+
+    fn set_default_value(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()> {
+        node::check(cx, this)?;
+        <Web as web::NodeImpl>::set_text_content(cx, this, Some(value))
+    }
+
+    fn select(cx: &mut Cx<'_>, this: NodeId) -> Fallible<()> {
+        node::check(cx, this)?;
+        Ok(())
+    }
+
     fn value(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {
         node::check(cx, this)?;
         let dirty = cx

@@ -342,3 +342,18 @@ fn line_boxes_take_the_tallest_run() {
     let rect = page.rect("p");
     assert!(close(rect.height, 2.0 * 25.6), "{rect:?}");
 }
+
+#[test]
+fn atomic_boxes_inside_inline_elements_get_boxes() {
+    let page = layout(
+        r#"<p style="font:16px sans-serif"><label>pick <input id=r type=radio> me</label> <a href=#><img id=i width=20 height=10></a></p>"#,
+        "",
+    );
+    let r = page.rect("r");
+    assert!(close(r.width, 13.0) && close(r.height, 13.0), "{r:?}");
+    let i = page.rect("i");
+    assert!(
+        close(i.width, 20.0) && close(i.height, 10.0) && i.x > r.right(),
+        "{i:?} after {r:?}"
+    );
+}

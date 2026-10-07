@@ -31,6 +31,7 @@ struct Cli {
 }
 
 #[derive(Subcommand)]
+#[allow(clippy::large_enum_variant)]
 enum Cmd {
     /// Fetch a page and print what an agent would see.
     Fetch(FetchArgs),
@@ -117,6 +118,12 @@ struct FetchArgs {
     /// its result (awaiting a promise) instead of a view of the page.
     #[arg(long, requires = "js")]
     eval: Option<String>,
+    /// With --js: an action to take once the page has settled, before the
+    /// output; may repeat. One of `click <selector>`, `fill <selector> <text>`,
+    /// `type <text>`, `press <key>`, `check <selector>`, `uncheck <selector>`,
+    /// `select <selector> <value>`, `hover <selector>`, `focus <selector>`.
+    #[arg(long, requires = "js")]
+    action: Vec<String>,
     /// With --js: write a PNG of the page (the viewport) to this path once
     /// it has settled.
     #[arg(long, requires = "js")]
@@ -437,6 +444,39 @@ fn describe_stop(report: &catpaw_engine::LoopReport) -> String {
 
 /// `fetch --js`: load the page in the engine, let its scripts run until it
 /// settles, then print the requested view of the resulting document.
+/// Runs one `--action` specification.
+fn run_action(page: &mut catpaw_engine::Page, spec: &str) -> Result<()> {
+    let spec = spec.trim();
+    let (verb, rest) = spec.split_once(' ').unwrap_or((spec, ""));
+    let rest = rest.trim();
+    let two = || -> Result<(&str, &str)> {
+        rest.split_once(' ')
+            .map(|(a, b)| (a.trim(), b.trim()))
+            .ok_or_else(|| anyhow::anyhow!("`{verb}` needs a selector and a value: {spec:?}"))
+    };
+    let outcome = match verb {
+        "click" => page.click(rest),
+        "fill" => {
+            let (selector, text) = two()?;
+            page.fill(selector, text)
+        }
+        "type" => page.type_text(rest),
+        "press" => page.press(rest),
+        "check" => page.set_checked(rest, true),
+        "uncheck" => page.set_checked(rest, false),
+        "select" => {
+            let (selector, value) = two()?;
+            page.select(selector, value)
+        }
+        "hover" => page.hover(rest),
+        "focus" => page.focus(rest),
+        other => bail!("unknown action {other:?} in {spec:?}"),
+    };
+    outcome.with_context(|| format!("action {spec:?}"))?;
+    eprintln!("[action] {spec}: {}", describe_stop(page.report()));
+    Ok(())
+}
+
 fn fetch_with_scripts(args: FetchArgs) -> Result<()> {
     let url = parse_url(&args.url)?;
     let options = PageOptions {
@@ -475,6 +515,7 @@ fn fetch_with_scripts(args: FetchArgs) -> Result<()> {
         for hop in page.navigations().iter().skip(1) {
             eprintln!("script navigated to {hop}");
         }
+        let mut hops_seen = page.navigations().len();
 
         let requests = page.net().requests();
         let failed = requests.iter().filter(|r| r.status.is_none()).count();
@@ -512,6 +553,13 @@ fn fetch_with_scripts(args: FetchArgs) -> Result<()> {
             }
         }
 
+        for spec in &args.action {
+            run_action(page, spec)?;
+            for hop in page.navigations().iter().skip(hops_seen) {
+                eprintln!("navigated to {hop}");
+            }
+            hops_seen = page.navigations().len();
+        }
         if let Some(path) = &args.screenshot {
             let png = page.screenshot(args.full_page);
             std::fs::write(path, &png)

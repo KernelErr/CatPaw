@@ -69,6 +69,12 @@ members = ["view", "detail", "which"]
 constructor = true
 members = ["relatedTarget"]
 
+[interfaces.SubmitEvent]
+members = ["submitter"]
+
+[interfaces.FormDataEvent]
+members = ["formData"]
+
 [interfaces.InputEvent]
 constructor = true
 members = ["data", "isComposing", "inputType"]
@@ -307,6 +313,16 @@ members = ["activeElement", "styleSheets", "adoptedStyleSheets"]
 exotic = true
 members = ["item", "length"]
 
+[interfaces.HTMLOptionsCollection]
+exotic = true
+
+[interfaces.HTMLFormControlsCollection]
+exotic = true
+members = ["namedItem"]
+
+[interfaces.RadioNodeList]
+members = ["value"]
+
 [interfaces.HTMLCollection]
 exotic = true
 members = ["length", "item", "namedItem"]
@@ -422,10 +438,19 @@ members = [
 [interfaces.HTMLLinkElement]
 [interfaces.HTMLMetaElement]
 [interfaces.HTMLButtonElement]
+members = ["form"]
+
 [interfaces.HTMLFormElement]
+members = ["submit", "requestSubmit", "reset", "elements", "length", "checkValidity", "reportValidity", "action", "method", "enctype", "encoding", "target"]
+
 [interfaces.HTMLLabelElement]
+members = ["form", "control"]
+
 [interfaces.HTMLSelectElement]
+members = ["value", "selectedIndex", "options", "length", "item", "selectedOptions", "form"]
+
 [interfaces.HTMLOptionElement]
+members = ["selected", "defaultSelected", "value", "text", "index", "form"]
 [interfaces.HTMLUListElement]
 [interfaces.HTMLOListElement]
 [interfaces.HTMLLIElement]
@@ -445,10 +470,10 @@ members = ["text"]
 members = ["text"]
 
 [interfaces.HTMLInputElement]
-members = ["value", "checked"]
+members = ["value", "checked", "form", "defaultValue", "select"]
 
 [interfaces.HTMLTextAreaElement]
-members = ["value"]
+members = ["value", "form", "defaultValue", "select"]
 
 [interfaces.HTMLTemplateElement]
 members = ["content"]

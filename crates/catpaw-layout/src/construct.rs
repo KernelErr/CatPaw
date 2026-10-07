@@ -223,8 +223,10 @@ impl Builder<'_> {
                 if display.outside() == DisplayOutside::Inline && !floating {
                     if display.inside() == DisplayInside::Flow && !is_replaced(self.dom, child) {
                         // An inline box: its content joins the parent's
-                        // inline formatting context.
+                        // inline formatting context, and the atomic boxes
+                        // inside it get boxes of their own now.
                         self.tree.inline_owner.insert(child, container);
+                        self.prepare_inline_descendants(child, container);
                         items.push(FlowItem::Inline(InlineItem::Element(child, style)));
                     } else {
                         let id = self.make_box(child, style, Some(container));
@@ -322,8 +324,12 @@ impl Builder<'_> {
         let anon = self.make_anonymous(container, style);
         for item in &items {
             match item {
-                InlineItem::Text(node) | InlineItem::Element(node, _) => {
+                InlineItem::Text(node) => {
                     self.tree.inline_owner.insert(*node, anon);
+                }
+                InlineItem::Element(node, _) => {
+                    self.tree.inline_owner.insert(*node, anon);
+                    self.reown_inline_descendants(*node, anon);
                 }
                 InlineItem::Atomic(id) => self.tree.boxes[*id].parent = Some(anon),
                 InlineItem::Pseudo(_) => {}
@@ -334,29 +340,28 @@ impl Builder<'_> {
     }
 
     fn make_inline_root(&mut self, container: BoxId, items: Vec<InlineItem>) {
-        let atomic: Vec<BoxId> = items
-            .iter()
-            .filter_map(|item| match item {
-                InlineItem::Atomic(id) => Some(*id),
-                _ => None,
-            })
-            .collect();
-        // Inline elements nested in the items join this context too.
-        for item in &items {
-            if let InlineItem::Element(node, _) = item {
-                self.claim_inline_descendants(*node, container);
-            }
-        }
         let context = InlineContext::build(self.tree, self.dom, self.styles, container, items);
+        // The atomic boxes the builder met, nested ones included, are the
+        // root's Taffy children; out-of-flow boxes hung off it come after.
+        let atomic = context.boxes.clone();
+        for id in &atomic {
+            self.tree.boxes[*id].parent = Some(container);
+        }
         let container_box = &mut self.tree.boxes[container];
         container_box.kind = BoxKind::InlineRoot;
         container_box.inline = Some(context);
-        let oof = std::mem::take(&mut container_box.children);
+        let oof: Vec<BoxId> = std::mem::take(&mut container_box.children)
+            .into_iter()
+            .filter(|c| !atomic.contains(c))
+            .collect();
         container_box.children = atomic;
         container_box.children.extend(oof);
     }
 
-    fn claim_inline_descendants(&mut self, el: NodeId, owner: BoxId) {
+    /// Moves the inline content of `el` (text and inline elements without
+    /// boxes of their own) to the context `owner`, after an anonymous block
+    /// took over from the container they were collected for.
+    fn reown_inline_descendants(&mut self, el: NodeId, owner: BoxId) {
         for child in self.dom.rendered_children(el) {
             match self.dom.kind(child) {
                 NodeKind::Text(_) => {
@@ -366,8 +371,67 @@ impl Builder<'_> {
                     if self.tree.node_box.contains_key(&child) {
                         continue;
                     }
+                    if self.tree.inline_owner.contains_key(&child) {
+                        self.tree.inline_owner.insert(child, owner);
+                    }
+                    self.reown_inline_descendants(child, owner);
+                }
+                _ => {}
+            }
+        }
+    }
+
+    /// Walks the content of an inline element: text and inline boxes join
+    /// the context `owner`; atomic inline-level elements (images, form
+    /// controls, inline-blocks), floats and positioned elements get boxes
+    /// of their own, which the inline builder places or which hang off
+    /// their containing block.
+    fn prepare_inline_descendants(&mut self, el: NodeId, owner: BoxId) {
+        for child in self.dom.rendered_children(el) {
+            match self.dom.kind(child) {
+                NodeKind::Text(_) => {
                     self.tree.inline_owner.insert(child, owner);
-                    self.claim_inline_descendants(child, owner);
+                }
+                NodeKind::Element(_) => {
+                    let Some(style) = self.styles.primary_style(child) else {
+                        continue;
+                    };
+                    let display = style.get_box().display;
+                    if display.is_none() {
+                        continue;
+                    }
+                    if display.is_contents() {
+                        self.prepare_inline_descendants(child, owner);
+                        continue;
+                    }
+                    let positioning = Self::positioning(&style);
+                    if matches!(positioning, Positioning::Absolute | Positioning::Fixed) {
+                        let id = self.make_box(child, style, None);
+                        self.fill(id, child);
+                        match self.containing_block(child, positioning) {
+                            Some(cb) => {
+                                self.tree.boxes[id].parent = Some(cb);
+                                self.tree.boxes[cb].children.push(id);
+                            }
+                            None => {
+                                self.tree.boxes[id].parent = self.tree.root;
+                                self.tree.oof_root.push(id);
+                            }
+                        }
+                        continue;
+                    }
+                    let floating = style.get_box().float.is_floating();
+                    let inline_flow = display.outside() == DisplayOutside::Inline
+                        && display.inside() == DisplayInside::Flow
+                        && !is_replaced(self.dom, child);
+                    if inline_flow && !floating {
+                        self.tree.inline_owner.insert(child, owner);
+                        self.prepare_inline_descendants(child, owner);
+                    } else {
+                        // Atomic: laid out by Taffy, placed on the line.
+                        let id = self.make_box(child, style, Some(owner));
+                        self.fill(id, child);
+                    }
                 }
                 _ => {}
             }

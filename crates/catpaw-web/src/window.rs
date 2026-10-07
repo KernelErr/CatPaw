@@ -477,6 +477,8 @@ pub(crate) fn navigate(cx: &mut Cx<'_>, url: Url, replace: bool) {
             url,
             replace,
             reload: false,
+            method: "GET".to_string(),
+            body: None,
         });
         return;
     }
@@ -606,6 +608,8 @@ impl web::LocationImpl for Web {
             url,
             replace: true,
             reload: true,
+            method: "GET".to_string(),
+            body: None,
         });
         Ok(())
     }

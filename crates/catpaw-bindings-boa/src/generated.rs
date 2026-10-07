@@ -3045,6 +3045,35 @@ impl IntoJs for web::NodeOrString {
     }
 }
 
+impl FromJs for web::RadioNodeListOrElement {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if rt::is_instance(v, I::RadioNodeList, ctx) {
+            return Ok(web::RadioNodeListOrElement::RadioNodeList(
+                rt::object_from_js(v, I::RadioNodeList, ctx)?,
+            ));
+        }
+        if rt::is_instance(v, I::Element, ctx) {
+            return Ok(web::RadioNodeListOrElement::Element(rt::node_from_js(
+                v,
+                I::Element,
+                ctx,
+            )?));
+        }
+        Err(rt::type_error(
+            "value is not convertible to RadioNodeListOrElement",
+        ))
+    }
+}
+
+impl IntoJs for web::RadioNodeListOrElement {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+            web::RadioNodeListOrElement::RadioNodeList(v) => v.into_js(ctx),
+            web::RadioNodeListOrElement::Element(v) => v.into_js(ctx),
+        }
+    }
+}
+
 impl FromJs for web::ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         if rt::is_instance(v, I::ReadableStream, ctx) {
@@ -6523,6 +6552,38 @@ pub mod form_data {
     };
 }
 
+pub mod form_data_event {
+    use super::*;
+
+    fn get_form_data(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FormDataEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FormDataEventImpl>::form_data(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::FormDataEvent,
+        name: "FormDataEvent",
+        parent: Some(I::Event),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "formData",
+            getter: get_form_data,
+            setter: None,
+        }],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod html_collection {
     use super::*;
 
@@ -6626,6 +6687,149 @@ pub mod html_collection {
             override_builtins: false,
             attribute_like: false,
             unenumerable_names: true,
+        }),
+    };
+}
+
+pub mod html_form_controls_collection {
+    use super::*;
+
+    fn op_named_item(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::HTMLFormControlsCollection, ctx)?;
+        rt::require_args(args, 1, "HTMLFormControlsCollection.namedItem")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLFormControlsCollectionImpl>::named_item(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn exotic_length(h: rt::Handle, ctx: &mut Context) -> JsResult<u32> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| <Web as web::HTMLCollectionImpl>::length(cx, this));
+        r.map_err(|e| rt::exception_to_js(e, ctx))
+    }
+
+    fn exotic_indexed_get(
+        h: rt::Handle,
+        index: u32,
+        ctx: &mut Context,
+    ) -> JsResult<Option<JsValue>> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLCollectionImpl>::indexed_get(cx, this, index)
+        });
+        rt::ret_opt(r, ctx)
+    }
+
+    fn exotic_named_get(h: rt::Handle, name: &str, ctx: &mut Context) -> JsResult<Option<JsValue>> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLFormControlsCollectionImpl>::named_get(cx, this, name)
+        });
+        rt::ret_opt(r, ctx)
+    }
+
+    fn exotic_named_properties(h: rt::Handle, ctx: &mut Context) -> JsResult<Vec<String>> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLFormControlsCollectionImpl>::named_properties(cx, this)
+        });
+        r.map_err(|e| rt::exception_to_js(e, ctx))
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLFormControlsCollection,
+        name: "HTMLFormControlsCollection",
+        parent: Some(I::HTMLCollection),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[rt::OpDef {
+            name: "namedItem",
+            func: op_named_item,
+            length: 1,
+        }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: Some(rt::ExoticDef {
+            length: Some(exotic_length),
+            indexed_get: Some(exotic_indexed_get),
+            named_get: Some(exotic_named_get),
+            named_properties: Some(exotic_named_properties),
+            named_set: None,
+            named_delete: None,
+            override_builtins: false,
+            attribute_like: false,
+            unenumerable_names: false,
+        }),
+    };
+}
+
+pub mod html_options_collection {
+    use super::*;
+
+    fn exotic_length(h: rt::Handle, ctx: &mut Context) -> JsResult<u32> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| <Web as web::HTMLCollectionImpl>::length(cx, this));
+        r.map_err(|e| rt::exception_to_js(e, ctx))
+    }
+
+    fn exotic_indexed_get(
+        h: rt::Handle,
+        index: u32,
+        ctx: &mut Context,
+    ) -> JsResult<Option<JsValue>> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLCollectionImpl>::indexed_get(cx, this, index)
+        });
+        rt::ret_opt(r, ctx)
+    }
+
+    fn exotic_named_get(h: rt::Handle, name: &str, ctx: &mut Context) -> JsResult<Option<JsValue>> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLCollectionImpl>::named_get(cx, this, name)
+        });
+        rt::ret_opt(r, ctx)
+    }
+
+    fn exotic_named_properties(h: rt::Handle, ctx: &mut Context) -> JsResult<Vec<String>> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLCollectionImpl>::named_properties(cx, this)
+        });
+        r.map_err(|e| rt::exception_to_js(e, ctx))
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::HTMLOptionsCollection,
+        name: "HTMLOptionsCollection",
+        parent: Some(I::HTMLCollection),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: Some(rt::ExoticDef {
+            length: Some(exotic_length),
+            indexed_get: Some(exotic_indexed_get),
+            named_get: Some(exotic_named_get),
+            named_properties: Some(exotic_named_properties),
+            named_set: None,
+            named_delete: None,
+            override_builtins: false,
+            attribute_like: false,
+            unenumerable_names: false,
         }),
     };
 }
@@ -11039,6 +11243,46 @@ pub mod promise_rejection_event {
     };
 }
 
+pub mod radio_node_list {
+    use super::*;
+
+    fn get_value(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::RadioNodeList, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::RadioNodeListImpl>::value(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn set_value(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::RadioNodeList, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::RadioNodeListImpl>::set_value(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::RadioNodeList,
+        name: "RadioNodeList",
+        parent: Some(I::NodeList),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "value",
+            getter: get_value,
+            setter: Some(set_value),
+        }],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod range {
     use super::*;
 
@@ -13696,6 +13940,36 @@ pub mod style_sheet_list {
             attribute_like: false,
             unenumerable_names: false,
         }),
+    };
+}
+
+pub mod submit_event {
+    use super::*;
+
+    fn get_submitter(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::SubmitEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::SubmitEventImpl>::submitter(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::SubmitEvent,
+        name: "SubmitEvent",
+        parent: Some(I::Event),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "submitter",
+            getter: get_submitter,
+            setter: None,
+        }],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
     };
 }
 
@@ -30677,7 +30951,9 @@ pub mod html_form_element {
 
     fn get_action(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLFormElement, ctx)?;
-        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_url(cx, this, "action"));
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLFormElementImpl>::action(cx, this)
+        });
         rt::ret(r, ctx)
     }
 
@@ -30693,7 +30969,85 @@ pub mod html_form_element {
         let this = rt::this_node(this_js, I::HTMLFormElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
-            catpaw_web::reflect::set_string(cx, this, "action", a0)
+            <Web as web::HTMLFormElementImpl>::set_action(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_enctype(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFormElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLFormElementImpl>::enctype(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_enctype(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_enctype_body(this_js, args, ctx))
+    }
+
+    fn set_enctype_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFormElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLFormElementImpl>::set_enctype(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_encoding(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFormElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLFormElementImpl>::encoding(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_encoding(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_encoding_body(this_js, args, ctx))
+    }
+
+    fn set_encoding_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFormElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLFormElementImpl>::set_encoding(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_method(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFormElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLFormElementImpl>::method(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_method(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_method_body(this_js, args, ctx))
+    }
+
+    fn set_method_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFormElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLFormElementImpl>::set_method(cx, this, a0)
         });
         rt::ret(r, ctx)?;
         Ok(JsValue::undefined())
@@ -30756,7 +31110,7 @@ pub mod html_form_element {
     fn get_target(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLFormElement, ctx)?;
         let r = rt::with_cx(ctx, |cx| {
-            catpaw_web::reflect::get_string(cx, this, "target")
+            <Web as web::HTMLFormElementImpl>::target(cx, this)
         });
         rt::ret(r, ctx)
     }
@@ -30773,7 +31127,7 @@ pub mod html_form_element {
         let this = rt::this_node(this_js, I::HTMLFormElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
-            catpaw_web::reflect::set_string(cx, this, "target", a0)
+            <Web as web::HTMLFormElementImpl>::set_target(cx, this, a0)
         });
         rt::ret(r, ctx)?;
         Ok(JsValue::undefined())
@@ -30817,6 +31171,95 @@ pub mod html_form_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_elements(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "elements", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::HTMLFormElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLFormElementImpl>::elements(cx, this)
+        });
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "elements", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_length(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLFormElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLFormElementImpl>::length(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_submit(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::HTMLFormElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLFormElementImpl>::submit(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_request_submit(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::HTMLFormElement, ctx)?;
+        let a0 = if args.len() > 0 && !args[0].is_undefined() {
+            if rt::arg(args, 0).is_null_or_undefined() {
+                None
+            } else {
+                Some(rt::node_from_js(rt::arg(args, 0), I::HTMLElement, ctx)?)
+            }
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLFormElementImpl>::request_submit(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_reset(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_reset_body(this_js, args, ctx))
+    }
+
+    fn op_reset_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::HTMLFormElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::HTMLFormElementImpl>::reset(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_check_validity(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::HTMLFormElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLFormElementImpl>::check_validity(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_report_validity(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::HTMLFormElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLFormElementImpl>::report_validity(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         rt::html_constructor(new_target, I::HTMLFormElement, ctx)
     }
@@ -30838,6 +31281,21 @@ pub mod html_form_element {
                 name: "action",
                 getter: get_action,
                 setter: Some(set_action),
+            },
+            rt::AttrDef {
+                name: "enctype",
+                getter: get_enctype,
+                setter: Some(set_enctype),
+            },
+            rt::AttrDef {
+                name: "encoding",
+                getter: get_encoding,
+                setter: Some(set_encoding),
+            },
+            rt::AttrDef {
+                name: "method",
+                getter: get_method,
+                setter: Some(set_method),
             },
             rt::AttrDef {
                 name: "name",
@@ -30864,8 +31322,44 @@ pub mod html_form_element {
                 getter: get_rel_list,
                 setter: Some(set_rel_list),
             },
+            rt::AttrDef {
+                name: "elements",
+                getter: get_elements,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "length",
+                getter: get_length,
+                setter: None,
+            },
         ],
-        ops: &[],
+        ops: &[
+            rt::OpDef {
+                name: "submit",
+                func: op_submit,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "requestSubmit",
+                func: op_request_submit,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "reset",
+                func: op_reset,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "checkValidity",
+                func: op_check_validity,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "reportValidity",
+                func: op_report_validity,
+                length: 0,
+            },
+        ],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -33145,6 +33639,12 @@ pub mod html_input_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_form(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::HTMLInputElementImpl>::form(cx, this));
+        rt::ret(r, ctx)
+    }
+
     fn get_form_action(
         this_js: &JsValue,
         _args: &[JsValue],
@@ -33599,7 +34099,9 @@ pub mod html_input_element {
         ctx: &mut Context,
     ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
-        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "value"));
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLInputElementImpl>::default_value(cx, this)
+        });
         rt::ret(r, ctx)
     }
 
@@ -33619,7 +34121,7 @@ pub mod html_input_element {
         let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
-            catpaw_web::reflect::set_string(cx, this, "value", a0)
+            <Web as web::HTMLInputElementImpl>::set_default_value(cx, this, a0)
         });
         rt::ret(r, ctx)?;
         Ok(JsValue::undefined())
@@ -33715,6 +34217,15 @@ pub mod html_input_element {
         Ok(JsValue::undefined())
     }
 
+    fn op_select(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLInputElementImpl>::select(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         rt::html_constructor(new_target, I::HTMLInputElement, ctx)
     }
@@ -33766,6 +34277,11 @@ pub mod html_input_element {
                 name: "disabled",
                 getter: get_disabled,
                 setter: Some(set_disabled),
+            },
+            rt::AttrDef {
+                name: "form",
+                getter: get_form,
+                setter: None,
             },
             rt::AttrDef {
                 name: "formAction",
@@ -33878,7 +34394,11 @@ pub mod html_input_element {
                 setter: Some(set_use_map),
             },
         ],
-        ops: &[],
+        ops: &[rt::OpDef {
+            name: "select",
+            func: op_select,
+            length: 0,
+        }],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -33967,6 +34487,12 @@ pub mod htmlli_element {
 pub mod html_label_element {
     use super::*;
 
+    fn get_form(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLLabelElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::HTMLLabelElementImpl>::form(cx, this));
+        rt::ret(r, ctx)
+    }
+
     fn get_html_for(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLLabelElement, ctx)?;
         let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "for"));
@@ -33991,6 +34517,14 @@ pub mod html_label_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_control(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLLabelElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLLabelElementImpl>::control(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         rt::html_constructor(new_target, I::HTMLLabelElement, ctx)
     }
@@ -34002,11 +34536,23 @@ pub mod html_label_element {
         global: false,
         constructor: Some(ctor),
         constructor_length: 0,
-        attrs: &[rt::AttrDef {
-            name: "htmlFor",
-            getter: get_html_for,
-            setter: Some(set_html_for),
-        }],
+        attrs: &[
+            rt::AttrDef {
+                name: "form",
+                getter: get_form,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "htmlFor",
+                getter: get_html_for,
+                setter: Some(set_html_for),
+            },
+            rt::AttrDef {
+                name: "control",
+                getter: get_control,
+                setter: None,
+            },
+        ],
         ops: &[],
         static_attrs: &[],
         static_ops: &[],
@@ -36328,6 +36874,14 @@ pub mod html_option_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_form(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLOptionElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLOptionElementImpl>::form(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn get_label(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLOptionElement, ctx)?;
         let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "label"));
@@ -36355,7 +36909,7 @@ pub mod html_option_element {
     ) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLOptionElement, ctx)?;
         let r = rt::with_cx(ctx, |cx| {
-            catpaw_web::reflect::get_bool(cx, this, "selected")
+            <Web as web::HTMLOptionElementImpl>::default_selected(cx, this)
         });
         rt::ret(r, ctx)
     }
@@ -36376,7 +36930,33 @@ pub mod html_option_element {
         let this = rt::this_node(this_js, I::HTMLOptionElement, ctx)?;
         let a0 = rt::arg(args, 0).to_boolean();
         let r = rt::with_cx(ctx, |cx| {
-            catpaw_web::reflect::set_bool(cx, this, "selected", a0)
+            <Web as web::HTMLOptionElementImpl>::set_default_selected(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_selected(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLOptionElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLOptionElementImpl>::selected(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_selected(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_selected_body(this_js, args, ctx))
+    }
+
+    fn set_selected_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLOptionElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_boolean();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLOptionElementImpl>::set_selected(cx, this, a0)
         });
         rt::ret(r, ctx)?;
         Ok(JsValue::undefined())
@@ -36384,7 +36964,9 @@ pub mod html_option_element {
 
     fn get_value(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLOptionElement, ctx)?;
-        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "value"));
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLOptionElementImpl>::value(cx, this)
+        });
         rt::ret(r, ctx)
     }
 
@@ -36396,10 +36978,40 @@ pub mod html_option_element {
         let this = rt::this_node(this_js, I::HTMLOptionElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
-            catpaw_web::reflect::set_string(cx, this, "value", a0)
+            <Web as web::HTMLOptionElementImpl>::set_value(cx, this, a0)
         });
         rt::ret(r, ctx)?;
         Ok(JsValue::undefined())
+    }
+
+    fn get_text(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLOptionElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLOptionElementImpl>::text(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_text(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_text_body(this_js, args, ctx))
+    }
+
+    fn set_text_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLOptionElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLOptionElementImpl>::set_text(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_index(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLOptionElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLOptionElementImpl>::index(cx, this)
+        });
+        rt::ret(r, ctx)
     }
 
     fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
@@ -36420,6 +37032,11 @@ pub mod html_option_element {
                 setter: Some(set_disabled),
             },
             rt::AttrDef {
+                name: "form",
+                getter: get_form,
+                setter: None,
+            },
+            rt::AttrDef {
                 name: "label",
                 getter: get_label,
                 setter: Some(set_label),
@@ -36430,9 +37047,24 @@ pub mod html_option_element {
                 setter: Some(set_default_selected),
             },
             rt::AttrDef {
+                name: "selected",
+                getter: get_selected,
+                setter: Some(set_selected),
+            },
+            rt::AttrDef {
                 name: "value",
                 getter: get_value,
                 setter: Some(set_value),
+            },
+            rt::AttrDef {
+                name: "text",
+                getter: get_text,
+                setter: Some(set_text),
+            },
+            rt::AttrDef {
+                name: "index",
+                getter: get_index,
+                setter: None,
             },
         ],
         ops: &[],
@@ -37261,6 +37893,14 @@ pub mod html_select_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_form(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLSelectElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLSelectElementImpl>::form(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn get_multiple(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLSelectElement, ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -37355,6 +37995,129 @@ pub mod html_select_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_options(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "options", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::HTMLSelectElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLSelectElementImpl>::options(cx, this)
+        });
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "options", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_length(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLSelectElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLSelectElementImpl>::length(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_length(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_length_body(this_js, args, ctx))
+    }
+
+    fn set_length_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLSelectElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLSelectElementImpl>::set_length(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_selected_options(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "selectedOptions", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::HTMLSelectElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLSelectElementImpl>::selected_options(cx, this)
+        });
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "selectedOptions", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_selected_index(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLSelectElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLSelectElementImpl>::selected_index(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_selected_index(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_selected_index_body(this_js, args, ctx))
+    }
+
+    fn set_selected_index_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLSelectElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_i32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLSelectElementImpl>::set_selected_index(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_value(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLSelectElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLSelectElementImpl>::value(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_value(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_value_body(this_js, args, ctx))
+    }
+
+    fn set_value_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLSelectElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLSelectElementImpl>::set_value(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn op_item(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::HTMLSelectElement, ctx)?;
+        rt::require_args(args, 1, "HTMLSelectElement.item")?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLSelectElementImpl>::item(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         rt::html_constructor(new_target, I::HTMLSelectElement, ctx)
     }
@@ -37378,6 +38141,11 @@ pub mod html_select_element {
                 setter: Some(set_disabled),
             },
             rt::AttrDef {
+                name: "form",
+                getter: get_form,
+                setter: None,
+            },
+            rt::AttrDef {
                 name: "multiple",
                 getter: get_multiple,
                 setter: Some(set_multiple),
@@ -37397,8 +38165,37 @@ pub mod html_select_element {
                 getter: get_size,
                 setter: Some(set_size),
             },
+            rt::AttrDef {
+                name: "options",
+                getter: get_options,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "length",
+                getter: get_length,
+                setter: Some(set_length),
+            },
+            rt::AttrDef {
+                name: "selectedOptions",
+                getter: get_selected_options,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "selectedIndex",
+                getter: get_selected_index,
+                setter: Some(set_selected_index),
+            },
+            rt::AttrDef {
+                name: "value",
+                getter: get_value,
+                setter: Some(set_value),
+            },
         ],
-        ops: &[],
+        ops: &[rt::OpDef {
+            name: "item",
+            func: op_item,
+            length: 1,
+        }],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -39422,6 +40219,14 @@ pub mod html_text_area_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_form(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTextAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLTextAreaElementImpl>::form(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn get_max_length(
         this_js: &JsValue,
         _args: &[JsValue],
@@ -39637,6 +40442,40 @@ pub mod html_text_area_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_default_value(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTextAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLTextAreaElementImpl>::default_value(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_default_value(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_default_value_body(this_js, args, ctx))
+    }
+
+    fn set_default_value_body(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTextAreaElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLTextAreaElementImpl>::set_default_value(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
     fn get_value(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLTextAreaElement, ctx)?;
         let r = rt::with_cx(ctx, |cx| {
@@ -39653,6 +40492,15 @@ pub mod html_text_area_element {
         });
         rt::ret(r, ctx)?;
         Ok(JsValue::undefined())
+    }
+
+    fn op_select(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::HTMLTextAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLTextAreaElementImpl>::select(cx, this)
+        });
+        rt::ret(r, ctx)
     }
 
     fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
@@ -39686,6 +40534,11 @@ pub mod html_text_area_element {
                 name: "disabled",
                 getter: get_disabled,
                 setter: Some(set_disabled),
+            },
+            rt::AttrDef {
+                name: "form",
+                getter: get_form,
+                setter: None,
             },
             rt::AttrDef {
                 name: "maxLength",
@@ -39728,12 +40581,21 @@ pub mod html_text_area_element {
                 setter: Some(set_wrap),
             },
             rt::AttrDef {
+                name: "defaultValue",
+                getter: get_default_value,
+                setter: Some(set_default_value),
+            },
+            rt::AttrDef {
                 name: "value",
                 getter: get_value,
                 setter: Some(set_value),
             },
         ],
-        ops: &[],
+        ops: &[rt::OpDef {
+            name: "select",
+            func: op_select,
+            length: 0,
+        }],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -48145,6 +49007,14 @@ pub mod html_button_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_form(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLButtonElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLButtonElementImpl>::form(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn get_form_action(
         this_js: &JsValue,
         _args: &[JsValue],
@@ -48328,6 +49198,11 @@ pub mod html_button_element {
                 name: "disabled",
                 getter: get_disabled,
                 setter: Some(set_disabled),
+            },
+            rt::AttrDef {
+                name: "form",
+                getter: get_form,
+                setter: None,
             },
             rt::AttrDef {
                 name: "formAction",
@@ -49963,7 +50838,10 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &font_face::DEF,
     &font_face_set::DEF,
     &form_data::DEF,
+    &form_data_event::DEF,
     &html_collection::DEF,
+    &html_form_controls_collection::DEF,
+    &html_options_collection::DEF,
     &hash_change_event::DEF,
     &headers::DEF,
     &history::DEF,
@@ -49991,6 +50869,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &pop_state_event::DEF,
     &progress_event::DEF,
     &promise_rejection_event::DEF,
+    &radio_node_list::DEF,
     &range::DEF,
     &readable_stream::DEF,
     &readable_stream_default_controller::DEF,
@@ -50007,6 +50886,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &storage::DEF,
     &style_sheet::DEF,
     &style_sheet_list::DEF,
+    &submit_event::DEF,
     &subtle_crypto::DEF,
     &text_decoder::DEF,
     &text_encoder::DEF,

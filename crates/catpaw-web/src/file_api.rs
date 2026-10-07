@@ -400,7 +400,7 @@ impl web::FileReaderImpl for Web {
 // ---------------------------------------------------------------- FormData
 
 #[derive(Clone)]
-enum Entry {
+pub(crate) enum Entry {
     Text(String),
     /// A `File`, pinned while it is in the list.
     File(ObjectId),
@@ -459,18 +459,18 @@ fn unpin_entry(cx: &mut Cx<'_>, entry: &Entry) {
 
 /// <https://html.spec.whatwg.org/#constructing-the-form-data-set>, for
 /// the controls there are: inputs, textareas and selects.
-fn entry_list(
+pub(crate) fn entry_list(
     cx: &mut Cx<'_>,
     form: NodeId,
     submitter: Option<NodeId>,
 ) -> Fallible<Vec<(String, Entry)>> {
     let controls: Vec<NodeId> = {
         let dom = cx.dom();
-        dom.descendants(form)
+        crate::forms::listed_controls(&dom, form)
+            .into_iter()
             .filter(|&n| {
-                dom.element(n).is_some_and(|el| {
-                    el.is_html() && matches!(&*el.name.local, "input" | "select" | "textarea")
-                })
+                dom.element(n)
+                    .is_some_and(|el| matches!(&*el.name.local, "input" | "select" | "textarea"))
             })
             .collect()
     };
@@ -523,37 +523,13 @@ fn entry_list(
                 out.push((name, Entry::Text(value)));
             }
             "select" => {
+                let selected = crate::forms::selected_options(cx, control);
                 let dom = cx.dom();
-                let multiple = dom
-                    .element(control)
-                    .is_some_and(|el| el.has_attr("multiple"));
-                let options: Vec<NodeId> = dom
-                    .descendants(control)
-                    .filter(|&n| {
-                        dom.element(n)
-                            .is_some_and(|el| el.is_html() && &*el.name.local == "option")
-                    })
-                    .collect();
-                let mut selected: Vec<NodeId> = options
-                    .iter()
-                    .copied()
-                    .filter(|&o| dom.element(o).is_some_and(|el| el.has_attr("selected")))
-                    .collect();
-                if selected.is_empty() && !multiple {
-                    selected.extend(options.iter().copied().find(|&o| !disabled(&dom, o)));
-                }
                 for option in selected {
                     if disabled(&dom, option) {
                         continue;
                     }
-                    let el = dom.element(option).expect("an option");
-                    let value = match el.attr("value") {
-                        Some(v) => v.to_string(),
-                        None => crate::element::child_text_content(&dom, option)
-                            .split_whitespace()
-                            .collect::<Vec<_>>()
-                            .join(" "),
-                    };
+                    let value = crate::forms::option_value(&dom, option);
                     out.push((name.clone(), Entry::Text(value)));
                 }
             }
@@ -722,6 +698,57 @@ fn escape_name(name: &str) -> String {
 
 /// <https://html.spec.whatwg.org/#multipart/form-data-encoding-algorithm>:
 /// the body a `FormData` is sent as, and its Content-Type.
+/// A `FormData` holding `entries`.
+pub(crate) fn form_data_object(page: &PageState, entries: Vec<(String, Entry)>) -> ObjectId {
+    page.alloc(FormDataObject { entries })
+}
+
+/// The entries as `application/x-www-form-urlencoded`; a file stands for
+/// its name.
+pub(crate) fn urlencoded_body(cx: &Cx<'_>, this: ObjectId) -> Fallible<String> {
+    let entries = form_data(cx, this, |f| f.entries.clone())?;
+    let crlf = |text: &str| {
+        text.replace("\r\n", "\n")
+            .replace('\r', "\n")
+            .replace('\n', "\r\n")
+    };
+    let mut out = url::form_urlencoded::Serializer::new(String::new());
+    for (name, entry) in &entries {
+        let name = crlf(name);
+        match entry {
+            Entry::Text(value) => {
+                out.append_pair(&name, &crlf(value));
+            }
+            Entry::File(id) => {
+                let filename = blob(cx, *id, |b| {
+                    b.file.as_ref().map(|f| f.name.clone()).unwrap_or_default()
+                })?;
+                out.append_pair(&name, &filename);
+            }
+        }
+    }
+    Ok(out.finish())
+}
+
+/// The entries as `text/plain`: `name=value` lines.
+pub(crate) fn text_plain_body(cx: &Cx<'_>, this: ObjectId) -> Fallible<Vec<u8>> {
+    let entries = form_data(cx, this, |f| f.entries.clone())?;
+    let mut out = String::new();
+    for (name, entry) in &entries {
+        let value = match entry {
+            Entry::Text(value) => value.clone(),
+            Entry::File(id) => blob(cx, *id, |b| {
+                b.file.as_ref().map(|f| f.name.clone()).unwrap_or_default()
+            })?,
+        };
+        out.push_str(name);
+        out.push('=');
+        out.push_str(&value);
+        out.push_str("\r\n");
+    }
+    Ok(out.into_bytes())
+}
+
 pub(crate) fn multipart_body(cx: &Cx<'_>, this: ObjectId) -> Fallible<(Vec<u8>, String)> {
     let entries = form_data(cx, this, |f| f.entries.clone())?;
     let boundary = format!(

@@ -81,6 +81,7 @@ impl InlineContext {
         let fonts = tree.fonts.clone();
         let mut fonts = fonts.lock().unwrap_or_else(|e| e.into_inner());
         let mut inline_styles = std::mem::take(&mut tree.inline_styles);
+        let node_box = std::mem::take(&mut tree.node_box);
         let Fonts { font_cx, layout_cx } = &mut *fonts;
         let root_text_style = text_style(&root_style, brush_for(root_node));
         let mut builder = layout_cx.tree_builder(font_cx, 1.0, true, &root_text_style);
@@ -88,6 +89,7 @@ impl InlineContext {
         let mut state = Pusher {
             dom,
             styles,
+            node_box: &node_box,
             inline_styles: &mut inline_styles,
             boxes: &mut boxes,
             transform: root_style.clone_text_transform(),
@@ -103,6 +105,7 @@ impl InlineContext {
         }
         let (layout, text) = builder.build();
         tree.inline_styles = inline_styles;
+        tree.node_box = node_box;
         Self {
             layout,
             text,
@@ -114,6 +117,9 @@ impl InlineContext {
 struct Pusher<'a> {
     dom: &'a Dom,
     styles: &'a StyleEngine,
+    /// The boxes made so far: an element in here met inside an inline
+    /// element is an atomic box to place on the line.
+    node_box: &'a HashMap<NodeId, BoxId>,
     inline_styles: &'a mut HashMap<NodeId, Arc<ComputedValues>>,
     boxes: &'a mut Vec<BoxId>,
     transform: TextTransform,
@@ -231,6 +237,23 @@ impl Pusher<'_> {
     /// anything that generates a box of its own was already given one by
     /// the constructor and is placed as an atomic box.
     fn push_element_child(&mut self, builder: &mut TreeBuilder<'_, Brush>, child: NodeId) {
+        if let Some(&id) = self.node_box.get(&child) {
+            // Out-of-flow boxes were hung off their containing block; the
+            // rest are atomic inline boxes.
+            let positioning = self
+                .styles
+                .primary_style(child)
+                .map(|s| s.get_box().position);
+            let out_of_flow = matches!(
+                positioning,
+                Some(style::computed_values::position::T::Absolute)
+                    | Some(style::computed_values::position::T::Fixed)
+            );
+            if !out_of_flow {
+                self.push_item(builder, InlineItem::Atomic(id));
+            }
+            return;
+        }
         let Some(style) = self.styles.primary_style(child) else {
             return;
         };

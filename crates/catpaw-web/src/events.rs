@@ -4,7 +4,7 @@
 use std::cell::Cell;
 use std::rc::Rc;
 
-use catpaw_dom::{FragmentKind, NodeKind};
+use catpaw_dom::{FragmentKind, NodeId, NodeKind};
 use catpaw_js::{Callback, EventTargetRef, Exception, Fallible, ObjectId, Value};
 
 use crate::generated::{self as web, InterfaceId};
@@ -46,6 +46,14 @@ pub enum EventData {
     },
     /// The UI event family; see `ui_events`.
     Ui(Box<crate::ui_events::UiEvent>),
+    /// `submit`: the button that submitted, if any.
+    Submit {
+        submitter: Option<NodeId>,
+    },
+    /// `formdata`: the entry list as a `FormData`, pinned by the form.
+    FormData {
+        form_data: ObjectId,
+    },
 }
 
 /// The state behind every event interface (`Event`, `CustomEvent`, ...).

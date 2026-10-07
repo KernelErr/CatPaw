@@ -514,6 +514,7 @@ dependencies = [
  "catpaw-fetch",
  "catpaw-js",
  "catpaw-net",
+ "catpaw-style",
  "catpaw-web",
  "http",
  "thiserror",

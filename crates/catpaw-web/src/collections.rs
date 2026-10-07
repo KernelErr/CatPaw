@@ -6,7 +6,7 @@
 use catpaw_dom::{Dom, NodeId, QuirksMode};
 use catpaw_js::{Fallible, ObjectId};
 
-use crate::generated as web;
+use crate::generated::{self as web, InterfaceId};
 use crate::page::{Cx, PageState};
 use crate::{Web, platform_object};
 
@@ -32,6 +32,10 @@ pub enum ListSource {
     DocumentKind { root: NodeId, kind: DocumentKind },
     /// `document[name]` when several elements share the name.
     DocumentNamed { root: NodeId, name: String },
+    /// `form.elements`.
+    FormControls(NodeId),
+    /// `select.options`.
+    Options(NodeId),
     /// A snapshot (`querySelectorAll`).
     Static,
 }
@@ -172,6 +176,18 @@ fn compute(dom: &Dom, source: &ListSource) -> Vec<NodeId> {
         ListSource::DocumentNamed { root, name } => {
             crate::document::named_elements(dom, *root, name)
         }
+        ListSource::FormControls(form) => {
+            if !dom.contains(*form) {
+                return Vec::new();
+            }
+            crate::forms::listed_controls(dom, *form)
+        }
+        ListSource::Options(select) => {
+            if !dom.contains(*select) {
+                return Vec::new();
+            }
+            crate::forms::options_of(dom, *select)
+        }
     }
 }
 
@@ -193,11 +209,11 @@ impl ListState {
     }
 }
 
-pub struct NodeListObject(ListState);
-platform_object!(NodeListObject, NodeList);
+pub struct NodeListObject(ListState, InterfaceId);
+platform_object!(NodeListObject, |l| l.1);
 
-pub struct HtmlCollectionObject(ListState);
-platform_object!(HtmlCollectionObject, HTMLCollection);
+pub struct HtmlCollectionObject(ListState, InterfaceId);
+platform_object!(HtmlCollectionObject, |c| c.1);
 
 trait HasList: 'static {
     fn list(&mut self) -> &mut ListState;
@@ -217,25 +233,60 @@ impl HasList for HtmlCollectionObject {
 
 /// A live `NodeList`.
 pub fn node_list(page: &PageState, source: ListSource) -> ObjectId {
-    page.alloc(NodeListObject(ListState::new(source, Vec::new())))
+    page.alloc(NodeListObject(
+        ListState::new(source, Vec::new()),
+        InterfaceId::NodeList,
+    ))
 }
 
 /// A static `NodeList` holding `items`.
 pub fn static_node_list(page: &PageState, items: Vec<NodeId>) -> ObjectId {
-    page.alloc(NodeListObject(ListState::new(ListSource::Static, items)))
+    page.alloc(NodeListObject(
+        ListState::new(ListSource::Static, items),
+        InterfaceId::NodeList,
+    ))
+}
+
+/// A static `RadioNodeList` holding `items`: the controls a form's
+/// collection names, when there are several.
+pub fn radio_node_list(page: &PageState, items: Vec<NodeId>) -> ObjectId {
+    page.alloc(NodeListObject(
+        ListState::new(ListSource::Static, items),
+        InterfaceId::RadioNodeList,
+    ))
 }
 
 /// A static `HTMLCollection` holding `items`.
 pub fn static_html_collection(page: &PageState, items: Vec<NodeId>) -> ObjectId {
-    page.alloc(HtmlCollectionObject(ListState::new(
-        ListSource::Static,
-        items,
-    )))
+    page.alloc(HtmlCollectionObject(
+        ListState::new(ListSource::Static, items),
+        InterfaceId::HTMLCollection,
+    ))
 }
 
 /// A live `HTMLCollection`.
 pub fn html_collection(page: &PageState, source: ListSource) -> ObjectId {
-    page.alloc(HtmlCollectionObject(ListState::new(source, Vec::new())))
+    page.alloc(HtmlCollectionObject(
+        ListState::new(source, Vec::new()),
+        InterfaceId::HTMLCollection,
+    ))
+}
+
+/// A live collection of a derived interface (`HTMLFormControlsCollection`,
+/// `HTMLOptionsCollection`).
+pub fn html_collection_as(page: &PageState, source: ListSource, iface: InterfaceId) -> ObjectId {
+    page.alloc(HtmlCollectionObject(
+        ListState::new(source, Vec::new()),
+        iface,
+    ))
+}
+
+/// The items of a node list or collection, whichever `id` is.
+pub(crate) fn items_of(cx: &Cx<'_>, id: ObjectId) -> Fallible<Vec<NodeId>> {
+    match with_items::<HtmlCollectionObject, _>(cx, id, |items| items.to_vec()) {
+        Ok(items) => Ok(items),
+        Err(_) => with_items::<NodeListObject, _>(cx, id, |items| items.to_vec()),
+    }
 }
 
 /// Runs `f` on the current items of the list `id`.
