@@ -5,6 +5,15 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 publish = false
-description = "CatPaw browser engine: text"
+description = "CatPaw browser engine: fonts and text shaping"
 
 [dependencies]
+parley.workspace = true
+fontique.workspace = true
+skrifa.workspace = true
+
+[features]
+default = []
+# Let the font collection see the fonts installed on the machine, after the
+# bundled ones. Off by default so that layout is the same on every machine.
+system-fonts = ["fontique/system", "parley/system"]

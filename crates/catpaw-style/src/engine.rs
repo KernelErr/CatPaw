@@ -56,30 +56,6 @@ impl Default for StyleOptions {
     }
 }
 
-/// Font metrics until the text crate provides real ones: ex/ch/cap/ic fall
-/// back to Stylo's defaults, and generic families use 16px.
-#[derive(Debug)]
-struct PlaceholderFontMetrics;
-
-impl style::device::servo::FontMetricsProvider for PlaceholderFontMetrics {
-    fn query_font_metrics(
-        &self,
-        _vertical: bool,
-        _font: &Font,
-        _base_size: style::values::computed::CSSPixelLength,
-        _flags: style::values::computed::font::QueryFontMetricsFlags,
-    ) -> style::font_metrics::FontMetrics {
-        style::font_metrics::FontMetrics::default()
-    }
-
-    fn base_size_for_generic(
-        &self,
-        _generic: style::values::computed::font::GenericFontFamily,
-    ) -> style::values::computed::Length {
-        style::values::computed::Length::new(16.0)
-    }
-}
-
 struct NoPainters;
 
 impl RegisteredSpeculativePainters for NoPainters {
@@ -114,7 +90,7 @@ pub(crate) fn make_device(options: &StyleOptions) -> Device {
         viewport_size,
         device_size,
         device_pixel_ratio,
-        Box::new(PlaceholderFontMetrics),
+        Box::new(crate::fonts::CatFontMetricsProvider::new()),
         ComputedValues::initial_values_with_font_override(Font::initial_values()),
         if options.dark_mode {
             PrefersColorScheme::Dark
@@ -237,6 +213,7 @@ impl StyleEngine {
     pub fn invalidate(&mut self) {
         self.resolved.clear();
         self.slots_fresh = false;
+        self.table.clear_data();
     }
 
     pub fn author_sheet_count(&self) -> usize {
@@ -407,6 +384,38 @@ impl StyleEngine {
             stylist.rule_tree().maybe_gc();
             thread_state::exit(ThreadState::LAYOUT);
         });
+    }
+
+    /// The style of the element's `::before` or `::after`, if the last
+    /// restyle gave it one (it has `content`).
+    pub fn pseudo_style(&self, id: NodeId, pseudo: Pseudo) -> Option<Arc<ComputedValues>> {
+        let slot = self.table.slot(id)?;
+        if !slot.has_data.load(Ordering::SeqCst) {
+            return None;
+        }
+        let data = slot.data.borrow();
+        let pseudo = match pseudo {
+            Pseudo::Before => PseudoElement::Before,
+            Pseudo::After => PseudoElement::After,
+        };
+        data.styles.pseudos.get(&pseudo).cloned()
+    }
+
+    /// The style of an anonymous block box generated inside an element with
+    /// `parent` style: inherited properties come from the parent, the rest
+    /// are initial, and `display` is `block`.
+    pub fn anonymous_block_style(&self, parent: &ComputedValues) -> Arc<ComputedValues> {
+        let lock = self.table.lock().clone();
+        let guard = lock.read();
+        let guards = StylesheetGuards {
+            author: &guard,
+            ua_or_user: &guard,
+        };
+        self.stylist.style_for_anonymous::<CatNode>(
+            &guards,
+            &PseudoElement::ServoAnonymousBox,
+            parent,
+        )
     }
 
     /// The element's primary computed style, if it was styled.

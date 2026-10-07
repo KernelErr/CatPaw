@@ -149,6 +149,39 @@ fn common_ancestor(dom: &Dom, start: Boundary, end: Boundary) -> NodeId {
 
 // ----------------------------------------------------------- range access
 
+/// The rectangles of the nodes a range touches: its start and end
+/// containers and whatever lies between them.
+fn range_rects(cx: &Cx<'_>, id: ObjectId) -> Fallible<Vec<catpaw_layout::Rect>> {
+    let (start, end, collapsed) = range(cx, id, |r| (r.start.node, r.end.node, r.start == r.end))?;
+    if collapsed {
+        // A caret: no width, at the start of what the node is rendered in.
+        return Ok(crate::layout::client_rects(cx.page, start)
+            .into_iter()
+            .next()
+            .map(|r| catpaw_layout::Rect::new(r.x, r.y, 0.0, r.height))
+            .into_iter()
+            .collect());
+    }
+    let mut nodes = vec![start];
+    if end != start {
+        let dom = cx.dom();
+        let mut current = dom.next_in_preorder(start, dom.root_of(start));
+        while let Some(node) = current {
+            nodes.push(node);
+            if node == end {
+                break;
+            }
+            current = dom.next_in_preorder(node, dom.root_of(start));
+        }
+        drop(dom);
+    }
+    let mut rects = Vec::new();
+    for node in nodes {
+        rects.extend(crate::layout::client_rects(cx.page, node));
+    }
+    Ok(rects)
+}
+
 fn range<R>(cx: &Cx<'_>, id: ObjectId, f: impl FnOnce(&mut RangeObject) -> R) -> Fallible<R> {
     cx.page.with::<RangeObject, _>(id, f)
 }
@@ -1004,8 +1037,16 @@ impl web::RangeImpl for Web {
     }
 
     fn get_bounding_client_rect(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId> {
-        range(cx, this, |_| ())?;
-        Ok(element::zero_rect(cx))
+        let rect = range_rects(cx, this)?
+            .into_iter()
+            .reduce(|a, b| a.union(&b))
+            .unwrap_or_default();
+        Ok(crate::layout::rect_object(cx.page, rect))
+    }
+
+    fn get_client_rects(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId> {
+        let rects = range_rects(cx, this)?;
+        Ok(crate::layout::rect_list(cx.page, rects))
     }
 
     fn stringify(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String> {

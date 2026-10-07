@@ -13,6 +13,7 @@
 pub mod computed;
 pub mod cssom;
 pub mod engine;
+pub mod fonts;
 pub mod inline;
 pub mod media;
 pub mod node;

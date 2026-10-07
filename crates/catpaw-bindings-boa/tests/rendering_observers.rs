@@ -106,9 +106,9 @@ fn entries_describe_empty_boxes() {
                  rect(e.intersectionRect), e.rootBounds instanceof DOMRectReadOnly].join(' | '));
              }, { rootMargin: '10px 5%' }).observe(a)"
         ),
-        "number | true | -64 -10 1408 740 | 0 0 0 0 | 0 0 0 0 | true"
+        "number | true | -64 -10 1408 740 | 8 8 1264 0 | 8 8 1264 0 | true"
     );
-    // An element root has an empty box of its own.
+    // An element root's bounds are its padding box, grown by the margin.
     assert_eq!(
         step(
             &mut page,
@@ -116,7 +116,7 @@ fn entries_describe_empty_boxes() {
                log.push(entries.map(function (e) { return e.target.id + ' ' + e.isIntersecting + ' ' + rect(e.rootBounds); }).join(', '));
              }, { root: a, rootMargin: '1px 2px 3px 4px' }).observe(inner)"
         ),
-        "inner true -4 -1 6 4"
+        "inner true 4 7 1270 4"
     );
 }
 
@@ -283,12 +283,12 @@ fn observers_outlive_their_script_references_and_survive_errors() {
 }
 
 #[test]
-fn resize_observers_have_nothing_to_report() {
+fn resize_observers_report_in_the_next_frame() {
     let mut page = load(FIXTURE);
     assert_eq!(
         step(
             &mut page,
-            "var ro = new ResizeObserver(function () { log.push('resized'); });
+            "var ro = new ResizeObserver(function (entries) { log.push('resized ' + entries.map(function (e) { return e.target.id + ' ' + e.borderBoxSize[0].inlineSize; }).join(',')); });
              ro.observe(a);
              ro.observe(a, { box: 'border-box' });
              ro.observe(b);
@@ -296,7 +296,13 @@ fn resize_observers_have_nothing_to_report() {
              ro.unobserve(b);
              log.push(typeof ro.disconnect)"
         ),
-        "function"
+        "function / resized a 100"
+    );
+    assert_eq!(step(&mut page, "a.style.color = 'red'"), "");
+    assert_eq!(step(&mut page, "a.style.width = '200px'"), "resized a 200");
+    assert_eq!(
+        step(&mut page, "ro.disconnect(); a.style.width = '300px'"),
+        ""
     );
     for (source, expected) in [
         (

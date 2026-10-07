@@ -9,6 +9,7 @@ area, base, basefont, datalist, head, link, meta, noembed, noframes, param, rp,
 script, style, template, title { display: none; }
 noscript { display: none; }
 input[type=hidden i] { display: none !important; }
+::-servo-anonymous-box { display: block; }
 dialog:not([open]) { display: none; }
 details:not([open]) > *:not(summary) { display: none; }
 select > option, select > optgroup { display: none; }

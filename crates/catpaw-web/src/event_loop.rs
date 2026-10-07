@@ -239,6 +239,7 @@ fn run_frame(cx: &mut Cx<'_>) {
     }
     cx.checkpoint();
     crate::intersection_observer::update(cx);
+    crate::resize_observer::update(cx);
 }
 
 /// Bounds on one run of the event loop.
@@ -343,6 +344,7 @@ pub fn run(cx: &mut Cx<'_>, limits: &LoopLimits) -> LoopReport {
         }
 
         crate::intersection_observer::request_frame_if_stale(cx.page);
+        crate::resize_observer::request_frame_if_stale(cx.page);
         let frame = cx.page.raf.borrow().deadline;
         if frame.is_some_and(|t| t <= now) {
             run_frame(cx);

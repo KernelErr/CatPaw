@@ -4423,6 +4423,77 @@ pub mod dom_parser {
     };
 }
 
+pub mod dom_rect_list {
+    use super::*;
+
+    fn get_length(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::DOMRectList, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::DOMRectListImpl>::length(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_item(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::DOMRectList, ctx)?;
+        rt::require_args(args, 1, "DOMRectList.item")?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::DOMRectListImpl>::item(cx, this, a0));
+        rt::ret(r, ctx)
+    }
+
+    fn exotic_length(h: rt::Handle, ctx: &mut Context) -> JsResult<u32> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| <Web as web::DOMRectListImpl>::length(cx, this));
+        r.map_err(|e| rt::exception_to_js(e, ctx))
+    }
+
+    fn exotic_indexed_get(
+        h: rt::Handle,
+        index: u32,
+        ctx: &mut Context,
+    ) -> JsResult<Option<JsValue>> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DOMRectListImpl>::indexed_get(cx, this, index)
+        });
+        rt::ret_opt(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::DOMRectList,
+        name: "DOMRectList",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "length",
+            getter: get_length,
+            setter: None,
+        }],
+        ops: &[rt::OpDef {
+            name: "item",
+            func: op_item,
+            length: 1,
+        }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: Some(rt::ExoticDef {
+            length: Some(exotic_length),
+            indexed_get: Some(exotic_indexed_get),
+            named_get: None,
+            named_properties: None,
+            named_set: None,
+            named_delete: None,
+            override_builtins: false,
+            attribute_like: false,
+            unenumerable_names: false,
+        }),
+    };
+}
+
 pub mod dom_rect_read_only {
     use super::*;
 
@@ -10983,6 +11054,19 @@ pub mod range {
         rt::ret(r, ctx)
     }
 
+    fn op_get_client_rects(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Range, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::RangeImpl>::get_client_rects(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn op_get_bounding_client_rect(
         this_js: &JsValue,
         args: &[JsValue],
@@ -11341,6 +11425,11 @@ pub mod range {
             setter: None,
         }],
         ops: &[
+            rt::OpDef {
+                name: "getClientRects",
+                func: op_get_client_rects,
+                length: 0,
+            },
             rt::OpDef {
                 name: "getBoundingClientRect",
                 func: op_get_bounding_client_rect,
@@ -12139,6 +12228,163 @@ pub mod resize_observer {
                 length: 0,
             },
         ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod resize_observer_entry {
+    use super::*;
+
+    fn get_target(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::ResizeObserverEntry, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ResizeObserverEntryImpl>::target(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_content_rect(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::ResizeObserverEntry, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ResizeObserverEntryImpl>::content_rect(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_border_box_size(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::ResizeObserverEntry, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ResizeObserverEntryImpl>::border_box_size(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_content_box_size(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::ResizeObserverEntry, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ResizeObserverEntryImpl>::content_box_size(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_device_pixel_content_box_size(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::ResizeObserverEntry, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ResizeObserverEntryImpl>::device_pixel_content_box_size(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::ResizeObserverEntry,
+        name: "ResizeObserverEntry",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "target",
+                getter: get_target,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "contentRect",
+                getter: get_content_rect,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "borderBoxSize",
+                getter: get_border_box_size,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "contentBoxSize",
+                getter: get_content_box_size,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "devicePixelContentBoxSize",
+                getter: get_device_pixel_content_box_size,
+                setter: None,
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod resize_observer_size {
+    use super::*;
+
+    fn get_inline_size(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::ResizeObserverSize, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ResizeObserverSizeImpl>::inline_size(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_block_size(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::ResizeObserverSize, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ResizeObserverSizeImpl>::block_size(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::ResizeObserverSize,
+        name: "ResizeObserverSize",
+        parent: None,
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "inlineSize",
+                getter: get_inline_size,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "blockSize",
+                getter: get_block_size,
+                setter: None,
+            },
+        ],
+        ops: &[],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -23282,6 +23528,38 @@ pub mod document {
         Ok(JsValue::undefined())
     }
 
+    fn op_element_from_point(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        rt::require_args(args, 2, "Document.elementFromPoint")?;
+        let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
+        let a1 = rt::to_finite(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DocumentImpl>::element_from_point(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_elements_from_point(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        rt::require_args(args, 2, "Document.elementsFromPoint")?;
+        let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
+        let a1 = rt::to_finite(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DocumentImpl>::elements_from_point(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn op_get_elements_by_tag_name(
         this_js: &JsValue,
         args: &[JsValue],
@@ -24619,6 +24897,16 @@ pub mod document {
         ],
         ops: &[
             rt::OpDef {
+                name: "elementFromPoint",
+                func: op_element_from_point,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "elementsFromPoint",
+                func: op_elements_from_point,
+                length: 2,
+            },
+            rt::OpDef {
                 name: "getElementsByTagName",
                 func: op_get_elements_by_tag_name,
                 length: 1,
@@ -25574,6 +25862,19 @@ pub mod element {
         rt::ret(r, ctx)
     }
 
+    fn op_get_client_rects(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Element, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ElementImpl>::get_client_rects(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn op_get_bounding_client_rect(
         this_js: &JsValue,
         args: &[JsValue],
@@ -26477,6 +26778,11 @@ pub mod element {
             },
         ],
         ops: &[
+            rt::OpDef {
+                name: "getClientRects",
+                func: op_get_client_rects,
+                length: 0,
+            },
             rt::OpDef {
                 name: "getBoundingClientRect",
                 func: op_get_bounding_client_rect,
@@ -49646,6 +49952,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &custom_element_registry::DEF,
     &dom_implementation::DEF,
     &dom_parser::DEF,
+    &dom_rect_list::DEF,
     &dom_rect_read_only::DEF,
     &dom_string_map::DEF,
     &dom_token_list::DEF,
@@ -49690,6 +49997,8 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &readable_stream_default_reader::DEF,
     &request::DEF,
     &resize_observer::DEF,
+    &resize_observer_entry::DEF,
+    &resize_observer_size::DEF,
     &response::DEF,
     &svg_animated_string::DEF,
     &screen::DEF,

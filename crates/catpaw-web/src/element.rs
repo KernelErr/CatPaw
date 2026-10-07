@@ -12,7 +12,7 @@ use crate::collections::{self, ListSource};
 use crate::generated::{self as web, BooleanOrDoubleOrString, InterfaceId};
 use crate::node::{self, qualified_name};
 use crate::page::Cx;
-use crate::{Web, attributes, events, platform_object};
+use crate::{Web, attributes, events, layout, platform_object};
 
 const XML_NS: &str = "http://www.w3.org/XML/1998/namespace";
 const XMLNS_NS: &str = "http://www.w3.org/2000/xmlns/";
@@ -555,14 +555,9 @@ fn dataset_attr(key: &str) -> String {
     out
 }
 
-pub(crate) fn zero_rect(cx: &Cx<'_>) -> ObjectId {
-    cx.page.alloc(RectObject {
-        iface: InterfaceId::DOMRect,
-        x: 0.0,
-        y: 0.0,
-        width: 0.0,
-        height: 0.0,
-    })
+/// A finite scroll coordinate; NaN and infinities count as zero.
+fn finite_or_zero(value: f64) -> f32 {
+    if value.is_finite() { value as f32 } else { 0.0 }
 }
 
 fn resolved_promise(cx: &mut Cx<'_>) -> PromiseRef {
@@ -576,114 +571,132 @@ fn resolved_promise(cx: &mut Cx<'_>) -> PromiseRef {
 impl web::ElementImpl for Web {
     fn get_bounding_client_rect(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId> {
         node::check(cx, this)?;
-        // Geometry arrives with layout; until then every box is empty.
-        Ok(zero_rect(cx))
+        let rect = layout::bounding_client_rect(cx.page, this);
+        Ok(layout::rect_object(cx.page, rect))
+    }
+
+    fn get_client_rects(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId> {
+        node::check(cx, this)?;
+        let rects = layout::client_rects(cx.page, this);
+        Ok(layout::rect_list(cx.page, rects))
     }
 
     fn scroll_into_view(
         cx: &mut Cx<'_>,
-        _this: NodeId,
-        _arg: web::BooleanOrScrollIntoViewOptions,
+        this: NodeId,
+        arg: web::BooleanOrScrollIntoViewOptions,
     ) -> Fallible<PromiseRef> {
+        let (block, inline) = match arg {
+            web::BooleanOrScrollIntoViewOptions::Boolean(true) => (
+                web::ScrollLogicalPosition::Start,
+                web::ScrollLogicalPosition::Nearest,
+            ),
+            web::BooleanOrScrollIntoViewOptions::Boolean(false) => (
+                web::ScrollLogicalPosition::End,
+                web::ScrollLogicalPosition::Nearest,
+            ),
+            web::BooleanOrScrollIntoViewOptions::ScrollIntoViewOptions(options) => {
+                (options.block, options.inline)
+            }
+        };
+        layout::scroll_into_view(cx, this, block, inline);
         Ok(resolved_promise(cx))
     }
 
     fn scroll(
         cx: &mut Cx<'_>,
-        _this: NodeId,
-        _options: web::ScrollToOptions,
+        this: NodeId,
+        options: web::ScrollToOptions,
     ) -> Fallible<PromiseRef> {
-        Ok(resolved_promise(cx))
+        <Self as web::ElementImpl>::scroll_to(cx, this, options)
     }
 
-    fn scroll_overload2(cx: &mut Cx<'_>, _this: NodeId, _x: f64, _y: f64) -> Fallible<PromiseRef> {
-        Ok(resolved_promise(cx))
+    fn scroll_overload2(cx: &mut Cx<'_>, this: NodeId, x: f64, y: f64) -> Fallible<PromiseRef> {
+        <Self as web::ElementImpl>::scroll_to_overload2(cx, this, x, y)
     }
 
     fn scroll_to(
         cx: &mut Cx<'_>,
-        _this: NodeId,
-        _options: web::ScrollToOptions,
+        this: NodeId,
+        options: web::ScrollToOptions,
     ) -> Fallible<PromiseRef> {
+        let (x, y) = layout::scroll_position(cx.page, this);
+        let x = options.left.map_or(x, finite_or_zero);
+        let y = options.top.map_or(y, finite_or_zero);
+        layout::scroll_element_to(cx, this, x, y);
         Ok(resolved_promise(cx))
     }
 
-    fn scroll_to_overload2(
-        cx: &mut Cx<'_>,
-        _this: NodeId,
-        _x: f64,
-        _y: f64,
-    ) -> Fallible<PromiseRef> {
+    fn scroll_to_overload2(cx: &mut Cx<'_>, this: NodeId, x: f64, y: f64) -> Fallible<PromiseRef> {
+        layout::scroll_element_to(cx, this, finite_or_zero(x), finite_or_zero(y));
         Ok(resolved_promise(cx))
     }
 
     fn scroll_by(
         cx: &mut Cx<'_>,
-        _this: NodeId,
-        _options: web::ScrollToOptions,
+        this: NodeId,
+        options: web::ScrollToOptions,
     ) -> Fallible<PromiseRef> {
+        let (x, y) = layout::scroll_position(cx.page, this);
+        let dx = options.left.map_or(0.0, finite_or_zero);
+        let dy = options.top.map_or(0.0, finite_or_zero);
+        layout::scroll_element_to(cx, this, x + dx, y + dy);
         Ok(resolved_promise(cx))
     }
 
-    fn scroll_by_overload2(
-        cx: &mut Cx<'_>,
-        _this: NodeId,
-        _x: f64,
-        _y: f64,
-    ) -> Fallible<PromiseRef> {
+    fn scroll_by_overload2(cx: &mut Cx<'_>, this: NodeId, x: f64, y: f64) -> Fallible<PromiseRef> {
+        let (cur_x, cur_y) = layout::scroll_position(cx.page, this);
+        layout::scroll_element_to(
+            cx,
+            this,
+            cur_x + finite_or_zero(x),
+            cur_y + finite_or_zero(y),
+        );
         Ok(resolved_promise(cx))
     }
 
-    fn scroll_top(_cx: &mut Cx<'_>, _this: NodeId) -> Fallible<f64> {
-        Ok(0.0)
+    fn scroll_top(cx: &mut Cx<'_>, this: NodeId) -> Fallible<f64> {
+        Ok(f64::from(layout::scroll_position(cx.page, this).1))
     }
 
-    fn set_scroll_top(_cx: &mut Cx<'_>, _this: NodeId, _value: f64) -> Fallible<()> {
+    fn set_scroll_top(cx: &mut Cx<'_>, this: NodeId, value: f64) -> Fallible<()> {
+        let (x, _) = layout::scroll_position(cx.page, this);
+        layout::scroll_element_to(cx, this, x, finite_or_zero(value));
         Ok(())
     }
 
-    fn scroll_left(_cx: &mut Cx<'_>, _this: NodeId) -> Fallible<f64> {
-        Ok(0.0)
+    fn scroll_left(cx: &mut Cx<'_>, this: NodeId) -> Fallible<f64> {
+        Ok(f64::from(layout::scroll_position(cx.page, this).0))
     }
 
-    fn set_scroll_left(_cx: &mut Cx<'_>, _this: NodeId, _value: f64) -> Fallible<()> {
+    fn set_scroll_left(cx: &mut Cx<'_>, this: NodeId, value: f64) -> Fallible<()> {
+        let (_, y) = layout::scroll_position(cx.page, this);
+        layout::scroll_element_to(cx, this, finite_or_zero(value), y);
         Ok(())
     }
 
-    fn scroll_width(_cx: &mut Cx<'_>, _this: NodeId) -> Fallible<i32> {
-        Ok(0)
+    fn scroll_width(cx: &mut Cx<'_>, this: NodeId) -> Fallible<i32> {
+        Ok(layout::scroll_size(cx.page, this).0.round() as i32)
     }
 
-    fn scroll_height(_cx: &mut Cx<'_>, _this: NodeId) -> Fallible<i32> {
-        Ok(0)
+    fn scroll_height(cx: &mut Cx<'_>, this: NodeId) -> Fallible<i32> {
+        Ok(layout::scroll_size(cx.page, this).1.round() as i32)
     }
 
-    fn client_top(_cx: &mut Cx<'_>, _this: NodeId) -> Fallible<i32> {
-        Ok(0)
+    fn client_top(cx: &mut Cx<'_>, this: NodeId) -> Fallible<i32> {
+        Ok(layout::client_box(cx.page, this).y.round() as i32)
     }
 
-    fn client_left(_cx: &mut Cx<'_>, _this: NodeId) -> Fallible<i32> {
-        Ok(0)
+    fn client_left(cx: &mut Cx<'_>, this: NodeId) -> Fallible<i32> {
+        Ok(layout::client_box(cx.page, this).x.round() as i32)
     }
 
     fn client_width(cx: &mut Cx<'_>, this: NodeId) -> Fallible<i32> {
-        // The root element reports the viewport, as scripts measuring the
-        // window expect.
-        let is_root = cx.dom().parent(this) == Some(cx.document());
-        Ok(if is_root {
-            cx.page.config.viewport_width as i32
-        } else {
-            0
-        })
+        Ok(layout::client_box(cx.page, this).width.round() as i32)
     }
 
     fn client_height(cx: &mut Cx<'_>, this: NodeId) -> Fallible<i32> {
-        let is_root = cx.dom().parent(this) == Some(cx.document());
-        Ok(if is_root {
-            cx.page.config.viewport_height as i32
-        } else {
-            0
-        })
+        Ok(layout::client_box(cx.page, this).height.round() as i32)
     }
 
     fn namespace_uri(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<String>> {
@@ -1158,24 +1171,24 @@ impl web::ElementImpl for Web {
 }
 
 impl web::HTMLElementImpl for Web {
-    fn offset_parent(_cx: &mut Cx<'_>, _this: NodeId) -> Fallible<Option<NodeId>> {
-        Ok(None)
+    fn offset_parent(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>> {
+        Ok(layout::offsets(cx.page, this).parent)
     }
 
-    fn offset_top(_cx: &mut Cx<'_>, _this: NodeId) -> Fallible<i32> {
-        Ok(0)
+    fn offset_top(cx: &mut Cx<'_>, this: NodeId) -> Fallible<i32> {
+        Ok(layout::offsets(cx.page, this).top.round() as i32)
     }
 
-    fn offset_left(_cx: &mut Cx<'_>, _this: NodeId) -> Fallible<i32> {
-        Ok(0)
+    fn offset_left(cx: &mut Cx<'_>, this: NodeId) -> Fallible<i32> {
+        Ok(layout::offsets(cx.page, this).left.round() as i32)
     }
 
-    fn offset_width(_cx: &mut Cx<'_>, _this: NodeId) -> Fallible<i32> {
-        Ok(0)
+    fn offset_width(cx: &mut Cx<'_>, this: NodeId) -> Fallible<i32> {
+        Ok(layout::offsets(cx.page, this).width.round() as i32)
     }
 
-    fn offset_height(_cx: &mut Cx<'_>, _this: NodeId) -> Fallible<i32> {
-        Ok(0)
+    fn offset_height(cx: &mut Cx<'_>, this: NodeId) -> Fallible<i32> {
+        Ok(layout::offsets(cx.page, this).height.round() as i32)
     }
 
     fn hidden(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<BooleanOrDoubleOrString>> {

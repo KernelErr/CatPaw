@@ -129,6 +129,12 @@ members = [
 constructor = true
 members = ["observe", "unobserve", "disconnect"]
 
+[interfaces.ResizeObserverEntry]
+members = ["target", "contentRect", "borderBoxSize", "contentBoxSize", "devicePixelContentBoxSize"]
+
+[interfaces.ResizeObserverSize]
+members = ["inlineSize", "blockSize"]
+
 # ----------------------------------------------------------------- DOM: nodes
 
 [interfaces.Node]
@@ -157,7 +163,7 @@ members = [
   "getElementsByName", "currentScript", "defaultView", "hasFocus", "hidden",
   "visibilityState", "write", "writeln", "open", "close", "implementation",
   "createAttribute", "createAttributeNS", "createNodeIterator", "createTreeWalker", "domain",
-  "scrollingElement", "getSelection", "createRange",
+  "scrollingElement", "elementFromPoint", "elementsFromPoint", "getSelection", "createRange",
   "images", "embeds", "plugins", "links", "forms", "scripts", "anchors", "applets",
 ]
 
@@ -176,7 +182,7 @@ members = [
   "setEndBefore", "setEndAfter", "collapse", "selectNode", "selectNodeContents",
   "compareBoundaryPoints", "deleteContents", "extractContents", "cloneContents", "insertNode",
   "surroundContents", "cloneRange", "detach", "isPointInRange", "comparePoint",
-  "intersectsNode", "createContextualFragment", "getBoundingClientRect",
+  "intersectsNode", "createContextualFragment", "getBoundingClientRect", "getClientRects",
 ]
 
 # XPath 1.0 (`catpaw_dom::xpath`). Node results may be attributes, which are
@@ -256,7 +262,7 @@ members = [
   "getElementsByTagName", "getElementsByTagNameNS", "getElementsByClassName",
   "insertAdjacentElement",
   "insertAdjacentText", "innerHTML", "outerHTML", "insertAdjacentHTML",
-  "getBoundingClientRect", "scrollIntoView", "scroll", "scrollTo", "scrollBy", "scrollTop", "scrollLeft", "scrollWidth",
+  "getBoundingClientRect", "getClientRects", "scrollIntoView", "scroll", "scrollTo", "scrollBy", "scrollTop", "scrollLeft", "scrollWidth",
   "scrollHeight", "clientTop", "clientLeft", "clientWidth", "clientHeight", "attributes",
   "getAttributeNode", "getAttributeNodeNS", "setAttributeNode", "setAttributeNodeNS",
   "removeAttributeNode", "attachShadow", "shadowRoot",
@@ -334,6 +340,10 @@ members = ["x", "y", "width", "height", "top", "right", "bottom", "left", "toJSO
 [interfaces.DOMRect]
 constructor = true
 members = ["x", "y", "width", "height"]
+
+[interfaces.DOMRectList]
+exotic = true
+members = ["length", "item"]
 
 # ------------------------------------------------------------- HTML elements
 

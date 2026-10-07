@@ -66,6 +66,11 @@ fn dialog(cx: &mut Cx<'_>, kind: &'static str, message: String) {
         .push(DialogRecord { kind, message });
 }
 
+/// A finite scroll coordinate; NaN and infinities count as zero.
+fn finite_scroll(value: f64) -> f32 {
+    if value.is_finite() { value as f32 } else { 0.0 }
+}
+
 impl web::WindowImpl for Web {
     fn inner_width(cx: &mut Cx<'_>) -> Fallible<i32> {
         Ok(cx.page.config.viewport_width as i32)
@@ -91,29 +96,38 @@ impl web::WindowImpl for Web {
         Ok(cx.page.document_state.borrow().scroll_y)
     }
 
-    // Without layout the document has no scrollable overflow, so every
-    // scroll request is a no-op that completes immediately.
-    fn scroll(cx: &mut Cx<'_>, _options: web::ScrollToOptions) -> Fallible<PromiseRef> {
+    fn scroll(cx: &mut Cx<'_>, options: web::ScrollToOptions) -> Fallible<PromiseRef> {
+        <Self as web::WindowImpl>::scroll_to(cx, options)
+    }
+
+    fn scroll_overload2(cx: &mut Cx<'_>, x: f64, y: f64) -> Fallible<PromiseRef> {
+        <Self as web::WindowImpl>::scroll_to_overload2(cx, x, y)
+    }
+
+    fn scroll_to(cx: &mut Cx<'_>, options: web::ScrollToOptions) -> Fallible<PromiseRef> {
+        let (x, y) = crate::layout::window_scroll(cx.page);
+        let x = options.left.map_or(x, finite_scroll);
+        let y = options.top.map_or(y, finite_scroll);
+        crate::layout::scroll_window_to(cx, x, y);
         Ok(resolved_promise(cx))
     }
 
-    fn scroll_overload2(cx: &mut Cx<'_>, _x: f64, _y: f64) -> Fallible<PromiseRef> {
+    fn scroll_to_overload2(cx: &mut Cx<'_>, x: f64, y: f64) -> Fallible<PromiseRef> {
+        crate::layout::scroll_window_to(cx, finite_scroll(x), finite_scroll(y));
         Ok(resolved_promise(cx))
     }
 
-    fn scroll_to(cx: &mut Cx<'_>, _options: web::ScrollToOptions) -> Fallible<PromiseRef> {
+    fn scroll_by(cx: &mut Cx<'_>, options: web::ScrollToOptions) -> Fallible<PromiseRef> {
+        let (x, y) = crate::layout::window_scroll(cx.page);
+        let dx = options.left.map_or(0.0, finite_scroll);
+        let dy = options.top.map_or(0.0, finite_scroll);
+        crate::layout::scroll_window_to(cx, x + dx, y + dy);
         Ok(resolved_promise(cx))
     }
 
-    fn scroll_to_overload2(cx: &mut Cx<'_>, _x: f64, _y: f64) -> Fallible<PromiseRef> {
-        Ok(resolved_promise(cx))
-    }
-
-    fn scroll_by(cx: &mut Cx<'_>, _options: web::ScrollToOptions) -> Fallible<PromiseRef> {
-        Ok(resolved_promise(cx))
-    }
-
-    fn scroll_by_overload2(cx: &mut Cx<'_>, _x: f64, _y: f64) -> Fallible<PromiseRef> {
+    fn scroll_by_overload2(cx: &mut Cx<'_>, x: f64, y: f64) -> Fallible<PromiseRef> {
+        let (cur_x, cur_y) = crate::layout::window_scroll(cx.page);
+        crate::layout::scroll_window_to(cx, cur_x + finite_scroll(x), cur_y + finite_scroll(y));
         Ok(resolved_promise(cx))
     }
 

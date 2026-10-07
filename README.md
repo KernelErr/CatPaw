@@ -11,8 +11,15 @@ settled" signals, diffs instead of re-dumps, deterministic time, and cheap
 isolated contexts.
 
 > Status: **pre-alpha**. Milestones M0 ("fetch & read") and M1 ("scripts
-> run", JavaScript via Boa) are complete; M2 ("interact": layout, input,
-> navigation, iframes) is next. See the roadmap below.
+> run", JavaScript via Boa) are complete; M2 ("interact") is in progress.
+> See the roadmap below.
+>
+> M2 so far: layout. Block, flex and grid boxes are laid out by Taffy and
+> inline content shaped and line-broken by Parley over a bundled font set,
+> only when something asks for geometry; the CSSOM View answers from it
+> (`getBoundingClientRect`, `getClientRects`, `offset*`/`client*`/`scroll*`,
+> `scrollTo`, `scrollIntoView`, `elementFromPoint`), as do
+> `IntersectionObserver` and `ResizeObserver`.
 >
 > With `catpaw fetch --js`: classic scripts (inline, external, `defer`,
 > `async`, script-inserted, `document.write`) and module scripts (static and
@@ -34,12 +41,13 @@ isolated contexts.
 > React, Vue, Svelte, Lit, htmx and Alpine sites run; the Boa engine is
 > vendored with fixes described in `vendor/`. web-platform-tests run in CI
 > against recorded expectations, served by an in-process stand-in for WPT's
-> server and the Python handlers its fetch and XHR tests use: `dom` 2975 of
+> server and the Python handlers its fetch and XHR tests use: `dom` 2978 of
 > 4246 subtests pass, `html/dom` 582 of 1066, `fetch/api` 1908 of 2237,
-> `xhr` 859 of 1200 (much of the rest needs iframes, layout, or server
-> behaviour the stand-in does not emulate). Not there yet: layout, canvas,
-> media, workers, WebAssembly, and the members of HTML elements that go
-> beyond their attributes.
+> `xhr` 859 of 1200, `css/cssom-view` 478 of 1198 (much of the rest needs iframes, layout, or server
+> behaviour the stand-in does not emulate). Not there yet: painting and
+> screenshots, tables as a grid, images' intrinsic sizes, canvas, media,
+> workers, WebAssembly, and the members of HTML elements that go beyond
+> their attributes.
 >
 > What works without JavaScript: HTTP/1.1 and HTTP/2 over rustls,
 > redirects, cookies, gzip/brotli/zstd, encoding sniffing, Web Bot Auth

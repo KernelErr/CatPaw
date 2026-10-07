@@ -33,6 +33,7 @@ pub enum InterfaceId {
     CustomElementRegistry,
     DOMImplementation,
     DOMParser,
+    DOMRectList,
     DOMRectReadOnly,
     DOMStringMap,
     DOMTokenList,
@@ -77,6 +78,8 @@ pub enum InterfaceId {
     ReadableStreamDefaultReader,
     Request,
     ResizeObserver,
+    ResizeObserverEntry,
+    ResizeObserverSize,
     Response,
     SVGAnimatedString,
     Screen,
@@ -240,8 +243,8 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 215;
-    pub const ALL: [InterfaceId; 215] = [
+    pub const COUNT: usize = 218;
+    pub const ALL: [InterfaceId; 218] = [
         InterfaceId::AbortController,
         InterfaceId::AbstractRange,
         InterfaceId::Blob,
@@ -253,6 +256,7 @@ impl InterfaceId {
         InterfaceId::CustomElementRegistry,
         InterfaceId::DOMImplementation,
         InterfaceId::DOMParser,
+        InterfaceId::DOMRectList,
         InterfaceId::DOMRectReadOnly,
         InterfaceId::DOMStringMap,
         InterfaceId::DOMTokenList,
@@ -297,6 +301,8 @@ impl InterfaceId {
         InterfaceId::ReadableStreamDefaultReader,
         InterfaceId::Request,
         InterfaceId::ResizeObserver,
+        InterfaceId::ResizeObserverEntry,
+        InterfaceId::ResizeObserverSize,
         InterfaceId::Response,
         InterfaceId::SVGAnimatedString,
         InterfaceId::Screen,
@@ -472,6 +478,7 @@ impl InterfaceId {
             InterfaceId::CustomElementRegistry => "CustomElementRegistry",
             InterfaceId::DOMImplementation => "DOMImplementation",
             InterfaceId::DOMParser => "DOMParser",
+            InterfaceId::DOMRectList => "DOMRectList",
             InterfaceId::DOMRectReadOnly => "DOMRectReadOnly",
             InterfaceId::DOMStringMap => "DOMStringMap",
             InterfaceId::DOMTokenList => "DOMTokenList",
@@ -516,6 +523,8 @@ impl InterfaceId {
             InterfaceId::ReadableStreamDefaultReader => "ReadableStreamDefaultReader",
             InterfaceId::Request => "Request",
             InterfaceId::ResizeObserver => "ResizeObserver",
+            InterfaceId::ResizeObserverEntry => "ResizeObserverEntry",
+            InterfaceId::ResizeObserverSize => "ResizeObserverSize",
             InterfaceId::Response => "Response",
             InterfaceId::SVGAnimatedString => "SVGAnimatedString",
             InterfaceId::Screen => "Screen",
@@ -692,6 +701,7 @@ impl InterfaceId {
             "CustomElementRegistry" => InterfaceId::CustomElementRegistry,
             "DOMImplementation" => InterfaceId::DOMImplementation,
             "DOMParser" => InterfaceId::DOMParser,
+            "DOMRectList" => InterfaceId::DOMRectList,
             "DOMRectReadOnly" => InterfaceId::DOMRectReadOnly,
             "DOMStringMap" => InterfaceId::DOMStringMap,
             "DOMTokenList" => InterfaceId::DOMTokenList,
@@ -736,6 +746,8 @@ impl InterfaceId {
             "ReadableStreamDefaultReader" => InterfaceId::ReadableStreamDefaultReader,
             "Request" => InterfaceId::Request,
             "ResizeObserver" => InterfaceId::ResizeObserver,
+            "ResizeObserverEntry" => InterfaceId::ResizeObserverEntry,
+            "ResizeObserverSize" => InterfaceId::ResizeObserverSize,
             "Response" => InterfaceId::Response,
             "SVGAnimatedString" => InterfaceId::SVGAnimatedString,
             "Screen" => InterfaceId::Screen,
@@ -913,6 +925,7 @@ impl InterfaceId {
             InterfaceId::CustomElementRegistry => None,
             InterfaceId::DOMImplementation => None,
             InterfaceId::DOMParser => None,
+            InterfaceId::DOMRectList => None,
             InterfaceId::DOMRectReadOnly => None,
             InterfaceId::DOMStringMap => None,
             InterfaceId::DOMTokenList => None,
@@ -957,6 +970,8 @@ impl InterfaceId {
             InterfaceId::ReadableStreamDefaultReader => None,
             InterfaceId::Request => None,
             InterfaceId::ResizeObserver => None,
+            InterfaceId::ResizeObserverEntry => None,
+            InterfaceId::ResizeObserverSize => None,
             InterfaceId::Response => None,
             InterfaceId::SVGAnimatedString => None,
             InterfaceId::Screen => None,
@@ -2983,6 +2998,12 @@ pub trait DOMParserImpl {
     fn constructor(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
 }
 
+pub trait DOMRectListImpl {
+    fn length(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn item(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<ObjectId>>;
+    fn indexed_get(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<ObjectId>>;
+}
+
 pub trait DOMRectReadOnlyImpl {
     fn x(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
     fn y(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
@@ -3622,6 +3643,7 @@ pub trait PromiseRejectionEventImpl {
 }
 
 pub trait RangeImpl {
+    fn get_client_rects(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
     fn get_bounding_client_rect(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
     fn common_ancestor_container(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<NodeId>;
     fn set_start(cx: &mut Cx<'_>, this: ObjectId, node: NodeId, offset: u32) -> Fallible<()>;
@@ -3736,6 +3758,19 @@ pub trait ResizeObserverImpl {
     fn unobserve(cx: &mut Cx<'_>, this: ObjectId, target: NodeId) -> Fallible<()>;
     fn disconnect(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
     fn constructor(cx: &mut Cx<'_>, callback: Callback) -> Fallible<ObjectId>;
+}
+
+pub trait ResizeObserverEntryImpl {
+    fn target(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<NodeId>;
+    fn content_rect(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn border_box_size(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<ObjectId>>;
+    fn content_box_size(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<ObjectId>>;
+    fn device_pixel_content_box_size(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<ObjectId>>;
+}
+
+pub trait ResizeObserverSizeImpl {
+    fn inline_size(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn block_size(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
 }
 
 pub trait ResponseImpl {
@@ -4191,6 +4226,13 @@ pub trait DOMRectImpl {
 }
 
 pub trait DocumentImpl {
+    fn element_from_point(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        x: f64,
+        y: f64,
+    ) -> Fallible<Option<NodeId>>;
+    fn elements_from_point(cx: &mut Cx<'_>, this: NodeId, x: f64, y: f64) -> Fallible<Vec<NodeId>>;
     fn scrolling_element(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
     fn implementation(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
     fn url(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
@@ -4333,6 +4375,7 @@ pub trait DocumentTypeImpl {
 }
 
 pub trait ElementImpl {
+    fn get_client_rects(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
     fn get_bounding_client_rect(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
     fn scroll_into_view(
         cx: &mut Cx<'_>,

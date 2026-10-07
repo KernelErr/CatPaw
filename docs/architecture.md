@@ -60,8 +60,9 @@ xtask (bindgen, IDL sync, WPT and html5lib runners)
 ```
 
 `catpaw-web` talks to JavaScript only through `catpaw-js` traits, so there is
-no cycle with the bindings crate. `catpaw-style` is the only crate that
-depends on Stylo, isolating its monthly breaking releases.
+no cycle with the bindings crate. `catpaw-style` and `catpaw-layout` are the
+only crates that depend on Stylo (the latter through a vendored `stylo_taffy`),
+isolating its monthly breaking releases.
 
 ## Key mechanisms
 
@@ -91,6 +92,20 @@ own timer heap, rendering opportunities only when something animates or
 observes. A shared `Clock` offers real time or deterministic virtual time.
 Network I/O runs on tokio; response bodies are pull-based so a slow page
 cannot flood its engine thread. Workers get their own thread and `Context`.
+
+**Layout.** Style and layout run only when something observes geometry:
+a CSSOM View call, a scroll, an intersection or resize observer's frame.
+The page then restyles the whole document and builds a box tree apart
+from the DOM (`catpaw-layout`): block, flex and grid containers go to
+Taffy; a block container with only inline content becomes an inline root
+whose text, inline elements and atomic inline boxes Parley shapes and
+breaks into lines; replaced elements are leaves sized by their attributes
+and defaults. The tree keeps the computed styles it was built with and is
+dropped when the document, the style sheets or a scroll position change.
+Fonts come from `catpaw-text`: a bundled DejaVu set stands in for the
+generic families so that layout is the same on every machine (the
+`system-fonts` feature adds the machine's fonts behind them). Boxes hold
+document coordinates; fixed boxes keep viewport ones.
 
 **Navigation.** html5ever drives parsing in time-budgeted tasks with the
 spec's script pauses (`document.write`, parser-blocking, defer/async/module).

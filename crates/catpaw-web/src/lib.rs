@@ -36,6 +36,7 @@ pub mod html_names;
 mod hyperlink;
 mod implementation;
 mod intersection_observer;
+mod layout;
 mod media;
 pub mod mime;
 mod mutation_observer;

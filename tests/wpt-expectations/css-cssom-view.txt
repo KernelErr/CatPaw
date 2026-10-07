@@ -1,0 +1,780 @@
+# Known failures in web-platform-tests css/cssom-view: `<test>\t<subtest>` per line,
+# `-` for the harness itself; `skip <test>` for tests not run at all
+# (those the engine cannot finish in time). Regenerate with
+# `cargo xtask wpt --include css/cssom-view --update-expectations`.
+css/cssom-view/Element-currentCSSZoom.html	Element.currentCSSZoom basic test
+css/cssom-view/Element-currentCSSZoom.html	Element.currentCSSZoom reacts to style changes
+css/cssom-view/GetBoundingRect.html	getBoundingClientRect
+css/cssom-view/HTMLBody-ScrollArea_quirksmode.html	When body not potentially scrollable, document.body.scrollHeight always equals window.innerHeight in quirks. (cond. scroll, visible)
+css/cssom-view/HTMLBody-ScrollArea_quirksmode.html	When body not potentially scrollable, document.body.scrollHeight always equals window.innerHeight in quirks. (cond. visible, scroll)
+css/cssom-view/HTMLBody-ScrollArea_quirksmode.html	When body not potentially scrollable, document.body.scrollHeight always equals window.innerHeight in quirks. (cond. visible, visible)
+css/cssom-view/HTMLBody-ScrollArea_quirksmode.html	scrollingElement in quirks should be null when body is potentially scrollable.
+css/cssom-view/MediaQueryList-addListener-handleEvent.html	-
+css/cssom-view/MediaQueryList-addListener-handleEvent.html	calls handleEvent method of event listener
+css/cssom-view/MediaQueryList-addListener-handleEvent.html	doesn't look up handleEvent method on callable event listeners
+css/cssom-view/MediaQueryList-addListener-handleEvent.html	looks up handleEvent method on every event dispatch
+css/cssom-view/MediaQueryList-addListener-handleEvent.html	rethrows errors when getting handleEvent
+css/cssom-view/MediaQueryList-addListener-handleEvent.html	throws if handleEvent is falsy and not callable
+css/cssom-view/MediaQueryList-addListener-handleEvent.html	throws if handleEvent is thruthy and not callable
+css/cssom-view/MediaQueryList-addListener-removeListener.html	-
+css/cssom-view/MediaQueryList-addListener-removeListener.html	MediaQueryList::removeListener removes added listener
+css/cssom-view/MediaQueryList-addListener-removeListener.html	listener that was added twice is called only once
+css/cssom-view/MediaQueryList-addListener-removeListener.html	listeners are called correct number of times
+css/cssom-view/MediaQueryList-addListener-removeListener.html	listeners are called in order their MQLs were created
+css/cssom-view/MediaQueryList-addListener-removeListener.html	listeners are called in order they were added
+css/cssom-view/MediaQueryList-addListener-removeListener.html	listeners are called when <iframe> is resized
+css/cssom-view/MediaQueryList-addListener-removeListener.html	removing listener from one MQL doesn't remove it from all MQLs
+css/cssom-view/MediaQueryList-change-event-matches-value.html	-
+css/cssom-view/MediaQueryList-change-event-matches-value.html	MediaQueryList.changed is correct for all lists in the document even during a change event handler
+css/cssom-view/MediaQueryList-extends-EventTarget-interop.html	-
+css/cssom-view/MediaQueryList-extends-EventTarget-interop.html	capturing event listener fires before non-capturing listener at target
+css/cssom-view/MediaQueryList-extends-EventTarget-interop.html	listener added with addListener and addEventListener (capture) is called twice
+css/cssom-view/MediaQueryList-extends-EventTarget-interop.html	listener added with addListener and addEventListener is called once
+css/cssom-view/MediaQueryList-extends-EventTarget-interop.html	removeEventListener (capture) doesn't remove listener added with addListener
+css/cssom-view/MediaQueryList-extends-EventTarget-interop.html	removeEventListener removes listener added with addListener
+css/cssom-view/MediaQueryList-extends-EventTarget-interop.html	removeListener doesn't remove listener added with addEventListener (capture)
+css/cssom-view/MediaQueryList-extends-EventTarget-interop.html	removeListener removes listener added with addEventListener
+css/cssom-view/MediaQueryList-extends-EventTarget.html	-
+css/cssom-view/MediaQueryList-extends-EventTarget.html	addEventListener "once" option is respected
+css/cssom-view/MediaQueryList-extends-EventTarget.html	listeners for "change" type are called
+css/cssom-view/MediaQueryList-extends-EventTarget.html	listeners with different type are not called
+css/cssom-view/MediaQueryList-extends-EventTarget.html	onchange adds listener
+css/cssom-view/MediaQueryList-extends-EventTarget.html	onchange removes listener
+css/cssom-view/MediaQueryList-extends-EventTarget.html	removeEventListener removes listener
+css/cssom-view/MediaQueryListEvent.html	-
+css/cssom-view/MediaQueryListEvent.html	argument of addListener
+css/cssom-view/MediaQueryListEvent.html	argument of onchange
+css/cssom-view/MediaQueryListEvent.html	constructor of "change" event
+css/cssom-view/MediaQueryListEvent.html	init dictionary default values
+css/cssom-view/MediaQueryListEvent.html	init dictionary overrides
+css/cssom-view/MediaQueryListEvent.html	type can be different from "change"
+css/cssom-view/add-background-attachment-fixed-during-smooth-scroll.html	-
+css/cssom-view/checkVisibility.html	checkVisibility on content-visibility:auto element which is outside the viewport.
+css/cssom-view/checkVisibility.html	checkVisibility on content-visibility:auto element.
+css/cssom-view/checkVisibility.html	checkVisibility on content-visibility:auto with visibility:hidden inside.
+css/cssom-view/checkVisibility.html	checkVisibility on content-visibility:hidden child after forced layout update.
+css/cssom-view/checkVisibility.html	checkVisibility on content-visibility:hidden element after forced layout update.
+css/cssom-view/checkVisibility.html	checkVisibility on content-visibility:hidden element.
+css/cssom-view/checkVisibility.html	checkVisibility on display:contents element.
+css/cssom-view/checkVisibility.html	checkVisibility on display:none element.
+css/cssom-view/checkVisibility.html	checkVisibility on element slotted in content-visibility: hidden shadow host.
+css/cssom-view/checkVisibility.html	checkVisibility on element slotted in display:none shadow host.
+css/cssom-view/checkVisibility.html	checkVisibility on element slotted in opacity: 0; shadow host.
+css/cssom-view/checkVisibility.html	checkVisibility on nested content-visibility:auto containers reports that the content is visible.
+css/cssom-view/checkVisibility.html	checkVisibility on opacity:0 element.
+css/cssom-view/checkVisibility.html	checkVisibility on root element with content-visibility: hidden returns true.
+css/cssom-view/checkVisibility.html	checkVisibility on visibility:hidden element.
+css/cssom-view/client-props-input.html	client* on input / textarea
+css/cssom-view/client-props-root-display-none-crash.html	-
+css/cssom-view/client-props-zoom.html	Client properties for elements with css zoom 1
+css/cssom-view/client-scroll-props-input.html	horizontal writing mode
+css/cssom-view/client-scroll-props-input.html	vertical writing mode
+css/cssom-view/cssom-geometryutils-connected-callback.html	getBoxQuads() returns current geometry from connectedCallback
+css/cssom-view/cssom-geometryutils-connected-callback.html	getBoxQuads() updates reused OOF geometry after scrollbars appear
+css/cssom-view/cssom-geometryutils-convertPointFromNode.html	Document.convertPointFromNode() converts to viewport coordinates
+css/cssom-view/cssom-geometryutils-convertPointFromNode.html	convertPointFromNode() maps border origin to border coordinates
+css/cssom-view/cssom-geometryutils-convertPointFromNode.html	convertPointFromNode() maps border origin to content coordinates
+css/cssom-view/cssom-geometryutils-convertPointFromNode.html	convertPointFromNode() maps border origin to margin coordinates
+css/cssom-view/cssom-geometryutils-convertPointFromNode.html	convertPointFromNode() maps border origin to padding coordinates
+css/cssom-view/cssom-geometryutils-convertPointFromNode.html	convertPointFromNode() maps content origin to border coordinates
+css/cssom-view/cssom-geometryutils-convertPointFromNode.html	convertPointFromNode() maps content origin to content coordinates
+css/cssom-view/cssom-geometryutils-convertPointFromNode.html	convertPointFromNode() maps content origin to margin coordinates
+css/cssom-view/cssom-geometryutils-convertPointFromNode.html	convertPointFromNode() maps content origin to padding coordinates
+css/cssom-view/cssom-geometryutils-convertPointFromNode.html	convertPointFromNode() maps margin origin to border coordinates
+css/cssom-view/cssom-geometryutils-convertPointFromNode.html	convertPointFromNode() maps margin origin to content coordinates
+css/cssom-view/cssom-geometryutils-convertPointFromNode.html	convertPointFromNode() maps margin origin to margin coordinates
+css/cssom-view/cssom-geometryutils-convertPointFromNode.html	convertPointFromNode() maps margin origin to padding coordinates
+css/cssom-view/cssom-geometryutils-convertPointFromNode.html	convertPointFromNode() maps padding origin to border coordinates
+css/cssom-view/cssom-geometryutils-convertPointFromNode.html	convertPointFromNode() maps padding origin to content coordinates
+css/cssom-view/cssom-geometryutils-convertPointFromNode.html	convertPointFromNode() maps padding origin to margin coordinates
+css/cssom-view/cssom-geometryutils-convertPointFromNode.html	convertPointFromNode() maps padding origin to padding coordinates
+css/cssom-view/cssom-geometryutils-convertPointFromNode.html	convertPointFromNode() round-trips between two elements
+css/cssom-view/cssom-geometryutils-convertPointFromNode.html	convertPointFromNode() throws for a display:none source
+css/cssom-view/cssom-geometryutils-convertPointFromNode.html	convertPointFromNode() throws for a display:none target
+css/cssom-view/cssom-geometryutils-convertQuadFromNode.html	Document.convertQuadFromNode() matches getBoxQuads()
+css/cssom-view/cssom-geometryutils-convertQuadFromNode.html	convertQuadFromNode() maps border quad to border coordinates
+css/cssom-view/cssom-geometryutils-convertQuadFromNode.html	convertQuadFromNode() maps border quad to content coordinates
+css/cssom-view/cssom-geometryutils-convertQuadFromNode.html	convertQuadFromNode() maps border quad to margin coordinates
+css/cssom-view/cssom-geometryutils-convertQuadFromNode.html	convertQuadFromNode() maps border quad to padding coordinates
+css/cssom-view/cssom-geometryutils-convertQuadFromNode.html	convertQuadFromNode() maps content quad to border coordinates
+css/cssom-view/cssom-geometryutils-convertQuadFromNode.html	convertQuadFromNode() maps content quad to content coordinates
+css/cssom-view/cssom-geometryutils-convertQuadFromNode.html	convertQuadFromNode() maps content quad to margin coordinates
+css/cssom-view/cssom-geometryutils-convertQuadFromNode.html	convertQuadFromNode() maps content quad to padding coordinates
+css/cssom-view/cssom-geometryutils-convertQuadFromNode.html	convertQuadFromNode() maps margin quad to border coordinates
+css/cssom-view/cssom-geometryutils-convertQuadFromNode.html	convertQuadFromNode() maps margin quad to content coordinates
+css/cssom-view/cssom-geometryutils-convertQuadFromNode.html	convertQuadFromNode() maps margin quad to margin coordinates
+css/cssom-view/cssom-geometryutils-convertQuadFromNode.html	convertQuadFromNode() maps margin quad to padding coordinates
+css/cssom-view/cssom-geometryutils-convertQuadFromNode.html	convertQuadFromNode() maps padding quad to border coordinates
+css/cssom-view/cssom-geometryutils-convertQuadFromNode.html	convertQuadFromNode() maps padding quad to content coordinates
+css/cssom-view/cssom-geometryutils-convertQuadFromNode.html	convertQuadFromNode() maps padding quad to margin coordinates
+css/cssom-view/cssom-geometryutils-convertQuadFromNode.html	convertQuadFromNode() maps padding quad to padding coordinates
+css/cssom-view/cssom-geometryutils-convertQuadFromNode.html	convertQuadFromNode() round-trips between two elements
+css/cssom-view/cssom-geometryutils-convertRectFromNode.html	convertRectFromNode() maps border rect to border coordinates
+css/cssom-view/cssom-geometryutils-convertRectFromNode.html	convertRectFromNode() maps border rect to content coordinates
+css/cssom-view/cssom-geometryutils-convertRectFromNode.html	convertRectFromNode() maps border rect to margin coordinates
+css/cssom-view/cssom-geometryutils-convertRectFromNode.html	convertRectFromNode() maps border rect to padding coordinates
+css/cssom-view/cssom-geometryutils-convertRectFromNode.html	convertRectFromNode() maps content rect to border coordinates
+css/cssom-view/cssom-geometryutils-convertRectFromNode.html	convertRectFromNode() maps content rect to content coordinates
+css/cssom-view/cssom-geometryutils-convertRectFromNode.html	convertRectFromNode() maps content rect to margin coordinates
+css/cssom-view/cssom-geometryutils-convertRectFromNode.html	convertRectFromNode() maps content rect to padding coordinates
+css/cssom-view/cssom-geometryutils-convertRectFromNode.html	convertRectFromNode() maps margin rect to border coordinates
+css/cssom-view/cssom-geometryutils-convertRectFromNode.html	convertRectFromNode() maps margin rect to content coordinates
+css/cssom-view/cssom-geometryutils-convertRectFromNode.html	convertRectFromNode() maps margin rect to margin coordinates
+css/cssom-view/cssom-geometryutils-convertRectFromNode.html	convertRectFromNode() maps margin rect to padding coordinates
+css/cssom-view/cssom-geometryutils-convertRectFromNode.html	convertRectFromNode() maps padding rect to border coordinates
+css/cssom-view/cssom-geometryutils-convertRectFromNode.html	convertRectFromNode() maps padding rect to content coordinates
+css/cssom-view/cssom-geometryutils-convertRectFromNode.html	convertRectFromNode() maps padding rect to margin coordinates
+css/cssom-view/cssom-geometryutils-convertRectFromNode.html	convertRectFromNode() maps padding rect to padding coordinates
+css/cssom-view/cssom-geometryutils-convertRectFromNode.html	convertRectFromNode() matches convertQuadFromNode() for the same rectangle
+css/cssom-view/cssom-geometryutils-convertRectFromNode.html	convertRectFromNode() output round-trips as a DOMQuad
+css/cssom-view/cssom-geometryutils-cross-origin-path.https.html	-
+css/cssom-view/cssom-geometryutils-cross-origin-path.https.html	GeometryUtils does not expose geometry across an A-B-A frame path
+css/cssom-view/cssom-geometryutils-element-types.html	convertPointFromNode() maps a local HTML element point to the viewport
+css/cssom-view/cssom-geometryutils-element-types.html	convertPointFromNode() maps a local MathML fraction element point to the viewport
+css/cssom-view/cssom-geometryutils-element-types.html	convertPointFromNode() maps a local MathML root element point to the viewport
+css/cssom-view/cssom-geometryutils-element-types.html	convertPointFromNode() maps a local SVG circle element point to the viewport
+css/cssom-view/cssom-geometryutils-element-types.html	convertPointFromNode() maps a local SVG element under CSS zoom point to the viewport
+css/cssom-view/cssom-geometryutils-element-types.html	convertPointFromNode() maps a local SVG group element point to the viewport
+css/cssom-view/cssom-geometryutils-element-types.html	convertPointFromNode() maps a local SVG rect element point to the viewport
+css/cssom-view/cssom-geometryutils-element-types.html	convertPointFromNode() maps a local SVG text element point to the viewport
+css/cssom-view/cssom-geometryutils-element-types.html	convertPointFromNode() maps a local SVG tspan element point to the viewport
+css/cssom-view/cssom-geometryutils-element-types.html	convertPointFromNode() maps a local outer SVG element point to the viewport
+css/cssom-view/cssom-geometryutils-element-types.html	convertQuadFromNode() maps a local HTML element quad to the viewport
+css/cssom-view/cssom-geometryutils-element-types.html	convertQuadFromNode() maps a local MathML fraction element quad to the viewport
+css/cssom-view/cssom-geometryutils-element-types.html	convertQuadFromNode() maps a local MathML root element quad to the viewport
+css/cssom-view/cssom-geometryutils-element-types.html	convertQuadFromNode() maps a local SVG circle element quad to the viewport
+css/cssom-view/cssom-geometryutils-element-types.html	convertQuadFromNode() maps a local SVG element under CSS zoom quad to the viewport
+css/cssom-view/cssom-geometryutils-element-types.html	convertQuadFromNode() maps a local SVG group element quad to the viewport
+css/cssom-view/cssom-geometryutils-element-types.html	convertQuadFromNode() maps a local SVG rect element quad to the viewport
+css/cssom-view/cssom-geometryutils-element-types.html	convertQuadFromNode() maps a local SVG text element quad to the viewport
+css/cssom-view/cssom-geometryutils-element-types.html	convertQuadFromNode() maps a local SVG tspan element quad to the viewport
+css/cssom-view/cssom-geometryutils-element-types.html	convertQuadFromNode() maps a local outer SVG element quad to the viewport
+css/cssom-view/cssom-geometryutils-element-types.html	convertRectFromNode() maps a local HTML element rect as a DOMQuad
+css/cssom-view/cssom-geometryutils-element-types.html	convertRectFromNode() maps a local MathML fraction element rect as a DOMQuad
+css/cssom-view/cssom-geometryutils-element-types.html	convertRectFromNode() maps a local MathML root element rect as a DOMQuad
+css/cssom-view/cssom-geometryutils-element-types.html	convertRectFromNode() maps a local SVG circle element rect as a DOMQuad
+css/cssom-view/cssom-geometryutils-element-types.html	convertRectFromNode() maps a local SVG element under CSS zoom rect as a DOMQuad
+css/cssom-view/cssom-geometryutils-element-types.html	convertRectFromNode() maps a local SVG group element rect as a DOMQuad
+css/cssom-view/cssom-geometryutils-element-types.html	convertRectFromNode() maps a local SVG rect element rect as a DOMQuad
+css/cssom-view/cssom-geometryutils-element-types.html	convertRectFromNode() maps a local SVG text element rect as a DOMQuad
+css/cssom-view/cssom-geometryutils-element-types.html	convertRectFromNode() maps a local SVG tspan element rect as a DOMQuad
+css/cssom-view/cssom-geometryutils-element-types.html	convertRectFromNode() maps a local outer SVG element rect as a DOMQuad
+css/cssom-view/cssom-geometryutils-element-types.html	getBoxQuads() bounds match getBoundingClientRect() for HTML element
+css/cssom-view/cssom-geometryutils-element-types.html	getBoxQuads() bounds match getBoundingClientRect() for MathML fraction element
+css/cssom-view/cssom-geometryutils-element-types.html	getBoxQuads() bounds match getBoundingClientRect() for MathML root element
+css/cssom-view/cssom-geometryutils-element-types.html	getBoxQuads() bounds match getBoundingClientRect() for SVG circle element
+css/cssom-view/cssom-geometryutils-element-types.html	getBoxQuads() bounds match getBoundingClientRect() for SVG element under CSS zoom
+css/cssom-view/cssom-geometryutils-element-types.html	getBoxQuads() bounds match getBoundingClientRect() for SVG group element
+css/cssom-view/cssom-geometryutils-element-types.html	getBoxQuads() bounds match getBoundingClientRect() for SVG rect element
+css/cssom-view/cssom-geometryutils-element-types.html	getBoxQuads() bounds match getBoundingClientRect() for SVG text element
+css/cssom-view/cssom-geometryutils-element-types.html	getBoxQuads() bounds match getBoundingClientRect() for SVG tspan element
+css/cssom-view/cssom-geometryutils-element-types.html	getBoxQuads() bounds match getBoundingClientRect() for outer SVG element
+css/cssom-view/cssom-geometryutils-fragmentation.html	getBoxQuads() returns every multicol fragment
+css/cssom-view/cssom-geometryutils-fragmentation.html	getBoxQuads({relativeTo}) maps every fragment relative to a container
+css/cssom-view/cssom-geometryutils-fragmentation.html	getBoxQuads({relativeTo}) maps every fragment relative to an ancestor
+css/cssom-view/cssom-geometryutils-fragmentation.html	getBoxQuads({relativeTo}) works when relativeTo is a fragmented element
+css/cssom-view/cssom-geometryutils-getBoxQuads-options.html	Document.getBoxQuads({box: "border"}) returns the layout viewport
+css/cssom-view/cssom-geometryutils-getBoxQuads-options.html	Document.getBoxQuads({box: "content"}) returns the layout viewport
+css/cssom-view/cssom-geometryutils-getBoxQuads-options.html	Document.getBoxQuads({box: "margin"}) returns the layout viewport
+css/cssom-view/cssom-geometryutils-getBoxQuads-options.html	Document.getBoxQuads({box: "padding"}) returns the layout viewport
+css/cssom-view/cssom-geometryutils-getBoxQuads-options.html	GeometryUtils APIs exist on Element
+css/cssom-view/cssom-geometryutils-getBoxQuads-options.html	getBoxQuads() combines box and relativeTo options
+css/cssom-view/cssom-geometryutils-getBoxQuads-options.html	getBoxQuads() defaults to the border box
+css/cssom-view/cssom-geometryutils-getBoxQuads-options.html	getBoxQuads() point order is physical for bidi and writing-mode
+css/cssom-view/cssom-geometryutils-getBoxQuads-options.html	getBoxQuads({box: "border"}) applies box edges to inline fragments
+css/cssom-view/cssom-geometryutils-getBoxQuads-options.html	getBoxQuads({box: "border"}) returns the requested CSS box
+css/cssom-view/cssom-geometryutils-getBoxQuads-options.html	getBoxQuads({box: "content"}) applies box edges to inline fragments
+css/cssom-view/cssom-geometryutils-getBoxQuads-options.html	getBoxQuads({box: "content"}) returns the requested CSS box
+css/cssom-view/cssom-geometryutils-getBoxQuads-options.html	getBoxQuads({box: "margin"}) applies box edges to inline fragments
+css/cssom-view/cssom-geometryutils-getBoxQuads-options.html	getBoxQuads({box: "margin"}) returns the requested CSS box
+css/cssom-view/cssom-geometryutils-getBoxQuads-options.html	getBoxQuads({box: "padding"}) applies box edges to inline fragments
+css/cssom-view/cssom-geometryutils-getBoxQuads-options.html	getBoxQuads({box: "padding"}) returns the requested CSS box
+css/cssom-view/cssom-geometryutils-getBoxQuads-options.html	getBoxQuads({relativeTo}) uses the relative element border-box origin
+css/cssom-view/cssom-geometryutils-lifecycle.html	-
+css/cssom-view/cssom-geometryutils-lifecycle.html	getBoxQuads() immediately after a transform style update
+css/cssom-view/cssom-geometryutils-lifecycle.html	getBoxQuads() updates a dirty display-locked subtree
+css/cssom-view/cssom-geometryutils-lifecycle.html	getBoxQuads() updates a dirty embedding document
+css/cssom-view/cssom-geometryutils-lifecycle.html	getBoxQuads() updates unrelated display-locked endpoints
+css/cssom-view/cssom-geometryutils-same-origin-iframe.html	-
+css/cssom-view/cssom-geometryutils-same-origin-iframe.html	GeometryUtils converts same-origin iframe content to the outer document
+css/cssom-view/cssom-geometryutils-same-origin-iframe.html	getBoxQuads() works in a same-origin iframe document
+css/cssom-view/cssom-geometryutils-shadow-dom.html	GeometryUtils follows flat-tree slot assignment
+css/cssom-view/cssom-geometryutils-shadow-dom.html	GeometryUtils follows shadow tree ancestry
+css/cssom-view/cssom-geometryutils-text.html	Text.getBoxQuads() matches Range.getClientRects() fragments
+css/cssom-view/cssom-geometryutils-text.html	convertPointFromNode() converts from a Text node
+css/cssom-view/cssom-geometryutils-transforms.html	Motion path properties used by this test are supported
+css/cssom-view/cssom-geometryutils-transforms.html	getBoxQuads() matches getBoundingClientRect() for individual translate, rotate and scale
+css/cssom-view/cssom-geometryutils-transforms.html	getBoxQuads() matches getBoundingClientRect() for offset-path, offset-distance and offset-rotate
+css/cssom-view/cssom-geometryutils-transforms.html	getBoxQuads() matches getBoundingClientRect() for perspective and perspective-origin
+css/cssom-view/cssom-geometryutils-transforms.html	getBoxQuads() matches getBoundingClientRect() for transform, transform-origin, skew, rotate and scale
+css/cssom-view/cssom-geometryutils-transforms.html	getBoxQuads() matches getBoundingClientRect() for transform-style: preserve-3d
+css/cssom-view/cssom-geometryutils-transforms.html	getBoxQuads() matches getBoundingClientRect() for zoom with transform
+css/cssom-view/cssom-geometryutils-transforms.html	getBoxQuads() preserves non-axis-aligned corners for CSS transforms
+css/cssom-view/cssom-geometryutils-transforms.html	getBoxQuads() returns a zero-size bounds for scale(0)
+css/cssom-view/cssom-geometryutils-transforms.html	getBoxQuads({relativeTo}) matches convertQuadFromNode() in a transformed subtree
+css/cssom-view/cssom-getBoundingClientRect-003.html	{Element,Range}.prototype.getBoundingClientRect on SVG <tspan>, Element
+css/cssom-view/cssom-getBoundingClientRect-003.html	{Element,Range}.prototype.getBoundingClientRect on SVG <tspan>, Range
+css/cssom-view/cssom-getBoundingClientRect-vertical-rl.html	-
+css/cssom-view/cssom-getBoxQuads-001.html	Block layout border box is expected width.
+css/cssom-view/cssom-getBoxQuads-001.html	Block layout margin box is expected width.
+css/cssom-view/cssom-getBoxQuads-001.html	Flex layout border box is expected height.
+css/cssom-view/cssom-getBoxQuads-001.html	Flex layout border box is expected width.
+css/cssom-view/cssom-getBoxQuads-001.html	Flex layout margin box is expected height.
+css/cssom-view/cssom-getBoxQuads-001.html	Flex layout margin box is expected width.
+css/cssom-view/cssom-getBoxQuads-002.html	CSSOM View - getBoxQuads() returns consistent box for SVG test
+css/cssom-view/cssom-view-img-attributes-001.html	test x with display false
+css/cssom-view/cssom-view-img-attributes-001.html	test x with display true
+css/cssom-view/cssom-view-img-attributes-001.html	test y with display false
+css/cssom-view/cssom-view-img-attributes-001.html	test y with display true
+css/cssom-view/devicePixelRatio-undisplayed-iframe.tentative.html	window.devicePixelRatio in an undisplayed iframe matches the dpi of the parent document
+css/cssom-view/dom-element-scroll.html	Element test for having overflow
+css/cssom-view/dom-element-scroll.html	Element test for having scrolling box
+css/cssom-view/element-scroll-arguments.html	scroll with 1 non-dictionary argument
+css/cssom-view/element-scroll-arguments.html	scroll with an invalid ScrollToOptions argument
+css/cssom-view/element-scroll-arguments.html	scrollBy with 1 non-dictionary argument
+css/cssom-view/element-scroll-arguments.html	scrollBy with an invalid ScrollToOptions argument
+css/cssom-view/element-scroll-arguments.html	scrollTo with 1 non-dictionary argument
+css/cssom-view/element-scroll-arguments.html	scrollTo with an invalid ScrollToOptions argument
+css/cssom-view/element-scroll-promise-after-removal.html	-
+css/cssom-view/element-scroll-promise-after-removal.html	Element.scrollBy promise after iframe removal
+css/cssom-view/element-scroll-promise-after-removal.html	Element.scrollBy promise after scroller removal
+css/cssom-view/element-scroll-promise-after-removal.html	Element.scrollIntoView promise after inner scroller removal
+css/cssom-view/element-scroll-promise-after-removal.html	Element.scrollIntoView promise after outer scroller removal
+css/cssom-view/element-scroll-promise-after-removal.html	Element.scrollTo promise after scroller removal
+css/cssom-view/element-scroll-promise-interruption.html	-
+css/cssom-view/element-scroll-promise-interruption.html	Element.scrollBy interrupted by a non-promise scroll
+css/cssom-view/element-scroll-promise-interruption.html	Element.scrollBy uninterrupted by an unrelated non-promise scroll
+css/cssom-view/element-scroll-promise-interruption.html	Element.scrollBy: interrupted by auto scroll
+css/cssom-view/element-scroll-promise-interruption.html	Element.scrollBy: interrupted by smooth scroll
+css/cssom-view/element-scroll-promise-interruption.html	Element.scrollIntoView interrupted by a non-promise scroll
+css/cssom-view/element-scroll-promise-interruption.html	Element.scrollIntoView uninterrupted by an unrelated non-promise scroll
+css/cssom-view/element-scroll-promise-interruption.html	Element.scrollIntoView: interrupted by auto scroll
+css/cssom-view/element-scroll-promise-interruption.html	Element.scrollIntoView: interrupted by inner scroll
+css/cssom-view/element-scroll-promise-interruption.html	Element.scrollIntoView: interrupted by outer scroll
+css/cssom-view/element-scroll-promise-interruption.html	Element.scrollIntoView: interrupted by smooth scroll
+css/cssom-view/element-scroll-promise-interruption.html	Element.scrollTo interrupted by a non-promise scroll
+css/cssom-view/element-scroll-promise-interruption.html	Element.scrollTo uninterrupted by an unrelated non-promise scroll
+css/cssom-view/element-scroll-promise-interruption.html	Element.scrollTo: interrupted by auto scroll
+css/cssom-view/element-scroll-promise-interruption.html	Element.scrollTo: interrupted by smooth scroll
+css/cssom-view/element-scroll-promises.html	-
+css/cssom-view/element-scroll-promises.html	Element.scroll(auto): promise behavior
+css/cssom-view/element-scroll-promises.html	Element.scroll(auto): return type
+css/cssom-view/element-scroll-promises.html	Element.scroll(instant): promise behavior
+css/cssom-view/element-scroll-promises.html	Element.scroll(instant): return type
+css/cssom-view/element-scroll-promises.html	Element.scroll(smooth): promise behavior
+css/cssom-view/element-scroll-promises.html	Element.scroll(smooth): return type
+css/cssom-view/element-scroll-promises.html	Element.scrollBy(auto): promise behavior
+css/cssom-view/element-scroll-promises.html	Element.scrollBy(auto): return type
+css/cssom-view/element-scroll-promises.html	Element.scrollBy(instant): promise behavior
+css/cssom-view/element-scroll-promises.html	Element.scrollBy(instant): return type
+css/cssom-view/element-scroll-promises.html	Element.scrollBy(smooth): promise behavior
+css/cssom-view/element-scroll-promises.html	Element.scrollBy(smooth): return type
+css/cssom-view/element-scroll-promises.html	Element.scrollIntoView(auto): promise behavior
+css/cssom-view/element-scroll-promises.html	Element.scrollIntoView(auto): return type
+css/cssom-view/element-scroll-promises.html	Element.scrollIntoView(instant): promise behavior
+css/cssom-view/element-scroll-promises.html	Element.scrollIntoView(instant): return type
+css/cssom-view/element-scroll-promises.html	Element.scrollIntoView(smooth): promise behavior
+css/cssom-view/element-scroll-promises.html	Element.scrollIntoView(smooth): return type
+css/cssom-view/element-scroll-promises.html	Element.scrollTo(auto): promise behavior
+css/cssom-view/element-scroll-promises.html	Element.scrollTo(auto): return type
+css/cssom-view/element-scroll-promises.html	Element.scrollTo(instant): promise behavior
+css/cssom-view/element-scroll-promises.html	Element.scrollTo(instant): return type
+css/cssom-view/element-scroll-promises.html	Element.scrollTo(smooth): promise behavior
+css/cssom-view/element-scroll-promises.html	Element.scrollTo(smooth): return type
+css/cssom-view/elementFromPoint-002.html	Checking whether dynamic changes to visibility interact correctly with\n  table anonymous boxes
+css/cssom-view/elementFromPoint-003.html	Checking whether dynamic changes to visibility interact correctly with\n  table anonymous boxes
+css/cssom-view/elementFromPoint-dynamic-anon-box.html	Link should be clickable after hiding a scrollbox with an anonymous table inside
+css/cssom-view/elementFromPoint-list-001.html	<li>Image Outside 1</li>
+css/cssom-view/elementFromPoint-list-001.html	<li>Image Outside 2</li>
+css/cssom-view/elementFromPoint-list-001.html	<li>Outside 1</li>
+css/cssom-view/elementFromPoint-list-001.html	<li>Outside 2</li>
+css/cssom-view/elementFromPoint-list-001.html	<li>Outside 3</li>
+css/cssom-view/elementFromPoint-mixed-font-sizes.html	document.elementFromPoint finds container SPAN in the empty region above a child SPAN with a smaller font size
+css/cssom-view/elementFromPoint-ua-shadowroot-crash.html	-
+css/cssom-view/elementFromPoint-visibility-hidden-resizer.html	elementFromPoint on resizer area of an element with visibility:hidden
+css/cssom-view/elementFromPoint.html	Fieldsets
+css/cssom-view/elementFromPoint.html	First element to get mouse events with pointer-events css
+css/cssom-view/elementFromPoint.html	Image Maps
+css/cssom-view/elementFromPoint.html	co-ordinates larger than the viewport from in iframe
+css/cssom-view/elementFromPoint.html	no hit target at x,y
+css/cssom-view/elementFromPoint.html	transformed element at x,y
+css/cssom-view/elementFromPosition.html	test some point of the element: bottom left corner
+css/cssom-view/elementFromPosition.html	test some point of the element: bottom line
+css/cssom-view/elementFromPosition.html	test some point of the element: bottom right corner
+css/cssom-view/elementFromPosition.html	test some point of the element: right line
+css/cssom-view/elementFromPosition.html	test some point of the element: top right corner
+css/cssom-view/elementScroll-002.html	simple scroll with style: 'margin' and 'overflow: hidden'
+css/cssom-view/elementScroll-002.html	simple scroll with style: 'padding' and 'overflow: hidden'
+css/cssom-view/elementScroll.html	Element scroll maximum test
+css/cssom-view/elementScroll.html	Element scroll test (one argument)
+css/cssom-view/elementScroll.html	Element scroll test (two arguments)
+css/cssom-view/elementScroll.html	Element scrollBy test (one argument)
+css/cssom-view/elementScroll.html	Element scrollBy test (two arguments)
+css/cssom-view/elementScroll.html	Element scrollTo test (one argument)
+css/cssom-view/elementScroll.html	Element scrollTo test (two arguments)
+css/cssom-view/elementScroll.html	Element scrollTop/Left getter/setter test
+css/cssom-view/elementsFromPoint-iframes.html	-
+css/cssom-view/elementsFromPoint-iframes.html	elementsFromPoint on inner documents
+css/cssom-view/elementsFromPoint-iframes.html	elementsFromPoint on the root document for points in iframe elements
+css/cssom-view/elementsFromPoint-inline-htb-rtl.html	elementsFromPoint should return all elements under a point
+css/cssom-view/elementsFromPoint-inline-vlr-rtl.html	elementsFromPoint should return all elements under a point
+css/cssom-view/elementsFromPoint-inline-vrl-ltr.html	elementsFromPoint should return all elements under a point
+css/cssom-view/elementsFromPoint-inline-vrl-rtl.html	elementsFromPoint should return all elements under a point
+css/cssom-view/elementsFromPoint-shadowroot.html	elementsFromPoint on a shadow root should include elements in that shadow tree
+css/cssom-view/elementsFromPoint-shadowroot.html	elementsFromPoint on the document root should not return elements in shadow trees
+css/cssom-view/elementsFromPoint-simple.html	elementsFromPoint for each corner of a div that has a margin
+css/cssom-view/elementsFromPoint-simple.html	elementsFromPoint for each corner of a div that has a pseudo-element
+css/cssom-view/elementsFromPoint-simple.html	elementsFromPoint for each corner of a div that is between another div and its pseudo-element
+css/cssom-view/elementsFromPoint-simple.html	elementsFromPoint for each corner of a div with a 3d transform
+css/cssom-view/elementsFromPoint-simple.html	elementsFromPoint for each corner of a div with pointer-events:none
+css/cssom-view/elementsFromPoint-simple.html	elementsFromPoint for each corner of a simple div
+css/cssom-view/elementsFromPoint-svg-text.html	elementsFromPoint for a point inside a <text>
+css/cssom-view/elementsFromPoint-svg-text.html	elementsFromPoint for a point inside a <textPath> nested in a <text> without content
+css/cssom-view/elementsFromPoint-svg-text.html	elementsFromPoint for a point inside a <tspan> nested in a <text> without content
+css/cssom-view/elementsFromPoint-svg-text.html	elementsFromPoint for a point inside an overlapping <tspan> nested in a <text>
+css/cssom-view/elementsFromPoint-svg.html	elementsFromPoint for a point inside a foreignObject
+css/cssom-view/elementsFromPoint-svg.html	elementsFromPoint for a point inside transformed rects and <g>
+css/cssom-view/elementsFromPoint-svg.html	elementsFromPoint for a point inside two images
+css/cssom-view/elementsFromPoint-svg.html	elementsFromPoint for a point inside two rects
+css/cssom-view/elementsFromPoint-svg.html	elementsFromPoint for a point inside two rects that are inside a <g>
+css/cssom-view/elementsFromPoint-svg.html	elementsFromPoint for a point inside two rects that are inside an svg element with pointer-events: bounding-box
+css/cssom-view/elementsFromPoint-table.html	elementsFromPoint for points between table cells
+css/cssom-view/elementsFromPoint-table.html	elementsFromPoint for points inside cells in a flipped (writing-mode:vertical-lr) table
+css/cssom-view/elementsFromPoint-table.html	elementsFromPoint for points inside cells in a right-to-left table
+css/cssom-view/elementsFromPoint-table.html	elementsFromPoint for points inside table cells
+css/cssom-view/elementsFromPoint.html	First element to get mouse events with pointer-events css
+css/cssom-view/elementsFromPoint.html	co-ordinates larger than the viewport from in iframe
+css/cssom-view/elementsFromPoint.html	no hit target at x,y
+css/cssom-view/elementsFromPoint.html	transformed element at x,y
+css/cssom-view/getBoundingClientRect-content-visibility-hidden.html	assert_not_equals(rectRoot.height, 0, "root rect height should not be zero")
+css/cssom-view/getBoundingClientRect-content-visibility-hidden.html	assert_not_equals(rectRoot.width, 0, "root rect width should not be zero")
+css/cssom-view/getBoundingClientRect-empty-inline.html	getBoundingClientRect-empty-inline
+css/cssom-view/getBoundingClientRect-newline.html	Range.getBoundingClientRect() should return the first position of the next line when the collapsed range is a newline character
+css/cssom-view/getBoundingClientRect-scroll.html	getBoundingClientRect for absolute element inside scroll container
+css/cssom-view/getBoundingClientRect-scroll.html	getBoundingClientRect for fixed element inside scroll container
+css/cssom-view/getBoundingClientRect-shy.html	Collapsed soft-hyphen should be 0 width.
+css/cssom-view/getBoundingClientRect-shy.html	Range 0-5 should not include the hyphen.
+css/cssom-view/getBoundingClientRect-shy.html	Range 0-6 should not include the hyphen.
+css/cssom-view/getBoundingClientRect-shy.html	Range 0-7 should include the hyphen.
+css/cssom-view/getBoundingClientRect-shy.html	Range 0-8 should include only the first hyphen.
+css/cssom-view/getBoundingClientRect-shy.html	Range 0-8 should include the hyphen.
+css/cssom-view/getBoundingClientRect-shy.html	Range 1-5 should not include the hyphen.
+css/cssom-view/getBoundingClientRect-shy.html	Range 1-6 should not include the hyphen.
+css/cssom-view/getBoundingClientRect-shy.html	Range 1-7 should include the hyphen.
+css/cssom-view/getBoundingClientRect-shy.html	Rendered soft-hyphen in a span should have a width.
+css/cssom-view/getBoundingClientRect-shy.html	Rendered soft-hyphen should have a width.
+css/cssom-view/getBoundingClientRect-zoom.html	getBoundingClientRect for elements with css zoom 4
+css/cssom-view/getClientRects-br-htb-ltr.html	Position of the BR element
+css/cssom-view/getClientRects-br-htb-rtl.html	Position of the BR element
+css/cssom-view/getClientRects-br-vlr-ltr.html	Position of the BR element
+css/cssom-view/getClientRects-br-vlr-rtl.html	Position of the BR element
+css/cssom-view/getClientRects-br-vrl-ltr.html	Position of the BR element
+css/cssom-view/getClientRects-br-vrl-rtl.html	Position of the BR element
+css/cssom-view/getClientRects-inline-inline-child.html	sub element in a child inline box should not be included
+css/cssom-view/getClientRects-inline-with-block-child.html	getClientRects-inline-with-block-child
+css/cssom-view/getClientRects-inline.html	-
+css/cssom-view/getClientRects-zoom.html	getBoundingClientRect for elements with css zoom 4
+css/cssom-view/idlharness.html	idl_test setup
+css/cssom-view/iframe.html	-
+css/cssom-view/image-x-y-zoom.html	x and y properties for image elements with css zoom
+css/cssom-view/image-x-y-zoom.html	x and y properties for image elements with css zoom 1
+css/cssom-view/inheritance.html	-
+css/cssom-view/interrupt-hidden-smooth-scroll.html	-
+css/cssom-view/interrupt-hidden-smooth-scroll.html	Make sure the page is ready for animation.
+css/cssom-view/interrupt-hidden-smooth-scroll.html	scrollTop should be updated after a mid-scroll scrollTop change
+css/cssom-view/long_scroll_composited.html	-
+css/cssom-view/matchMedia-display-none-iframe.html	-
+css/cssom-view/matchMedia.html	-
+css/cssom-view/matchMedia.html	iframe.matchMedia("(max-height: 50px)") matches
+css/cssom-view/matchMedia.html	iframe.matchMedia("(max-width: 199px), all and (min-width: 200px)") is serialized w/o "all"
+css/cssom-view/matchMedia.html	iframe.matchMedia("(min-aspect-ratio: 1/1)") matches
+css/cssom-view/matchMedia.html	iframe.matchMedia("(min-width: 150px)") matches
+css/cssom-view/matchMedia.html	iframe.matchMedia("(width: 200px)") matches
+css/cssom-view/mouseEvent-offsetXY-svg.html	-
+css/cssom-view/mouseEvent-offsetXY-svg.html	rect offsetX/Y is relative to the root svg
+css/cssom-view/mouseEvent-offsetXY-svg.html	tspan offsetX/Y is relative to the root svg
+css/cssom-view/mouseEvent.html	MouseEvent's pageX and pageY attributes should be the sum of the scroll offset and clientX/clientY
+css/cssom-view/negativeMargins.html	cssom-view - elementFromPoint and elementsFromPoint dealing with negative margins 1
+css/cssom-view/offsetParent-block-in-inline.html	offsetParent-block-in-inline
+css/cssom-view/offsetParent-body-and-html.html	The offsetParent of a <body> element which has a previous <body> sibling is also null
+css/cssom-view/offsetParent-body-and-html.html	The offsetParent of a <body> element which is a child of a non-<html> is also null
+css/cssom-view/offsetParent-body-and-html.html	The offsetParent of a <body> element which is a child of a non-root <html> is also null
+css/cssom-view/offsetParent-body-and-html.html	The offsetParent of the root element is null
+css/cssom-view/offsetParent-fixed.html	If the containing block for a fixed positioned element is the nearest ancestor box, the offsetParent should be the nearest ancestor box.
+css/cssom-view/offsetParent_element_test.html	Valid the algorithm rule of offsetParent check step 1
+css/cssom-view/offsetParent_element_test.html	Valid the algorithm rule of offsetParent check step 2
+css/cssom-view/offsetTop-offsetLeft-nested-offsetParents.html	Verifies that offsetTop and offsetLeft only go up one offsetParent when there are multiple nested offsetParents.
+css/cssom-view/offsetTop-offsetLeft-with-zoom.html	Verifies that offsetTop and offsetLeft find the right OffsetParent and return values excluding the target zoom
+css/cssom-view/offsetTop-offsetLeft-with-zoom.html	check that offset is equal between elements when one of them has css zoom
+css/cssom-view/offsetTopLeft-empty-inline-offset.html	offsetTop/Left of empty inline elements should work as if they were not empty: 0
+css/cssom-view/offsetTopLeft-empty-inline-offset.html	offsetTop/Left of empty inline elements should work as if they were not empty: 1
+css/cssom-view/offsetTopLeft-empty-inline-offset.html	offsetTop/Left of empty inline elements should work as if they were not empty: 2
+css/cssom-view/offsetTopLeft-empty-inline-offset.html	offsetTop/Left of empty inline elements should work as if they were not empty: 3
+css/cssom-view/offsetTopLeft-empty-inline-offset.html	offsetTop/Left of empty inline elements should work as if they were not empty: 4
+css/cssom-view/offsetTopLeft-empty-inline-offset.html	offsetTop/Left of empty inline elements should work as if they were not empty: 5
+css/cssom-view/offsetTopLeft-empty-inline.html	offsetTop/Left of empty inline elements should work as if they were not empty: 0
+css/cssom-view/offsetTopLeft-empty-inline.html	offsetTop/Left of empty inline elements should work as if they were not empty: 1
+css/cssom-view/offsetTopLeft-empty-inline.html	offsetTop/Left of empty inline elements should work as if they were not empty: 2
+css/cssom-view/offsetTopLeft-inline.html	-
+css/cssom-view/offsetTopLeft-leading-space-inline.html	offsetTop/Left of empty inline elements should work as if they were not empty: 0
+css/cssom-view/offsetTopLeft-leading-space-inline.html	offsetTop/Left of empty inline elements should work as if they were not empty: 1
+css/cssom-view/offsetTopLeft-leading-space-inline.html	offsetTop/Left of empty inline elements should work as if they were not empty: 2
+css/cssom-view/offsetTopLeft-trailing-space-inline.html	offsetTop/Left of empty inline elements should work as if they were not empty: 0
+css/cssom-view/offsetTopLeft-trailing-space-inline.html	offsetTop/Left of empty inline elements should work as if they were not empty: 1
+css/cssom-view/offsetTopLeft-trailing-space-inline.html	offsetTop/Left of empty inline elements should work as if they were not empty: 2
+css/cssom-view/offsetTopLeftInScrollableParent.html	Basic functionality in scrolled parent
+css/cssom-view/offsetTopLeftInScrollableParent.html	Margins on child
+css/cssom-view/offsetTopLeftInScrollableParent.html	Margins on child and parent
+css/cssom-view/offsetTopLeftInScrollableParent.html	Margins on child and parent, border on child
+css/cssom-view/offsetTopLeftInScrollableParent.html	Margins on child and parent, border on child and parent
+css/cssom-view/offsetTopLeftInScrollableParent.html	Margins on child and parent, border on child and parent, padding on child
+css/cssom-view/offsetTopLeftInScrollableParent.html	Margins on child and parent, border on child and parent, padding on child and parent
+css/cssom-view/overflow-hidden-smooth-scroll-crash.html	-
+css/cssom-view/parsing/scroll-behavior-computed.html	-
+css/cssom-view/parsing/scroll-behavior-invalid.html	-
+css/cssom-view/parsing/scroll-behavior-valid.html	-
+css/cssom-view/position-sticky-root-scroller-with-scroll-behavior.html	Sticky elements work with the root (document) scroller
+css/cssom-view/range-bounding-client-rect-rtl-ligature-split.html	Caret positions in a RTL run that begins inside a ligature
+css/cssom-view/range-bounding-client-rect-with-display-contents.html	the space between elements using a range should be the same as using another method
+css/cssom-view/range-bounding-client-rect-with-nested-text.html	getClientRects should return non-empty rectangles for nested text nodes
+css/cssom-view/range-bounding-client-rect-with-shadow-dom.html	ranges entirely inside a shadow tree return client rects
+css/cssom-view/resizeTo-negative.html	resizeTo(-1, -1) might shrink window size, but it stays positive
+css/cssom-view/screen-detached-frame.html	Window.screen on detached frame
+css/cssom-view/scroll-behavior-default-css.html	Make sure the page is ready for animation.
+css/cssom-view/scroll-behavior-default-css.html	Smooth scrolling of an element with default scroll-behavior
+css/cssom-view/scroll-behavior-element.html	Element with auto scroll-behavior ; scroll() with smooth behavior
+css/cssom-view/scroll-behavior-element.html	Element with auto scroll-behavior ; scrollBy() with smooth behavior
+css/cssom-view/scroll-behavior-element.html	Element with auto scroll-behavior ; scrollIntoView() with auto behavior
+css/cssom-view/scroll-behavior-element.html	Element with auto scroll-behavior ; scrollIntoView() with default behavior
+css/cssom-view/scroll-behavior-element.html	Element with auto scroll-behavior ; scrollIntoView() with instant behavior
+css/cssom-view/scroll-behavior-element.html	Element with auto scroll-behavior ; scrollIntoView() with smooth behavior
+css/cssom-view/scroll-behavior-element.html	Element with auto scroll-behavior ; scrollTo() with smooth behavior
+css/cssom-view/scroll-behavior-element.html	Element with smooth scroll-behavior ; scroll() with auto behavior
+css/cssom-view/scroll-behavior-element.html	Element with smooth scroll-behavior ; scroll() with default behavior
+css/cssom-view/scroll-behavior-element.html	Element with smooth scroll-behavior ; scroll() with smooth behavior
+css/cssom-view/scroll-behavior-element.html	Element with smooth scroll-behavior ; scrollBy() with auto behavior
+css/cssom-view/scroll-behavior-element.html	Element with smooth scroll-behavior ; scrollBy() with default behavior
+css/cssom-view/scroll-behavior-element.html	Element with smooth scroll-behavior ; scrollBy() with smooth behavior
+css/cssom-view/scroll-behavior-element.html	Element with smooth scroll-behavior ; scrollIntoView() with auto behavior
+css/cssom-view/scroll-behavior-element.html	Element with smooth scroll-behavior ; scrollIntoView() with default behavior
+css/cssom-view/scroll-behavior-element.html	Element with smooth scroll-behavior ; scrollIntoView() with instant behavior
+css/cssom-view/scroll-behavior-element.html	Element with smooth scroll-behavior ; scrollIntoView() with smooth behavior
+css/cssom-view/scroll-behavior-element.html	Element with smooth scroll-behavior ; scrollTo() with auto behavior
+css/cssom-view/scroll-behavior-element.html	Element with smooth scroll-behavior ; scrollTo() with default behavior
+css/cssom-view/scroll-behavior-element.html	Element with smooth scroll-behavior ; scrollTo() with smooth behavior
+css/cssom-view/scroll-behavior-element.html	Make sure the page is ready for animation.
+css/cssom-view/scroll-behavior-element.html	Set scrollLeft to element with smooth scroll-behavior
+css/cssom-view/scroll-behavior-element.html	Set scrollTop to element with smooth scroll-behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Aborting an ongoing smooth scrolling on the main frame with another smooth scrolling
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with auto scroll-behavior ; scroll() with auto behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with auto scroll-behavior ; scroll() with default behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with auto scroll-behavior ; scroll() with instant behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with auto scroll-behavior ; scroll() with smooth behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with auto scroll-behavior ; scrollBy() with auto behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with auto scroll-behavior ; scrollBy() with default behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with auto scroll-behavior ; scrollBy() with instant behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with auto scroll-behavior ; scrollBy() with smooth behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with auto scroll-behavior ; scrollIntoView() with auto behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with auto scroll-behavior ; scrollIntoView() with default behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with auto scroll-behavior ; scrollIntoView() with instant behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with auto scroll-behavior ; scrollIntoView() with smooth behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with auto scroll-behavior ; scrollTo() with auto behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with auto scroll-behavior ; scrollTo() with default behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with auto scroll-behavior ; scrollTo() with instant behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with auto scroll-behavior ; scrollTo() with smooth behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with smooth scroll-behavior ; scroll() with auto behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with smooth scroll-behavior ; scroll() with default behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with smooth scroll-behavior ; scroll() with instant behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with smooth scroll-behavior ; scroll() with smooth behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with smooth scroll-behavior ; scrollBy() with auto behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with smooth scroll-behavior ; scrollBy() with default behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with smooth scroll-behavior ; scrollBy() with instant behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with smooth scroll-behavior ; scrollBy() with smooth behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with smooth scroll-behavior ; scrollIntoView() with auto behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with smooth scroll-behavior ; scrollIntoView() with default behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with smooth scroll-behavior ; scrollIntoView() with instant behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with smooth scroll-behavior ; scrollIntoView() with smooth behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with smooth scroll-behavior ; scrollTo() with auto behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with smooth scroll-behavior ; scrollTo() with default behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with smooth scroll-behavior ; scrollTo() with instant behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Main frame with smooth scroll-behavior ; scrollTo() with smooth behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Make sure the page is ready for animation.
+css/cssom-view/scroll-behavior-main-frame-root.html	Set scrollLeft to frame with auto scroll-behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Set scrollLeft to frame with smooth scroll-behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Set scrollTop to frame with auto scroll-behavior
+css/cssom-view/scroll-behavior-main-frame-root.html	Set scrollTop to frame with smooth scroll-behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Aborting an ongoing smooth scrolling on the main frame with another smooth scrolling
+css/cssom-view/scroll-behavior-main-frame-window.html	Main frame with auto scroll-behavior ; scroll() with auto behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Main frame with auto scroll-behavior ; scroll() with default behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Main frame with auto scroll-behavior ; scroll() with instant behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Main frame with auto scroll-behavior ; scroll() with smooth behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Main frame with auto scroll-behavior ; scrollBy() with auto behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Main frame with auto scroll-behavior ; scrollBy() with default behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Main frame with auto scroll-behavior ; scrollBy() with instant behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Main frame with auto scroll-behavior ; scrollBy() with smooth behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Main frame with auto scroll-behavior ; scrollTo() with auto behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Main frame with auto scroll-behavior ; scrollTo() with default behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Main frame with auto scroll-behavior ; scrollTo() with instant behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Main frame with auto scroll-behavior ; scrollTo() with smooth behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Main frame with smooth scroll-behavior ; scroll() with auto behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Main frame with smooth scroll-behavior ; scroll() with default behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Main frame with smooth scroll-behavior ; scroll() with instant behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Main frame with smooth scroll-behavior ; scroll() with smooth behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Main frame with smooth scroll-behavior ; scrollBy() with auto behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Main frame with smooth scroll-behavior ; scrollBy() with default behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Main frame with smooth scroll-behavior ; scrollBy() with instant behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Main frame with smooth scroll-behavior ; scrollBy() with smooth behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Main frame with smooth scroll-behavior ; scrollTo() with auto behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Main frame with smooth scroll-behavior ; scrollTo() with default behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Main frame with smooth scroll-behavior ; scrollTo() with instant behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Main frame with smooth scroll-behavior ; scrollTo() with smooth behavior
+css/cssom-view/scroll-behavior-main-frame-window.html	Make sure the page is ready for animation.
+css/cssom-view/scroll-behavior-scrollintoview-nested.html	Make sure the page is ready for animation.
+css/cssom-view/scroll-behavior-scrollintoview-nested.html	scrollIntoView with nested elements with different scroll-behavior
+css/cssom-view/scroll-behavior-smooth-after-hiding-iframe.html	Smooth scroll finishes correctly after hiding a tab with an iframe
+css/cssom-view/scroll-behavior-smooth-navigation.html	Instant scrolling while doing history navigation.
+css/cssom-view/scroll-behavior-smooth-navigation.html	Make sure the page is ready for animation.
+css/cssom-view/scroll-behavior-smooth-navigation.html	Smooth scrolling while doing history navigation.
+css/cssom-view/scroll-behavior-smooth-positions.html	Make sure the page is ready for animation.
+css/cssom-view/scroll-behavior-smooth-positions.html	Scroll positions when performing smooth scrolling from (0, 0) to (500, 250) using scrollIntoView() 
+css/cssom-view/scroll-behavior-smooth-positions.html	Scroll positions when performing smooth scrolling from (0, 500) to (500, 250) using scrollIntoView() 
+css/cssom-view/scroll-behavior-smooth-positions.html	Scroll positions when performing smooth scrolling from (1000, 0) to (500, 250) using scrollIntoView() 
+css/cssom-view/scroll-behavior-smooth-positions.html	Scroll positions when performing smooth scrolling from (1000, 500) to (500, 250) using scrollIntoView() 
+css/cssom-view/scroll-behavior-smooth.html	-
+css/cssom-view/scroll-behavior-smooth.html	BODY element scroll-behavior should not propagate to viewport
+css/cssom-view/scroll-behavior-smooth.html	HTML element scroll-behavior should propagate to viewport
+css/cssom-view/scroll-behavior-smooth.html	scroll-behavior: smooth on DIV element
+css/cssom-view/scroll-behavior-subframe-root.html	-
+css/cssom-view/scroll-behavior-subframe-window.html	-
+css/cssom-view/scroll-clamp-after-transform-shrinks-overflow.html	Scroll offset is clamped when a transform animation shrinks scrollable overflow
+css/cssom-view/scroll-zoom.html	scroll{Top, Left}
+css/cssom-view/scroll-zoom.html	scroll{Width, Height}
+css/cssom-view/scrollIntoView-align-scrollport-covering-child.html	scrollIntoView scrolls scrollport-covering child in both axes
+css/cssom-view/scrollIntoView-container.html	-
+css/cssom-view/scrollIntoView-container.html	scrollIntoView() defaults to scrolling ancestors
+css/cssom-view/scrollIntoView-container.html	scrollIntoView({container: 'all'}) scrolls ancestors
+css/cssom-view/scrollIntoView-container.html	scrollIntoView({container: 'nearest'}) doesn't propagate to outer frames
+css/cssom-view/scrollIntoView-fixed-outside-of-viewport.html	Element.scrollIntoView doesn't scroll a position:fixed element outside of the layout viewport
+css/cssom-view/scrollIntoView-fixed.html	[Box A] scrollIntoView from unscrollable position:fixed
+css/cssom-view/scrollIntoView-fixed.html	[Box B] scrollIntoView from unscrollable position:fixed in iframe
+css/cssom-view/scrollIntoView-fixed.html	[Box C] scrollIntoView from scrollable position:fixed
+css/cssom-view/scrollIntoView-fixed.html	[Box D] scrollIntoView from scrollable position:fixed in iframe
+css/cssom-view/scrollIntoView-horizontal-partially-visible.html	scrollIntoView scrolls partially-visible child in both axes
+css/cssom-view/scrollIntoView-horizontal-tb-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"center","inline":"center"})
+css/cssom-view/scrollIntoView-horizontal-tb-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"center","inline":"end"})
+css/cssom-view/scrollIntoView-horizontal-tb-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"center","inline":"start"})
+css/cssom-view/scrollIntoView-horizontal-tb-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"end","inline":"center"})
+css/cssom-view/scrollIntoView-horizontal-tb-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"end","inline":"end"})
+css/cssom-view/scrollIntoView-horizontal-tb-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"end","inline":"start"})
+css/cssom-view/scrollIntoView-horizontal-tb-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"start","inline":"center"})
+css/cssom-view/scrollIntoView-horizontal-tb-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"start","inline":"end"})
+css/cssom-view/scrollIntoView-horizontal-tb-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"start","inline":"start"})
+css/cssom-view/scrollIntoView-iframes.html	-
+css/cssom-view/scrollIntoView-iframes.html	scrollIntoView in cross-origin iframe can scroll in inner window
+css/cssom-view/scrollIntoView-iframes.html	scrollIntoView in cross-origin iframe can't scroll in parent window
+css/cssom-view/scrollIntoView-iframes.html	scrollIntoView in same-origin iframe can scroll in inner window
+css/cssom-view/scrollIntoView-iframes.html	scrollIntoView in same-origin iframe can scroll in parent window
+css/cssom-view/scrollIntoView-multiple-nested.html	-
+css/cssom-view/scrollIntoView-multiple-nested.html	Simultaneous instant scrollIntoViews run to completion
+css/cssom-view/scrollIntoView-multiple-nested.html	Simultaneous instant,smooth scrollIntoViews run to completion
+css/cssom-view/scrollIntoView-multiple-nested.html	Simultaneous smooth scrollIntoViews run to completion
+css/cssom-view/scrollIntoView-multiple-nested.html	Simultaneous smooth,instant scrollIntoViews run to completion
+css/cssom-view/scrollIntoView-multiple.html	-
+css/cssom-view/scrollIntoView-multiple.html	Simultaneous instant scrollIntoViews run to completion
+css/cssom-view/scrollIntoView-multiple.html	Simultaneous instant,smooth scrollIntoViews run to completion
+css/cssom-view/scrollIntoView-multiple.html	Simultaneous smooth scrollIntoViews run to completion
+css/cssom-view/scrollIntoView-multiple.html	Simultaneous smooth,instant scrollIntoViews run to completion
+css/cssom-view/scrollIntoView-nearest-oversized-element.html	scrollIntoView nearest aligns an oversized target before the scrollport to its closest (right/bottom) edge
+css/cssom-view/scrollIntoView-scrollMargin.html	scrollIntoView({block: "center", inline: "center"})
+css/cssom-view/scrollIntoView-scrollMargin.html	scrollIntoView({block: "end", inline: "end"})
+css/cssom-view/scrollIntoView-scrollMargin.html	scrollIntoView({block: "start", inline: "start"})
+css/cssom-view/scrollIntoView-scrollPadding.html	scrollIntoView({block: "center", inline: "center"})
+css/cssom-view/scrollIntoView-scrollPadding.html	scrollIntoView({block: "end", inline: "end"})
+css/cssom-view/scrollIntoView-scrollPadding.html	scrollIntoView({block: "start", inline: "start"})
+css/cssom-view/scrollIntoView-scrolling-container.html	scrollIntoView on a scrolling container should scroll its outer scrollers into view but not scroll itself.
+css/cssom-view/scrollIntoView-shadow.html	scrollIntoView should behave correctly if applies to shadow dom elements
+css/cssom-view/scrollIntoView-should-treat-slot-as-scroll-container.html	-
+css/cssom-view/scrollIntoView-sideways-lr-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"center","inline":"center"})
+css/cssom-view/scrollIntoView-sideways-lr-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"center","inline":"end"})
+css/cssom-view/scrollIntoView-sideways-lr-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"center","inline":"start"})
+css/cssom-view/scrollIntoView-sideways-lr-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"end","inline":"center"})
+css/cssom-view/scrollIntoView-sideways-lr-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"end","inline":"end"})
+css/cssom-view/scrollIntoView-sideways-lr-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"end","inline":"start"})
+css/cssom-view/scrollIntoView-sideways-lr-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"start","inline":"center"})
+css/cssom-view/scrollIntoView-sideways-lr-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"start","inline":"end"})
+css/cssom-view/scrollIntoView-sideways-lr-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"start","inline":"start"})
+css/cssom-view/scrollIntoView-sideways-lr-writing-mode.html	scrollIntoView({"block":"center","inline":"center"})
+css/cssom-view/scrollIntoView-sideways-lr-writing-mode.html	scrollIntoView({"block":"center","inline":"end"})
+css/cssom-view/scrollIntoView-sideways-lr-writing-mode.html	scrollIntoView({"block":"center","inline":"start"})
+css/cssom-view/scrollIntoView-sideways-lr-writing-mode.html	scrollIntoView({"block":"end","inline":"center"})
+css/cssom-view/scrollIntoView-sideways-lr-writing-mode.html	scrollIntoView({"block":"end","inline":"end"})
+css/cssom-view/scrollIntoView-sideways-lr-writing-mode.html	scrollIntoView({"block":"end","inline":"start"})
+css/cssom-view/scrollIntoView-sideways-lr-writing-mode.html	scrollIntoView({"block":"start","inline":"center"})
+css/cssom-view/scrollIntoView-sideways-lr-writing-mode.html	scrollIntoView({"block":"start","inline":"end"})
+css/cssom-view/scrollIntoView-sideways-lr-writing-mode.html	scrollIntoView({"block":"start","inline":"start"})
+css/cssom-view/scrollIntoView-sideways-rl-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"center","inline":"center"})
+css/cssom-view/scrollIntoView-sideways-rl-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"center","inline":"end"})
+css/cssom-view/scrollIntoView-sideways-rl-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"center","inline":"start"})
+css/cssom-view/scrollIntoView-sideways-rl-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"end","inline":"center"})
+css/cssom-view/scrollIntoView-sideways-rl-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"end","inline":"end"})
+css/cssom-view/scrollIntoView-sideways-rl-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"end","inline":"start"})
+css/cssom-view/scrollIntoView-sideways-rl-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"start","inline":"center"})
+css/cssom-view/scrollIntoView-sideways-rl-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"start","inline":"end"})
+css/cssom-view/scrollIntoView-sideways-rl-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"start","inline":"start"})
+css/cssom-view/scrollIntoView-sideways-rl-writing-mode.html	scrollIntoView({"block":"center","inline":"center"})
+css/cssom-view/scrollIntoView-sideways-rl-writing-mode.html	scrollIntoView({"block":"center","inline":"end"})
+css/cssom-view/scrollIntoView-sideways-rl-writing-mode.html	scrollIntoView({"block":"center","inline":"start"})
+css/cssom-view/scrollIntoView-sideways-rl-writing-mode.html	scrollIntoView({"block":"end","inline":"center"})
+css/cssom-view/scrollIntoView-sideways-rl-writing-mode.html	scrollIntoView({"block":"end","inline":"end"})
+css/cssom-view/scrollIntoView-sideways-rl-writing-mode.html	scrollIntoView({"block":"end","inline":"start"})
+css/cssom-view/scrollIntoView-sideways-rl-writing-mode.html	scrollIntoView({"block":"start","inline":"center"})
+css/cssom-view/scrollIntoView-sideways-rl-writing-mode.html	scrollIntoView({"block":"start","inline":"end"})
+css/cssom-view/scrollIntoView-sideways-rl-writing-mode.html	scrollIntoView({"block":"start","inline":"start"})
+css/cssom-view/scrollIntoView-smooth.html	-
+css/cssom-view/scrollIntoView-smooth.html	Smooth scrollIntoView should scroll the element to the 'center' position
+css/cssom-view/scrollIntoView-smooth.html	Smooth scrollIntoView should scroll the element to the 'end' position
+css/cssom-view/scrollIntoView-smooth.html	Smooth scrollIntoView should scroll the element to the 'nearest' position
+css/cssom-view/scrollIntoView-smooth.html	Smooth scrollIntoView should scroll the element to the 'start' position
+css/cssom-view/scrollIntoView-stuck.tentative.html	CSSOM View - scrollIntoView doesn't consider scroll-padding when target is stuck
+css/cssom-view/scrollIntoView-svg-shape.html	scrollIntoView on an SVG shape element, geometry
+css/cssom-view/scrollIntoView-svg-shape.html	scrollIntoView on an SVG shape element, rotated
+css/cssom-view/scrollIntoView-svg-shape.html	scrollIntoView on an SVG shape element, translated
+css/cssom-view/scrollIntoView-then-scrollBy.html	scrollIntoView() followed by a deferred scrollBy() preserves the scroll correction
+css/cssom-view/scrollIntoView-vertical-lr-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"center","inline":"center"})
+css/cssom-view/scrollIntoView-vertical-lr-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"center","inline":"end"})
+css/cssom-view/scrollIntoView-vertical-lr-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"center","inline":"start"})
+css/cssom-view/scrollIntoView-vertical-lr-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"end","inline":"center"})
+css/cssom-view/scrollIntoView-vertical-lr-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"end","inline":"end"})
+css/cssom-view/scrollIntoView-vertical-lr-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"end","inline":"start"})
+css/cssom-view/scrollIntoView-vertical-lr-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"start","inline":"center"})
+css/cssom-view/scrollIntoView-vertical-lr-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"start","inline":"end"})
+css/cssom-view/scrollIntoView-vertical-lr-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"start","inline":"start"})
+css/cssom-view/scrollIntoView-vertical-lr-writing-mode.html	scrollIntoView({"block":"center","inline":"end"})
+css/cssom-view/scrollIntoView-vertical-lr-writing-mode.html	scrollIntoView({"block":"center","inline":"start"})
+css/cssom-view/scrollIntoView-vertical-lr-writing-mode.html	scrollIntoView({"block":"end","inline":"center"})
+css/cssom-view/scrollIntoView-vertical-lr-writing-mode.html	scrollIntoView({"block":"end","inline":"start"})
+css/cssom-view/scrollIntoView-vertical-lr-writing-mode.html	scrollIntoView({"block":"start","inline":"center"})
+css/cssom-view/scrollIntoView-vertical-lr-writing-mode.html	scrollIntoView({"block":"start","inline":"end"})
+css/cssom-view/scrollIntoView-vertical-rl-writing-mode.html	scrollIntoView({"block":"center","inline":"center"})
+css/cssom-view/scrollIntoView-vertical-rl-writing-mode.html	scrollIntoView({"block":"center","inline":"end"})
+css/cssom-view/scrollIntoView-vertical-rl-writing-mode.html	scrollIntoView({"block":"center","inline":"start"})
+css/cssom-view/scrollIntoView-vertical-rl-writing-mode.html	scrollIntoView({"block":"end","inline":"center"})
+css/cssom-view/scrollIntoView-vertical-rl-writing-mode.html	scrollIntoView({"block":"end","inline":"end"})
+css/cssom-view/scrollIntoView-vertical-rl-writing-mode.html	scrollIntoView({"block":"end","inline":"start"})
+css/cssom-view/scrollIntoView-vertical-rl-writing-mode.html	scrollIntoView({"block":"start","inline":"center"})
+css/cssom-view/scrollIntoView-vertical-rl-writing-mode.html	scrollIntoView({"block":"start","inline":"end"})
+css/cssom-view/scrollIntoView-vertical-rl-writing-mode.html	scrollIntoView({"block":"start","inline":"start"})
+css/cssom-view/scrollLeft-of-scroller-with-wider-scrollbar.html	Test the maxmium value of scrollLeft
+css/cssom-view/scrollLeftTop.html	writing-mode:horizontal-tb; direction:rtl
+css/cssom-view/scrollLeftTop.html	writing-mode:vertical-lr; direction:rtl
+css/cssom-view/scrollLeftTop.html	writing-mode:vertical-rl; direction:ltr
+css/cssom-view/scrollLeftTop.html	writing-mode:vertical-rl; direction:rtl
+css/cssom-view/scrollParent-quirks-mode.html	scrollParent of body is null when body is document scrolling element
+css/cssom-view/scrollParent-shadow-tree.html	scrollParent from inside closed shadow tree
+css/cssom-view/scrollParent-shadow-tree.html	scrollParent from inside open shadow tree
+css/cssom-view/scrollParent-shadow-tree.html	scrollParent skips intermediate closed shadow tree nodes
+css/cssom-view/scrollParent-shadow-tree.html	scrollParent skips intermediate open shadow tree nodes
+css/cssom-view/scrollParent.html	Element with no box has null scrollParent.
+css/cssom-view/scrollParent.html	hidden element is a scroll container.
+css/cssom-view/scrollParent.html	scrollParent follows absolute positioned containing block chain.
+css/cssom-view/scrollParent.html	scrollParent follows fixed positioned containing block chain.
+css/cssom-view/scrollParent.html	scrollParent of body is document scrolling element when body is not document scrolling element.
+css/cssom-view/scrollParent.html	scrollParent of child in root viewport returns document scrolling element.
+css/cssom-view/scrollParent.html	scrollParent of element fixed to root is null.
+css/cssom-view/scrollParent.html	scrollParent of fixed element contained within root is document scrolling element.
+css/cssom-view/scrollParent.html	scrollParent of root is null.
+css/cssom-view/scrollParent.html	scrollParent of scrolling element is null.
+css/cssom-view/scrollParent.html	scrollParent returns the nearest scroll container.
+css/cssom-view/scrollParent.html	scrollParent skips ancestors with `display: contents`.
+css/cssom-view/scrollTo-zoom.html	-
+css/cssom-view/scrollTop-display-change.html	-
+css/cssom-view/scrollWidthHeight-child-border-within-padding.tentative.html	Container with overflow:both — child border crossing content edge extends scrollable area by inline/block padding
+css/cssom-view/scrollWidthHeight-child-border-within-padding.tentative.html	Container with overflow:clip-x — child border crossing content edge extends scrollable area by inline/block padding
+css/cssom-view/scrollWidthHeight-child-border-within-padding.tentative.html	Container with overflow:clip-y — child border crossing content edge extends scrollable area by inline/block padding
+css/cssom-view/scrollWidthHeight-child-border-within-padding.tentative.html	Container with overflow:x-only — child border crossing content edge extends scrollable area by inline/block padding
+css/cssom-view/scrollWidthHeight-child-border-within-padding.tentative.html	Container with overflow:y-only — child border crossing content edge extends scrollable area by inline/block padding
+css/cssom-view/scrollWidthHeight-contain-layout.html	-
+css/cssom-view/scrollWidthHeight-flex-column-padding-001.html	flex-direction:column scrollHeight includes block-axis padding around overflowing items
+css/cssom-view/scrollWidthHeight-flex-column-padding-001.html	flex-direction:column-reverse scrollHeight includes block-axis padding around overflowing items
+css/cssom-view/scrollWidthHeight-negative-margin-001.html	scrollWidth/Height with negative margins: overflow: auto;
+css/cssom-view/scrollWidthHeight-negative-margin-001.html	scrollWidth/Height with negative margins: overflow: clip;
+css/cssom-view/scrollWidthHeight-negative-margin-001.html	scrollWidth/Height with negative margins: overflow: hidden;
+css/cssom-view/scrollWidthHeight-negative-margin-001.html	scrollWidth/Height with negative margins: overflow: visible;
+css/cssom-view/scrollWidthHeight-negative-margin-002.html	-
+css/cssom-view/scrollWidthHeight-overflow-visible-margin-collapsing.html	-
+css/cssom-view/scrolling-quirks-vs-nonquirks.html	-
+css/cssom-view/scrolling-quirks-vs-nonquirks.html	Execution of tests in non-quirks mode
+css/cssom-view/scrolling-quirks-vs-nonquirks.html	Execution of tests in quirks mode
+css/cssom-view/scrollingElement-quirks-dynamic-001.html	-
+css/cssom-view/scrollingElement-quirks-dynamic-002.html	-
+css/cssom-view/scrollingElement.html	-
+css/cssom-view/scrollingElement.html	scrollingElement in no-quirks mode 
+css/cssom-view/scrollingElement.html	scrollingElement in no-quirks mode  (body table)
+css/cssom-view/scrollingElement.html	scrollingElement in no-quirks mode  (root table)
+css/cssom-view/scrollingElement.html	scrollingElement in no-quirks mode  (root table, body table)
+css/cssom-view/scrollingElement.html	scrollingElement in quirks mode
+css/cssom-view/scrollingElement.html	scrollingElement in quirks mode (body table)
+css/cssom-view/scrollingElement.html	scrollingElement in quirks mode (root table)
+css/cssom-view/scrollingElement.html	scrollingElement in quirks mode (root table, body table)
+css/cssom-view/scrollintoview-zero-height-item.html	scrollIntoView on zero height item
+css/cssom-view/smooth-scroll-in-load-event.html	-
+css/cssom-view/smooth-scroll-in-load-event.html	Smooth scroll in load event handler
+css/cssom-view/smooth-scroll-nonstop.html	-
+css/cssom-view/smooth-scroll-nonstop.html	noop scrollIntoView doesn't interrupt ongoing smooth scroll.
+css/cssom-view/smooth-scrollIntoView-with-smooth-fragment-scroll-iframe.html	-
+css/cssom-view/smooth-scrollIntoView-with-smooth-fragment-scroll.html	-
+css/cssom-view/smooth-scrollIntoView-with-smooth-fragment-scroll.html	Smooth scroll to hash fragment (on click) alongside smooth scrollIntoView runs to completion.
+css/cssom-view/smooth-scrollIntoView-with-smooth-fragment-scroll.html	Smooth scroll to hash fragment (on pageload) alongside smooth scrollIntoView runs to completion.
+css/cssom-view/smooth-scrollIntoView-with-unrelated-gesture-scroll.html	-
+css/cssom-view/smooth-scrollIntoView-with-unrelated-gesture-scroll.html	scrollIntoView is not interrupted by unrelated gesture scroll
+css/cssom-view/subpixel-sizes-and-offsets.tentative.html	clientLeft and clientTop don't round 44.1
+css/cssom-view/subpixel-sizes-and-offsets.tentative.html	clientLeft and clientTop don't round 44.5
+css/cssom-view/subpixel-sizes-and-offsets.tentative.html	clientLeft and clientTop don't round 44.9
+css/cssom-view/table-client-props.html	Flex-level table with collapsed border
+css/cssom-view/table-client-props.html	Flex-level table with separated border
+css/cssom-view/table-client-props.html	Table and narrower caption
+css/cssom-view/table-client-props.html	Table and wider caption
+css/cssom-view/table-client-props.html	Table with collapsed border
+css/cssom-view/table-client-props.html	Table with separated border
+css/cssom-view/table-offset-props.html	Table and narrower caption
+css/cssom-view/table-offset-props.html	Table and wider caption
+css/cssom-view/table-offset-props.html	Table with collapsed border
+css/cssom-view/table-scroll-props.html	Table and narrower caption
+css/cssom-view/table-scroll-props.html	Table and wider caption
+css/cssom-view/table-scroll-props.html	Table with collapsed border
+css/cssom-view/table-scroll-props.html	Table with separated border
+css/cssom-view/table-with-border-client-width-height.html	Table's clientWidth/Height and OffsetWidth/Height should be the same
+css/cssom-view/visual-scrollIntoView-001.html	Element.scrollIntoView scrolls visually
+css/cssom-view/visual-scrollIntoView-002.html	Element.scrollIntoView scrolls visually to a position: fixed element with non-zero layout scroll offset
+css/cssom-view/visual-scrollIntoView-003.html	Element.scrollIntoView scrolls visually to an element in nested position: fixed elements
+css/cssom-view/window-scroll-arguments.html	scroll with 1 non-dictionary argument
+css/cssom-view/window-scroll-arguments.html	scroll with an invalid ScrollToOptions argument
+css/cssom-view/window-scroll-arguments.html	scrollBy with 1 non-dictionary argument
+css/cssom-view/window-scroll-arguments.html	scrollBy with an invalid ScrollToOptions argument
+css/cssom-view/window-scroll-arguments.html	scrollTo with 1 non-dictionary argument
+css/cssom-view/window-scroll-arguments.html	scrollTo with an invalid ScrollToOptions argument
+css/cssom-view/window-scroll-promise-interruption.html	-
+css/cssom-view/window-scroll-promise-interruption.html	Window.scrollBy: interruption by auto scroll call
+css/cssom-view/window-scroll-promise-interruption.html	Window.scrollBy: interruption by smooth scroll call
+css/cssom-view/window-scroll-promise-interruption.html	Window.scrollTo: interruption by auto scroll call
+css/cssom-view/window-scroll-promise-interruption.html	Window.scrollTo: interruption by smooth scroll call
+css/cssom-view/window-scroll-promises.html	-
+css/cssom-view/window-scroll-promises.html	Window.scroll(auto): promise behavior
+css/cssom-view/window-scroll-promises.html	Window.scroll(auto): return type
+css/cssom-view/window-scroll-promises.html	Window.scroll(instant): promise behavior
+css/cssom-view/window-scroll-promises.html	Window.scroll(instant): return type
+css/cssom-view/window-scroll-promises.html	Window.scroll(smooth): promise behavior
+css/cssom-view/window-scroll-promises.html	Window.scroll(smooth): return type
+css/cssom-view/window-scroll-promises.html	Window.scrollBy(auto): promise behavior
+css/cssom-view/window-scroll-promises.html	Window.scrollBy(auto): return type
+css/cssom-view/window-scroll-promises.html	Window.scrollBy(instant): promise behavior
+css/cssom-view/window-scroll-promises.html	Window.scrollBy(instant): return type
+css/cssom-view/window-scroll-promises.html	Window.scrollBy(smooth): promise behavior
+css/cssom-view/window-scroll-promises.html	Window.scrollBy(smooth): return type
+css/cssom-view/window-scroll-promises.html	Window.scrollTo(auto): promise behavior
+css/cssom-view/window-scroll-promises.html	Window.scrollTo(auto): return type
+css/cssom-view/window-scroll-promises.html	Window.scrollTo(instant): promise behavior
+css/cssom-view/window-scroll-promises.html	Window.scrollTo(instant): return type
+css/cssom-view/window-scroll-promises.html	Window.scrollTo(smooth): promise behavior
+css/cssom-view/window-scroll-promises.html	Window.scrollTo(smooth): return type
+css/cssom-view/window-scrollBy-display-change.html	-

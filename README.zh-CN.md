@@ -7,7 +7,9 @@ CatPaw 不是 Chromium 的封装，也不是"渲染引擎 + 自动化接口"。�
 agent 真正需要的东西——带稳定引用的紧凑语义快照、精确的"页面已稳定"信号、用 diff 代替
 重复输出、确定性的时间、廉价的隔离上下文。
 
-> 状态：**pre-alpha**。里程碑 M0（"抓取与阅读"）与 M1（"脚本运行"，基于 Boa 的 JavaScript）已完成，下一步是 M2（"交互"：布局、输入、导航、iframe）。
+> 状态：**pre-alpha**。里程碑 M0（"抓取与阅读"）与 M1（"脚本运行"，基于 Boa 的 JavaScript）已完成，M2（"交互"）进行中。
+>
+> M2 当前进展：布局。块级、flex、grid 盒由 Taffy 排布，行内内容由 Parley 在内置字体集上整形断行，且只在有人索取几何信息时才计算；CSSOM View（`getBoundingClientRect`、`getClientRects`、`offset*`/`client*`/`scroll*`、`scrollTo`、`scrollIntoView`、`elementFromPoint`）以及 `IntersectionObserver`、`ResizeObserver` 都基于它作答。
 >
 > 通过 `catpaw fetch --js` 使用：经典脚本（内联、外链、`defer`、`async`、
 > 脚本动态插入、`document.write`）与模块脚本（静态与动态 import、import map）在 Boa 上与解析器交错执行；核心 DOM（全部 HTML/SVG 元素接口、属性对象、树遍历、XPath、`Range` 与 `Selection`、`DOMParser`、`document.implementation`、文档集合与具名访问如 `document.forms`、`document.myForm`）、
@@ -16,8 +18,8 @@ agent 真正需要的东西——带稳定引用的紧凑语义快照、精确�
 > `fetch`/`XMLHttpRequest`（CORS、预检、重定向与 referrer policy 均按 Fetch 标准由页面处理）、Streams、`data:` URL、`sendBeacon`、storage、编码、`crypto` 随机数与摘要、
 > 无布局形态的字体加载 API，以及 console 等 API 的绑定由 Web IDL 生成；事件循环支持虚拟时间；墙钟脚本预算（`--script-budget`，默认 10 秒）会终止失控的脚本。
 > React、Vue、Svelte、Lit、htmx、Alpine 站点均可运行；Boa 引擎以附带修复的形式 vendor 在 `vendor/` 下（见其中说明）。
-> web-platform-tests 在 CI 中按记录的预期运行，由进程内的 WPT 服务器替身提供服务（含 fetch/XHR 测试依赖的 Python 处理器的等价实现）：`dom` 4246 个子测试通过 2975，`html/dom` 1066 通过 582，`fetch/api` 2237 通过 1908，`xhr` 1200 通过 859（其余大多需要 iframe、布局，或替身尚未模拟的服务器行为）。
-> 尚未支持：布局、canvas、媒体、Worker、WebAssembly，以及 HTML 元素中超出属性反射的成员。
+> web-platform-tests 在 CI 中按记录的预期运行，由进程内的 WPT 服务器替身提供服务（含 fetch/XHR 测试依赖的 Python 处理器的等价实现）：`dom` 4246 个子测试通过 2978，`html/dom` 1066 通过 582，`fetch/api` 2237 通过 1908，`xhr` 1200 通过 859，`css/cssom-view` 1198 通过 478（其余大多需要 iframe、布局，或替身尚未模拟的服务器行为）。
+> 尚未支持：绘制与截图、表格的网格布局、图片的固有尺寸、canvas、媒体、Worker、WebAssembly，以及 HTML 元素中超出属性反射的成员。
 >
 > 不依赖 JavaScript 即可用的部分：基于 rustls 的 HTTP/1.1 与 HTTP/2、重定向、cookie、
 > gzip/brotli/zstd 解压、编码嗅探、Web Bot Auth 请求签名（已通过 Cloudflare 测试端点验证）、

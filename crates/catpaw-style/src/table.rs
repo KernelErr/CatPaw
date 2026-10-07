@@ -1,7 +1,7 @@
 //! Per-element style data kept beside the arena.
 
 use std::cell::Cell;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use catpaw_dom::NodeId;
 use selectors::matching::ElementSelectorFlags;
@@ -89,6 +89,16 @@ impl StyleTable {
 
     pub fn remove(&mut self, id: NodeId) {
         self.slots.remove(id);
+    }
+
+    /// Forgets every computed style, so that the next restyle starts from
+    /// scratch.
+    pub fn clear_data(&mut self) {
+        for slot in self.slots.values_mut() {
+            slot.data = ElementDataWrapper::default();
+            slot.has_data.store(false, Ordering::SeqCst);
+            slot.dirty_descendants.store(false, Ordering::SeqCst);
+        }
     }
 
     pub fn len(&self) -> usize {

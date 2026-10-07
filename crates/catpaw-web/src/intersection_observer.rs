@@ -15,7 +15,7 @@ use crate::element::RectObject;
 use crate::event_loop;
 use crate::generated::{self as web, InterfaceId};
 use crate::page::{Cx, PageState};
-use crate::{Web, platform_object};
+use crate::{Web, layout, platform_object};
 
 /// One side of a root margin.
 #[derive(Clone, Copy)]
@@ -145,33 +145,109 @@ pub struct IntersectionObserverObject {
 }
 platform_object!(IntersectionObserverObject, IntersectionObserver);
 
+impl Rect {
+    fn from_layout(rect: catpaw_layout::Rect) -> Self {
+        Self {
+            x: f64::from(rect.x),
+            y: f64::from(rect.y),
+            width: f64::from(rect.width),
+            height: f64::from(rect.height),
+        }
+    }
+
+    fn area(&self) -> f64 {
+        self.width * self.height
+    }
+
+    /// The overlap of two rectangles, or `None` when they are apart. Edges
+    /// that touch count as overlapping with no area.
+    fn intersection(&self, other: &Rect) -> Option<Rect> {
+        let x = self.x.max(other.x);
+        let y = self.y.max(other.y);
+        let right = (self.x + self.width).min(other.x + other.width);
+        let bottom = (self.y + self.height).min(other.y + other.height);
+        (right >= x && bottom >= y).then_some(Rect {
+            x,
+            y,
+            width: right - x,
+            height: bottom - y,
+        })
+    }
+}
+
 impl IntersectionObserverObject {
-    /// The root's box grown by the root margin. An element has an empty
-    /// box; the viewport does not.
+    /// The root's box (the viewport, or an element's padding box) in
+    /// viewport coordinates, grown by the root margin.
     fn root_bounds(&self, page: &PageState) -> Rect {
-        let (width, height) = match self.root {
-            Root::Element(_) => (0.0, 0.0),
-            Root::Implicit | Root::Document(_) => (
-                f64::from(page.config.viewport_width),
-                f64::from(page.config.viewport_height),
-            ),
+        let base = match self.root {
+            Root::Element(root) => {
+                let border = layout::bounding_client_rect(page, root);
+                let client = layout::client_box(page, root);
+                Rect {
+                    x: f64::from(border.x + client.x),
+                    y: f64::from(border.y + client.y),
+                    width: f64::from(client.width),
+                    height: f64::from(client.height),
+                }
+            }
+            Root::Implicit | Root::Document(_) => Rect {
+                x: 0.0,
+                y: 0.0,
+                width: f64::from(page.config.viewport_width),
+                height: f64::from(page.config.viewport_height),
+            },
         };
         let [top, right, bottom, left] = self.root_margin;
-        let (top, bottom) = (top.resolve(height), bottom.resolve(height));
-        let (left, right) = (left.resolve(width), right.resolve(width));
+        let (top, bottom) = (top.resolve(base.height), bottom.resolve(base.height));
+        let (left, right) = (left.resolve(base.width), right.resolve(base.width));
         Rect {
-            x: -left,
-            y: -top,
-            width: (width + left + right).max(0.0),
-            height: (height + top + bottom).max(0.0),
+            x: base.x - left,
+            y: base.y - top,
+            width: (base.width + left + right).max(0.0),
+            height: (base.height + top + bottom).max(0.0),
         }
+    }
+}
+
+/// What one observation of a target found.
+#[derive(Clone, Copy)]
+struct Observation {
+    bounding: Rect,
+    intersection: Rect,
+    ratio: f64,
+    is_intersecting: bool,
+}
+
+/// Observes `target` against `root_bounds`.
+fn observe(page: &PageState, root_bounds: &Rect, target: NodeId) -> Observation {
+    let bounding = Rect::from_layout(layout::bounding_client_rect(page, target));
+    match bounding.intersection(root_bounds) {
+        Some(intersection) => {
+            let ratio = if bounding.area() > 0.0 {
+                (intersection.area() / bounding.area()).clamp(0.0, 1.0)
+            } else {
+                1.0
+            };
+            Observation {
+                bounding,
+                intersection,
+                ratio,
+                is_intersecting: true,
+            }
+        }
+        None => Observation {
+            bounding,
+            intersection: EMPTY,
+            ratio: 0.0,
+            is_intersecting: false,
+        },
     }
 }
 
 pub struct IntersectionObserverEntryObject {
     time: f64,
     root_bounds: Rect,
-    is_intersecting: bool,
+    observation: Observation,
     target: NodeId,
 }
 platform_object!(IntersectionObserverEntryObject, IntersectionObserverEntry);
@@ -189,14 +265,15 @@ pub(crate) struct Observers {
     seen: Cell<Option<u64>>,
 }
 
-/// Asks for a frame if targets may have entered or left the tree since the
-/// last update. Called by the event loop before it decides what to wait for.
+/// Asks for a frame if targets may have moved since the last update: the
+/// document or a scroll position changed. Called by the event loop before
+/// it decides what to wait for.
 pub(crate) fn request_frame_if_stale(page: &PageState) {
     let state = &page.intersection;
     if state.observing.borrow().is_empty() {
         return;
     }
-    if state.seen.get() != Some(page.dom.borrow().version()) {
+    if state.seen.get() != Some(layout::geometry_version(page)) {
         event_loop::request_frame(page);
     }
 }
@@ -223,7 +300,7 @@ pub(crate) fn update(cx: &mut Cx<'_>) {
     }
     page.intersection
         .seen
-        .set(Some(page.dom.borrow().version()));
+        .set(Some(layout::geometry_version(page)));
     let time = page.clock.now();
     for observer in observers {
         // The targets whose state changed, with their new state.
@@ -240,23 +317,32 @@ pub(crate) fn update(cx: &mut Cx<'_>) {
                 return None;
             }
             let (root, thresholds) = (o.root, &o.thresholds);
+            let root_bounds = o.root_bounds(page);
             let mut changed = Vec::new();
             for target in &mut o.targets {
-                let is_intersecting = intersects(&dom, root, target.node);
-                let ratio = if is_intersecting { 1.0 } else { 0.0 };
+                let observation = if intersects(&dom, root, target.node) {
+                    observe(page, &root_bounds, target.node)
+                } else {
+                    Observation {
+                        bounding: EMPTY,
+                        intersection: EMPTY,
+                        ratio: 0.0,
+                        is_intersecting: false,
+                    }
+                };
                 let index = thresholds
                     .iter()
-                    .position(|&threshold| threshold > ratio)
+                    .position(|&threshold| threshold > observation.ratio)
                     .unwrap_or(thresholds.len()) as i32;
                 if index != target.previous_threshold_index
-                    || is_intersecting != target.previous_is_intersecting
+                    || observation.is_intersecting != target.previous_is_intersecting
                 {
-                    changed.push((target.node, is_intersecting));
+                    changed.push((target.node, observation));
                 }
                 target.previous_threshold_index = index;
-                target.previous_is_intersecting = is_intersecting;
+                target.previous_is_intersecting = observation.is_intersecting;
             }
-            Some((o.root_bounds(page), changed))
+            Some((root_bounds, changed))
         });
         let Some(Some((root_bounds, changed))) = changed else {
             continue;
@@ -266,11 +352,11 @@ pub(crate) fn update(cx: &mut Cx<'_>) {
         }
         let entries: Vec<ObjectId> = changed
             .into_iter()
-            .map(|(target, is_intersecting)| {
+            .map(|(target, observation)| {
                 page.alloc(IntersectionObserverEntryObject {
                     time,
                     root_bounds,
-                    is_intersecting,
+                    observation,
                     target,
                 })
             })
@@ -470,21 +556,21 @@ impl web::IntersectionObserverEntryImpl for Web {
     }
 
     fn bounding_client_rect(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId> {
-        entry(cx, this, |_| ())?;
-        Ok(rect_object(cx.page, EMPTY))
+        let rect = entry(cx, this, |e| e.observation.bounding)?;
+        Ok(rect_object(cx.page, rect))
     }
 
     fn intersection_rect(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId> {
-        entry(cx, this, |_| ())?;
-        Ok(rect_object(cx.page, EMPTY))
+        let rect = entry(cx, this, |e| e.observation.intersection)?;
+        Ok(rect_object(cx.page, rect))
     }
 
     fn is_intersecting(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool> {
-        entry(cx, this, |e| e.is_intersecting)
+        entry(cx, this, |e| e.observation.is_intersecting)
     }
 
     fn intersection_ratio(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64> {
-        entry(cx, this, |e| if e.is_intersecting { 1.0 } else { 0.0 })
+        entry(cx, this, |e| e.observation.ratio)
     }
 
     fn target(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<NodeId> {

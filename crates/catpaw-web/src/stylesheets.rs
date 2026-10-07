@@ -338,7 +338,7 @@ fn collect_sheets(page: &PageState, dom: &Dom) -> Vec<(u64, Rc<str>)> {
 }
 
 /// Brings the style engine up to date with the document and runs `f` on it.
-fn with_engine<R>(page: &PageState, f: impl FnOnce(&mut StyleEngine, &Dom) -> R) -> R {
+pub(crate) fn with_engine<R>(page: &PageState, f: impl FnOnce(&mut StyleEngine, &Dom) -> R) -> R {
     let dom = page.dom.borrow();
     let mut engine = page.styles.engine.borrow_mut();
     let engine = engine.get_or_insert_with(|| StyleEngine::new(&media::device(page)));

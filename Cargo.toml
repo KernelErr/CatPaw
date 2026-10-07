@@ -27,9 +27,11 @@ stylo_traits = "0.22"
 stylo_atoms = "0.22"
 selectors = "0.41"
 cssparser = "0.38"
-taffy = "0.14"
-parley = "0.11"
-fontique = "0.11"
+taffy = { version = "0.14", default-features = false, features = ["std", "taffy_tree", "flexbox", "flexbox_balance", "grid", "block_layout", "float_layout", "calc", "content_size", "detailed_layout_info"] }
+stylo_taffy = { version = "0.3.0-beta.2", default-features = false, features = ["std", "block", "flexbox", "grid", "floats"] }
+parley = { version = "0.11", default-features = false, features = ["std", "complex-scripts"] }
+fontique = { version = "0.11", default-features = false, features = ["std"] }
+skrifa = "0.44"
 tiny-skia = "0.12"
 weedle2 = "5"
 slotmap = "1.1"
@@ -88,3 +90,5 @@ debug = 1
 # boa_ast and boa_engine 0.22.0 with fixes described in vendor/*/CATPAW.md.
 boa_ast = { path = "vendor/boa_ast" }
 boa_engine = { path = "vendor/boa_engine" }
+# stylo_taffy 0.3.0-beta.2 built against stylo 0.22, see vendor/stylo_taffy/CATPAW.md.
+stylo_taffy = { path = "vendor/stylo_taffy" }

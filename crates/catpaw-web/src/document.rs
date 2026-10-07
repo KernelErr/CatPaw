@@ -366,6 +366,29 @@ impl web::DocumentImpl for Web {
         Ok(supported_names(&cx.dom(), this))
     }
 
+    fn element_from_point(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        x: f64,
+        y: f64,
+    ) -> Fallible<Option<NodeId>> {
+        if this != cx.document() || !x.is_finite() || !y.is_finite() {
+            return Ok(None);
+        }
+        Ok(crate::layout::element_from_point(
+            cx.page, x as f32, y as f32,
+        ))
+    }
+
+    fn elements_from_point(cx: &mut Cx<'_>, this: NodeId, x: f64, y: f64) -> Fallible<Vec<NodeId>> {
+        if this != cx.document() || !x.is_finite() || !y.is_finite() {
+            return Ok(Vec::new());
+        }
+        Ok(crate::layout::elements_from_point(
+            cx.page, x as f32, y as f32,
+        ))
+    }
+
     /// <https://drafts.csswg.org/cssom-view/#dom-document-scrollingelement>
     fn scrolling_element(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>> {
         let dom = cx.dom();
