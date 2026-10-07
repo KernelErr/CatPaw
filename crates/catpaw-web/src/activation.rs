@@ -74,6 +74,51 @@ fn is_disabled(dom: &Dom, el: NodeId) -> bool {
     }) || forms::is_disabled(dom, el)
 }
 
+/// What a checkbox or radio button was before a click toggled it, to roll
+/// the click back if a listener cancels it.
+struct PreActivation {
+    control: NodeId,
+    was: bool,
+    /// The radio button of the group that was checked before.
+    previous: Option<NodeId>,
+}
+
+/// Legacy-pre-activation behavior: the new state is visible to click
+/// listeners.
+fn pre_activate(cx: &mut Cx<'_>, control: NodeId, kind: Toggle) -> PreActivation {
+    let was = element::is_checked(cx, control);
+    let previous = match kind {
+        Toggle::Radio => element::checked_in_group(cx, control),
+        Toggle::Checkbox => None,
+    };
+    element::set_checked(cx, control, kind == Toggle::Radio || !was);
+    PreActivation {
+        control,
+        was,
+        previous,
+    }
+}
+
+/// After the dispatch: legacy-canceled-activation behavior when a listener
+/// cancelled the click, else `input` and `change` (for a connected control
+/// whose state changed).
+fn post_activate(cx: &mut Cx<'_>, pre: PreActivation, proceed: bool) {
+    if !proceed {
+        if let Some(previous) = pre.previous {
+            element::set_checked(cx, previous, true);
+        }
+        element::set_checked(cx, pre.control, pre.was);
+        return;
+    }
+    if !cx.dom().is_connected(pre.control) {
+        return;
+    }
+    if element::is_checked(cx, pre.control) != pre.was {
+        events::fire(cx, EventTargetRef::Node(pre.control), "input", true, false);
+        events::fire(cx, EventTargetRef::Node(pre.control), "change", true, false);
+    }
+}
+
 /// Dispatches a `click` at `el` and runs the activation behavior of the
 /// nearest element that has one. `trusted` distinguishes user input from
 /// `element.click()`.
@@ -96,45 +141,82 @@ pub(crate) fn click_with(
         }
         activation_target(&dom, el).filter(|(n, _)| !is_disabled(&dom, *n))
     };
-    // Legacy-pre-activation: the new state is visible to click listeners,
-    // and rolled back if one of them cancels the event.
-    let previous = match target {
-        Some((control, Behavior::Toggle(kind))) => {
-            let was = element::is_checked(cx, control);
-            element::set_checked(cx, control, kind == Toggle::Radio || !was);
-            Some((control, was))
-        }
+    let pre = match target {
+        Some((control, Behavior::Toggle(kind))) => Some(pre_activate(cx, control, kind)),
         _ => None,
     };
     let event = event.unwrap_or_else(|| crate::ui_events::synthetic_click(cx, trusted));
     let proceed = events::dispatch(cx, EventTargetRef::Node(el), event);
-    if let Some((control, was)) = previous {
-        if !proceed {
-            element::set_checked(cx, control, was);
-        } else if element::is_checked(cx, control) != was {
-            events::fire(cx, EventTargetRef::Node(control), "input", true, false);
-            events::fire(cx, EventTargetRef::Node(control), "change", true, false);
-        }
+    if let Some(pre) = pre {
+        post_activate(cx, pre, proceed);
         return;
     }
     if !proceed {
         return;
     }
-    let Some((control, behavior)) = target else {
-        return;
+    if let Some((control, behavior)) = target {
+        run_behavior(cx, el, control, behavior, trusted);
+    }
+}
+
+/// The activation steps of the DOM dispatch algorithm, for a `click`
+/// `MouseEvent` script dispatches (`dispatchEvent`): the target's
+/// activation behavior, or with a bubbling event the nearest ancestor's,
+/// around the dispatch. Unlike `click()`, a disabled checkbox still
+/// toggles. Returns what the dispatch returns.
+pub(crate) fn dispatch_click(
+    cx: &mut Cx<'_>,
+    el: NodeId,
+    event: catpaw_js::ObjectId,
+    bubbles: bool,
+) -> bool {
+    let target = {
+        let dom = cx.dom();
+        behavior_of(&dom, el).map(|b| (el, b)).or_else(|| {
+            if bubbles {
+                dom.ancestors(el)
+                    .find_map(|n| behavior_of(&dom, n).map(|b| (n, b)))
+            } else {
+                None
+            }
+        })
     };
+    let pre = match target {
+        Some((control, Behavior::Toggle(kind))) => Some(pre_activate(cx, control, kind)),
+        _ => None,
+    };
+    let proceed = events::dispatch(cx, EventTargetRef::Node(el), event);
+    if let Some(pre) = pre {
+        post_activate(cx, pre, proceed);
+        return proceed;
+    }
+    if proceed && let Some((control, behavior)) = target {
+        let disabled = is_disabled(&cx.dom(), control);
+        if !disabled {
+            run_behavior(cx, el, control, behavior, false);
+        }
+    }
+    proceed
+}
+
+/// What activating `control` does, for a click aimed at `el`.
+fn run_behavior(cx: &mut Cx<'_>, el: NodeId, control: NodeId, behavior: Behavior, trusted: bool) {
     if !cx.dom().contains(control) {
         return;
     }
     match behavior {
         Behavior::Link => follow_link(cx, control),
+        // The owner is looked up first: the borrow of the DOM must not
+        // outlive the lookup, since submit and reset run script.
         Behavior::Submit => {
-            if let Some(form) = forms::form_owner(&cx.dom(), control) {
+            let form = forms::form_owner(&cx.dom(), control);
+            if let Some(form) = form {
                 forms::submit(cx, form, Some(control), forms::Submission::Normal);
             }
         }
         Behavior::Reset => {
-            if let Some(form) = forms::form_owner(&cx.dom(), control) {
+            let form = forms::form_owner(&cx.dom(), control);
+            if let Some(form) = form {
                 forms::reset(cx, form);
             }
         }
@@ -181,7 +263,9 @@ fn follow_link(cx: &mut Cx<'_>, link: NodeId) {
     if url.scheme() == "javascript" {
         // `javascript:` URLs run as a script; the value they produce is
         // discarded (a page replaced with the result is rare enough).
-        let source = percent_decode(&url[url::Position::AfterScheme..]);
+        // Everything after `javascript:` (a `?` or `#` in the script
+        // parses as a query or fragment).
+        let source = percent_decode(&url[url::Position::BeforePath..]);
         if let Err(e) = cx.script.eval_script(&source, "javascript:", 1) {
             cx.report_exception(&e);
         }

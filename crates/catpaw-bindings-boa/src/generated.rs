@@ -40301,6 +40301,28 @@ pub mod html_input_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_type(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLInputElementImpl>::type_(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_type(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| set_type_body(this_js, args, ctx))
+    }
+
+    fn set_type_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLInputElementImpl>::set_type(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
     fn get_default_value(
         this_js: &JsValue,
         _args: &[JsValue],
@@ -40579,6 +40601,11 @@ pub mod html_input_element {
                 name: "step",
                 getter: get_step,
                 setter: Some(set_step),
+            },
+            rt::AttrDef {
+                name: "type",
+                getter: get_type,
+                setter: Some(set_type),
             },
             rt::AttrDef {
                 name: "defaultValue",
@@ -44299,6 +44326,14 @@ pub mod html_select_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_type(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLSelectElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLSelectElementImpl>::type_(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn get_options(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         if let Some(v) = rt::cached(this_js, "options", ctx) {
             return Ok(v);
@@ -44472,6 +44507,11 @@ pub mod html_select_element {
                 name: "size",
                 getter: get_size,
                 setter: Some(set_size),
+            },
+            rt::AttrDef {
+                name: "type",
+                getter: get_type,
+                setter: None,
             },
             rt::AttrDef {
                 name: "options",
@@ -46794,6 +46834,14 @@ pub mod html_text_area_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_type(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLTextAreaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLTextAreaElementImpl>::type_(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn get_default_value(
         this_js: &JsValue,
         _args: &[JsValue],
@@ -46935,6 +46983,11 @@ pub mod html_text_area_element {
                 name: "wrap",
                 getter: get_wrap,
                 setter: Some(set_wrap),
+            },
+            rt::AttrDef {
+                name: "type",
+                getter: get_type,
+                setter: None,
             },
             rt::AttrDef {
                 name: "defaultValue",
@@ -55671,7 +55724,9 @@ pub mod html_button_element {
 
     fn get_type(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLButtonElement, ctx)?;
-        let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_string(cx, this, "type"));
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLButtonElementImpl>::type_(cx, this)
+        });
         rt::ret(r, ctx)
     }
 
@@ -55683,7 +55738,7 @@ pub mod html_button_element {
         let this = rt::this_node(this_js, I::HTMLButtonElement, ctx)?;
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
-            catpaw_web::reflect::set_string(cx, this, "type", a0)
+            <Web as web::HTMLButtonElementImpl>::set_type(cx, this, a0)
         });
         rt::ret(r, ctx)?;
         Ok(JsValue::undefined())

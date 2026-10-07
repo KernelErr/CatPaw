@@ -150,3 +150,27 @@ fn local_storage_survives_runs_through_the_snapshot() {
     })
     .unwrap();
 }
+
+#[test]
+fn a_submit_listener_may_push_a_history_entry() {
+    // What single-page apps do on login: take the submission over and
+    // route with `pushState`, which writes the document URL while the
+    // click that submitted is still being handled.
+    let page = r#"<!doctype html><form><input name=u><button>Login</button></form>
+<script>
+document.querySelector("form").addEventListener("submit", e => {
+  e.preventDefault();
+  history.pushState({}, "", "/inventory.html");
+  document.body.append("routed");
+});
+</script>"#;
+    let port = serve(HashMap::from([("/", page)]));
+    let url = Url::parse(&format!("http://127.0.0.1:{port}/")).unwrap();
+    with_page(url, options(HashMap::new()), |page| {
+        page.click("button").unwrap();
+        assert_eq!(page.url().path(), "/inventory.html");
+        let text = page.eval("document.body.textContent").unwrap();
+        assert!(text.contains("routed"), "{text}");
+    })
+    .unwrap();
+}

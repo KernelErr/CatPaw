@@ -536,7 +536,7 @@ members = [
 [interfaces.HTMLLinkElement]
 [interfaces.HTMLMetaElement]
 [interfaces.HTMLButtonElement]
-members = ["form"]
+members = ["form", "type"]
 
 [interfaces.HTMLFormElement]
 members = ["submit", "requestSubmit", "reset", "elements", "length", "checkValidity", "reportValidity", "action", "method", "enctype", "encoding", "target"]
@@ -545,7 +545,7 @@ members = ["submit", "requestSubmit", "reset", "elements", "length", "checkValid
 members = ["form", "control"]
 
 [interfaces.HTMLSelectElement]
-members = ["value", "selectedIndex", "options", "length", "item", "selectedOptions", "form"]
+members = ["value", "selectedIndex", "options", "length", "item", "selectedOptions", "form", "type"]
 
 [interfaces.HTMLOptionElement]
 members = ["selected", "defaultSelected", "value", "text", "index", "form"]
@@ -572,10 +572,10 @@ members = ["text"]
 members = ["text"]
 
 [interfaces.HTMLInputElement]
-members = ["value", "checked", "form", "defaultValue", "select"]
+members = ["value", "checked", "form", "defaultValue", "select", "type"]
 
 [interfaces.HTMLTextAreaElement]
-members = ["value", "form", "defaultValue", "select"]
+members = ["value", "form", "defaultValue", "select", "type"]
 
 [interfaces.HTMLTemplateElement]
 members = ["content"]

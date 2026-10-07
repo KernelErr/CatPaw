@@ -59,15 +59,6 @@ dom/events/Body-FrameSet-Event-Handlers.html	Reflect HTMLFrameSetElement.onscrol
 dom/events/CustomEvent.html	initCustomEvent's default parameter values.
 dom/events/Event-constructors.any.html	Event constructors 3
 dom/events/Event-constructors.any.html	Event constructors 4
-dom/events/Event-dispatch-click.html	-
-dom/events/Event-dispatch-detached-input-and-change.html	attached checkbox should emit input and change events on click().
-dom/events/Event-dispatch-detached-input-and-change.html	attached checkbox should emit input and change events on dispatchEvent(new MouseEvent('click')).
-dom/events/Event-dispatch-detached-input-and-change.html	attached radio should emit input and change events on click().
-dom/events/Event-dispatch-detached-input-and-change.html	attached radio should emit input and change events on dispatchEvent(new MouseEvent('click')).
-dom/events/Event-dispatch-detached-input-and-change.html	attached to shadow dom checkbox should emit input and change events on click().
-dom/events/Event-dispatch-detached-input-and-change.html	attached to shadow dom checkbox should emit input and change events on dispatchEvent(new MouseEvent('click')).
-dom/events/Event-dispatch-detached-input-and-change.html	attached to shadow dom radio should emit input and change events on click().
-dom/events/Event-dispatch-detached-input-and-change.html	attached to shadow dom radio should emit input and change events on dispatchEvent(new MouseEvent('click')).
 dom/events/Event-dispatch-on-disabled-elements.html	-
 dom/events/Event-dispatch-redispatch.html	Redispatching mouseup event whose default action dispatches a click event
 dom/events/Event-dispatch-single-activation-behavior.html	-
@@ -597,7 +588,6 @@ dom/nodes/Element-setAttributeNodeNS.html	Replacing an attribute prefix preserve
 dom/nodes/Element-setAttributeNodeNS.html	Replacing an attribute prefix preserves other attributes with the old qualified name
 dom/nodes/Element-webkitMatchesSelector.html	-
 dom/nodes/Element-webkitMatchesSelector.html	Selectors-API Level 2 Test Suite: HTML with Selectors Level 3
-dom/nodes/MutationObserver-attributes.html	attributes HTMLInputElement.type: type update mutation
 dom/nodes/MutationObserver-childList.html	childList Node.replaceChild: internal replacement mutation
 dom/nodes/MutationObserver-childList.html	childList Node.replaceChild: self internal replacement mutation
 dom/nodes/MutationObserver-cross-realm-callback-report-exception.html	-
@@ -859,7 +849,6 @@ dom/nodes/moveBefore/style-applies.html	Moving a style inside the document shoul
 dom/nodes/moveBefore/stylesheet-cascade-order.html	Moving loaded link stylesheets updates their cascade order
 dom/nodes/moveBefore/stylesheet-no-refetch.html	Moving a loaded link stylesheet preserves its resource
 dom/nodes/moveBefore/throws-exception.html	moveBefore() on a cross-document target node
-dom/nodes/namespaced-attribute-mutations.html	A namespaced type attribute does not change an input's state
 dom/nodes/namespaced-attribute-mutations.html	append a namespaced event handler attribute preserves an HTML event handler
 dom/nodes/namespaced-attribute-mutations.html	append a namespaced event handler attribute preserves an SVG event handler
 dom/nodes/namespaced-attribute-mutations.html	change a namespaced event handler attribute preserves an HTML event handler

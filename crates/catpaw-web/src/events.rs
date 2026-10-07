@@ -745,15 +745,23 @@ impl web::EventTargetImpl for Web {
     fn dispatch_event(cx: &mut Cx<'_>, this: EventTargetRef, event: ObjectId) -> Fallible<bool> {
         let ready = cx.page.with::<Event, _>(event, |e| {
             if e.dispatching || !e.initialized {
-                return false;
+                return None;
             }
             e.trusted = false;
-            true
+            let mouse = matches!(
+                e.iface,
+                InterfaceId::MouseEvent | InterfaceId::PointerEvent | InterfaceId::WheelEvent
+            );
+            Some((mouse && e.type_ == "click", e.bubbles))
         })?;
-        if !ready {
+        let Some((activation, bubbles)) = ready else {
             return Err(Exception::invalid_state(
                 "The event is already being dispatched or is not initialized",
             ));
+        };
+        // A click `MouseEvent` runs activation behavior, whoever sends it.
+        if activation && let EventTargetRef::Node(el) = this {
+            return Ok(crate::activation::dispatch_click(cx, el, event, bubbles));
         }
         Ok(dispatch(cx, this, event))
     }

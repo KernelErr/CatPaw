@@ -1564,9 +1564,38 @@ impl web::DOMRectImpl for Web {
 
 // ---- form controls and other stateful elements ----------------------------
 
+/// The `type` keywords of `input`; anything else is the text state.
+const INPUT_TYPES: &[&str] = &[
+    "hidden",
+    "text",
+    "search",
+    "tel",
+    "url",
+    "email",
+    "password",
+    "date",
+    "month",
+    "week",
+    "time",
+    "datetime-local",
+    "number",
+    "range",
+    "color",
+    "checkbox",
+    "radio",
+    "file",
+    "submit",
+    "image",
+    "reset",
+    "button",
+];
+
+/// An `input`'s type: its `type` attribute when that is a known keyword
+/// (ASCII case-insensitively), else `text`.
 fn input_type(dom: &Dom, el: NodeId) -> String {
     dom.attr(el, "type")
         .map(|t| t.to_ascii_lowercase())
+        .filter(|t| INPUT_TYPES.contains(&t.as_str()))
         .unwrap_or_else(|| "text".to_string())
 }
 
@@ -1587,37 +1616,56 @@ pub(crate) fn set_checked(cx: &Cx<'_>, el: NodeId, value: bool) {
         return;
     }
     // Checking a radio button unchecks the others in its group.
-    let group: Vec<NodeId> = {
-        let dom = cx.dom();
-        if input_type(&dom, el) != "radio" {
-            return;
-        }
-        let Some(name) = dom.attr(el, "name").filter(|n| !n.is_empty()) else {
-            return;
-        };
-        let owner = |n: NodeId| dom.ancestors(n).find(|&a| dom.is_html_element(a, "form"));
-        let form = owner(el);
-        let root = dom.root_of(el);
-        dom.descendants(root)
-            .filter(|&n| {
-                n != el
-                    && dom.is_html_element(n, "input")
-                    && input_type(&dom, n) == "radio"
-                    && dom.attr(n, "name") == Some(name)
-                    && owner(n) == form
-            })
-            .collect()
-    };
+    let group = radio_group(&cx.dom(), el);
     let mut state = cx.page.form_state.borrow_mut();
     for other in group {
         state.entry(other).or_default().checked = Some(false);
     }
 }
 
+/// The other radio buttons of a radio button's group (same name, same
+/// form owner, same tree); empty for other elements.
+fn radio_group(dom: &Dom, el: NodeId) -> Vec<NodeId> {
+    if input_type(dom, el) != "radio" {
+        return Vec::new();
+    }
+    let Some(name) = dom.attr(el, "name").filter(|n| !n.is_empty()) else {
+        return Vec::new();
+    };
+    let owner = |n: NodeId| dom.ancestors(n).find(|&a| dom.is_html_element(a, "form"));
+    let form = owner(el);
+    let root = dom.root_of(el);
+    dom.descendants(root)
+        .filter(|&n| {
+            n != el
+                && dom.is_html_element(n, "input")
+                && input_type(dom, n) == "radio"
+                && dom.attr(n, "name") == Some(name)
+                && owner(n) == form
+        })
+        .collect()
+}
+
+/// The radio button of `el`'s group that is checked, other than `el`.
+pub(crate) fn checked_in_group(cx: &Cx<'_>, el: NodeId) -> Option<NodeId> {
+    let group = radio_group(&cx.dom(), el);
+    group.into_iter().find(|&other| is_checked(cx, other))
+}
+
 impl web::HTMLInputElementImpl for Web {
     fn form(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>> {
         node::check(cx, this)?;
         Ok(crate::forms::form_owner(&cx.dom(), this))
+    }
+
+    fn type_(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {
+        node::check(cx, this)?;
+        Ok(input_type(&cx.dom(), this))
+    }
+
+    fn set_type(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()> {
+        node::check(cx, this)?;
+        set_attr(cx, this, "type", value)
     }
 
     fn default_value(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {
@@ -1697,6 +1745,11 @@ impl web::HTMLTextAreaElementImpl for Web {
     fn form(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>> {
         node::check(cx, this)?;
         Ok(crate::forms::form_owner(&cx.dom(), this))
+    }
+
+    fn type_(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {
+        node::check(cx, this)?;
+        Ok("textarea".to_string())
     }
 
     fn default_value(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {

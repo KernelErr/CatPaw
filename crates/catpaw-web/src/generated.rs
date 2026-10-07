@@ -5831,6 +5831,8 @@ pub trait HTMLInputElementImpl {
     fn checked(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool>;
     fn set_checked(cx: &mut Cx<'_>, this: NodeId, value: bool) -> Fallible<()>;
     fn form(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
+    fn type_(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_type(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
     fn default_value(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
     fn set_default_value(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
     fn value(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
@@ -5863,6 +5865,7 @@ pub trait HTMLScriptElementImpl {
 
 pub trait HTMLSelectElementImpl {
     fn form(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
+    fn type_(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
     fn options(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
     fn length(cx: &mut Cx<'_>, this: NodeId) -> Fallible<u32>;
     fn set_length(cx: &mut Cx<'_>, this: NodeId, value: u32) -> Fallible<()>;
@@ -5893,6 +5896,7 @@ pub trait HTMLTemplateElementImpl {
 
 pub trait HTMLTextAreaElementImpl {
     fn form(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
+    fn type_(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
     fn default_value(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
     fn set_default_value(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
     fn value(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
@@ -6090,6 +6094,8 @@ pub trait HTMLAnchorElementImpl {
 
 pub trait HTMLButtonElementImpl {
     fn form(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
+    fn type_(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn set_type(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
 }
 
 pub trait HTMLCanvasElementImpl {

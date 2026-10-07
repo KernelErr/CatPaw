@@ -89,13 +89,16 @@ pub(crate) fn options_of(dom: &Dom, select: NodeId) -> Vec<NodeId> {
 
 /// An option's selectedness: what script set, else its attribute.
 pub(crate) fn is_selected(cx: &Cx<'_>, option: NodeId) -> bool {
-    let dirty = cx
-        .page
+    option_selected(cx.page, option)
+}
+
+pub(crate) fn option_selected(page: &PageState, option: NodeId) -> bool {
+    let dirty = page
         .form_state
         .borrow()
         .get(&option)
         .and_then(|s| s.selected);
-    dirty.unwrap_or_else(|| cx.dom().attr(option, "selected").is_some())
+    dirty.unwrap_or_else(|| page.dom.borrow().attr(option, "selected").is_some())
 }
 
 fn set_selectedness(cx: &Cx<'_>, option: NodeId, value: bool) {
@@ -170,8 +173,12 @@ pub(crate) fn select_option(cx: &Cx<'_>, option: NodeId, selected: bool) {
 /// The options shown as selected: the selected ones, or for a single-select
 /// with none, the first enabled one.
 pub(crate) fn selected_options(cx: &Cx<'_>, select: NodeId) -> Vec<NodeId> {
+    displayed_options(cx.page, select)
+}
+
+pub(crate) fn displayed_options(page: &PageState, select: NodeId) -> Vec<NodeId> {
     let (options, multiple) = {
-        let dom = cx.dom();
+        let dom = page.dom.borrow();
         (
             options_of(&dom, select),
             dom.attr(select, "multiple").is_some(),
@@ -180,16 +187,15 @@ pub(crate) fn selected_options(cx: &Cx<'_>, select: NodeId) -> Vec<NodeId> {
     let mut selected: Vec<NodeId> = options
         .iter()
         .copied()
-        .filter(|&o| is_selected(cx, o))
+        .filter(|&o| option_selected(page, o))
         .collect();
-    let no_fallback = cx
-        .page
+    let no_fallback = page
         .form_state
         .borrow()
         .get(&select)
         .is_some_and(|s| s.no_fallback);
     if selected.is_empty() && !multiple && !no_fallback {
-        let dom = cx.dom();
+        let dom = page.dom.borrow();
         if let Some(first) = options.iter().copied().find(|&o| !is_disabled(&dom, o)) {
             selected.push(first);
         }
@@ -681,6 +687,15 @@ impl web::HTMLFormElementImpl for Web {
 }
 
 impl web::HTMLSelectElementImpl for Web {
+    fn type_(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {
+        node::check(cx, this)?;
+        Ok(if cx.dom().attr(this, "multiple").is_some() {
+            "select-multiple".to_string()
+        } else {
+            "select-one".to_string()
+        })
+    }
+
     fn value(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {
         node::check(cx, this)?;
         let selected = selected_options(cx, this);
@@ -840,6 +855,23 @@ impl web::HTMLButtonElementImpl for Web {
     fn form(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>> {
         node::check(cx, this)?;
         Ok(form_owner(&cx.dom(), this))
+    }
+
+    /// `submit`, `reset` or `button`; a missing or unknown value is
+    /// `submit`.
+    fn type_(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {
+        node::check(cx, this)?;
+        let ty = cx
+            .dom()
+            .attr(this, "type")
+            .map(|t| t.to_ascii_lowercase())
+            .filter(|t| matches!(t.as_str(), "submit" | "reset" | "button"));
+        Ok(ty.unwrap_or_else(|| "submit".to_string()))
+    }
+
+    fn set_type(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()> {
+        node::check(cx, this)?;
+        crate::element::set_attr(cx, this, "type", value)
     }
 }
 
