@@ -127,6 +127,10 @@ pub struct EngineNet {
     socket_events: RefCell<Vec<(u64, WsEvent)>>,
     /// Shared with the hosts of the page's frames: one log per page.
     log: Rc<RefCell<Vec<RequestRecord>>>,
+    /// Answers already there (from a recording), delivered at the next
+    /// poll in the order the requests were made: a replay interleaves
+    /// the same way every time.
+    ready: RefCell<std::collections::VecDeque<(u64, NetResult)>>,
 }
 
 async fn perform(client: &NetClient, request: NetRequest) -> NetResult {
@@ -200,6 +204,7 @@ impl EngineNet {
             sockets: RefCell::new(HashMap::new()),
             socket_events: RefCell::new(Vec::new()),
             log: Rc::new(RefCell::new(Vec::new())),
+            ready: RefCell::new(std::collections::VecDeque::new()),
         }
     }
 
@@ -250,6 +255,7 @@ impl EngineNet {
             sockets: RefCell::new(HashMap::new()),
             socket_events: RefCell::new(Vec::new()),
             log: self.log.clone(),
+            ready: RefCell::new(std::collections::VecDeque::new()),
         }
     }
 
@@ -362,6 +368,12 @@ impl NetHost for EngineNet {
         let token = self.next_token.get();
         self.next_token.set(token + 1);
         let index = self.record(&request);
+        if self.client.is_replaying() {
+            let result = self.runtime.block_on(perform(&self.client, request));
+            self.finish(index, &result);
+            self.ready.borrow_mut().push_back((token, result));
+            return token;
+        }
         let client = self.client.clone();
         let tx = self.tx.clone();
         let task = self.runtime.spawn(async move {
@@ -375,7 +387,10 @@ impl NetHost for EngineNet {
     }
 
     fn poll(&self, wait: Option<Duration>) -> Vec<(u64, NetResult)> {
-        let mut out = Vec::new();
+        let mut out: Vec<(u64, NetResult)> = self.ready.borrow_mut().drain(..).collect();
+        if !out.is_empty() {
+            return out;
+        }
         if let Some(wait) = wait
             && (self.inflight() > 0 || !self.sockets.borrow().is_empty())
         {
@@ -395,6 +410,7 @@ impl NetHost for EngineNet {
     }
 
     fn abort(&self, token: u64) {
+        self.ready.borrow_mut().retain(|(t, _)| *t != token);
         if let Some((task, _)) = self.inflight.borrow_mut().remove(&token) {
             task.abort();
         }

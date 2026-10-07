@@ -1,5 +1,5 @@
 //! `cargo xtask snapshot-bench`: how big what an agent reads is, on live
-//! pages, per snapshot format and filter (needs `--features bench`).
+//! pages, per snapshot format and filter (needs `--features engine`).
 //!
 //! Sizes are bytes of the tool result; tokens are estimated as bytes/3.5,
 //! the estimate the snapshot budget uses.

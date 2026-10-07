@@ -43,7 +43,12 @@ of the model on every turn.
    matched against what a snapshot shows, frames included; an exact match
    beats a partial one and a single control beats other matches, and
    anything still tied is `error AmbiguousTarget` listing up to five
-   candidates: the server never guesses. Before acting, an element must be
+   candidates: the server never guesses. A `role "name"` target names its
+   element in full (case and spacing aside), or as the snapshot cut it
+   short with `…`; a name found only inside another is listed, not taken
+   (`error NotFound textbox "Password" names nothing in full; in part: e5
+   textbox "Username Password"`), since it is another field as often as
+   not. Before acting, an element must be
    enabled (for clicks, typing, choosing and checking) and hold still while
    the page animates; one covered by something else is reported with the
    control that would dismiss the cover when there is one
@@ -109,6 +114,28 @@ of the model on every turn.
 11. **Dialogs** are dismissed unless the action says `dialog: "accept"`
     (`promptText` answers a prompt and implies accepting); each is a
     consequence line with its answer.
+12. **Recording and replay.** `--record-har <file>` keeps a session's
+    traffic as HAR 1.2 (compressed with zstd when the name ends in
+    `.zst`), without request cookies, credentials or signatures;
+    `--replay-har <file>` answers from it with no network. A request
+    matches on method, URL and body, or failing that on method and path;
+    repeated requests get the recorded answers in order, and one the
+    recording lacks fails (`--replay-misses-live` sends it instead).
+    Answers arrive at once, in the order the page asked for them;
+    `--random-seed` seeds `Math.random` and `crypto.getRandomValues` for
+    each document, `--time-origin` fixes where the page clock starts, and
+    cookie lifetimes count from the recorded time. A replay therefore gives
+    the same results byte for byte, on any platform. WebSockets are refused
+    during replay; they are not recorded yet.
+13. **The task set.** `tests/tasks/<id>/` holds a goal on a site made for
+    automation practice, the calls an agent would make, checks of the
+    outcome, the recording and the expected transcript (each call and its
+    result). `cargo xtask tasks record` runs a task live and keeps the
+    recording only when two replays of it agree; CI replays every task
+    twice against its transcript, offline, so a change in what agents see
+    shows up as a diff of the transcript. Content sites (Hacker News,
+    Wikipedia, MDN) are tasks too, but their recordings stay out of the
+    repository (`tests/tasks/local/`).
 
 ## Consequences
 

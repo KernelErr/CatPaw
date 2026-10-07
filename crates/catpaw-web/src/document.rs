@@ -680,6 +680,9 @@ impl web::DocumentImpl for Web {
             return Ok(());
         }
         if let Some(net) = cx.page.net() {
+            // Expiry is counted on the page's clock, which may not be the
+            // jar's (a fixed time origin).
+            let value = crate::cookie_time::relative_expiry(&value, cx.page.clock.unix_ms());
             net.set_cookie(&cx.page.url.borrow(), &value);
             return Ok(());
         }

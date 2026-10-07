@@ -76,6 +76,9 @@ pub struct PageConfig {
     pub virtual_time: bool,
     /// A fixed time origin (Unix milliseconds) for repeatable runs.
     pub time_origin_unix_ms: Option<f64>,
+    /// Seeds `Math.random` and `crypto.getRandomValues` for repeatable runs
+    /// (each document starts the sequence again).
+    pub random_seed: Option<u64>,
     /// How long one run of script (a task with its microtasks, or a script
     /// element) may take before it is stopped with an uncatchable error;
     /// `None` lets it run forever.
@@ -105,6 +108,7 @@ impl Default for PageConfig {
             hardware_concurrency: 4,
             virtual_time: true,
             time_origin_unix_ms: None,
+            random_seed: None,
             script_budget: Some(std::time::Duration::from_secs(10)),
             history_before: 0,
             history_after: 0,

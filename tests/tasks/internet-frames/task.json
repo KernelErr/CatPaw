@@ -1,0 +1,22 @@
+{
+  "id": "internet-frames",
+  "goal": "Read the middle frame of nested framesets",
+  "start_url": "https://the-internet.herokuapp.com/nested_frames",
+  "credentials": {
+    "public": true
+  },
+  "random_seed": 1,
+  "time_origin": 1790000000000,
+  "steps_min": 1,
+  "steps": [
+    {
+      "tool": "snapshot",
+      "args": {}
+    }
+  ],
+  "success": [
+    {
+      "snapshot_contains": "text: MIDDLE"
+    }
+  ]
+}

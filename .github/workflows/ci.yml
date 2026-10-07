@@ -29,12 +29,18 @@ jobs:
         run: cargo fmt --all --check
       - name: Clippy
         run: cargo clippy --workspace --all-targets
+      - name: Clippy (xtask with the engine)
+        run: cargo clippy -p xtask --features engine
       - name: Generated bindings are up to date
         run: cargo run -p xtask -- bindgen --check
       - name: protocol.json is up to date
         run: cargo run -p xtask -- protocol --check
       - name: Test
         run: cargo test --workspace
+      - name: Agent task set is well-formed
+        run: cargo run -p xtask --features engine -- tasks lint
+      - name: Agent task set (recordings replayed twice, offline)
+        run: cargo run -p xtask --features engine -- tasks replay --twice
       - name: tree-construction (WPT html5lib suite)
         run: cargo run -p xtask -- tree-construction
       - name: web-platform-tests (testharness.js subsets)

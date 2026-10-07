@@ -1,0 +1,448 @@
+> navigate {"url":"https://books.toscrape.com/"}
+ok navigate → https://books.toscrape.com/ (200)
+# s1 tab=t1 doc=d1 url=https://books.toscrape.com/ title="All products | Books to Scrape - Sandbox" vp=1280x720 scroll=0,0 filter=interesting nodes=208/541 settled=yes
+e1 banner
+  e2 link "Books to Scrape"
+  text: We love being scraped!
+e3 list
+  e4 link "Home"
+  e5 listitem: All products
+e6 complementary
+  e7 list
+    e8 listitem
+      e9 link "Books"
+      e10 list
+        e11 link "Travel"
+        e12 link "Mystery"
+        e13 link "Historical Fiction"
+        e14 link "Sequential Art"
+        e15 link "Classics"
+        e16 link "Philosophy"
+        e17 link "Romance"
+        e18 link "Womens Fiction"
+        e19 link "Fiction"
+        e20 link "Childrens"
+        e21 link "Religion"
+        e22 link "Nonfiction"
+        e23 link "Music"
+        e24 link "Default"
+        e25 link "Science Fiction"
+        e26 link "Sports and Games"
+        e27 link "Add a comment"
+        e28 link "Fantasy"
+        e29 link "New Adult"
+        e30 link "Young Adult"
+        e31 link "Science"
+        e32 link "Poetry"
+        e33 link "Paranormal"
+        e34 link "Art"
+        e35 link "Psychology"
+        e36 link "Autobiography"
+        e37 link "Parenting"
+        e38 link "Adult Fiction"
+        e39 link "Humor"
+        e40 link "Horror"
+        e41 link "History"
+        e42 link "Food and Drink"
+        e43 link "Christian Fiction"
+        e44 link "Business"
+        e45 link "Biography"
+        e46 link "Thriller"
+        e47 link "Contemporary"
+        e48 link "Spirituality"
+        e49 link "Academic"
+        e50 link "Self Help"
+        e51 link "Historical"
+        e52 link "Christian"
+        e53 link "Suspense"
+        e54 link "Short Stories"
+        e55 link "Novels"
+        e56 link "Health"
+        e57 link "Politics"
+        e58 link "Cultural"
+        e59 link "Erotica"
+        e60 link "Crime"
+e61 heading "All products" [level=1]
+text: 1000 results - showing 1 to 20.
+e62 alert: Warning! This is a demo website for web scraping purposes. Prices and ratings here were randomly assigned and have no real meaning.
+e63 list
+  e64 article
+    e65 link "A Light in the Attic"
+    e66 heading [level=3]
+      e67 link "A Light in the ..."
+    e68 paragraph: £51.77
+    e69 paragraph: In stock
+    e70 button "Add to basket"
+  e71 article
+    e72 link "Tipping the Velvet"
+    e73 heading [level=3]
+      e74 link "Tipping the Velvet"
+    e75 paragraph: £53.74
+    e76 paragraph: In stock
+    e77 button "Add to basket"
+  e78 article
+    e79 link "Soumission"
+    e80 heading [level=3]
+      e81 link "Soumission"
+    e82 paragraph: £50.10
+    e83 paragraph: In stock
+    e84 button "Add to basket"
+  e85 article
+    e86 link "Sharp Objects"
+    e87 heading [level=3]
+      e88 link "Sharp Objects"
+    e89 paragraph: £47.82
+    e90 paragraph: In stock
+    e91 button "Add to basket"
+  e92 article
+    e93 link "Sapiens: A Brief History of Humankind"
+    e94 heading [level=3]
+      e95 link "Sapiens: A Brief History ..."
+    e96 paragraph: £54.23
+    e97 paragraph: In stock
+    e98 button "Add to basket"
+  e99 article
+    e100 link "The Requiem Red"
+    e101 heading [level=3]
+      e102 link "The Requiem Red"
+    e103 paragraph: £22.65
+    e104 paragraph: In stock
+    e105 button "Add to basket"
+  e106 article
+    e107 link "The Dirty Little Secrets of Getting Your Dream Job"
+    e108 heading [level=3]
+      e109 link "The Dirty Little Secrets ..."
+    e110 paragraph: £33.34
+    e111 paragraph: In stock
+    e112 button "Add to basket"
+  e113 article
+    e114 link "The Coming Woman: A Novel Based on the Life of the Infamous Feminist, Victoria Woodhull"
+    e115 heading [level=3]
+      e116 link "The Coming Woman: A ..."
+    e117 paragraph: £17.93
+    e118 paragraph: In stock
+    e119 button "Add to basket"
+  e120 article
+    e121 link "The Boys in the Boat: Nine Americans and Their Epic Quest for Gold at the 1936 Berlin Olympics"
+    e122 heading [level=3]
+      e123 link "The Boys in the ..."
+    e124 paragraph: £22.60
+    e125 paragraph: In stock
+    e126 button "Add to basket"
+  e127 article
+    e128 link "The Black Maria"
+    e129 heading [level=3]
+      e130 link "The Black Maria"
+    e131 paragraph: £52.15
+    e132 paragraph: In stock
+    e133 button "Add to basket"
+  e134 article
+    e135 link "Starving Hearts (Triangular Trade Trilogy, #1)"
+    e136 heading [level=3]
+      e137 link "Starving Hearts (Triangular Trade ..."
+    e138 paragraph: £13.99
+    e139 paragraph: In stock
+    e140 button "Add to basket"
+  e141 article
+    e142 link "Shakespeare's Sonnets"
+    e143 heading [level=3]
+      e144 link "Shakespeare's Sonnets"
+    e145 paragraph: £20.66
+    e146 paragraph: In stock
+    e147 button "Add to basket"
+  e148 article
+    e149 link "Set Me Free"
+    e150 heading [level=3]
+      e151 link "Set Me Free"
+    e152 paragraph: £17.46
+    e153 paragraph: In stock
+    e154 button "Add to basket"
+  e155 article
+    e156 link "Scott Pilgrim's Precious Little Life (Scott Pilgrim #1)"
+    e157 heading [level=3]
+      e158 link "Scott Pilgrim's Precious Little ..."
+    e159 paragraph: £52.29
+    e160 paragraph: In stock
+    e161 button "Add to basket"
+  e162 article
+    e163 link "Rip it Up and Start Again"
+    e164 heading [level=3]
+      e165 link "Rip it Up and ..."
+    e166 paragraph: £35.02
+    e167 paragraph: In stock
+    e168 button "Add to basket"
+  e169 article
+    e170 link "Our Band Could Be Your Life: Scenes from the American Indie Underground, 1981-1991"
+    e171 heading [level=3]
+      e172 link "Our Band Could Be ..."
+    e173 paragraph: £57.25
+    e174 paragraph: In stock
+    e175 button "Add to basket"
+  e176 article
+    e177 link "Olio"
+    e178 heading [level=3]
+      e179 link "Olio"
+    e180 paragraph: £23.88
+    e181 paragraph: In stock
+    e182 button "Add to basket"
+  e183 article
+    e184 link "Mesaerion: The Best Science Fiction Stories 1800-1849"
+    e185 heading [level=3]
+      e186 link "Mesaerion: The Best Science ..."
+    e187 paragraph: £37.59
+    e188 paragraph: In stock
+    e189 button "Add to basket"
+  e190 article
+    e191 link "Libertarianism for Beginners"
+    e192 heading [level=3]
+      e193 link "Libertarianism for Beginners"
+    e194 paragraph: £51.33
+    e195 paragraph: In stock
+    e196 button "Add to basket"
+  e197 article
+    e198 link "It's Only the Himalayas"
+    e199 heading [level=3]
+      e200 link "It's Only the Himalayas"
+    e201 paragraph: £45.17
+    e202 paragraph: In stock
+    e203 button "Add to basket"
+e204 list
+  e205 listitem: Page 1 of 50
+  e206 link "next"
+
+> click {"target":"link \"Travel\""}
+ok click e11 link "Travel" → https://books.toscrape.com/catalogue/category/books/travel_2/index.html (200)
+# s2 tab=t1 doc=d2 navigated-from=d1 url=https://books.toscrape.com/catalogue/category/books/travel_2/index.html title="Travel | Books to Scrape - Sandbox" vp=1280x720 scroll=0,0 filter=interesting nodes=143/366 settled=yes full=navigated
+e207 banner
+  e208 link "Books to Scrape"
+  text: We love being scraped!
+e209 list
+  e210 link "Home"
+  e211 link "Books"
+  e212 listitem: Travel
+e213 complementary
+  e214 list
+    e215 listitem
+      e216 link "Books"
+      e217 list
+        e218 link "Travel"
+        e219 link "Mystery"
+        e220 link "Historical Fiction"
+        e221 link "Sequential Art"
+        e222 link "Classics"
+        e223 link "Philosophy"
+        e224 link "Romance"
+        e225 link "Womens Fiction"
+        e226 link "Fiction"
+        e227 link "Childrens"
+        e228 link "Religion"
+        e229 link "Nonfiction"
+        e230 link "Music"
+        e231 link "Default"
+        e232 link "Science Fiction"
+        e233 link "Sports and Games"
+        e234 link "Add a comment"
+        e235 link "Fantasy"
+        e236 link "New Adult"
+        e237 link "Young Adult"
+        e238 link "Science"
+        e239 link "Poetry"
+        e240 link "Paranormal"
+        e241 link "Art"
+        e242 link "Psychology"
+        e243 link "Autobiography"
+        e244 link "Parenting"
+        e245 link "Adult Fiction"
+        e246 link "Humor"
+        e247 link "Horror"
+        e248 link "History"
+        e249 link "Food and Drink"
+        e250 link "Christian Fiction"
+        e251 link "Business"
+        e252 link "Biography"
+        e253 link "Thriller"
+        e254 link "Contemporary"
+        e255 link "Spirituality"
+        e256 link "Academic"
+        e257 link "Self Help"
+        e258 link "Historical"
+        e259 link "Christian"
+        e260 link "Suspense"
+        e261 link "Short Stories"
+        e262 link "Novels"
+        e263 link "Health"
+        e264 link "Politics"
+        e265 link "Cultural"
+        e266 link "Erotica"
+        e267 link "Crime"
+e268 heading "Travel" [level=1]
+text: 11 results.
+e269 alert: Warning! This is a demo website for web scraping purposes. Prices and ratings here were randomly assigned and have no real meaning.
+e270 list
+  e271 article
+    e272 link "It's Only the Himalayas"
+    e273 heading [level=3]
+      e274 link "It's Only the Himalayas"
+    e275 paragraph: £45.17
+    e276 paragraph: In stock
+    e277 button "Add to basket"
+  e278 article
+    e279 link "Full Moon over Noah’s Ark: An Odyssey to Mount Ararat and Beyond"
+    e280 heading [level=3]
+      e281 link "Full Moon over Noah’s ..."
+    e282 paragraph: £49.43
+    e283 paragraph: In stock
+    e284 button "Add to basket"
+  e285 article
+    e286 link "See America: A Celebration of Our National Parks & Treasured Sites"
+    e287 heading [level=3]
+      e288 link "See America: A Celebration ..."
+    e289 paragraph: £48.87
+    e290 paragraph: In stock
+    e291 button "Add to basket"
+  e292 article
+    e293 link "Vagabonding: An Uncommon Guide to the Art of Long-Term World Travel"
+    e294 heading [level=3]
+      e295 link "Vagabonding: An Uncommon Guide ..."
+    e296 paragraph: £36.94
+    e297 paragraph: In stock
+    e298 button "Add to basket"
+  e299 article
+    e300 link "Under the Tuscan Sun"
+    e301 heading [level=3]
+      e302 link "Under the Tuscan Sun"
+    e303 paragraph: £37.33
+    e304 paragraph: In stock
+    e305 button "Add to basket"
+  e306 article
+    e307 link "A Summer In Europe"
+    e308 heading [level=3]
+      e309 link "A Summer In Europe"
+    e310 paragraph: £44.34
+    e311 paragraph: In stock
+    e312 button "Add to basket"
+  e313 article
+    e314 link "The Great Railway Bazaar"
+    e315 heading [level=3]
+      e316 link "The Great Railway Bazaar"
+    e317 paragraph: £30.54
+    e318 paragraph: In stock
+    e319 button "Add to basket"
+  e320 article
+    e321 link "A Year in Provence (Provence #1)"
+    e322 heading [level=3]
+      e323 link "A Year in Provence ..."
+    e324 paragraph: £56.88
+    e325 paragraph: In stock
+    e326 button "Add to basket"
+  e327 article
+    e328 link "The Road to Little Dribbling: Adventures of an American in Britain (Notes From a Small Island #2)"
+    e329 heading [level=3]
+      e330 link "The Road to Little ..."
+    e331 paragraph: £23.21
+    e332 paragraph: In stock
+    e333 button "Add to basket"
+  e334 article
+    e335 link "Neither Here nor There: Travels in Europe"
+    e336 heading [level=3]
+      e337 link "Neither Here nor There: ..."
+    e338 paragraph: £38.95
+    e339 paragraph: In stock
+    e340 button "Add to basket"
+  e341 article
+    e342 link "1,000 Places to See Before You Die"
+    e343 heading [level=3]
+      e344 link "1,000 Places to See ..."
+    e345 paragraph: £26.08
+    e346 paragraph: In stock
+    e347 button "Add to basket"
+
+> click {"target":"css:h3 a[title=\"It's Only the Himalayas\"]"}
+ok click e274 link "It's Only the Himalayas" → https://books.toscrape.com/catalogue/its-only-the-himalayas_981/index.html (200)
+# s3 tab=t1 doc=d3 navigated-from=d2 url=https://books.toscrape.com/catalogue/its-only-the-himalayas_981/index.html title="It's Only the Himalayas | Books to Scrape - Sandbox" vp=1280x720 scroll=0,0 filter=interesting nodes=83/210 settled=yes full=navigated
+e348 banner
+  e349 link "Books to Scrape"
+  text: We love being scraped!
+e350 list
+  e351 link "Home"
+  e352 link "Books"
+  e353 link "Travel"
+  e354 listitem: It's Only the Himalayas
+e355 article
+  e356 img "It's Only the Himalayas"
+  e357 heading "It's Only the Himalayas" [level=1]
+  e358 paragraph: £45.17
+  e359 paragraph: In stock (19 available)
+  e360 alert: Warning! This is a demo website for web scraping purposes. Prices and ratings here were randomly assigned and have no real meaning.
+  e361 heading "Product Description" [level=2]
+  e362 paragraph: “Wherever you go, whatever you do, just . . . don’t do anything stupid.” —My MotherDuring her yearlong adventure backpacking from South Africa to Singapore, S. Bedford definitely did a few things her…
+  e363 heading "Product Information" [level=2]
+  e364 table
+    e365 row
+      e366 columnheader "UPC"
+      e367 cell "a22124811bfa8350"
+    e368 row
+      e369 columnheader "Product Type"
+      e370 cell "Books"
+    e371 row
+      e372 columnheader "Price (excl. tax)"
+      e373 cell "£45.17"
+    e374 row
+      e375 columnheader "Price (incl. tax)"
+      e376 cell "£45.17"
+    e377 row
+      e378 columnheader "Tax"
+      e379 cell "£0.00"
+    e380 row
+      e381 columnheader "Availability"
+      e382 cell "In stock (19 available)"
+    e383 row
+      e384 columnheader "Number of reviews"
+      e385 cell "0"
+  e386 heading "Products you recently viewed" [level=2]
+  e387 list
+    e388 article
+      e389 link "Libertarianism for Beginners"
+      e390 heading [level=3]
+        e391 link "Libertarianism for Beginners"
+      e392 paragraph: £51.33
+      e393 paragraph: In stock
+      e394 button "Add to basket"
+    e395 article
+      e396 link "Mesaerion: The Best Science Fiction Stories 1800-1849"
+      e397 heading [level=3]
+        e398 link "Mesaerion: The Best Science ..."
+      e399 paragraph: £37.59
+      e400 paragraph: In stock
+      e401 button "Add to basket"
+    e402 article
+      e403 link "Olio"
+      e404 heading [level=3]
+        e405 link "Olio"
+      e406 paragraph: £23.88
+      e407 paragraph: In stock
+      e408 button "Add to basket"
+    e409 article
+      e410 link "Our Band Could Be Your Life: Scenes from the American Indie Underground, 1981-1991"
+      e411 heading [level=3]
+        e412 link "Our Band Could Be ..."
+      e413 paragraph: £57.25
+      e414 paragraph: In stock
+      e415 button "Add to basket"
+    e416 article
+      e417 link "Rip it Up and Start Again"
+      e418 heading [level=3]
+        e419 link "Rip it Up and ..."
+      e420 paragraph: £35.02
+      e421 paragraph: In stock
+      e422 button "Add to basket"
+    e423 article
+      e424 link "Scott Pilgrim's Precious Little Life (Scott Pilgrim #1)"
+      e425 heading [level=3]
+        e426 link "Scott Pilgrim's Precious Little ..."
+      e427 paragraph: £52.29
+      e428 paragraph: In stock
+      e429 button "Add to basket"
+
+? text_contains "In stock" → yes
+? url_contains "its-only-the-himalayas" → yes

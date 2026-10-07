@@ -505,7 +505,7 @@ pub(crate) fn post_to_frame(
 pub(crate) fn iframe_changed(page: &PageState, el: NodeId) {
     let (url, srcdoc) = {
         let dom = page.dom.borrow();
-        if !dom.is_html_element(el, "iframe") || !dom.is_connected(el) {
+        if !is_frame_element(&dom, el) || !dom.is_connected(el) {
             return;
         }
         let srcdoc = dom.attr(el, "srcdoc").map(str::to_string);
@@ -536,6 +536,12 @@ pub(crate) fn iframe_changed(page: &PageState, el: NodeId) {
     });
 }
 
+/// An element that holds a frame: an `iframe`, or a `frame` of a
+/// `frameset`.
+pub(crate) fn is_frame_element(dom: &catpaw_dom::Dom, el: NodeId) -> bool {
+    dom.is_html_element(el, "iframe") || dom.is_html_element(el, "frame")
+}
+
 /// The element is no longer waiting for its frame.
 fn settle_pending(page: &PageState, el: NodeId) {
     if page.frames.pending.borrow_mut().remove(&el) {
@@ -562,7 +568,7 @@ pub(crate) fn nodes_inserted(page: &PageState, inserted: &[NodeId]) {
         inserted
             .iter()
             .flat_map(|&n| dom.shadow_including_descendants(n))
-            .filter(|&n| dom.is_html_element(n, "iframe"))
+            .filter(|&n| is_frame_element(&dom, n))
             .collect()
     };
     for el in iframes {

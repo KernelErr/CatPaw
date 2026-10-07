@@ -1,0 +1,87 @@
+{
+  "id": "saucedemo-checkout",
+  "goal": "Log in as standard_user, buy the Sauce Labs Backpack and reach the order confirmation",
+  "start_url": "https://www.saucedemo.com/",
+  "credentials": {
+    "public": true
+  },
+  "random_seed": 1,
+  "time_origin": 1790000000000,
+  "steps_min": 10,
+  "steps": [
+    {
+      "tool": "type",
+      "args": {
+        "target": "textbox \"Username\"",
+        "text": "standard_user"
+      }
+    },
+    {
+      "tool": "type",
+      "args": {
+        "target": "textbox \"Password\"",
+        "text": "secret_sauce",
+        "submit": true
+      }
+    },
+    {
+      "tool": "click",
+      "args": {
+        "target": "css:#add-to-cart-sauce-labs-backpack"
+      }
+    },
+    {
+      "tool": "click",
+      "args": {
+        "target": "css:.shopping_cart_link"
+      }
+    },
+    {
+      "tool": "click",
+      "args": {
+        "target": "button \"Checkout\""
+      }
+    },
+    {
+      "tool": "type",
+      "args": {
+        "target": "textbox \"First Name\"",
+        "text": "Ada"
+      }
+    },
+    {
+      "tool": "type",
+      "args": {
+        "target": "textbox \"Last Name\"",
+        "text": "Lovelace"
+      }
+    },
+    {
+      "tool": "type",
+      "args": {
+        "target": "textbox \"Zip/Postal Code\"",
+        "text": "10115"
+      }
+    },
+    {
+      "tool": "click",
+      "args": {
+        "target": "button \"Continue\""
+      }
+    },
+    {
+      "tool": "click",
+      "args": {
+        "target": "button \"Finish\""
+      }
+    }
+  ],
+  "success": [
+    {
+      "url_contains": "checkout-complete"
+    },
+    {
+      "text_contains": "Thank you for your order"
+    }
+  ]
+}

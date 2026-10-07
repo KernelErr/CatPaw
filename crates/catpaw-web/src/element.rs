@@ -84,7 +84,7 @@ fn attribute_changed(
     if matches!(local, "href" | "rel" | "disabled") {
         crate::stylesheets::link_changed(cx.page, el, false);
     }
-    if matches!(local, "src" | "srcdoc") && cx.dom().is_html_element(el, "iframe") {
+    if matches!(local, "src" | "srcdoc") && crate::frames::is_frame_element(&cx.dom(), el) {
         crate::frames::iframe_changed(cx.page, el);
     }
     if matches!(local, "width" | "height") && cx.dom().is_html_element(el, "canvas") {

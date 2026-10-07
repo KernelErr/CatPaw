@@ -1,0 +1,24 @@
+> navigate {"url":"https://the-internet.herokuapp.com/javascript_alerts"}
+ok navigate → https://the-internet.herokuapp.com/javascript_alerts (200)
+! console error: Failed to load https://298279967.log.optimizely.com/event?a=298279967&d=298279967&y=false&n=https%3A%2F%2Fthe-internet.herokuapp.com%2Fjavascript_alerts&u=oeu1…
+! console error: Uncaught SyntaxError: expected token 'identifier', got '=' in identifier parsing at line 1307, col 10
+# s1 tab=t1 doc=d1 url=https://the-internet.herokuapp.com/javascript_alerts title="The Internet" vp=1280x720 scroll=0,0 filter=interesting nodes=10/42 settled=yes
+e1 link "Fork me on GitHub"
+e2 heading "JavaScript Alerts" [level=3]
+e3 paragraph: Here are some examples of different JavaScript alerts which can be troublesome for automation
+e4 list
+  e5 button "Click for JS Alert"
+  e6 button "Click for JS Confirm"
+  e7 button "Click for JS Prompt"
+e8 heading "Result:" [level=4]
+text: Powered by
+e9 link "Elemental Selenium"
+
+> click {"promptText":"catpaw","target":"button \"Click for JS Prompt\""}
+ok click e7 button "Click for JS Prompt"
+! dialog prompt "I am a JS prompt" → accepted "catpaw"
+! console error: Failed to load https://298279967.log.optimizely.com/event?a=298279967&d=298279967&y=false&n=engagement&g=298283957&u=oeu1790000000000r0.8231605821469785&wxhr=t…
+# s2 diff-from=s1 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e7 settled=yes changed=0 added=1 removed=0 unchanged=9
++ e10 paragraph (after e8): You entered: catpaw
+
+? text_contains "You entered: catpaw" → yes

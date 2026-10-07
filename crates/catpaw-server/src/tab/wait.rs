@@ -146,7 +146,10 @@ impl GroupState {
                     .url_of(root)
                     .is_some_and(|u| u.as_str().contains(p.url.as_deref().unwrap_or(""))),
                 // An idle page has nothing for time to bring.
-                WaitFor::Time => waited >= timeout_ms || (ran && !self.page.last_run_progressed()),
+                WaitFor::Time => {
+                    waited.max(started.elapsed().as_secs_f64() * 1000.0) >= timeout_ms
+                        || (ran && !self.page.last_run_progressed())
+                }
             };
             if met {
                 break Ok(());

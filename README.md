@@ -13,7 +13,8 @@ isolated contexts.
 > Status: **pre-alpha**. Milestones M0 ("fetch & read"), M1 ("scripts
 > run", JavaScript via Boa) and M2 ("interact") are complete; M3 (the
 > agent API) is under way: `catpaw mcp --stdio` serves the agent tools over
-> MCP (see [From an agent](#from-an-agent-mcp)). See the roadmap below.
+> MCP, and a task set on practice sites replays from recorded traffic in CI
+> (see [From an agent](#from-an-agent-mcp)). See the roadmap below.
 >
 > What M2 brought: layout. Block, flex and grid boxes are laid out by Taffy and
 > inline content shaped and line-broken by Parley over a bundled font set,
@@ -176,8 +177,52 @@ Errors say what to try next (`error StaleRef e13 button "Remove"
 and the protocol are described in
 [ADR 0005](docs/adr/0005-cst-snapshot-format.md) and
 [ADR 0006](docs/adr/0006-agent-protocol.md);
-`cargo run -p xtask --features bench -- snapshot-bench` measures snapshot sizes on
+`cargo run -p xtask --features engine -- snapshot-bench` measures snapshot sizes on
 live pages.
+
+`--record-har run.har.zst` keeps a session's traffic and `--replay-har
+run.har.zst` serves it back with no network; with `--random-seed` and
+`--time-origin` as well, a replay gives the same results byte for byte.
+Sixteen tasks on sites made for automation practice (Sauce Demo, Books and
+Quotes to Scrape, the-internet, TodoMVC) live in [`tests/tasks/`](tests/tasks/),
+each with its recording and the transcript an agent sees; CI replays them
+twice, offline, and both runs must equal the transcript. What an agent
+reads over each task, against Playwright MCP taking the same steps:
+
+| task | CatPaw calls | CatPaw bytes (~tokens) | Playwright MCP calls | Playwright MCP bytes (~tokens) |
+|---|---|---|---|---|
+| books-category | 3 | 14814 (~4233) | 6 | 64648 (~18471) |
+| books-pagination | 2 | 13445 (~3841) | 4 | 64942 (~18555) |
+| internet-dropdown | 2 | 900 (~257) | 4 | 1937 (~553) |
+| internet-dynamic | 3 | 1390 (~397) | 6 | 2922 (~835) |
+| internet-entry-ad | 2 | 1534 (~438) | 4 | 2305 (~659) |
+| internet-frames | 2 | 859 (~245) | 3 | 980 (~280) |
+| internet-login | 4 | 2355 (~673) | 6 | 2876 (~822) |
+| internet-prompt | 2 | 1340 (~383) | 5 | 1968 (~562) |
+| internet-windows | 3 | 1000 (~286) | 5 | 2217 (~633) |
+| quotes-js-pagination | 2 | 1452 (~415) | 4 | 9394 (~2684) |
+| quotes-login | 4 | 4020 (~1149) | 6 | 12497 (~3571) |
+| quotes-scroll | 3 | 906 (~259) | 5 | 11922 (~3406) |
+| quotes-table | 2 | 5179 (~1480) | 2 | 8658 (~2474) |
+| saucedemo-checkout | 11 | 7757 (~2216) | 18 | 20992 (~5998) |
+| saucedemo-sort | 4 | 6011 (~1717) | 7 | 12814 (~3661) |
+| todomvc | 5 | 1833 (~524) | 10 | 9128 (~2608) |
+| all | 54 | 64795 (~18513) | 95 | 230200 (~65771) |
+
+Bytes are all the tool results an agent receives over a task (tokens
+estimated at 3.5 bytes each). CatPaw's numbers come from the recordings;
+`@playwright/mcp` 0.0.83 with headless Chrome took the same steps live on
+2026-10-08 (the median of three runs). Playwright MCP keeps the page
+snapshot in a file and links it from a result whenever the page changed;
+an agent reads it to see the page and find its next target, so the file
+counts too, as one more call. CatPaw answers an action with what changed,
+and caps a whole snapshot at 4000 tokens, folding the rest for the agent
+to open. The tool list, a cost on every turn, is 9.6 KB for CatPaw and
+20.3 KB for Playwright MCP.
+`cargo run -p xtask --features engine -- tasks report --baseline tools/baseline/playwright-mcp.json`
+regenerates the table, and
+[`tools/baseline/playwright-mcp.mjs`](tools/baseline/playwright-mcp.mjs)
+measures the baseline.
 
 The library crates are published too: `catpaw-net`, `catpaw-fetch`, `catpaw-dom`,
 `catpaw-style`, `catpaw-agent`.

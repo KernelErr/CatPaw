@@ -595,6 +595,15 @@ fn targets_by_text_and_role_never_guess() {
     // "Save" names one button exactly; "Sav" two in part.
     let saved = client.ok("click", json!({"target": "button \"Save\""}));
     assert!(saved.contains("button \"Save\""), "{saved}");
+    // A role target takes a name in full, or as the snapshot cut it.
+    let inside = client.error("click", json!({"target": "button \"draft\""}));
+    assert!(
+        inside.starts_with("error NotFound button \"draft\" names nothing in full; in part: e"),
+        "{inside}"
+    );
+    assert!(inside.contains("button \"Save draft\""), "{inside}");
+    let cut = client.ok("click", json!({"target": "button \"Save d…\""}));
+    assert!(cut.contains("button \"Save draft\""), "{cut}");
     let partial = client.error("click", json!({"target": "text:Sav"}));
     assert!(
         partial.starts_with("error AmbiguousTarget text:Sav matches 2 elements: e"),

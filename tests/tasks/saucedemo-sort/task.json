@@ -1,0 +1,41 @@
+{
+  "id": "saucedemo-sort",
+  "goal": "Log in and sort the products by price, low to high; the cheapest comes first",
+  "start_url": "https://www.saucedemo.com/",
+  "credentials": {
+    "public": true
+  },
+  "random_seed": 1,
+  "time_origin": 1790000000000,
+  "steps_min": 3,
+  "steps": [
+    {
+      "tool": "type",
+      "args": {
+        "target": "textbox \"Username\"",
+        "text": "standard_user"
+      }
+    },
+    {
+      "tool": "type",
+      "args": {
+        "target": "textbox \"Password\"",
+        "text": "secret_sauce",
+        "submit": true
+      }
+    },
+    {
+      "tool": "select",
+      "args": {
+        "target": "combobox \"Sort products\"",
+        "option": "Price (low to high)"
+      }
+    }
+  ],
+  "success": [
+    {
+      "eval": "document.querySelector('.inventory_item_name').textContent",
+      "equals": "Sauce Labs Onesie"
+    }
+  ]
+}

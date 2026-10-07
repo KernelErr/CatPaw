@@ -1,0 +1,52 @@
+> navigate {"url":"https://demo.playwright.dev/todomvc/"}
+ok navigate → https://demo.playwright.dev/todomvc/ (200)
+# s1 tab=t1 doc=d1 url=https://demo.playwright.dev/todomvc/#/ title="React • TodoMVC" vp=1280x720 scroll=0,0 focus=e3 filter=interesting nodes=12/22 settled=yes
+text: This is just a demo of TodoMVC for testing, not the
+e1 link "real TodoMVC app."
+e2 heading "todos" [level=1]
+e3 textbox "What needs to be done?"
+e4 contentinfo
+  e5 paragraph: Double-click to edit a todo
+  e6 paragraph
+    text: Created by
+    e7 link "Remo H. Jansen"
+  e8 paragraph
+    text: Part of
+    e9 link "TodoMVC"
+
+> type {"submit":true,"target":"textbox \"What needs to be done?\"","text":"Buy milk"}
+ok type e3 textbox "What needs to be done?" + Enter
+# s2 diff-from=s1 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e3 settled=yes changed=0 added=4 removed=0 unchanged=9
++ e10 checkbox "Mark all as complete" (after e3)
++ e11 list (after e10)
+    e12 listitem
+      e13 checkbox "Toggle Todo"
+      text: Buy milk
++ text[1] "1 item left"
++ e14 list (after e11)
+    e15 link "All"
+    e16 link "Active"
+    e17 link "Completed"
+
+> type {"submit":true,"target":"textbox \"What needs to be done?\"","text":"Walk the dog"}
+ok type e3 textbox "What needs to be done?" + Enter
+# s3 diff-from=s2 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e3 settled=yes changed=1 added=1 removed=0 unchanged=17
++ e18 listitem (in e11, after e12)
+    e19 checkbox "Toggle Todo"
+    text: Walk the dog
+~ text[1] "1 item left" → "2 items left"
+
+> act {"kind":"check","target":"css:.todo-list li:first-child .toggle"}
+ok check e13 checkbox "Toggle Todo"
+# s4 diff-from=s3 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e13 settled=yes changed=2 added=1 removed=0 unchanged=18
+~ e13 checkbox "Toggle Todo" [- → checked]
+~ text[1] "2 items left" → "1 item left"
++ e20 button "Clear completed" (after e14)
+
+> click {"target":"link \"Active\""}
+ok click e16 link "Active" → https://demo.playwright.dev/todomvc/#/active (same document)
+# s5 diff-from=s4 tab=t1 doc=d1 url=https://demo.playwright.dev/todomvc/#/active scroll=0,0 focus=e16 settled=yes changed=0 added=0 removed=1 unchanged=18
+- e12 listitem (+2 descendants)
+
+? url_contains "#/active" → yes
+? eval "ok evaluate\n1" → yes

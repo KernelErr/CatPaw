@@ -4949,6 +4949,7 @@ dependencies = [
  "anyhow",
  "catpaw-bindings-boa",
  "catpaw-dom",
+ "catpaw-net",
  "catpaw-protocol",
  "catpaw-server",
  "catpaw-web",
@@ -4956,6 +4957,7 @@ dependencies = [
  "clap",
  "serde_json",
  "url",
+ "zstd",
 ]
 
 [[package]]

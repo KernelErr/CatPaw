@@ -1,0 +1,31 @@
+{
+  "id": "internet-windows",
+  "goal": "Open the link that opens a new window and read it",
+  "start_url": "https://the-internet.herokuapp.com/windows",
+  "credentials": {
+    "public": true
+  },
+  "random_seed": 1,
+  "time_origin": 1790000000000,
+  "steps_min": 2,
+  "steps": [
+    {
+      "tool": "click",
+      "args": {
+        "target": "link \"Click Here\""
+      }
+    },
+    {
+      "tool": "tabs",
+      "args": {
+        "op": "switch",
+        "tab": "t2"
+      }
+    }
+  ],
+  "success": [
+    {
+      "text_contains": "New Window"
+    }
+  ]
+}

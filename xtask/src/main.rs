@@ -4,8 +4,10 @@ mod bindgen;
 #[cfg(feature = "wpt")]
 mod harness;
 mod protocol;
-#[cfg(feature = "bench")]
+#[cfg(feature = "engine")]
 mod snapshot_bench;
+#[cfg(feature = "engine")]
+mod tasks;
 mod tree_construction;
 mod wpt;
 #[cfg(feature = "wpt")]
@@ -31,9 +33,12 @@ enum Cmd {
     /// Write the agent protocol to crates/catpaw-protocol/protocol.json
     /// (or verify it with --check).
     Protocol(protocol::Args),
-    /// Measure snapshot and read sizes on live pages (needs `--features bench`).
-    #[cfg(feature = "bench")]
+    /// Measure snapshot and read sizes on live pages (needs `--features engine`).
+    #[cfg(feature = "engine")]
     SnapshotBench(snapshot_bench::Args),
+    /// The agent task set: record, replay, lint, report (needs `--features engine`).
+    #[cfg(feature = "engine")]
+    Tasks(tasks::Args),
     /// Run testharness.js tests from web-platform-tests in CatPaw pages and
     /// compare the results with tests/wpt-expectations (needs `--features wpt`).
     #[cfg(feature = "wpt")]
@@ -56,8 +61,10 @@ fn main() -> Result<()> {
         Cmd::TreeConstruction(args) => tree_construction::run(args),
         Cmd::Bindgen(args) => bindgen::run(args),
         Cmd::Protocol(args) => protocol::run(args),
-        #[cfg(feature = "bench")]
+        #[cfg(feature = "engine")]
         Cmd::SnapshotBench(args) => snapshot_bench::run(args),
+        #[cfg(feature = "engine")]
+        Cmd::Tasks(args) => tasks::run_cmd(args),
         #[cfg(feature = "wpt")]
         Cmd::Wpt(args) => harness::run(args),
         #[cfg(feature = "wpt")]

@@ -36,3 +36,7 @@ Format and the two `toString` forms, so timestamps with microseconds
 offset, and the legacy `Oct 7, 2026`, `7 Oct 2026 10:00:00 GMT` and
 `10/07/2026` forms were `NaN`, where every browser accepts them. Those
 are now rewritten into the strict format and parsed by the same parser.
+
+`src/builtins/math/mod.rs`: `set_random_seed(Some(seed))` makes
+`Math.random` on the calling thread a repeatable SplitMix64 sequence (for
+recorded runs that must replay byte for byte); `None` restores `rand`.

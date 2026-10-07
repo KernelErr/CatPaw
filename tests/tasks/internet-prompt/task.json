@@ -1,0 +1,25 @@
+{
+  "id": "internet-prompt",
+  "goal": "Answer a JavaScript prompt",
+  "start_url": "https://the-internet.herokuapp.com/javascript_alerts",
+  "credentials": {
+    "public": true
+  },
+  "random_seed": 1,
+  "time_origin": 1790000000000,
+  "steps_min": 1,
+  "steps": [
+    {
+      "tool": "click",
+      "args": {
+        "target": "button \"Click for JS Prompt\"",
+        "promptText": "catpaw"
+      }
+    }
+  ],
+  "success": [
+    {
+      "text_contains": "You entered: catpaw"
+    }
+  ]
+}

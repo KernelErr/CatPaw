@@ -90,6 +90,11 @@ impl Session {
         })
     }
 
+    /// Writes the HAR recording, when the session records.
+    pub fn save_recording(&self) -> std::io::Result<Option<usize>> {
+        self.net.client().save_recording()
+    }
+
     /// The context's cookies.
     pub fn cookies(&self) -> &catpaw_net::CookieJar {
         self.net.client().cookies()

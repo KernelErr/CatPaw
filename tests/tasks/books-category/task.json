@@ -1,0 +1,33 @@
+{
+  "id": "books-category",
+  "goal": "Open the Travel category and the first book in it",
+  "start_url": "https://books.toscrape.com/",
+  "credentials": {
+    "public": true
+  },
+  "random_seed": 1,
+  "time_origin": 1790000000000,
+  "steps_min": 2,
+  "steps": [
+    {
+      "tool": "click",
+      "args": {
+        "target": "link \"Travel\""
+      }
+    },
+    {
+      "tool": "click",
+      "args": {
+        "target": "css:h3 a[title=\"It's Only the Himalayas\"]"
+      }
+    }
+  ],
+  "success": [
+    {
+      "text_contains": "In stock"
+    },
+    {
+      "url_contains": "its-only-the-himalayas"
+    }
+  ]
+}

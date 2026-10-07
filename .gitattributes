@@ -3,3 +3,4 @@
 *.png binary
 *.jpg binary
 *.woff2 binary
+*.zst binary

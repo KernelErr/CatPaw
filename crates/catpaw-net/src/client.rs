@@ -57,6 +57,8 @@ pub enum NetError {
     PrivateAddress(String),
     #[error("proxy: {0}")]
     Proxy(String),
+    #[error("replay: {0}")]
+    Replay(String),
 }
 
 #[derive(Debug, Clone)]
@@ -79,6 +81,8 @@ pub struct NetConfig {
     pub proxy: Option<Url>,
     /// Cookies to start with, as [`CookieJar::to_json`] writes them.
     pub cookies_json: Option<String>,
+    /// Record the traffic as HAR, or answer from such a recording.
+    pub recording: Option<crate::har::Recording>,
 }
 
 impl Default for NetConfig {
@@ -94,6 +98,7 @@ impl Default for NetConfig {
             allow_private_network: false,
             proxy: None,
             cookies_json: None,
+            recording: None,
         }
     }
 }
@@ -204,6 +209,8 @@ pub struct NetClient {
     config: NetConfig,
     cookies: CookieJar,
     signer: Option<BotAuthSigner>,
+    recorder: Option<crate::har::Recorder>,
+    replayer: Option<crate::har::Replayer>,
 }
 
 /// What the client has learnt about the HTTP versions of hosts.
@@ -362,6 +369,16 @@ impl NetClient {
                 .load_json(json)
                 .map_err(|e| NetError::InvalidUrl(format!("cookie file: {e}")))?;
         }
+        let (recorder, replayer) = match &config.recording {
+            None => (None, None),
+            Some(crate::har::Recording::Record(path)) => {
+                (Some(crate::har::Recorder::new(path.clone())), None)
+            }
+            Some(crate::har::Recording::Replay { path, misses }) => (
+                None,
+                Some(crate::har::Replayer::open(path, *misses).map_err(NetError::Replay)?),
+            ),
+        };
         Ok(Self {
             inner,
             h1,
@@ -370,6 +387,8 @@ impl NetClient {
             config,
             cookies,
             signer,
+            recorder,
+            replayer,
         })
     }
 
@@ -383,6 +402,19 @@ impl NetClient {
 
     pub fn cookies(&self) -> &CookieJar {
         &self.cookies
+    }
+
+    /// Whether answers come from a recording.
+    pub fn is_replaying(&self) -> bool {
+        self.replayer.is_some()
+    }
+
+    /// Writes the traffic recorded so far; `None` when not recording.
+    pub fn save_recording(&self) -> std::io::Result<Option<usize>> {
+        match &self.recorder {
+            Some(recorder) => recorder.save(&self.config.user_agent).map(Some),
+            None => Ok(None),
+        }
     }
 
     pub async fn get(&self, url: &Url) -> Result<Response, NetError> {
@@ -511,6 +543,34 @@ impl NetClient {
         // hyper sets Host from the URI; never let callers inject a stale one.
         headers.remove(HOST);
 
+        if let Some(replayer) = &self.replayer {
+            let request_body = body.clone().unwrap_or_default();
+            match replayer.answer(method, url, &request_body) {
+                Some(answer) => {
+                    if credentials {
+                        self.cookies.store_response(url, &answer.headers);
+                    }
+                    return Ok(Hop {
+                        status: answer.status,
+                        headers: answer.headers,
+                        body: answer.body,
+                    });
+                }
+                None if replayer.misses == crate::har::Misses::Fail => {
+                    return Err(NetError::Replay(format!(
+                        "no recorded answer for {method} {url}"
+                    )));
+                }
+                None => {}
+            }
+        }
+        let recording = self.recorder.as_ref().map(|_| {
+            (
+                headers.clone(),
+                body.clone().unwrap_or_default(),
+                crate::har::now_ms(),
+            )
+        });
         let authority = uri
             .authority()
             .map(|a| a.as_str().to_string())
@@ -596,6 +656,21 @@ impl NetClient {
         // The body is now decoded; these headers would describe the wire form.
         headers.remove(CONTENT_ENCODING);
         headers.remove(CONTENT_LENGTH);
+        if let (Some(recorder), Some((request_headers, request_body, started))) =
+            (&self.recorder, recording)
+        {
+            recorder.record(
+                method,
+                url,
+                &request_headers,
+                &request_body,
+                parts.status,
+                &headers,
+                &decoded,
+                started,
+                crate::har::now_ms().saturating_sub(started),
+            );
+        }
         Ok(Hop {
             status: parts.status,
             headers,

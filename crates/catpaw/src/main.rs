@@ -196,6 +196,24 @@ struct McpArgs {
     /// stopped; 0 lets scripts run as long as they like.
     #[arg(long, default_value_t = 10_000)]
     script_budget: u64,
+    /// Record every request and response to this HAR file (`.har.zst` is
+    /// compressed), written at exit.
+    #[arg(long, conflicts_with = "replay_har")]
+    record_har: Option<PathBuf>,
+    /// Answer every request from this HAR recording instead of the network.
+    #[arg(long)]
+    replay_har: Option<PathBuf>,
+    /// With --replay-har: let requests the recording has no answer for go
+    /// to the network instead of failing.
+    #[arg(long, requires = "replay_har")]
+    replay_misses_live: bool,
+    /// Seed `Math.random` and `crypto.getRandomValues` (repeatable runs).
+    #[arg(long)]
+    random_seed: Option<u64>,
+    /// Start page clocks at this Unix time in milliseconds (repeatable
+    /// runs).
+    #[arg(long)]
+    time_origin: Option<f64>,
 }
 
 #[derive(Args)]
@@ -238,7 +256,26 @@ fn mcp(args: McpArgs) -> Result<()> {
     config.options.page.script_budget =
         (args.script_budget > 0).then(|| Duration::from_millis(args.script_budget));
     config.options.storage = read_storage_file(args.storage.as_deref())?;
+    config.options.net.recording = match (&args.record_har, &args.replay_har) {
+        (Some(path), _) => Some(catpaw_net::Recording::Record(path.clone())),
+        (None, Some(path)) => Some(catpaw_net::Recording::Replay {
+            path: path.clone(),
+            misses: if args.replay_misses_live {
+                catpaw_net::Misses::Live
+            } else {
+                catpaw_net::Misses::Fail
+            },
+        }),
+        (None, None) => None,
+    };
+    config.options.page.random_seed = args.random_seed;
+    config.options.page.time_origin_unix_ms = args.time_origin;
     let outcome = catpaw_server::serve_stdio_with(config, |session| {
+        match session.save_recording() {
+            Ok(Some(n)) => eprintln!("catpaw: recorded {n} requests"),
+            Ok(None) => {}
+            Err(e) => eprintln!("catpaw: writing the recording: {e}"),
+        }
         if let Err(e) = save_cookie_jar(&args.net, session.cookies()) {
             eprintln!("catpaw: {e:#}");
         }

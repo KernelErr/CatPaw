@@ -1,0 +1,27 @@
+> navigate {"url":"https://quotes.toscrape.com/scroll"}
+ok navigate → https://quotes.toscrape.com/scroll (200)
+! network GET /api/quotes?page=1 200
+# s1 tab=t1 doc=d1 url=https://quotes.toscrape.com/scroll title="Quotes to Scrape" vp=1280x720 scroll=0,0 filter=interesting nodes=12/109 settled=yes
+e1 heading [level=1]
+  e2 link "Quotes to Scrape"
+e3 paragraph
+  e4 link "Login"
+text: “The world as we have created it is a process of our thinking. It cannot be changed without changing our thinking.” by Albert Einstein Tags: change deep-thoughts thinking world “It is our choices, Ha…
+e5 contentinfo
+  e6 paragraph
+    text: Quotes by:
+    e7 link "GoodReads.com"
+  e8 paragraph
+    text: Made with ❤ by
+    e9 link "Zyte"
+
+> act {"dy":20000,"kind":"scroll"}
+ok scroll 20000px
+! network GET /api/quotes?page=2 200
+# s2 diff-from=s1 tab=t1 doc=d1 url=(same) scroll=0,997 settled=yes no changes
+
+> wait {"for":"settled"}
+ok wait settled
+# s3 diff-from=s2 tab=t1 doc=d1 url=(same) scroll=0,997 settled=yes no changes
+
+? eval "ok evaluate\ntrue" → yes

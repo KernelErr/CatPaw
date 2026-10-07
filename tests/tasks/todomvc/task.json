@@ -1,0 +1,51 @@
+{
+  "id": "todomvc",
+  "goal": "Add two todos, complete the first, and show the active ones",
+  "start_url": "https://demo.playwright.dev/todomvc/",
+  "credentials": {
+    "public": true
+  },
+  "random_seed": 1,
+  "time_origin": 1790000000000,
+  "steps_min": 4,
+  "steps": [
+    {
+      "tool": "type",
+      "args": {
+        "target": "textbox \"What needs to be done?\"",
+        "text": "Buy milk",
+        "submit": true
+      }
+    },
+    {
+      "tool": "type",
+      "args": {
+        "target": "textbox \"What needs to be done?\"",
+        "text": "Walk the dog",
+        "submit": true
+      }
+    },
+    {
+      "tool": "act",
+      "args": {
+        "kind": "check",
+        "target": "css:.todo-list li:first-child .toggle"
+      }
+    },
+    {
+      "tool": "click",
+      "args": {
+        "target": "link \"Active\""
+      }
+    }
+  ],
+  "success": [
+    {
+      "url_contains": "#/active"
+    },
+    {
+      "eval": "document.querySelectorAll('.todo-list li').length",
+      "equals": "1"
+    }
+  ]
+}

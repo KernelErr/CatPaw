@@ -783,7 +783,8 @@ impl Math {
     #[allow(clippy::unnecessary_wraps)]
     pub(crate) fn random(_: &JsValue, _: &[JsValue], _: &mut Context) -> JsResult<JsValue> {
         // NOTE: Each Math.random function created for distinct realms must produce a distinct sequence of values from successive calls.
-        Ok(rand::random::<f64>().into())
+        // CatPaw: a seeded sequence when the embedder set one.
+        Ok(next_seeded().unwrap_or_else(rand::random::<f64>).into())
     }
 
     /// Round a number to the nearest integer.
@@ -1052,4 +1053,29 @@ impl Math {
         // 12. Return 𝔽(sum).
         Ok(sum.sum().into())
     }
+}
+
+// CatPaw: a repeatable `Math.random` for recorded runs.
+thread_local! {
+    static SEEDED: std::cell::Cell<Option<u64>> = const { std::cell::Cell::new(None) };
+}
+
+/// Makes `Math.random` on this thread a repeatable sequence from `seed`
+/// (`None`: random again).
+pub fn set_random_seed(seed: Option<u64>) {
+    SEEDED.with(|s| s.set(seed));
+}
+
+/// The next number of the seeded sequence (SplitMix64), if one is set.
+fn next_seeded() -> Option<f64> {
+    SEEDED.with(|s| {
+        let mut x = s.get()?;
+        x = x.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        s.set(Some(x));
+        let mut z = x;
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^= z >> 31;
+        Some((z >> 11) as f64 / (1u64 << 53) as f64)
+    })
 }

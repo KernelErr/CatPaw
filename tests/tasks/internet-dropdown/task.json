@@ -1,0 +1,26 @@
+{
+  "id": "internet-dropdown",
+  "goal": "Choose Option 2 in the dropdown",
+  "start_url": "https://the-internet.herokuapp.com/dropdown",
+  "credentials": {
+    "public": true
+  },
+  "random_seed": 1,
+  "time_origin": 1790000000000,
+  "steps_min": 1,
+  "steps": [
+    {
+      "tool": "select",
+      "args": {
+        "target": "css:#dropdown",
+        "option": "Option 2"
+      }
+    }
+  ],
+  "success": [
+    {
+      "eval": "document.getElementById('dropdown').value",
+      "equals": "2"
+    }
+  ]
+}

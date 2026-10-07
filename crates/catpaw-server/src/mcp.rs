@@ -23,6 +23,11 @@ impl McpServer {
         Self { session }
     }
 
+    /// The session the server speaks for.
+    pub fn session(&self) -> &Session {
+        &self.session
+    }
+
     /// Handles one line from the client; returns the line to answer with,
     /// if any.
     pub fn handle_line(&mut self, line: &str) -> Option<String> {

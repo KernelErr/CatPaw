@@ -1,0 +1,31 @@
+{
+  "id": "internet-dynamic",
+  "goal": "Start a slow load and wait for its result",
+  "start_url": "https://the-internet.herokuapp.com/dynamic_loading/2",
+  "credentials": {
+    "public": true
+  },
+  "random_seed": 1,
+  "time_origin": 1790000000000,
+  "steps_min": 2,
+  "steps": [
+    {
+      "tool": "click",
+      "args": {
+        "target": "button \"Start\""
+      }
+    },
+    {
+      "tool": "wait",
+      "args": {
+        "for": "text",
+        "text": "Hello World!"
+      }
+    }
+  ],
+  "success": [
+    {
+      "text_contains": "Hello World!"
+    }
+  ]
+}

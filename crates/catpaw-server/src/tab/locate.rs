@@ -4,6 +4,11 @@
 //! target means what the agent read. It never guesses: an exact match
 //! beats a partial one, a single element to act on beats others, and
 //! anything still tied is an `AmbiguousTarget` listing the candidates.
+//! A `role "name"` target names its element in full, as the snapshot
+//! shows it (a name the snapshot cut short, ending in `…`, names what it
+//! begins); one that only appears inside a name is listed, not taken:
+//! the "Password" inside `textbox "Username Password"` is often another
+//! field.
 
 use catpaw_agent::a11y::{is_interactive, subtree_text};
 use catpaw_agent::snapshot::{LineKind, quote};
@@ -39,6 +44,7 @@ impl GroupState {
         text: &str,
     ) -> Result<Aim, Failure> {
         let needle = normalize(text);
+        let cut = role.and(needle.strip_suffix('…'));
         let what = match role {
             Some(role) => format!("{role} {}", quote(text)),
             None => format!("text:{text}"),
@@ -71,7 +77,7 @@ impl GroupState {
                         if value.is_empty() {
                             continue;
                         }
-                        if value == needle {
+                        if value == needle || cut.is_some_and(|cut| value.starts_with(cut)) {
                             best = Some(true);
                         } else if value.contains(&needle) && best.is_none() {
                             best = Some(false);
@@ -121,6 +127,21 @@ impl GroupState {
         // Exact matches first; then one thing to act on among them.
         if found.iter().any(|c| c.exact) {
             found.retain(|c| c.exact);
+        } else if role.is_some() {
+            let listed: Vec<String> = found
+                .iter()
+                .take(5)
+                .map(|c| self.describe(tab, c.r))
+                .collect();
+            let more = if found.len() > 5 { ", …" } else { "" };
+            return Err(Failure::new(
+                ErrorCode::NotFound,
+                format!(
+                    "{what} names nothing in full; in part: {}{more}",
+                    listed.join(", ")
+                ),
+            )
+            .with(advice::FULL_NAME));
         }
         if found.len() > 1 && found.iter().filter(|c| c.actionable).count() == 1 {
             found.retain(|c| c.actionable);

@@ -28,6 +28,12 @@ use catpaw_js_boa::{Jobs, inspect};
 use catpaw_web::{Cx, PageState};
 
 pub use crate::rt::Realm;
+
+/// Makes `Math.random` on this thread a repeatable sequence from `seed`
+/// (`None`: random again).
+pub fn set_random_seed(seed: Option<u64>) {
+    boa_engine::builtins::math::set_random_seed(seed);
+}
 use crate::rt::{Prelude, Runtime};
 
 const PRELUDE: &str = include_str!("prelude.js");

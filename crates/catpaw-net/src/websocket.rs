@@ -52,6 +52,9 @@ impl NetClient {
         protocols: &[String],
         origin: Option<&str>,
     ) -> Result<WsConnection, NetError> {
+        if self.is_replaying() {
+            return Err(NetError::Replay("WebSockets are not recorded".to_string()));
+        }
         let (scheme, default_port) = match url.scheme() {
             "ws" => ("http", 80),
             "wss" => ("https", 443),

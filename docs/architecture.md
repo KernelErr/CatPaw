@@ -60,7 +60,7 @@ catpaw (CLI) → catpaw-server (MCP over stdio: sessions, tab groups on threads 
                     cookies + PSL, proxies, HAR, Web Bot Auth signing)
         → catpaw-js (engine-neutral runtime traits)
 catpaw-webidl (IDL model + emitters, used by xtask)
-xtask (bindgen, protocol.json, WPT and html5lib runners, snapshot-bench)
+xtask (bindgen, protocol.json, WPT and html5lib runners, snapshot-bench, the agent task set)
 ```
 
 `catpaw-agent` is published on its own and stays free of the engine: what
@@ -210,5 +210,14 @@ challenges → M5 scale & compat. Exit criteria live in the README.
   `tests/wpt-expectations/<dir>.txt`. The expectations are recorded on
   Linux, where CI runs the suites; the few tests whose outcome depends on
   the platform are skipped.
+- `cargo xtask tasks replay --twice` (with `--features engine`) — the agent
+  task set in `tests/tasks/`: each task's recorded traffic is replayed
+  offline through the MCP server, twice, with a fixed random seed and
+  clock origin, and both transcripts must equal `expected.txt` byte for
+  byte (ADR 0006). `tasks record` takes new recordings from the live
+  sites, `tasks lint` checks sizes and that no local path or secret header
+  is kept, and `tasks report --baseline tools/baseline/playwright-mcp.json`
+  sets what the agent reads beside what Playwright MCP sends for the same
+  steps.
 - Leak census after integration tests: force a GC, then assert the arena is
   empty.

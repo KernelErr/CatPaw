@@ -1,0 +1,26 @@
+> navigate {"url":"https://the-internet.herokuapp.com/dynamic_loading/2"}
+ok navigate → https://the-internet.herokuapp.com/dynamic_loading/2 (200)
+! console error: Failed to load https://298279967.log.optimizely.com/event?a=298279967&d=298279967&y=false&n=https%3A%2F%2Fthe-internet.herokuapp.com%2Fdynamic_loading%2F2&u=oe…
+! console error: Uncaught SyntaxError: expected token 'identifier', got '=' in identifier parsing at line 1307, col 10
+# s1 tab=t1 doc=d1 url=https://the-internet.herokuapp.com/dynamic_loading/2 title="The Internet" vp=1280x720 scroll=0,0 filter=interesting nodes=6/37 settled=yes
+e1 link "Fork me on GitHub"
+e2 heading "Dynamically Loaded Page Elements" [level=3]
+e3 heading "Example 2: Element rendered after the fact" [level=4]
+e4 button "Start"
+text: Powered by
+e5 link "Elemental Selenium"
+
+> click {"target":"button \"Start\""}
+ok click e4 button "Start"
+! console error: Failed to load https://298279967.log.optimizely.com/event?a=298279967&d=298279967&y=false&n=engagement&g=298283957&u=oeu1790000000000r0.7133993513406471&wxhr=t…
+# s2 diff-from=s1 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e4 settled=yes changed=1 added=0 removed=1 unchanged=4
+~ text[0] "Powered by" → "Loading... Powered by"
+- e4 button "Start"
+
+> wait {"for":"text","text":"Hello World!"}
+ok wait text "Hello World!" (4.9s)
+# s3 diff-from=s2 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e4 settled=yes changed=1 added=1 removed=0 unchanged=4
++ e6 heading "Hello World!" [level=4] (after e3)
+~ text[0] "Loading... Powered by" → "Powered by"
+
+? text_contains "Hello World!" → yes

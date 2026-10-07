@@ -1,0 +1,177 @@
+> navigate {"url":"https://www.saucedemo.com/"}
+ok navigate → https://www.saucedemo.com/ (200)
+! console error: Failed to load https://events.backtrace.io/api/unique-events/submit?universe=UNIVERSE&token=TOKEN: CORS preflight failed: replay: no recorded answer for OPTION…
+! console error: Failed to load https://events.backtrace.io/api/summed-events/submit?universe=UNIVERSE&token=TOKEN: CORS preflight failed: replay: no recorded answer for OPTION…
+# s1 tab=t1 doc=d1 url=https://www.saucedemo.com/ title="Swag Labs" vp=1280x720 scroll=0,0 filter=interesting nodes=10/43 settled=yes
+text: Swag Labs
+e1 main
+  e2 form "Login"
+    e3 textbox "Username"
+    e4 textbox "Password"
+    e5 button "Login"
+  e6 heading "Accepted usernames are:" [level=4]
+  text: standard_user locked_out_user problem_user performance_glitch_user error_user visual_user
+  e7 heading "Password for all users:" [level=4]
+  text: secret_sauce
+
+> type {"target":"textbox \"Username\"","text":"standard_user"}
+ok type e3 textbox "Username"
+# s2 diff-from=s1 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e3 settled=yes changed=1 added=0 removed=0 unchanged=6
+~ e3 textbox "Username" [value=- → standard_user]
+
+> type {"submit":true,"target":"textbox \"Password\"","text":"secret_sauce"}
+ok type e4 textbox "Password" + Enter → https://www.saucedemo.com/inventory.html (same document)
+# s3 tab=t1 doc=d1 url=https://www.saucedemo.com/inventory.html title="Swag Labs" vp=1280x720 scroll=0,0 filter=interesting nodes=38/140 settled=yes full=large
+e8 banner
+  e9 button "Open Menu"
+  e10 img "Open Menu"
+  text: Swag Labs
+  e11 button "Cart, empty"
+  text: Products Name (A to Z)
+  e12 combobox "Sort products" [value="Name (A to Z)"] [options=4]
+e13 main
+  e14 button "View details for Sauce Labs Backpack"
+  e15 button "View details for Sauce Labs Backpack"
+  text: carry.allTheThings() with the sleek, streamlined Sly Pack that melds uncompromising style with unequaled laptop and tablet protection. $29.99
+  e16 button "Add to cart"
+  e17 button "View details for Sauce Labs Bike Light"
+  e18 button "View details for Sauce Labs Bike Light"
+  text: A red light isn't the desired state in testing but it sure helps when riding your bike at night. Water-resistant with 3 lighting modes, 1 AAA battery included. $9.99
+  e19 button "Add to cart"
+  e20 button "View details for Sauce Labs Bolt T-Shirt"
+  e21 button "View details for Sauce Labs Bolt T-Shirt"
+  text: Get your testing superhero on with the Sauce Labs bolt T-shirt. From American Apparel, 100% ringspun combed cotton, heather gray with red bolt. $15.99
+  e22 button "Add to cart"
+  e23 button "View details for Sauce Labs Fleece Jacket"
+  e24 button "View details for Sauce Labs Fleece Jacket"
+  text: It's not every day that you come across a midweight quarter-zip fleece jacket capable of handling everything from a relaxing day outdoors to a busy day at the office. $49.99
+  e25 button "Add to cart"
+  e26 button "View details for Sauce Labs Onesie"
+  e27 button "View details for Sauce Labs Onesie"
+  text: Rib snap infant onesie for the junior automation engineer in development. Reinforced 3-snap bottom closure, two-needle hemmed sleeved and bottom won't unravel. $7.99
+  e28 button "Add to cart"
+  e29 button "View details for Test.allTheThings() T-Shirt (Red)"
+  e30 button "View details for Test.allTheThings() T-Shirt (Red)"
+  text: This classic Sauce Labs t-shirt is perfect to wear when cozying up to your keyboard to automate a few tests. Super-soft and comfy ringspun combed cotton. $15.99
+  e31 button "Add to cart"
+e32 contentinfo
+  e33 list
+    e34 link "X"
+    e35 link "Facebook"
+    e36 link "LinkedIn"
+  text: © 2026 Sauce Labs. All Rights Reserved. Terms of Service | Privacy Policy
+
+> click {"target":"css:#add-to-cart-sauce-labs-backpack"}
+ok click e16 button "Add to cart"
+# s4 diff-from=s3 tab=t1 doc=d1 url=(same) scroll=0,0 settled=yes changed=1 added=1 removed=1 unchanged=27
+~ e11 button "Cart, empty" → "Cart, 1 items"
++ e37 button "Remove" (in e13, after e15)
+- e16 button "Add to cart"
+
+> click {"target":"css:.shopping_cart_link"}
+ok click e11 button "Cart, 1 items" → https://www.saucedemo.com/cart.html (same document)
+# s5 tab=t1 doc=d1 url=https://www.saucedemo.com/cart.html title="Swag Labs" vp=1280x720 scroll=0,0 filter=interesting nodes=19/75 settled=yes full=large
+e38 banner
+  e39 button "Open Menu"
+  e40 img "Open Menu"
+  text: Swag Labs
+  e41 button "Cart, 1 items"
+  text: Your Cart
+e42 main
+  text: QTY Description 1
+  e43 button "View details for Sauce Labs Backpack"
+  text: carry.allTheThings() with the sleek, streamlined Sly Pack that melds uncompromising style with unequaled laptop and tablet protection. $29.99
+  e44 button "Remove"
+  e45 button "Continue Shopping"
+  e46 button "Checkout"
+e47 contentinfo
+  e48 list
+    e49 link "X"
+    e50 link "Facebook"
+    e51 link "LinkedIn"
+  text: © 2026 Sauce Labs. All Rights Reserved. Terms of Service | Privacy Policy
+
+> click {"target":"button \"Checkout\""}
+ok click e46 button "Checkout" → https://www.saucedemo.com/checkout-step-one.html (same document)
+# s6 tab=t1 doc=d1 url=https://www.saucedemo.com/checkout-step-one.html title="Swag Labs" vp=1280x720 scroll=0,0 filter=interesting nodes=19/72 settled=yes full=large
+e52 banner
+  e53 button "Open Menu"
+  e54 img "Open Menu"
+  text: Swag Labs
+  e55 button "Cart, 1 items"
+  text: Checkout: Your Information
+e56 main
+  e57 form "Checkout information"
+    e58 textbox "First Name"
+    e59 textbox "Last Name"
+    e60 textbox "Zip/Postal Code"
+    e61 button "Cancel"
+    e62 button "Continue"
+e63 contentinfo
+  e64 list
+    e65 link "X"
+    e66 link "Facebook"
+    e67 link "LinkedIn"
+  text: © 2026 Sauce Labs. All Rights Reserved. Terms of Service | Privacy Policy
+
+> type {"target":"textbox \"First Name\"","text":"Ada"}
+ok type e58 textbox "First Name"
+# s7 diff-from=s6 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e58 settled=yes changed=1 added=0 removed=0 unchanged=15
+~ e58 textbox "First Name" [value=- → Ada]
+
+> type {"target":"textbox \"Last Name\"","text":"Lovelace"}
+ok type e59 textbox "Last Name"
+# s8 diff-from=s7 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e59 settled=yes changed=1 added=0 removed=0 unchanged=15
+~ e59 textbox "Last Name" [value=- → Lovelace]
+
+> type {"target":"textbox \"Zip/Postal Code\"","text":"10115"}
+ok type e60 textbox "Zip/Postal Code"
+# s9 diff-from=s8 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e60 settled=yes changed=1 added=0 removed=0 unchanged=15
+~ e60 textbox "Zip/Postal Code" [value=- → 10115]
+
+> click {"target":"button \"Continue\""}
+ok click e62 button "Continue" → https://www.saucedemo.com/checkout-step-two.html (same document)
+# s10 tab=t1 doc=d1 url=https://www.saucedemo.com/checkout-step-two.html title="Swag Labs" vp=1280x720 scroll=0,0 filter=interesting nodes=18/83 settled=yes full=large
+e68 banner
+  e69 button "Open Menu"
+  e70 img "Open Menu"
+  text: Swag Labs
+  e71 button "Cart, 1 items"
+  text: Checkout: Overview
+e72 main
+  text: QTY Description 1
+  e73 button "View details for Sauce Labs Backpack"
+  text: carry.allTheThings() with the sleek, streamlined Sly Pack that melds uncompromising style with unequaled laptop and tablet protection. $29.99 Payment Information: SauceCard #31337 Shipping Informatio…
+  e74 button "Cancel"
+  e75 button "Finish"
+e76 contentinfo
+  e77 list
+    e78 link "X"
+    e79 link "Facebook"
+    e80 link "LinkedIn"
+  text: © 2026 Sauce Labs. All Rights Reserved. Terms of Service | Privacy Policy
+
+> click {"target":"button \"Finish\""}
+ok click e75 button "Finish" → https://www.saucedemo.com/checkout-complete.html (same document)
+# s11 tab=t1 doc=d1 url=https://www.saucedemo.com/checkout-complete.html title="Swag Labs" vp=1280x720 scroll=0,0 filter=interesting nodes=18/63 settled=yes full=large
+e81 banner
+  e82 button "Open Menu"
+  e83 img "Open Menu"
+  text: Swag Labs
+  e84 button "Cart, empty"
+  text: Checkout: Complete!
+e85 main
+  e86 img "Pony Express"
+  e87 heading "Thank you for your order!" [level=2]
+  text: Your order has been dispatched, and will arrive just as fast as the pony can get there!
+  e88 button "Back Home"
+  e89 button "Generate PDF order"
+e90 contentinfo
+  e91 list
+    e92 link "X"
+    e93 link "Facebook"
+    e94 link "LinkedIn"
+  text: © 2026 Sauce Labs. All Rights Reserved. Terms of Service | Privacy Policy
+
+? url_contains "checkout-complete" → yes
+? text_contains "Thank you for your order" → yes

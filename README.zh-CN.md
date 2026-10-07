@@ -7,7 +7,7 @@ CatPaw 不是 Chromium 的封装，也不是"渲染引擎 + 自动化接口"。�
 agent 真正需要的东西——带稳定引用的紧凑语义快照、精确的"页面已稳定"信号、用 diff 代替
 重复输出、确定性的时间、廉价的隔离上下文。
 
-> 状态：**pre-alpha**。里程碑 M0（"抓取与阅读"）、M1（"脚本运行"，基于 Boa 的 JavaScript）与 M2（"交互"）已完成；M3（agent API）进行中：`catpaw mcp --stdio` 已通过 MCP 提供 agent 工具（见[供 agent 使用](#供-agent-使用mcp)）。
+> 状态：**pre-alpha**。里程碑 M0（"抓取与阅读"）、M1（"脚本运行"，基于 Boa 的 JavaScript）与 M2（"交互"）已完成；M3（agent API）进行中：`catpaw mcp --stdio` 已通过 MCP 提供 agent 工具，练习站点上的任务集在 CI 中按录制的流量回放（见[供 agent 使用](#供-agent-使用mcp)）。
 >
 > M2 带来了：布局。块级、flex、grid 盒由 Taffy 排布，行内内容由 Parley 在内置字体集上整形断行，且只在有人索取几何信息时才计算；CSSOM View（`getBoundingClientRect`、`getClientRects`、`offset*`/`client*`/`scroll*`、`scrollTo`、`scrollIntoView`、`elementFromPoint`）以及 `IntersectionObserver`、`ResizeObserver` 都基于它作答。截图（`catpaw fetch --js --screenshot out.png [--full-page]`）用 tiny-skia 绘制背景、边框与文字。输入：受信的指针与键盘事件序列，含焦点、打字、激活行为（链接、按钮、label、`details`）、各种编码的表单提交及其引发的导航，由 `--action "click <selector>"`、`fill`、`type`、`press`、`check`、`select` 驱动。框架：每个 `iframe` 都是同一线程上独立的页面（自己的文档、脚本与事件循环），尺寸取自其元素；框架之间只能通过 `postMessage`、`parent`/`top`/`contentWindow` 与 `load` 事件相见，如同跨源框架；`--action "frame <selector>"` 把后续动作与 `--eval` 指向该框架（`frame top`、`frame parent` 返回）。弹窗：点击或按键之后的 `window.open()` 会打开一个独立页面并设置 `opener`，`frame popup` 指向最近打开的弹窗，`window.close()` 关闭它。Canvas：`getContext('2d')` 用 tiny-skia 绘制（路径、圆弧、圆角矩形、填充、描边、虚线、裁剪、渐变、变换、合成、与布局同一套字体的文字、从其他 canvas `drawImage`、`getImageData`/`putImageData`、`toDataURL`/`toBlob`），canvas 内容会绘入截图。Web Crypto：`crypto.subtle` 支持 HMAC、AES-GCM/CBC/CTR、PBKDF2、HKDF、P-256/P-384 上的 ECDSA 与 ECDH、RSA（PKCS#1 v1.5、PSS、OAEP）、Ed25519 与 X25519，密钥格式 raw、JWK、PKCS#8、SPKI，基于 RustCrypto。Worker：dedicated worker（`new Worker`，支持同源、`blob:` 与 `data:` 脚本；双向 `postMessage`、`importScripts`、`close`、`terminate`，错误转发给所有者）作为独立 realm 在页面线程上与页面及框架轮流运行。有了框架与 Worker，Cloudflare Turnstile 组件能加载挑战框架并以测试 site key 完成验证，页面回调收到 token。通道与套接字：页面内的 `MessageChannel`、`MessagePort`、`BroadcastChannel`；`WebSocket` 复用 HTTP 的传输层（代理、TLS、cookie 与私网策略一并生效），文本与二进制双向收发，带关闭码与原因；只剩一个打开的 socket 在等的页面，静默一秒后即视为已稳定。会话：`--action back` / `forward` 在会话历史中跨文档前进后退（同一文档内的 `pushState` 条目也算），脚本里的 `history.back()` 亦然；`--storage <file>` 按源保存 `localStorage` 供下次运行使用，如同 `--cookie-jar` 之于 cookie。网络：响应体在线上和解码后都有上限（`--max-response-mb`），回环与私网地址默认拒绝（`--allow-private-network` 放行），支持 HTTP `CONNECT` 与 SOCKS5 代理（`--proxy`），cookie 文件跨运行保留（`--cookie-jar`）。
 >
@@ -83,7 +83,31 @@ ok click e16 button "Add to cart"
 
 换了新文档时返回完整快照。还有内容在加载时，`wait({"for":"text","text":"Order placed"})` 会让页面一直运行到它出现；页面只在等定时器的时间会瞬间过去。
 
-错误会说明下一步怎么做（`error StaleRef e13 button "Remove" (removed)`，随后是可能的替代 ref 和一行 `advice:`）。格式与协议见 [ADR 0005](docs/adr/0005-cst-snapshot-format.md) 和 [ADR 0006](docs/adr/0006-agent-protocol.md)；`cargo run -p xtask --features bench -- snapshot-bench` 在真实页面上测量快照大小。
+错误会说明下一步怎么做（`error StaleRef e13 button "Remove" (removed)`，随后是可能的替代 ref 和一行 `advice:`）。格式与协议见 [ADR 0005](docs/adr/0005-cst-snapshot-format.md) 和 [ADR 0006](docs/adr/0006-agent-protocol.md)；`cargo run -p xtask --features engine -- snapshot-bench` 在真实页面上测量快照大小。
+
+`--record-har run.har.zst` 记录会话的全部流量，`--replay-har run.har.zst` 不联网地按记录作答；再加上 `--random-seed` 和 `--time-origin`，回放结果逐字节一致。[`tests/tasks/`](tests/tasks/) 里有 16 个练习站点上的任务（Sauce Demo、Books 与 Quotes to Scrape、the-internet、TodoMVC），每个都带录制的流量和 agent 看到的完整记录；CI 不联网地把每个任务回放两次，两次都必须与记录逐字节相同。下表是 agent 完成每个任务读到的内容，与 Playwright MCP 走同样步骤的对比：
+
+| 任务 | CatPaw 调用数 | CatPaw 字节（≈token） | Playwright MCP 调用数 | Playwright MCP 字节（≈token） |
+|---|---|---|---|---|
+| books-category | 3 | 14814 (~4233) | 6 | 64648 (~18471) |
+| books-pagination | 2 | 13445 (~3841) | 4 | 64942 (~18555) |
+| internet-dropdown | 2 | 900 (~257) | 4 | 1937 (~553) |
+| internet-dynamic | 3 | 1390 (~397) | 6 | 2922 (~835) |
+| internet-entry-ad | 2 | 1534 (~438) | 4 | 2305 (~659) |
+| internet-frames | 2 | 859 (~245) | 3 | 980 (~280) |
+| internet-login | 4 | 2355 (~673) | 6 | 2876 (~822) |
+| internet-prompt | 2 | 1340 (~383) | 5 | 1968 (~562) |
+| internet-windows | 3 | 1000 (~286) | 5 | 2217 (~633) |
+| quotes-js-pagination | 2 | 1452 (~415) | 4 | 9394 (~2684) |
+| quotes-login | 4 | 4020 (~1149) | 6 | 12497 (~3571) |
+| quotes-scroll | 3 | 906 (~259) | 5 | 11922 (~3406) |
+| quotes-table | 2 | 5179 (~1480) | 2 | 8658 (~2474) |
+| saucedemo-checkout | 11 | 7757 (~2216) | 18 | 20992 (~5998) |
+| saucedemo-sort | 4 | 6011 (~1717) | 7 | 12814 (~3661) |
+| todomvc | 5 | 1833 (~524) | 10 | 9128 (~2608) |
+| 合计 | 54 | 64795 (~18513) | 95 | 230200 (~65771) |
+
+字节数是 agent 在一个任务中收到的全部工具结果（token 按每 3.5 字节一个估算）。CatPaw 的数字来自录制的回放；`@playwright/mcp` 0.0.83 搭配 headless Chrome 于 2026-10-08 实网走了同样的步骤（取三次运行的中位数）。Playwright MCP 把页面快照存进文件，页面变化时在结果里给出链接；agent 要看页面、找下一个目标就得读它，所以这个文件也计入，并算作一次调用。CatPaw 对动作只返回变化的部分，整份快照默认上限 4000 token，其余折叠起来由 agent 按需展开。每轮对话都要付出的工具列表，CatPaw 为 9.6 KB，Playwright MCP 为 20.3 KB。`cargo run -p xtask --features engine -- tasks report --baseline tools/baseline/playwright-mcp.json` 重新生成此表，[`tools/baseline/playwright-mcp.mjs`](tools/baseline/playwright-mcp.mjs) 用来测量对照组。
 
 库 crate 同样已发布：`catpaw-net`、`catpaw-fetch`、`catpaw-dom`、`catpaw-style`、`catpaw-agent`。
 

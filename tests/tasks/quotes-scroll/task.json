@@ -1,0 +1,32 @@
+{
+  "id": "quotes-scroll",
+  "goal": "Load more quotes on the infinite-scroll page",
+  "start_url": "https://quotes.toscrape.com/scroll",
+  "credentials": {
+    "public": true
+  },
+  "random_seed": 1,
+  "time_origin": 1790000000000,
+  "steps_min": 2,
+  "steps": [
+    {
+      "tool": "act",
+      "args": {
+        "kind": "scroll",
+        "dy": 20000
+      }
+    },
+    {
+      "tool": "wait",
+      "args": {
+        "for": "settled"
+      }
+    }
+  ],
+  "success": [
+    {
+      "eval": "document.querySelectorAll('.quote').length > 10",
+      "equals": "true"
+    }
+  ]
+}

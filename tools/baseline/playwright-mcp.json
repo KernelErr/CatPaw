@@ -1,0 +1,120 @@
+{
+  "server": "@playwright/mcp 0.0.83",
+  "browser": "Chrome, headless",
+  "date": "2026-10-08",
+  "tools_list_bytes": 20286,
+  "tasks": {
+    "books-category": {
+      "calls": 6,
+      "snapshot_reads": 3,
+      "bytes": 64648,
+      "first_view_bytes": 32260,
+      "passed": true
+    },
+    "books-pagination": {
+      "calls": 4,
+      "snapshot_reads": 2,
+      "bytes": 64942,
+      "first_view_bytes": 32260,
+      "passed": true
+    },
+    "internet-dropdown": {
+      "calls": 4,
+      "snapshot_reads": 2,
+      "bytes": 1937,
+      "first_view_bytes": 1018,
+      "passed": true
+    },
+    "internet-dynamic": {
+      "calls": 6,
+      "snapshot_reads": 3,
+      "bytes": 2922,
+      "first_view_bytes": 914,
+      "passed": true
+    },
+    "internet-entry-ad": {
+      "calls": 4,
+      "snapshot_reads": 2,
+      "bytes": 2305,
+      "first_view_bytes": 1164,
+      "passed": true
+    },
+    "internet-frames": {
+      "calls": 3,
+      "snapshot_reads": 1,
+      "bytes": 980,
+      "first_view_bytes": 567,
+      "passed": true
+    },
+    "internet-login": {
+      "calls": 6,
+      "snapshot_reads": 2,
+      "bytes": 2876,
+      "first_view_bytes": 1489,
+      "passed": true
+    },
+    "internet-prompt": {
+      "calls": 5,
+      "snapshot_reads": 2,
+      "bytes": 1968,
+      "first_view_bytes": 1343,
+      "passed": true
+    },
+    "internet-windows": {
+      "calls": 5,
+      "snapshot_reads": 2,
+      "bytes": 2217,
+      "first_view_bytes": 957,
+      "passed": true
+    },
+    "quotes-js-pagination": {
+      "calls": 4,
+      "snapshot_reads": 2,
+      "bytes": 9394,
+      "first_view_bytes": 3638,
+      "passed": true
+    },
+    "quotes-login": {
+      "calls": 6,
+      "snapshot_reads": 2,
+      "bytes": 12497,
+      "first_view_bytes": 1286,
+      "passed": true
+    },
+    "quotes-scroll": {
+      "calls": 5,
+      "snapshot_reads": 2,
+      "bytes": 11922,
+      "first_view_bytes": 3564,
+      "passed": true
+    },
+    "quotes-table": {
+      "calls": 2,
+      "snapshot_reads": 1,
+      "bytes": 8658,
+      "first_view_bytes": 8658,
+      "passed": true
+    },
+    "saucedemo-checkout": {
+      "calls": 18,
+      "snapshot_reads": 7,
+      "bytes": 20992,
+      "first_view_bytes": 789,
+      "passed": true
+    },
+    "saucedemo-sort": {
+      "calls": 7,
+      "snapshot_reads": 3,
+      "bytes": 12814,
+      "first_view_bytes": 789,
+      "passed": true
+    },
+    "todomvc": {
+      "calls": 10,
+      "snapshot_reads": 5,
+      "bytes": 9128,
+      "first_view_bytes": 1039,
+      "passed": true
+    }
+  }
+}
