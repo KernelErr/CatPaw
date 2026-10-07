@@ -486,6 +486,15 @@ fn print_frames(page: &catpaw_engine::Page, list: bool, console: bool) {
                     message.text
                 );
             }
+            for (name, count) in state.stub_calls.borrow().iter() {
+                eprintln!("[frame {id} stub] {name} x{count}");
+            }
+            for error in state.errors.borrow().iter().take(5) {
+                eprintln!(
+                    "[frame {id} error] {}",
+                    error.lines().next().unwrap_or_default()
+                );
+            }
         }
     }
 }
@@ -637,6 +646,9 @@ fn fetch_with_scripts_on(
         if args.console {
             for message in state.console_messages() {
                 eprintln!("[console.{}] {}", message.level.as_str(), message.text);
+            }
+            for (name, count) in state.stub_calls.borrow().iter() {
+                eprintln!("[stub] {name} x{count}");
             }
         } else {
             for error in state.errors.borrow().iter().take(5) {
