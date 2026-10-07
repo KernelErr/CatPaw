@@ -1,6 +1,5 @@
 > navigate {"url":"https://the-internet.herokuapp.com/upload"}
 ok navigate → https://the-internet.herokuapp.com/upload (200)
-! console error: Uncaught SyntaxError: expected token 'identifier', got '=' in identifier parsing at line 1307, col 10
 # s1 tab=t1 doc=d1 url=https://the-internet.herokuapp.com/upload title="The Internet" vp=1280x720 scroll=0,0 filter=interesting nodes=8/49 settled=yes
 e1 link "Fork me on GitHub"
 e2 heading "File Uploader" [level=3]
@@ -32,7 +31,6 @@ approved
 
 > click {"confirmation":"c2","target":"button \"Upload\""}
 ok click e5 button "Upload" (confirmed c2) → https://the-internet.herokuapp.com/upload (POST, 200)
-! console error: Uncaught SyntaxError: expected token 'identifier', got '=' in identifier parsing at line 1307, col 10
 # s4 tab=t1 doc=d2 navigated-from=d1 url=https://the-internet.herokuapp.com/upload title="The Internet" vp=1280x720 scroll=0,0 filter=interesting nodes=4/32 settled=yes full=navigated
 e8 link "Fork me on GitHub"
 e9 heading "File Uploaded!" [level=3]

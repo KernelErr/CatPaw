@@ -89,8 +89,10 @@ opt-level = 3
 debug = 1
 
 [patch.crates-io]
-# boa_ast and boa_engine 0.22.0 with fixes described in vendor/*/CATPAW.md.
+# boa_ast, boa_engine and boa_parser 0.22.0 with fixes described in
+# vendor/*/CATPAW.md.
 boa_ast = { path = "vendor/boa_ast" }
 boa_engine = { path = "vendor/boa_engine" }
+boa_parser = { path = "vendor/boa_parser" }
 # stylo_taffy 0.3.0-beta.2 built against stylo 0.22, see vendor/stylo_taffy/CATPAW.md.
 stylo_taffy = { path = "vendor/stylo_taffy" }

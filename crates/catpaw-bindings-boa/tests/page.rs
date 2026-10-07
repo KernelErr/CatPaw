@@ -1267,6 +1267,16 @@ fn vendored_engine_fixes_hold() {
             "['2025-10-01T12:34:56.789123+00:00', '2025-10-01 12:34:56Z', '7 Oct 2026 10:00:00 GMT', 'Oct 7, 2026 10:30 PM UTC', '2026-10-07T10:00:00.000+0000', '10/07/2026 10:00 GMT'].map(function (s) { return new Date(s).toISOString(); }).join(' ') + ' ' + isNaN(new Date('nonsense'))",
             "2025-10-01T12:34:56.789Z 2025-10-01T12:34:56.000Z 2026-10-07T10:00:00.000Z 2026-10-07T22:30:00.000Z 2026-10-07T10:00:00.000Z 2026-10-07T10:00:00.000Z true",
         ),
+        // `using` is an identifier unless a binding follows it (jQuery UI
+        // assigns to a variable of that name).
+        (
+            "(function () { var using; using = function (p) { return p + 1; }; var o = { using: 2 }; return using(o.using) + using.length; })()",
+            "4",
+        ),
+        (
+            "(function () { { using x = null; } return typeof using; })()",
+            "undefined",
+        ),
     ] {
         assert_eq!(eval(&mut page, source), expected, "{source}");
     }
