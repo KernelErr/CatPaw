@@ -375,13 +375,7 @@ pub(crate) fn submit(cx: &mut Cx<'_>, form: NodeId, submitter: Option<NodeId>, h
             let query = file_api::urlencoded_body(cx, form_data).unwrap_or_default();
             let mut url = action.clone();
             url.set_query(Some(&query));
-            Some(NavigationRequest {
-                url,
-                replace: false,
-                reload: false,
-                method: "GET".to_string(),
-                body: None,
-            })
+            Some(NavigationRequest::get(url, false))
         }
         (_, _) => {
             let body = match enctype.as_str() {
@@ -397,11 +391,9 @@ pub(crate) fn submit(cx: &mut Cx<'_>, form: NodeId, submitter: Option<NodeId>, h
                 }),
             };
             body.map(|(bytes, content_type)| NavigationRequest {
-                url: action.clone(),
-                replace: false,
-                reload: false,
                 method: "POST".to_string(),
                 body: Some((content_type, bytes)),
+                ..NavigationRequest::get(action.clone(), false)
             })
         }
     };

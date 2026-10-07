@@ -81,6 +81,10 @@ pub struct PageConfig {
     /// element) may take before it is stopped with an uncatchable error;
     /// `None` lets it run forever.
     pub script_budget: Option<std::time::Duration>,
+    /// Session history entries before and after this document, for
+    /// `history.length` and traversals that leave the document.
+    pub history_before: u32,
+    pub history_after: u32,
 }
 
 impl Default for PageConfig {
@@ -103,6 +107,8 @@ impl Default for PageConfig {
             virtual_time: true,
             time_origin_unix_ms: None,
             script_budget: Some(std::time::Duration::from_secs(10)),
+            history_before: 0,
+            history_after: 0,
         }
     }
 }
@@ -147,6 +153,24 @@ pub struct NavigationRequest {
     pub method: String,
     /// A request body with its content type (form submissions).
     pub body: Option<(String, Vec<u8>)>,
+    /// A session history traversal (`history.go(delta)`) that leaves the
+    /// document: the embedder loads the entry `delta` steps away. `url`
+    /// is then the current URL and the other fields do not apply.
+    pub traverse: i32,
+}
+
+impl NavigationRequest {
+    /// A plain `GET` navigation to `url`.
+    pub fn get(url: Url, replace: bool) -> Self {
+        Self {
+            url,
+            replace,
+            reload: false,
+            method: "GET".to_string(),
+            body: None,
+            traverse: 0,
+        }
+    }
 }
 
 /// A dialog (`alert`, `confirm`, `prompt`) the page opened. Dialogs never
@@ -445,6 +469,25 @@ impl PageState {
     /// Records a call to a member that is defined but not implemented.
     pub fn count_stub(&self, name: &'static str) {
         *self.stub_calls.borrow_mut().entry(name).or_insert(0) += 1;
+    }
+
+    // ---- storage --------------------------------------------------------
+
+    /// Fills `localStorage` (before any script runs) with what an earlier
+    /// run of the origin saved.
+    pub fn seed_local_storage(&self, items: impl IntoIterator<Item = (String, String)>) {
+        let mut area = self.storage[0].borrow_mut();
+        area.clear();
+        area.extend(items);
+    }
+
+    /// The `localStorage` items, in order.
+    pub fn local_storage_items(&self) -> Vec<(String, String)> {
+        self.storage[0]
+            .borrow()
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect()
     }
 
     // ---- object arena ---------------------------------------------------

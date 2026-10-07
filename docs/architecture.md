@@ -105,7 +105,14 @@ realms yet. WebSockets are opened by `catpaw-net` over the same
 connector as HTTP (proxy, TLS, address policy, cookies) and driven by a
 task on the network runtime; the engine host relays frames to the page
 as events, and the event loop, with nothing else to do, listens to open
-sockets for a second before calling the page idle. Task sources with fixed priority,
+sockets for a second before calling the page idle. The engine keeps
+the session history across documents: `history.go()` past the
+document's own entries becomes a navigation request with a traversal
+delta, which the engine resolves against its session list; the page
+is told how many entries lie before and after it, so `history.length`
+is right. `localStorage` is a per-origin map the engine seeds each new
+document from and refreshes from documents as they are left; the CLI's
+`--storage` file carries it between runs. Task sources with fixed priority,
 microtask checkpoints after every task and every re-entry from native code,
 own timer heap, rendering opportunities only when something animates or
 observes. A shared `Clock` offers real time or deterministic virtual time.

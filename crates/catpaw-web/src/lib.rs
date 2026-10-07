@@ -34,7 +34,7 @@ mod fonts;
 mod forms;
 pub mod frames;
 pub mod generated;
-mod history;
+pub mod history;
 pub mod html_names;
 mod hyperlink;
 mod implementation;

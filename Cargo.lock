@@ -464,6 +464,7 @@ dependencies = [
  "catpaw-net",
  "catpaw-style",
  "clap",
+ "serde_json",
  "tokio",
  "url",
 ]

@@ -128,6 +128,10 @@ struct FetchArgs {
     /// With --js: list the page's frames and workers once it has settled.
     #[arg(long, requires = "js")]
     frames: bool,
+    /// With --js: a JSON file holding `localStorage` by origin, read before
+    /// the page loads and written back afterwards.
+    #[arg(long, requires = "js")]
+    storage: Option<PathBuf>,
     /// With --js: list every request the page made, with a preview of
     /// request bodies, on stderr.
     #[arg(long, requires = "js")]
@@ -141,7 +145,8 @@ struct FetchArgs {
     /// `type <text>`, `press <key>`, `check <selector>`, `uncheck <selector>`,
     /// `select <selector> <value>`, `hover <selector>`, `focus <selector>`,
     /// `frame <selector>` (address the frame of that iframe for the actions
-    /// and --eval that follow), `frame parent`, `frame top`.
+    /// and --eval that follow), `frame parent`, `frame top`, `back`,
+    /// `forward`.
     #[arg(long, requires = "js")]
     action: Vec<String>,
     /// With --js: write a PNG of the page (the viewport) to this path once
@@ -572,6 +577,8 @@ fn run_action(page: &mut catpaw_engine::Page, spec: &str) -> Result<()> {
         }
         "hover" => page.hover(rest),
         "focus" => page.focus(rest),
+        "back" => page.back().map_err(Into::into),
+        "forward" => page.forward().map_err(Into::into),
         "frame" => match rest {
             "top" => {
                 page.select_top_frame();
@@ -603,12 +610,14 @@ fn fetch_with_scripts(args: FetchArgs) -> Result<()> {
             virtual_ms: args.time_budget as f64,
             ..LoopLimits::default()
         },
+        storage: load_storage(&args)?,
         ..PageOptions::default()
     };
     let started = Instant::now();
     catpaw_engine::with_page(url.clone(), options, move |page| -> Result<()> {
         let result = fetch_with_scripts_on(&args, page, started);
         save_cookie_jar(&args, page.net().client().cookies())?;
+        save_storage(&args, page)?;
         result
     })
     .with_context(|| format!("loading {url}"))?
@@ -737,6 +746,58 @@ fn fetch_with_scripts_on(
         };
         render(args, view, &dom, oracle.as_ref())
     }
+}
+
+/// Reads the `--storage` file: an object of origins, each an object of
+/// `localStorage` keys and values.
+fn load_storage(
+    args: &FetchArgs,
+) -> Result<std::collections::HashMap<String, Vec<(String, String)>>> {
+    let mut out = std::collections::HashMap::new();
+    let Some(path) = &args.storage else {
+        return Ok(out);
+    };
+    if !path.exists() {
+        return Ok(out);
+    }
+    let text = std::fs::read_to_string(path)
+        .with_context(|| format!("reading the storage file {}", path.display()))?;
+    let value: serde_json::Value = serde_json::from_str(&text)
+        .with_context(|| format!("parsing the storage file {}", path.display()))?;
+    let Some(origins) = value.as_object() else {
+        bail!("the storage file {} is not a JSON object", path.display());
+    };
+    for (origin, items) in origins {
+        let Some(items) = items.as_object() else {
+            continue;
+        };
+        let items: Vec<(String, String)> = items
+            .iter()
+            .filter_map(|(k, v)| v.as_str().map(|v| (k.clone(), v.to_string())))
+            .collect();
+        out.insert(origin.clone(), items);
+    }
+    Ok(out)
+}
+
+fn save_storage(args: &FetchArgs, page: &catpaw_engine::Page) -> Result<()> {
+    let Some(path) = &args.storage else {
+        return Ok(());
+    };
+    let mut origins = serde_json::Map::new();
+    let mut snapshot: Vec<_> = page.storage_snapshot().into_iter().collect();
+    snapshot.sort();
+    for (origin, items) in snapshot {
+        let mut object = serde_json::Map::new();
+        for (k, v) in items {
+            object.insert(k, serde_json::Value::String(v));
+        }
+        origins.insert(origin, serde_json::Value::Object(object));
+    }
+    let text = serde_json::to_string_pretty(&serde_json::Value::Object(origins))?;
+    std::fs::write(path, text)
+        .with_context(|| format!("writing the storage file {}", path.display()))?;
+    Ok(())
 }
 
 fn save_cookie_jar(args: &FetchArgs, jar: &catpaw_net::CookieJar) -> Result<()> {

@@ -41,7 +41,10 @@ isolated contexts.
 > same transport as HTTP (proxy, TLS, cookies and the private-network policy
 > apply), text and binary both ways, close codes and reasons; a page whose
 > only pending work is an open socket counts as settled after a second of
-> silence. Network: response bodies are capped on the wire and
+> silence. Session: `--action back` / `forward` traverse the session history
+> across documents (and within one, for `pushState` entries), as
+> `history.back()` does from script; `--storage <file>` keeps `localStorage`
+> by origin between runs, as `--cookie-jar` keeps cookies. Network: response bodies are capped on the wire and
 > after decoding (`--max-response-mb`), loopback and private addresses are
 > refused unless `--allow-private-network` says otherwise, HTTP `CONNECT`
 > and SOCKS5 proxies (`--proxy`), cookie files kept between runs

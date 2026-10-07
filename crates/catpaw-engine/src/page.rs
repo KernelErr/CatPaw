@@ -7,6 +7,7 @@
 //! in turns, and carries messages between them.
 
 use std::cell::{Ref, RefCell};
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Instant;
 
@@ -47,9 +48,12 @@ pub struct PageOptions {
     pub page: PageConfig,
     /// Bounds on the event loop run that follows each document load.
     pub limits: LoopLimits,
-    /// How many script-initiated navigations (`location.href = ...`) to
+    /// How many navigations in a row (`location.href = ...` chains) to
     /// follow before giving up.
     pub max_navigations: usize,
+    /// `localStorage` to start from, by serialized origin
+    /// (`https://example.com`): what earlier runs saved.
+    pub storage: HashMap<String, Vec<(String, String)>>,
 }
 
 impl Default for PageOptions {
@@ -59,6 +63,7 @@ impl Default for PageOptions {
             page: PageConfig::default(),
             limits: LoopLimits::default(),
             max_navigations: 5,
+            storage: HashMap::new(),
         }
     }
 }
@@ -206,6 +211,12 @@ pub struct Page {
     document: DocumentInfo,
     /// The documents loaded on the way here, oldest first.
     navigations: Vec<Url>,
+    /// The session history: the entries back and forward go through.
+    session: Vec<Url>,
+    session_index: usize,
+    /// `localStorage` by origin: what the run started with, updated from
+    /// documents as they are left.
+    storage: HashMap<String, Vec<(String, String)>>,
     options: PageOptions,
     report: LoopReport,
     top_virtual_used: f64,
@@ -231,6 +242,9 @@ struct Placement {
     frame: FrameId,
     tree: Rc<RefCell<FrameTree>>,
     viewport: Option<(u32, u32)>,
+    /// Session history entries before and after the document (the top
+    /// page only).
+    history: (u32, u32),
 }
 
 /// Parses `html` as the document at `info.url` in a new realm, running its
@@ -241,6 +255,7 @@ fn load(
     html: &str,
     referrer: Option<&Url>,
     options: &PageOptions,
+    storage: &HashMap<String, Vec<(String, String)>>,
     placement: Placement,
 ) -> Result<BoaPage, EngineError> {
     let mut config = options.page.clone();
@@ -249,9 +264,14 @@ fn load(
         config.viewport_width = width;
         config.viewport_height = height;
     }
+    config.history_before = placement.history.0;
+    config.history_after = placement.history.1;
     let state = Rc::new(PageState::new(info.url.clone(), config));
     state.set_net(net.clone());
     state.frames.place(placement.frame, placement.tree);
+    if let Some(items) = storage.get(&frames::origin_of(&info.url)) {
+        state.seed_local_storage(items.iter().cloned());
+    }
     {
         let mut document = state.document_state.borrow_mut();
         document.charset = info.encoding.to_string();
@@ -277,11 +297,12 @@ fn idle_report() -> LoopReport {
     }
 }
 
-fn top_placement(tree: &Rc<RefCell<FrameTree>>) -> Placement {
+fn top_placement(tree: &Rc<RefCell<FrameTree>>, history: (u32, u32)) -> Placement {
     Placement {
         frame: FrameId(0),
         tree: tree.clone(),
         viewport: None,
+        history,
     }
 }
 
@@ -306,7 +327,8 @@ impl Page {
             fetched.html(),
             None,
             options,
-            top_placement(&tree),
+            &options.storage,
+            top_placement(&tree, (0, 0)),
         )?;
         let mut page = Self::with_top(boa, tree, net, info, options);
         page.run_frames();
@@ -330,7 +352,10 @@ impl Page {
             current: FrameId(0),
             net,
             document: info.clone(),
-            navigations: vec![info.url],
+            navigations: vec![info.url.clone()],
+            session: vec![info.url],
+            session_index: 0,
+            storage: options.storage.clone(),
             options: options.clone(),
             report: idle_report(),
             top_virtual_used: 0.0,
@@ -340,23 +365,54 @@ impl Page {
     /// Loads the document a navigation request asks for, in place of the
     /// current one: the same network (cookies included), a new page.
     fn navigate(&mut self, request: NavigationRequest) -> Result<(), EngineError> {
+        // Where the new document goes in the session history.
+        let target = if request.traverse != 0 {
+            let target = self.session_index as i64 + i64::from(request.traverse);
+            if target < 0 || target >= self.session.len() as i64 {
+                return Ok(());
+            }
+            Some(target as usize)
+        } else {
+            None
+        };
+        let (method, url, body) = match target {
+            Some(index) => ("GET".to_string(), self.session[index].clone(), None),
+            None => (request.method, request.url, request.body),
+        };
         let referrer = self.url();
         let fetched = self.net.block_on(fetch_document_with(
             self.net.client(),
-            &request.method,
-            &request.url,
-            request.body,
+            &method,
+            &url,
+            body,
             Some(&referrer),
         ))?;
         let info = DocumentInfo::from_fetch(&fetched);
+        match target {
+            Some(index) => self.session_index = index,
+            None if request.replace || request.reload => {
+                self.session[self.session_index] = info.url.clone();
+            }
+            None => {
+                self.session.truncate(self.session_index + 1);
+                self.session.push(info.url.clone());
+                self.session_index += 1;
+            }
+        }
+        let history = (
+            self.session_index as u32,
+            (self.session.len() - self.session_index - 1) as u32,
+        );
         let tree = Rc::new(RefCell::new(FrameTree::default()));
+        self.remember_storage();
         let boa = load(
             &self.net,
             &info,
             fetched.html(),
             Some(&referrer),
             &self.options,
-            top_placement(&tree),
+            &self.storage,
+            top_placement(&tree, history),
         )?;
         // The frames and workers belonged to the old document.
         self.workers.clear();
@@ -371,16 +427,74 @@ impl Page {
         Ok(())
     }
 
+    /// Goes `delta` entries through the session history (`-1` is back),
+    /// as `history.go(delta)` would: within the document when the entry
+    /// is one of its own (`pushState`), else by loading that document.
+    /// Nothing happens past either end.
+    pub fn traverse_history(&mut self, delta: i32) -> Result<(), EngineError> {
+        if delta == 0 {
+            return Ok(());
+        }
+        self.boa
+            .with_cx(|cx| catpaw_web::history::traverse(cx, delta));
+        self.run_frames();
+        self.follow_navigations()
+    }
+
+    pub fn back(&mut self) -> Result<(), EngineError> {
+        self.traverse_history(-1)
+    }
+
+    pub fn forward(&mut self) -> Result<(), EngineError> {
+        self.traverse_history(1)
+    }
+
+    /// The session history, oldest first, and the index of the current
+    /// entry.
+    pub fn session_history(&self) -> (&[Url], usize) {
+        (&self.session, self.session_index)
+    }
+
+    /// Keeps the `localStorage` of the documents now open, for the
+    /// documents of their origins that come later.
+    fn remember_storage(&mut self) {
+        let snapshot = self.storage_snapshot();
+        self.storage = snapshot;
+    }
+
+    /// `localStorage` by origin: what the page and its frames hold now,
+    /// over what earlier documents of the run left. For a later run's
+    /// [`PageOptions::storage`].
+    pub fn storage_snapshot(&self) -> HashMap<String, Vec<(String, String)>> {
+        let mut out = self.storage.clone();
+        for scope in self.scopes() {
+            let Some(page) = self.scope_page(scope) else {
+                continue;
+            };
+            if page.workers.role().is_some() {
+                continue;
+            }
+            let origin = frames::origin_of(&page.url.borrow());
+            if origin == "null" {
+                continue;
+            }
+            out.insert(origin, page.local_storage_items());
+        }
+        out
+    }
+
     /// Follows the navigations the page asks for (links, form submissions,
-    /// `location` assignments), up to the configured number.
+    /// `location` assignments, history traversals), up to the configured
+    /// number.
     pub fn follow_navigations(&mut self) -> Result<(), EngineError> {
+        // The limit is on one chain of navigations (a redirect loop in
+        // script), not on what a long session adds up to.
+        let mut hops = 0;
         loop {
             let requested = self.boa.page().navigation.borrow_mut().take();
             match requested {
-                Some(request)
-                    if !request.reload
-                        && self.navigations.len() <= self.options.max_navigations =>
-                {
+                Some(request) if !request.reload && hops < self.options.max_navigations => {
+                    hops += 1;
                     self.navigate(request)?;
                 }
                 _ => return Ok(()),
@@ -394,7 +508,15 @@ impl Page {
         let net = Rc::new(EngineNet::new(options.net.clone())?);
         let info = DocumentInfo::local(url, html);
         let tree = Rc::new(RefCell::new(FrameTree::default()));
-        let boa = load(&net, &info, html, None, options, top_placement(&tree))?;
+        let boa = load(
+            &net,
+            &info,
+            html,
+            None,
+            options,
+            &options.storage,
+            top_placement(&tree, (0, 0)),
+        )?;
         let mut page = Self::with_top(boa, tree, net, info, options);
         page.run_frames();
         page.follow_navigations()?;
@@ -577,6 +699,7 @@ impl Page {
             frame: id,
             tree: self.tree.clone(),
             viewport: Some(frames::frame_viewport(&parent_page, element)),
+            history: (0, 0),
         };
         let net = Rc::new(self.net.child());
         let boa = match load(
@@ -585,6 +708,7 @@ impl Page {
             &html,
             Some(&referrer),
             &self.options,
+            &self.storage,
             placement,
         ) {
             Ok(boa) => boa,
@@ -611,6 +735,12 @@ impl Page {
 
     /// Closes a frame and the frames inside it.
     fn close_frame(&mut self, id: FrameId) {
+        if let Some(page) = self.page_of(id) {
+            let origin = frames::origin_of(&page.url.borrow());
+            if origin != "null" {
+                self.storage.insert(origin, page.local_storage_items());
+            }
+        }
         let inner: Vec<FrameId> = self
             .frames
             .iter()
@@ -933,11 +1063,19 @@ impl Page {
             .iter()
             .position(|f| f.id == id)
             .expect("frame still open");
+        {
+            let page = self.frames[index].boa.page();
+            let origin = frames::origin_of(&page.url.borrow());
+            if origin != "null" {
+                self.storage.insert(origin, page.local_storage_items());
+            }
+        }
         let depth = self.frames[index].depth;
         let placement = Placement {
             frame: id,
             tree: self.tree.clone(),
             viewport: Some(frames::frame_viewport(&parent_page, element)),
+            history: (0, 0),
         };
         let net = Rc::new(self.net.child());
         match load(
@@ -946,6 +1084,7 @@ impl Page {
             fetched.html(),
             Some(&referrer),
             &self.options,
+            &self.storage,
             placement,
         ) {
             Ok(boa) => {

@@ -496,13 +496,7 @@ pub(crate) fn navigate(cx: &mut Cx<'_>, url: Url, replace: bool) {
         a == b && url.fragment().is_some()
     };
     if !same_document {
-        *cx.page.navigation.borrow_mut() = Some(NavigationRequest {
-            url,
-            replace,
-            reload: false,
-            method: "GET".to_string(),
-            body: None,
-        });
+        *cx.page.navigation.borrow_mut() = Some(NavigationRequest::get(url, replace));
         return;
     }
     if url == current {
@@ -628,11 +622,8 @@ impl web::LocationImpl for Web {
     fn reload(cx: &mut Cx<'_>, _this: ObjectId) -> Fallible<()> {
         let url = cx.page.url.borrow().clone();
         *cx.page.navigation.borrow_mut() = Some(NavigationRequest {
-            url,
-            replace: true,
             reload: true,
-            method: "GET".to_string(),
-            body: None,
+            ..NavigationRequest::get(url, true)
         });
         Ok(())
     }

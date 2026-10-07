@@ -10,7 +10,7 @@ use url::Url;
 use crate::event_loop::queue_task;
 use crate::events::{self, EventData};
 use crate::generated::{self as web, InterfaceId, ScrollRestoration};
-use crate::page::Cx;
+use crate::page::{Cx, NavigationRequest};
 use crate::{Web, platform_object};
 
 pub struct HistoryObject;
@@ -81,16 +81,32 @@ pub(crate) fn fire_hashchange(cx: &mut Cx<'_>, old_url: &Url, new_url: &Url) {
 }
 
 /// Moves `delta` entries through the session history.
-fn traverse(cx: &mut Cx<'_>, delta: i32) {
+/// `history.go(delta)`, carried out now: within the document when the
+/// entry is one of its own, else as a navigation request for the
+/// embedder.
+pub fn traverse(cx: &mut Cx<'_>, delta: i32) {
     let (old_url, new_url, state) = {
         let mut history = cx.page.history.borrow_mut();
-        let Some(target) = history
-            .index
-            .checked_add_signed(delta as isize)
-            .filter(|&i| i < history.entries.len())
-        else {
+        let target = history.index as i64 + i64::from(delta);
+        if target < 0 || target >= history.entries.len() as i64 {
+            // Beyond this document's entries: the embedder loads another
+            // document, if the session has one that way.
+            let config = &cx.page.config;
+            let session_index = i64::from(config.history_before) + history.index as i64;
+            let session_len = i64::from(config.history_before)
+                + history.entries.len() as i64
+                + i64::from(config.history_after);
+            let session_target = session_index + i64::from(delta);
+            if session_target >= 0 && session_target < session_len {
+                let url = cx.page.url.borrow().clone();
+                *cx.page.navigation.borrow_mut() = Some(NavigationRequest {
+                    traverse: delta,
+                    ..NavigationRequest::get(url, false)
+                });
+            }
             return;
-        };
+        }
+        let target = target as usize;
         if target == history.index {
             return;
         }
@@ -149,7 +165,10 @@ fn push_or_replace(
 
 impl web::HistoryImpl for Web {
     fn length(cx: &mut Cx<'_>, _this: ObjectId) -> Fallible<u32> {
-        Ok(cx.page.history.borrow().entries.len() as u32)
+        let config = &cx.page.config;
+        Ok(config.history_before
+            + cx.page.history.borrow().entries.len() as u32
+            + config.history_after)
     }
 
     fn scroll_restoration(cx: &mut Cx<'_>, _this: ObjectId) -> Fallible<ScrollRestoration> {
