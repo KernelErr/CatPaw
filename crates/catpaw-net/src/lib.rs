@@ -10,6 +10,7 @@ pub mod client;
 pub mod cookies;
 pub mod decode;
 pub mod policy;
+pub mod websocket;
 
 pub use bot_auth::{BotAuthConfig, BotAuthError, BotAuthSigner, KeyPair, SignedHeaders};
 pub use bytes::Bytes;
@@ -17,3 +18,4 @@ pub use client::{NetClient, NetConfig, NetError, RequestOptions, Response};
 pub use cookies::CookieJar;
 pub use http::{HeaderMap, HeaderName, HeaderValue, Method, StatusCode};
 pub use url::Url;
+pub use websocket::{WsConnection, WsMessage, WsStream};

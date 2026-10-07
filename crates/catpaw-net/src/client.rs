@@ -192,6 +192,9 @@ struct Hop {
 /// An HTTP client with its own cookie jar and identity.
 pub struct NetClient {
     inner: Client<Connector, Full<Bytes>>,
+    /// The transport again, for connections hyper does not make
+    /// (WebSockets).
+    connector: Connector,
     config: NetConfig,
     cookies: CookieJar,
     signer: Option<BotAuthSigner>,
@@ -232,12 +235,12 @@ fn is_redirect(status: StatusCode) -> bool {
 
 /// The transport: TLS over a direct connection, or over a tunnel through
 /// the proxy.
-type Connector = HttpsConnector<ProxyOrDirect>;
+pub(crate) type Connector = HttpsConnector<ProxyOrDirect>;
 
 /// A connection made directly (names resolved and filtered here) or
 /// through a `CONNECT` or SOCKS5 proxy (which resolves the target).
 #[derive(Clone)]
-enum ProxyOrDirect {
+pub(crate) enum ProxyOrDirect {
     Direct(HttpConnector<FilteringResolver>),
     Tunnel(hyper_util::client::legacy::connect::proxy::Tunnel<HttpConnector<FilteringResolver>>),
     Socks(hyper_util::client::legacy::connect::proxy::SocksV5<HttpConnector<FilteringResolver>>),
@@ -322,7 +325,7 @@ impl NetClient {
             .enable_http1()
             .enable_http2()
             .wrap_connector(transport);
-        let inner = Client::builder(TokioExecutor::new()).build(https);
+        let inner = Client::builder(TokioExecutor::new()).build(https.clone());
         let signer = config
             .bot_auth
             .as_ref()
@@ -336,10 +339,15 @@ impl NetClient {
         }
         Ok(Self {
             inner,
+            connector: https,
             config,
             cookies,
             signer,
         })
+    }
+
+    pub(crate) fn connector(&self) -> Connector {
+        self.connector.clone()
     }
 
     pub fn config(&self) -> &NetConfig {

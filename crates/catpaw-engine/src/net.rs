@@ -13,11 +13,15 @@ use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
 use std::time::Duration;
 
 use bytes::Bytes;
+use catpaw_net::WsMessage;
 use catpaw_net::{NetClient, NetConfig, NetError, RequestOptions};
-use catpaw_web::net::{NetHost, NetRequest, NetResponse, NetResult, RequestKind};
+use catpaw_web::net::{
+    NetHost, NetRequest, NetResponse, NetResult, RequestKind, WsEvent, WsOutbound,
+};
 use http::Method;
 use http::header::{ACCEPT, HeaderName, HeaderValue, REFERER};
 use tokio::runtime::Runtime;
+use tokio::sync::mpsc::{UnboundedSender, unbounded_channel};
 use tokio::task::AbortHandle;
 use url::Url;
 
@@ -36,13 +40,24 @@ pub struct RequestRecord {
 /// How much of a request body a record keeps.
 const BODY_PREVIEW_BYTES: usize = 4096;
 
+/// What the network tasks report back to the page thread.
+enum HostEvent {
+    Response(u64, NetResult),
+    Socket(u64, WsEvent),
+}
+
 pub struct EngineNet {
     runtime: Arc<Runtime>,
     client: Arc<NetClient>,
-    tx: Sender<(u64, NetResult)>,
-    rx: Receiver<(u64, NetResult)>,
+    tx: Sender<HostEvent>,
+    rx: Receiver<HostEvent>,
     next_token: Cell<u64>,
     inflight: RefCell<HashMap<u64, (AbortHandle, usize)>>,
+    /// Open sockets: what to send them, and whether the handshake is still
+    /// pending (then the socket counts as in flight).
+    sockets: RefCell<HashMap<u64, (UnboundedSender<WsOutbound>, bool)>>,
+    /// Socket events taken from the channel while polling for responses.
+    socket_events: RefCell<Vec<(u64, WsEvent)>>,
     /// Shared with the hosts of the page's frames: one log per page.
     log: Rc<RefCell<Vec<RequestRecord>>>,
 }
@@ -121,6 +136,8 @@ impl EngineNet {
             rx,
             next_token: Cell::new(1),
             inflight: RefCell::new(HashMap::new()),
+            sockets: RefCell::new(HashMap::new()),
+            socket_events: RefCell::new(Vec::new()),
             log: Rc::new(RefCell::new(Vec::new())),
         })
     }
@@ -136,6 +153,8 @@ impl EngineNet {
             rx,
             next_token: Cell::new(1),
             inflight: RefCell::new(HashMap::new()),
+            sockets: RefCell::new(HashMap::new()),
+            socket_events: RefCell::new(Vec::new()),
             log: self.log.clone(),
         }
     }
@@ -187,6 +206,29 @@ impl EngineNet {
         }
     }
 
+    /// Sorts an event from the channel: responses go to `out`, socket
+    /// events wait for [`NetHost::poll_sockets`].
+    fn take(&self, out: &mut Vec<(u64, NetResult)>, event: HostEvent) {
+        match event {
+            HostEvent::Response(token, result) => self.accept(out, token, result),
+            HostEvent::Socket(token, event) => {
+                let mut sockets = self.sockets.borrow_mut();
+                match &event {
+                    WsEvent::Open { .. } => {
+                        if let Some(entry) = sockets.get_mut(&token) {
+                            entry.1 = false;
+                        }
+                    }
+                    WsEvent::Close { .. } | WsEvent::Error(_) => {
+                        sockets.remove(&token);
+                    }
+                    _ => {}
+                }
+                self.socket_events.borrow_mut().push((token, event));
+            }
+        }
+    }
+
     fn accept(&self, out: &mut Vec<(u64, NetResult)>, token: u64, result: NetResult) {
         // A result for an aborted request is dropped.
         if let Some((_, index)) = self.inflight.borrow_mut().remove(&token) {
@@ -212,7 +254,7 @@ impl NetHost for EngineNet {
         let tx = self.tx.clone();
         let task = self.runtime.spawn(async move {
             let result = perform(&client, request).await;
-            let _ = tx.send((token, result));
+            let _ = tx.send(HostEvent::Response(token, result));
         });
         self.inflight
             .borrow_mut()
@@ -223,17 +265,21 @@ impl NetHost for EngineNet {
     fn poll(&self, wait: Option<Duration>) -> Vec<(u64, NetResult)> {
         let mut out = Vec::new();
         if let Some(wait) = wait
-            && !self.inflight.borrow().is_empty()
+            && (self.inflight() > 0 || !self.sockets.borrow().is_empty())
         {
             match self.rx.recv_timeout(wait) {
-                Ok((token, result)) => self.accept(&mut out, token, result),
+                Ok(event) => self.take(&mut out, event),
                 Err(RecvTimeoutError::Timeout | RecvTimeoutError::Disconnected) => {}
             }
         }
-        while let Ok((token, result)) = self.rx.try_recv() {
-            self.accept(&mut out, token, result);
+        while let Ok(event) = self.rx.try_recv() {
+            self.take(&mut out, event);
         }
         out
+    }
+
+    fn poll_sockets(&self) -> Vec<(u64, WsEvent)> {
+        std::mem::take(&mut *self.socket_events.borrow_mut())
     }
 
     fn abort(&self, token: u64) {
@@ -244,6 +290,104 @@ impl NetHost for EngineNet {
 
     fn inflight(&self) -> usize {
         self.inflight.borrow().len()
+            + self
+                .sockets
+                .borrow()
+                .values()
+                .filter(|(_, connecting)| *connecting)
+                .count()
+    }
+
+    fn ws_connect(&self, url: Url, protocols: Vec<String>, origin: String) -> Option<u64> {
+        let token = self.next_token.get();
+        self.next_token.set(token + 1);
+        let (out_tx, mut out_rx) = unbounded_channel::<WsOutbound>();
+        self.sockets.borrow_mut().insert(token, (out_tx, true));
+        let client = self.client.clone();
+        let tx = self.tx.clone();
+        self.record(&NetRequest::get(url.clone(), RequestKind::Other));
+        self.runtime.spawn(async move {
+            let mut connection = match client.websocket(&url, &protocols, Some(&origin)).await {
+                Ok(connection) => connection,
+                Err(e) => {
+                    let _ = tx.send(HostEvent::Socket(token, WsEvent::Error(e.to_string())));
+                    return;
+                }
+            };
+            let _ = tx.send(HostEvent::Socket(
+                token,
+                WsEvent::Open {
+                    protocol: connection.protocol.clone(),
+                    extensions: connection.extensions.clone(),
+                },
+            ));
+            // The close we sent, answered by the peer or by the stream
+            // ending.
+            let mut we_closed: Option<(u16, String)> = None;
+            loop {
+                tokio::select! {
+                    incoming = connection.next() => match incoming {
+                        Some(Ok(WsMessage::Text(text))) => {
+                            let _ = tx.send(HostEvent::Socket(token, WsEvent::Text(text)));
+                        }
+                        Some(Ok(WsMessage::Binary(bytes))) => {
+                            let _ = tx.send(HostEvent::Socket(token, WsEvent::Binary(bytes)));
+                        }
+                        Some(Ok(WsMessage::Close { code, reason })) => {
+                            // The stream answers the close frame itself.
+                            let _ = tx.send(HostEvent::Socket(token, WsEvent::Close { code, reason, clean: true }));
+                            return;
+                        }
+                        Some(Err(e)) => {
+                            let event = match &we_closed {
+                                Some((code, reason)) => WsEvent::Close { code: *code, reason: reason.clone(), clean: true },
+                                None => WsEvent::Error(e),
+                            };
+                            let _ = tx.send(HostEvent::Socket(token, event));
+                            return;
+                        }
+                        None => {
+                            let event = match &we_closed {
+                                Some((code, reason)) => WsEvent::Close { code: *code, reason: reason.clone(), clean: true },
+                                None => WsEvent::Close { code: 1006, reason: String::new(), clean: false },
+                            };
+                            let _ = tx.send(HostEvent::Socket(token, event));
+                            return;
+                        }
+                    },
+                    outgoing = out_rx.recv() => match outgoing {
+                        Some(WsOutbound::Text(text)) => {
+                            if let Err(e) = connection.send(WsMessage::Text(text)).await {
+                                let _ = tx.send(HostEvent::Socket(token, WsEvent::Error(e)));
+                                return;
+                            }
+                        }
+                        Some(WsOutbound::Binary(bytes)) => {
+                            if let Err(e) = connection.send(WsMessage::Binary(bytes)).await {
+                                let _ = tx.send(HostEvent::Socket(token, WsEvent::Error(e)));
+                                return;
+                            }
+                        }
+                        Some(WsOutbound::Close { code, reason }) => {
+                            let code = code.unwrap_or(1000);
+                            we_closed = Some((code, reason.clone()));
+                            let _ = connection
+                                .send(WsMessage::Close { code, reason })
+                                .await;
+                        }
+                        // The page let go of the socket: it is dropped.
+                        None => return,
+                    },
+                }
+            }
+        });
+        Some(token)
+    }
+
+    fn ws_send(&self, token: u64, message: WsOutbound) {
+        if let Some((sender, _)) = self.sockets.borrow().get(&token) {
+            let _ = sender.send(message);
+        }
     }
 
     fn cookies_for(&self, url: &Url) -> String {

@@ -18,6 +18,20 @@ use catpaw_web::generated::InterfaceId as I;
 
 use crate::rt::{self, FromJs, IntoJs};
 
+impl FromJs for web::BinaryType {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::BinaryType::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid BinaryType")))
+    }
+}
+
+impl IntoJs for web::BinaryType {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
 impl FromJs for web::DOMParserSupportedType {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let s = rt::string_from_js(v, ctx)?;
@@ -497,6 +511,51 @@ impl IntoJs for web::CSSStyleSheetInit {
         rt::set_member(&obj, "baseURL", self.base_url, ctx)?;
         rt::set_member(&obj, "media", self.media, ctx)?;
         rt::set_member(&obj, "disabled", self.disabled, ctx)?;
+        Ok(obj.into())
+    }
+}
+
+impl FromJs for web::CloseEventInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "CloseEventInit")?;
+        Ok(Self {
+            bubbles: match rt::dictionary_member(&obj, "bubbles", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            cancelable: match rt::dictionary_member(&obj, "cancelable", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            composed: match rt::dictionary_member(&obj, "composed", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            was_clean: match rt::dictionary_member(&obj, "wasClean", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            code: match rt::dictionary_member(&obj, "code", ctx)? {
+                Some(m) => (&m).to_uint16(ctx)?,
+                None => (0) as u16,
+            },
+            reason: match rt::dictionary_member(&obj, "reason", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "".to_string(),
+            },
+        })
+    }
+}
+
+impl IntoJs for web::CloseEventInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "bubbles", self.bubbles, ctx)?;
+        rt::set_member(&obj, "cancelable", self.cancelable, ctx)?;
+        rt::set_member(&obj, "composed", self.composed, ctx)?;
+        rt::set_member(&obj, "wasClean", self.was_clean, ctx)?;
+        rt::set_member(&obj, "code", self.code, ctx)?;
+        rt::set_member(&obj, "reason", self.reason, ctx)?;
         Ok(obj.into())
     }
 }
@@ -1289,10 +1348,19 @@ impl FromJs for web::MessageEventInit {
                     if (&m).is_null_or_undefined() {
                         None
                     } else {
-                        Some(rt::window_from_js((&m), ctx)?)
+                        Some(<web::WindowProxyOrMessagePort as FromJs>::from_js(
+                            (&m),
+                            ctx,
+                        )?)
                     }
                 }
                 None => None,
+            },
+            ports: match rt::dictionary_member(&obj, "ports", ctx)? {
+                Some(m) => rt::sequence_from_js((&m), ctx, |v, ctx| {
+                    Ok(rt::object_from_js(v, I::MessagePort, ctx)?)
+                })?,
+                None => Vec::new(),
             },
         })
     }
@@ -1308,6 +1376,7 @@ impl IntoJs for web::MessageEventInit {
         rt::set_member(&obj, "origin", self.origin, ctx)?;
         rt::set_member(&obj, "lastEventId", self.last_event_id, ctx)?;
         rt::set_member(&obj, "source", self.source, ctx)?;
+        rt::set_member(&obj, "ports", self.ports, ctx)?;
         Ok(obj.into())
     }
 }
@@ -3395,6 +3464,28 @@ impl IntoJs for web::StringOrPerformanceMeasureOptions {
     }
 }
 
+impl FromJs for web::StringOrStringSequence {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if rt::is_iterable(v, ctx)? {
+            return Ok(web::StringOrStringSequence::StringSequence(
+                rt::sequence_from_js(v, ctx, |v, ctx| Ok(rt::string_from_js(v, ctx)?))?,
+            ));
+        }
+        Ok(web::StringOrStringSequence::String(rt::string_from_js(
+            v, ctx,
+        )?))
+    }
+}
+
+impl IntoJs for web::StringOrStringSequence {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+            web::StringOrStringSequence::String(v) => v.into_js(ctx),
+            web::StringOrStringSequence::StringSequence(v) => v.into_js(ctx),
+        }
+    }
+}
+
 impl FromJs for web::StringSequenceSequenceOrStringStringRecord {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         if rt::is_iterable(v, ctx)? {
@@ -3472,6 +3563,31 @@ impl IntoJs for web::StringSequenceSequenceOrStringStringRecordOrString {
                 v.into_js(ctx)
             }
             web::StringSequenceSequenceOrStringStringRecordOrString::String(v) => v.into_js(ctx),
+        }
+    }
+}
+
+impl FromJs for web::WindowProxyOrMessagePort {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if let Ok(w) = rt::window_from_js(v, ctx) {
+            return Ok(web::WindowProxyOrMessagePort::WindowProxy(w));
+        }
+        if rt::is_instance(v, I::MessagePort, ctx) {
+            return Ok(web::WindowProxyOrMessagePort::MessagePort(
+                rt::object_from_js(v, I::MessagePort, ctx)?,
+            ));
+        }
+        Err(rt::type_error(
+            "value is not convertible to WindowProxyOrMessagePort",
+        ))
+    }
+}
+
+impl IntoJs for web::WindowProxyOrMessagePort {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+            web::WindowProxyOrMessagePort::WindowProxy(v) => v.into_js(ctx),
+            web::WindowProxyOrMessagePort::MessagePort(v) => v.into_js(ctx),
         }
     }
 }
@@ -8470,6 +8586,70 @@ pub mod media_query_list {
     };
 }
 
+pub mod message_channel {
+    use super::*;
+
+    fn get_port1(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "port1", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_object(this_js, I::MessageChannel, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MessageChannelImpl>::port1(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "port1", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_port2(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "port2", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_object(this_js, I::MessageChannel, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MessageChannelImpl>::port2(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "port2", &v, ctx);
+        Ok(v)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "MessageChannel")?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MessageChannelImpl>::constructor(cx));
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::MessageChannel, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::MessageChannel,
+        name: "MessageChannel",
+        parent: None,
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
+        constructor: Some(ctor),
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "port1",
+                getter: get_port1,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "port2",
+                getter: get_port2,
+                setter: None,
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod message_event {
     use super::*;
 
@@ -8549,6 +8729,175 @@ pub mod message_event {
             },
         ],
         ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod message_port {
+    use super::*;
+
+    fn get_onclose(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MessagePort, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "close")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onclose(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MessagePort, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "close", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onmessage(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MessagePort, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "message")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onmessage(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MessagePort, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "message", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onmessageerror(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MessagePort, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "messageerror")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onmessageerror(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MessagePort, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Object(this),
+                "messageerror",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn op_post_message(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::MessagePort, ctx)?;
+        if args.len() >= 2 && rt::arg(args, 1).is_object() {
+            rt::require_args(args, 2, "MessagePort.postMessage")?;
+            let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+            let a1 = rt::sequence_from_js(rt::arg(args, 1), ctx, |v, ctx| {
+                Ok(rt::value_from_js(v, ctx)?)
+            })?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::MessagePortImpl>::post_message(cx, this, a0, a1)
+            });
+            rt::ret(r, ctx)
+        } else if args.len() >= 1 && true {
+            rt::require_args(args, 1, "MessagePort.postMessage")?;
+            let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+            let a1 = <web::StructuredSerializeOptions as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::MessagePortImpl>::post_message_overload2(cx, this, a0, a1)
+            });
+            rt::ret(r, ctx)
+        } else {
+            Err(rt::type_error(
+                "MessagePort.postMessage: no overload matches the arguments",
+            ))
+        }
+    }
+
+    fn op_start(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::MessagePort, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MessagePortImpl>::start(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_close(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::MessagePort, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MessagePortImpl>::close(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::MessagePort,
+        name: "MessagePort",
+        parent: Some(I::EventTarget),
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "onclose",
+                getter: get_onclose,
+                setter: Some(set_onclose),
+            },
+            rt::AttrDef {
+                name: "onmessage",
+                getter: get_onmessage,
+                setter: Some(set_onmessage),
+            },
+            rt::AttrDef {
+                name: "onmessageerror",
+                getter: get_onmessageerror,
+                setter: Some(set_onmessageerror),
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "postMessage",
+                func: op_post_message,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "start",
+                func: op_start,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "close",
+                func: op_close,
+                length: 0,
+            },
+        ],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -15848,6 +16197,284 @@ pub mod url_search_params {
     };
 }
 
+pub mod web_socket {
+    use super::*;
+
+    fn get_url(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WebSocket, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WebSocketImpl>::url(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_ready_state(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WebSocket, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WebSocketImpl>::ready_state(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_buffered_amount(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WebSocket, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WebSocketImpl>::buffered_amount(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_onopen(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WebSocket, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "open")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onopen(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WebSocket, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "open", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onerror(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WebSocket, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "error")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onerror(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WebSocket, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "error", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onclose(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WebSocket, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "close")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onclose(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WebSocket, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "close", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_extensions(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WebSocket, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WebSocketImpl>::extensions(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_protocol(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WebSocket, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WebSocketImpl>::protocol(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_onmessage(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WebSocket, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "message")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onmessage(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WebSocket, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "message", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_binary_type(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WebSocket, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WebSocketImpl>::binary_type(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn set_binary_type(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::WebSocket, ctx)?;
+        let s = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let Some(a0) = web::BinaryType::parse(&s) else {
+            return Ok(JsValue::undefined());
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WebSocketImpl>::set_binary_type(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn op_close(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::WebSocket, ctx)?;
+        let a0 = if args.len() > 0 && !args[0].is_undefined() {
+            Some(rt::arg(args, 0).to_uint16(ctx)?)
+        } else {
+            None
+        };
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            Some(rt::string_from_js(rt::arg(args, 1), ctx)?)
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WebSocketImpl>::close(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_send(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::WebSocket, ctx)?;
+        rt::require_args(args, 1, "WebSocket.send")?;
+        let a0 = <web::BufferSourceOrBlobOrString as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::WebSocketImpl>::send(cx, this, a0));
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "WebSocket")?;
+        rt::require_args(args, 1, "WebSocket constructor")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            <web::StringOrStringSequence as FromJs>::from_js(rt::arg(args, 1), ctx)?
+        } else {
+            web::StringOrStringSequence::StringSequence(Vec::new())
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::WebSocketImpl>::constructor(cx, a0, a1)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::WebSocket, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::WebSocket,
+        name: "WebSocket",
+        parent: Some(I::EventTarget),
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[
+            rt::AttrDef {
+                name: "url",
+                getter: get_url,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "readyState",
+                getter: get_ready_state,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "bufferedAmount",
+                getter: get_buffered_amount,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "onopen",
+                getter: get_onopen,
+                setter: Some(set_onopen),
+            },
+            rt::AttrDef {
+                name: "onerror",
+                getter: get_onerror,
+                setter: Some(set_onerror),
+            },
+            rt::AttrDef {
+                name: "onclose",
+                getter: get_onclose,
+                setter: Some(set_onclose),
+            },
+            rt::AttrDef {
+                name: "extensions",
+                getter: get_extensions,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "protocol",
+                getter: get_protocol,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "onmessage",
+                getter: get_onmessage,
+                setter: Some(set_onmessage),
+            },
+            rt::AttrDef {
+                name: "binaryType",
+                getter: get_binary_type,
+                setter: Some(set_binary_type),
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "close",
+                func: op_close,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "send",
+                func: op_send,
+                length: 1,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[
+            ("CONNECTING", 0_f64),
+            ("OPEN", 1_f64),
+            ("CLOSING", 2_f64),
+            ("CLOSED", 3_f64),
+        ],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod window {
     use super::*;
 
@@ -22336,6 +22963,147 @@ pub mod attr {
     };
 }
 
+pub mod broadcast_channel {
+    use super::*;
+
+    fn get_name(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::BroadcastChannel, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::BroadcastChannelImpl>::name(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_onmessage(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::BroadcastChannel, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "message")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onmessage(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::BroadcastChannel, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "message", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onmessageerror(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::BroadcastChannel, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "messageerror")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onmessageerror(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::BroadcastChannel, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Object(this),
+                "messageerror",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn op_post_message(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::BroadcastChannel, ctx)?;
+        rt::require_args(args, 1, "BroadcastChannel.postMessage")?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::BroadcastChannelImpl>::post_message(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_close(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::BroadcastChannel, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::BroadcastChannelImpl>::close(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "BroadcastChannel")?;
+        rt::require_args(args, 1, "BroadcastChannel constructor")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::BroadcastChannelImpl>::constructor(cx, a0)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::BroadcastChannel, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::BroadcastChannel,
+        name: "BroadcastChannel",
+        parent: Some(I::EventTarget),
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[
+            rt::AttrDef {
+                name: "name",
+                getter: get_name,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "onmessage",
+                getter: get_onmessage,
+                setter: Some(set_onmessage),
+            },
+            rt::AttrDef {
+                name: "onmessageerror",
+                getter: get_onmessageerror,
+                setter: Some(set_onmessageerror),
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "postMessage",
+                func: op_post_message,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "close",
+                func: op_close,
+                length: 0,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod css_grouping_rule {
     use super::*;
 
@@ -22888,6 +23656,76 @@ pub mod character_data {
                 length: 0,
             },
         ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod close_event {
+    use super::*;
+
+    fn get_was_clean(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CloseEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::CloseEventImpl>::was_clean(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_code(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CloseEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::CloseEventImpl>::code(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_reason(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CloseEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::CloseEventImpl>::reason(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "CloseEvent")?;
+        rt::require_args(args, 1, "CloseEvent constructor")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::CloseEventInit as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CloseEventImpl>::constructor(cx, a0, a1)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::CloseEvent, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::CloseEvent,
+        name: "CloseEvent",
+        parent: Some(I::Event),
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[
+            rt::AttrDef {
+                name: "wasClean",
+                getter: get_was_clean,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "code",
+                getter: get_code,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "reason",
+                getter: get_reason,
+                setter: None,
+            },
+        ],
+        ops: &[],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -53553,7 +54391,9 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &location::DEF,
     &media_list::DEF,
     &media_query_list::DEF,
+    &message_channel::DEF,
     &message_event::DEF,
+    &message_port::DEF,
     &mutation_observer::DEF,
     &mutation_record::DEF,
     &named_node_map::DEF,
@@ -53600,6 +54440,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &ui_event::DEF,
     &url::DEF,
     &url_search_params::DEF,
+    &web_socket::DEF,
     &window::DEF,
     &worker::DEF,
     &worker_global_scope::DEF,
@@ -53616,10 +54457,12 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &x_path_result::DEF,
     &abort_signal::DEF,
     &attr::DEF,
+    &broadcast_channel::DEF,
     &css_grouping_rule::DEF,
     &css_style_rule::DEF,
     &css_style_sheet::DEF,
     &character_data::DEF,
+    &close_event::DEF,
     &comment::DEF,
     &custom_event::DEF,
     &dom_rect::DEF,

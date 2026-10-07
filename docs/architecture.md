@@ -99,7 +99,13 @@ dedicated worker is a realm of the same kind, with a
 `[Exposed]` set, so a worker sees neither `window` nor `document`; it
 shares its owner's object-URL store and network client, and the engine
 schedules it in the same turns (a worker that spins without yielding
-blocks its page, as a long script does). Task sources with fixed priority,
+blocks its page, as a long script does). `MessageChannel` ports and
+`BroadcastChannel` work within one realm; ports do not transfer across
+realms yet. WebSockets are opened by `catpaw-net` over the same
+connector as HTTP (proxy, TLS, address policy, cookies) and driven by a
+task on the network runtime; the engine host relays frames to the page
+as events, and the event loop, with nothing else to do, listens to open
+sockets for a second before calling the page idle. Task sources with fixed priority,
 microtask checkpoints after every task and every re-entry from native code,
 own timer heap, rendering opportunities only when something animates or
 observes. A shared `Clock` offers real time or deterministic virtual time.

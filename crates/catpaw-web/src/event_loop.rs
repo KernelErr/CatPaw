@@ -283,11 +283,18 @@ pub struct LoopReport {
     pub inflight_requests: usize,
 }
 
+/// How long the loop listens to open WebSockets with nothing else to do
+/// before the page counts as idle.
+const SOCKET_GRACE: Duration = Duration::from_secs(1);
+
 /// Runs the event loop until the page is idle or a limit is reached.
 pub fn run(cx: &mut Cx<'_>, limits: &LoopLimits) -> LoopReport {
     let started = Instant::now();
     let mut steps = 0u64;
     let mut advanced = 0.0f64;
+    // Real time spent listening to sockets since the last step.
+    let mut socket_silence = Duration::ZERO;
+    let mut steps_at_silence = 0u64;
     // Whatever ran before the loop (a script evaluated by the embedder,
     // say) may have queued microtasks; they run before the loop can be
     // found idle.
@@ -373,6 +380,34 @@ pub fn run(cx: &mut Cx<'_>, limits: &LoopLimits) -> LoopReport {
             if net::deliver(cx, Some(wait)) == 0 && cx.page.clock.is_virtual() {
                 let waited = waiting_since.elapsed().as_secs_f64() * 1000.0;
                 cx.page.clock.advance_to(now + waited.max(0.001));
+            }
+            continue;
+        }
+
+        // An open WebSocket may speak at any time, but nothing says when:
+        // the loop listens a while after the last step, then counts the
+        // page as idle.
+        if steps != steps_at_silence {
+            steps_at_silence = steps;
+            socket_silence = Duration::ZERO;
+        }
+        if net::open_sockets(cx.page) > 0 && socket_silence < SOCKET_GRACE {
+            let mut wait = Duration::from_millis(50).min(remaining);
+            if let Some(t) = next {
+                wait = wait.min(Duration::from_secs_f64(((t - now) / 1000.0).max(0.0)));
+            }
+            let waiting_since = Instant::now();
+            let delivered = net::deliver(cx, Some(wait));
+            let waited = waiting_since.elapsed();
+            if delivered > 0 {
+                steps += 1;
+            } else {
+                socket_silence += waited;
+                if cx.page.clock.is_virtual() {
+                    cx.page
+                        .clock
+                        .advance_to(now + (waited.as_secs_f64() * 1000.0).max(0.001));
+                }
             }
             continue;
         }

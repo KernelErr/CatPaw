@@ -69,6 +69,30 @@ members = ["view", "detail", "which"]
 constructor = true
 members = ["relatedTarget"]
 
+# ------------------------------------------------------------- websockets
+
+[interfaces.WebSocket]
+constructor = true
+members = ["url", "readyState", "bufferedAmount", "extensions", "protocol", "close", "binaryType", "send"]
+
+[interfaces.CloseEvent]
+constructor = true
+members = ["wasClean", "code", "reason"]
+
+# --------------------------------------------------------------- channels
+
+[interfaces.MessageChannel]
+constructor = true
+members = ["port1", "port2"]
+same_object = ["port1", "port2"]
+
+[interfaces.MessagePort]
+members = ["postMessage", "start", "close"]
+
+[interfaces.BroadcastChannel]
+constructor = true
+members = ["name", "postMessage", "close"]
+
 # ---------------------------------------------------------------- workers
 
 [interfaces.Worker]

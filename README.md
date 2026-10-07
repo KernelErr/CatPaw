@@ -36,7 +36,12 @@ isolated contexts.
 > realms of their own on the page's thread, in turns with the page and its
 > frames. With frames and workers in place, the Cloudflare Turnstile widget
 > loads its challenge frame and completes against the test site key, and the
-> page's callback receives the token. Network: response bodies are capped on the wire and
+> page's callback receives the token. Channels and sockets: `MessageChannel`,
+> `MessagePort` and `BroadcastChannel` within a page; `WebSocket` over the
+> same transport as HTTP (proxy, TLS, cookies and the private-network policy
+> apply), text and binary both ways, close codes and reasons; a page whose
+> only pending work is an open socket counts as settled after a second of
+> silence. Network: response bodies are capped on the wire and
 > after decoding (`--max-response-mb`), loopback and private addresses are
 > refused unless `--allow-private-network` says otherwise, HTTP `CONNECT`
 > and SOCKS5 proxies (`--proxy`), cookie files kept between runs

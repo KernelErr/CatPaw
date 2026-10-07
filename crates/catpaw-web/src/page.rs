@@ -279,6 +279,8 @@ pub struct PageState {
     pub frames: crate::frames::FrameState,
     /// The page's dedicated workers, or its role as one.
     pub workers: crate::workers::WorkerState,
+    pub(crate) channels: crate::channels::Channels,
+    pub(crate) sockets: crate::websocket::Sockets,
     pub(crate) attrs: crate::attributes::AttrObjects,
     pub(crate) timeline: crate::performance::Timeline,
     pub(crate) traversers: crate::traversal::Traversers,
@@ -365,6 +367,8 @@ impl PageState {
             input: Default::default(),
             frames: Default::default(),
             workers: Default::default(),
+            channels: Default::default(),
+            sockets: Default::default(),
             attrs: Default::default(),
             timeline: Default::default(),
             traversers: Default::default(),

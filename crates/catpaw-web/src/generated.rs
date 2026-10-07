@@ -57,7 +57,9 @@ pub enum InterfaceId {
     Location,
     MediaList,
     MediaQueryList,
+    MessageChannel,
     MessageEvent,
+    MessagePort,
     MutationObserver,
     MutationRecord,
     NamedNodeMap,
@@ -104,6 +106,7 @@ pub enum InterfaceId {
     UIEvent,
     URL,
     URLSearchParams,
+    WebSocket,
     Window,
     Worker,
     WorkerGlobalScope,
@@ -120,10 +123,12 @@ pub enum InterfaceId {
     XPathResult,
     AbortSignal,
     Attr,
+    BroadcastChannel,
     CSSGroupingRule,
     CSSStyleRule,
     CSSStyleSheet,
     CharacterData,
+    CloseEvent,
     Comment,
     CustomEvent,
     DOMRect,
@@ -255,8 +260,8 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 230;
-    pub const ALL: [InterfaceId; 230] = [
+    pub const COUNT: usize = 235;
+    pub const ALL: [InterfaceId; 235] = [
         InterfaceId::AbortController,
         InterfaceId::AbstractRange,
         InterfaceId::Blob,
@@ -292,7 +297,9 @@ impl InterfaceId {
         InterfaceId::Location,
         InterfaceId::MediaList,
         InterfaceId::MediaQueryList,
+        InterfaceId::MessageChannel,
         InterfaceId::MessageEvent,
+        InterfaceId::MessagePort,
         InterfaceId::MutationObserver,
         InterfaceId::MutationRecord,
         InterfaceId::NamedNodeMap,
@@ -339,6 +346,7 @@ impl InterfaceId {
         InterfaceId::UIEvent,
         InterfaceId::URL,
         InterfaceId::URLSearchParams,
+        InterfaceId::WebSocket,
         InterfaceId::Window,
         InterfaceId::Worker,
         InterfaceId::WorkerGlobalScope,
@@ -355,10 +363,12 @@ impl InterfaceId {
         InterfaceId::XPathResult,
         InterfaceId::AbortSignal,
         InterfaceId::Attr,
+        InterfaceId::BroadcastChannel,
         InterfaceId::CSSGroupingRule,
         InterfaceId::CSSStyleRule,
         InterfaceId::CSSStyleSheet,
         InterfaceId::CharacterData,
+        InterfaceId::CloseEvent,
         InterfaceId::Comment,
         InterfaceId::CustomEvent,
         InterfaceId::DOMRect,
@@ -526,7 +536,9 @@ impl InterfaceId {
             InterfaceId::Location => "Location",
             InterfaceId::MediaList => "MediaList",
             InterfaceId::MediaQueryList => "MediaQueryList",
+            InterfaceId::MessageChannel => "MessageChannel",
             InterfaceId::MessageEvent => "MessageEvent",
+            InterfaceId::MessagePort => "MessagePort",
             InterfaceId::MutationObserver => "MutationObserver",
             InterfaceId::MutationRecord => "MutationRecord",
             InterfaceId::NamedNodeMap => "NamedNodeMap",
@@ -573,6 +585,7 @@ impl InterfaceId {
             InterfaceId::UIEvent => "UIEvent",
             InterfaceId::URL => "URL",
             InterfaceId::URLSearchParams => "URLSearchParams",
+            InterfaceId::WebSocket => "WebSocket",
             InterfaceId::Window => "Window",
             InterfaceId::Worker => "Worker",
             InterfaceId::WorkerGlobalScope => "WorkerGlobalScope",
@@ -589,10 +602,12 @@ impl InterfaceId {
             InterfaceId::XPathResult => "XPathResult",
             InterfaceId::AbortSignal => "AbortSignal",
             InterfaceId::Attr => "Attr",
+            InterfaceId::BroadcastChannel => "BroadcastChannel",
             InterfaceId::CSSGroupingRule => "CSSGroupingRule",
             InterfaceId::CSSStyleRule => "CSSStyleRule",
             InterfaceId::CSSStyleSheet => "CSSStyleSheet",
             InterfaceId::CharacterData => "CharacterData",
+            InterfaceId::CloseEvent => "CloseEvent",
             InterfaceId::Comment => "Comment",
             InterfaceId::CustomEvent => "CustomEvent",
             InterfaceId::DOMRect => "DOMRect",
@@ -761,7 +776,9 @@ impl InterfaceId {
             "Location" => InterfaceId::Location,
             "MediaList" => InterfaceId::MediaList,
             "MediaQueryList" => InterfaceId::MediaQueryList,
+            "MessageChannel" => InterfaceId::MessageChannel,
             "MessageEvent" => InterfaceId::MessageEvent,
+            "MessagePort" => InterfaceId::MessagePort,
             "MutationObserver" => InterfaceId::MutationObserver,
             "MutationRecord" => InterfaceId::MutationRecord,
             "NamedNodeMap" => InterfaceId::NamedNodeMap,
@@ -808,6 +825,7 @@ impl InterfaceId {
             "UIEvent" => InterfaceId::UIEvent,
             "URL" => InterfaceId::URL,
             "URLSearchParams" => InterfaceId::URLSearchParams,
+            "WebSocket" => InterfaceId::WebSocket,
             "Window" => InterfaceId::Window,
             "Worker" => InterfaceId::Worker,
             "WorkerGlobalScope" => InterfaceId::WorkerGlobalScope,
@@ -824,10 +842,12 @@ impl InterfaceId {
             "XPathResult" => InterfaceId::XPathResult,
             "AbortSignal" => InterfaceId::AbortSignal,
             "Attr" => InterfaceId::Attr,
+            "BroadcastChannel" => InterfaceId::BroadcastChannel,
             "CSSGroupingRule" => InterfaceId::CSSGroupingRule,
             "CSSStyleRule" => InterfaceId::CSSStyleRule,
             "CSSStyleSheet" => InterfaceId::CSSStyleSheet,
             "CharacterData" => InterfaceId::CharacterData,
+            "CloseEvent" => InterfaceId::CloseEvent,
             "Comment" => InterfaceId::Comment,
             "CustomEvent" => InterfaceId::CustomEvent,
             "DOMRect" => InterfaceId::DOMRect,
@@ -997,7 +1017,9 @@ impl InterfaceId {
             InterfaceId::Location => None,
             InterfaceId::MediaList => None,
             InterfaceId::MediaQueryList => Some(InterfaceId::EventTarget),
+            InterfaceId::MessageChannel => None,
             InterfaceId::MessageEvent => Some(InterfaceId::Event),
+            InterfaceId::MessagePort => Some(InterfaceId::EventTarget),
             InterfaceId::MutationObserver => None,
             InterfaceId::MutationRecord => None,
             InterfaceId::NamedNodeMap => None,
@@ -1044,6 +1066,7 @@ impl InterfaceId {
             InterfaceId::UIEvent => Some(InterfaceId::Event),
             InterfaceId::URL => None,
             InterfaceId::URLSearchParams => None,
+            InterfaceId::WebSocket => Some(InterfaceId::EventTarget),
             InterfaceId::Window => Some(InterfaceId::EventTarget),
             InterfaceId::Worker => Some(InterfaceId::EventTarget),
             InterfaceId::WorkerGlobalScope => Some(InterfaceId::EventTarget),
@@ -1060,10 +1083,12 @@ impl InterfaceId {
             InterfaceId::XPathResult => None,
             InterfaceId::AbortSignal => Some(InterfaceId::EventTarget),
             InterfaceId::Attr => Some(InterfaceId::Node),
+            InterfaceId::BroadcastChannel => Some(InterfaceId::EventTarget),
             InterfaceId::CSSGroupingRule => Some(InterfaceId::CSSRule),
             InterfaceId::CSSStyleRule => Some(InterfaceId::CSSGroupingRule),
             InterfaceId::CSSStyleSheet => Some(InterfaceId::StyleSheet),
             InterfaceId::CharacterData => Some(InterfaceId::Node),
+            InterfaceId::CloseEvent => Some(InterfaceId::Event),
             InterfaceId::Comment => Some(InterfaceId::CharacterData),
             InterfaceId::CustomEvent => Some(InterfaceId::Event),
             InterfaceId::DOMRect => Some(InterfaceId::DOMRectReadOnly),
@@ -1330,6 +1355,29 @@ impl InterfaceId {
             "tspan" => InterfaceId::SVGTSpanElement,
             "use" => InterfaceId::SVGUseElement,
             "view" => InterfaceId::SVGViewElement,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum BinaryType {
+    Blob,
+    Arraybuffer,
+}
+
+impl BinaryType {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            BinaryType::Blob => "blob",
+            BinaryType::Arraybuffer => "arraybuffer",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "blob" => BinaryType::Blob,
+            "arraybuffer" => BinaryType::Arraybuffer,
             _ => return None,
         })
     }
@@ -2119,6 +2167,16 @@ pub struct CSSStyleSheetInit {
 }
 
 #[derive(Clone, Debug)]
+pub struct CloseEventInit {
+    pub bubbles: bool,
+    pub cancelable: bool,
+    pub composed: bool,
+    pub was_clean: bool,
+    pub code: u16,
+    pub reason: String,
+}
+
+#[derive(Clone, Debug)]
 pub struct CustomEventInit {
     pub bubbles: bool,
     pub cancelable: bool,
@@ -2281,7 +2339,8 @@ pub struct MessageEventInit {
     pub data: Value,
     pub origin: String,
     pub last_event_id: String,
-    pub source: Option<WindowRef>,
+    pub source: Option<WindowProxyOrMessagePort>,
+    pub ports: Vec<ObjectId>,
 }
 
 #[derive(Clone, Debug)]
@@ -2734,6 +2793,12 @@ pub enum StringOrPerformanceMeasureOptions {
 }
 
 #[derive(Clone, Debug)]
+pub enum StringOrStringSequence {
+    String(String),
+    StringSequence(Vec<String>),
+}
+
+#[derive(Clone, Debug)]
 pub enum StringSequenceSequenceOrStringStringRecord {
     StringSequenceSequence(Vec<Vec<String>>),
     StringStringRecord(Vec<(String, String)>),
@@ -2744,6 +2809,12 @@ pub enum StringSequenceSequenceOrStringStringRecordOrString {
     StringSequenceSequence(Vec<Vec<String>>),
     StringStringRecord(Vec<(String, String)>),
     String(String),
+}
+
+#[derive(Clone, Debug)]
+pub enum WindowProxyOrMessagePort {
+    WindowProxy(WindowRef),
+    MessagePort(ObjectId),
 }
 
 pub trait AnimationFrameProviderImpl {
@@ -3487,16 +3558,39 @@ pub trait MediaQueryListImpl {
     -> Fallible<()>;
 }
 
+pub trait MessageChannelImpl {
+    fn port1(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn port2(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn constructor(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
+}
+
 pub trait MessageEventImpl {
     fn data(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
     fn origin(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
     fn last_event_id(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
-    fn source(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<WindowRef>>;
+    fn source(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<WindowProxyOrMessagePort>>;
     fn constructor(
         cx: &mut Cx<'_>,
         type_: String,
         event_init_dict: MessageEventInit,
     ) -> Fallible<ObjectId>;
+}
+
+pub trait MessagePortImpl {
+    fn post_message(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        message: Value,
+        transfer: Vec<Value>,
+    ) -> Fallible<()>;
+    fn post_message_overload2(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        message: Value,
+        options: StructuredSerializeOptions,
+    ) -> Fallible<()>;
+    fn start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn close(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
 }
 
 pub trait MutationObserverImpl {
@@ -4198,6 +4292,28 @@ pub trait URLSearchParamsImpl {
     fn stringify(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
 }
 
+pub trait WebSocketImpl {
+    fn url(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn ready_state(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u16>;
+    fn buffered_amount(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn extensions(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn protocol(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn close(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        code: Option<u16>,
+        reason: Option<String>,
+    ) -> Fallible<()>;
+    fn binary_type(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<BinaryType>;
+    fn set_binary_type(cx: &mut Cx<'_>, this: ObjectId, value: BinaryType) -> Fallible<()>;
+    fn send(cx: &mut Cx<'_>, this: ObjectId, data: BufferSourceOrBlobOrString) -> Fallible<()>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        url: String,
+        protocols: StringOrStringSequence,
+    ) -> Fallible<ObjectId>;
+}
+
 pub trait WindowImpl {
     fn match_media(cx: &mut Cx<'_>, query: String) -> Fallible<ObjectId>;
     fn screen(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
@@ -4385,6 +4501,13 @@ pub trait AttrImpl {
     fn parent_element(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
 }
 
+pub trait BroadcastChannelImpl {
+    fn name(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn post_message(cx: &mut Cx<'_>, this: ObjectId, message: Value) -> Fallible<()>;
+    fn close(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn constructor(cx: &mut Cx<'_>, name: String) -> Fallible<ObjectId>;
+}
+
 pub trait CSSStyleRuleImpl {
     fn selector_text(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
     fn set_selector_text(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
@@ -4424,6 +4547,17 @@ pub trait CharacterDataImpl {
         count: u32,
         data: String,
     ) -> Fallible<()>;
+}
+
+pub trait CloseEventImpl {
+    fn was_clean(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn code(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u16>;
+    fn reason(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        type_: String,
+        event_init_dict: CloseEventInit,
+    ) -> Fallible<ObjectId>;
 }
 
 pub trait CommentImpl {

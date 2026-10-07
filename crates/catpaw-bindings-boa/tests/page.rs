@@ -111,7 +111,7 @@ fn the_global_object_is_the_window() {
     assert_eq!(
         eval(
             &mut page,
-            "typeof WebSocket + ' ' + ('serviceWorker' in navigator)"
+            "typeof RTCPeerConnection + ' ' + ('serviceWorker' in navigator)"
         ),
         "undefined false"
     );

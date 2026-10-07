@@ -5,7 +5,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use catpaw_dom::{FragmentKind, NodeId, NodeKind};
-use catpaw_js::{Callback, EventTargetRef, Exception, Fallible, ObjectId, Value, WindowRef};
+use catpaw_js::{Callback, EventTargetRef, Exception, Fallible, ObjectId, Value};
 
 use crate::generated::{self as web, InterfaceId};
 use crate::page::{Cx, PageState};
@@ -54,12 +54,18 @@ pub enum EventData {
     FormData {
         form_data: ObjectId,
     },
+    /// `close` on a WebSocket.
+    Close {
+        was_clean: bool,
+        code: u16,
+        reason: String,
+    },
     /// `message`: see `frames`.
     Message {
         data: Value,
         origin: String,
         last_event_id: String,
-        source: Option<WindowRef>,
+        source: Option<web::WindowProxyOrMessagePort>,
     },
 }
 
@@ -297,6 +303,7 @@ pub fn set_event_handler(
     handler: Option<Callback>,
 ) -> Fallible<()> {
     let owner = handler_owner(cx.page, target, type_);
+    crate::channels::handler_set(cx.page, target, type_);
     let mut listeners = cx.page.listeners.borrow_mut();
     let list = listeners.entry(owner).or_default();
     for l in list.iter_mut() {

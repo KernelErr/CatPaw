@@ -335,7 +335,7 @@ pub(crate) fn dispatch_message(
         data,
         origin,
         last_event_id: String::new(),
-        source,
+        source: source.map(web::WindowProxyOrMessagePort::WindowProxy),
     };
     let event = cx.page.alloc(event);
     cx.pin(event);
@@ -645,7 +645,7 @@ impl web::HTMLIFrameElementImpl for Web {
 fn message<R>(
     cx: &Cx<'_>,
     this: ObjectId,
-    f: impl FnOnce(&Value, &str, &str, Option<WindowRef>) -> R,
+    f: impl FnOnce(&Value, &str, &str, Option<web::WindowProxyOrMessagePort>) -> R,
 ) -> Fallible<R> {
     cx.page.with::<Event, _>(this, |e| match &e.data {
         EventData::Message {
@@ -653,7 +653,7 @@ fn message<R>(
             origin,
             last_event_id,
             source,
-        } => Ok(f(data, origin, last_event_id, *source)),
+        } => Ok(f(data, origin, last_event_id, source.clone())),
         _ => Err(Exception::type_error("not a message event")),
     })?
 }
@@ -688,7 +688,7 @@ impl web::MessageEventImpl for Web {
         message(cx, this, |_, _, id, _| id.to_string())
     }
 
-    fn source(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<WindowRef>> {
+    fn source(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<web::WindowProxyOrMessagePort>> {
         message(cx, this, |_, _, _, source| source)
     }
 }

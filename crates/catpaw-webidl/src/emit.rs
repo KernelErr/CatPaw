@@ -1590,7 +1590,7 @@ rt::ret(r, ctx)
                     ),
                     Named::Window => w!(
                         out,
-                        "if rt::is_window(v, ctx) {{ return Ok({}(WindowRef)); }}",
+                        "if let Ok(w) = rt::window_from_js(v, ctx) {{ return Ok({}(w)); }}",
                         var(m)
                     ),
                     Named::EventTarget => w!(

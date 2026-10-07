@@ -91,6 +91,35 @@ pub type NetResult = Result<NetResponse, String>;
 pub type NetCallback = Box<dyn FnOnce(&mut Cx<'_>, NetResult)>;
 
 /// The embedder's network implementation.
+/// What a WebSocket connection reports.
+#[derive(Clone, Debug)]
+pub enum WsEvent {
+    /// The handshake succeeded.
+    Open {
+        protocol: String,
+        extensions: String,
+    },
+    Text(String),
+    Binary(Vec<u8>),
+    /// The connection is over. `clean` when a close handshake completed;
+    /// `code` 1006 when it did not.
+    Close {
+        code: u16,
+        reason: String,
+        clean: bool,
+    },
+    /// The connection could not be made, or broke.
+    Error(String),
+}
+
+/// What a page sends on a WebSocket.
+#[derive(Clone, Debug)]
+pub enum WsOutbound {
+    Text(String),
+    Binary(Vec<u8>),
+    Close { code: Option<u16>, reason: String },
+}
+
 pub trait NetHost {
     /// Performs a request and waits for it (parser-blocking scripts,
     /// synchronous XHR).
@@ -115,6 +144,20 @@ pub trait NetHost {
 
     /// Stores a cookie set through `document.cookie`.
     fn set_cookie(&self, url: &Url, cookie: &str);
+
+    /// Opens a WebSocket and returns a token for it; its events come from
+    /// [`NetHost::poll_sockets`]. A host without sockets returns `None`.
+    fn ws_connect(&self, _url: Url, _protocols: Vec<String>, _origin: String) -> Option<u64> {
+        None
+    }
+
+    fn ws_send(&self, _token: u64, _message: WsOutbound) {}
+
+    /// The socket events since the last call. [`NetHost::poll`] does the
+    /// waiting: a socket being opened counts as in flight.
+    fn poll_sockets(&self) -> Vec<(u64, WsEvent)> {
+        Vec::new()
+    }
 }
 
 /// The response a `data:` URL stands for
@@ -267,6 +310,13 @@ pub fn inflight(page: &PageState) -> usize {
         .borrow()
         .len()
         .saturating_sub(page.background_requests.get())
+        + page.sockets.connecting(page)
+}
+
+/// How many WebSockets are open: the page may hear from them, but
+/// nothing says when.
+pub fn open_sockets(page: &PageState) -> usize {
+    page.sockets.open(page)
 }
 
 /// How long, in real time, an awaited request could still complete before
@@ -305,6 +355,11 @@ pub fn deliver(cx: &mut Cx<'_>, wait: Option<Duration>) -> usize {
             cx.checkpoint();
             delivered += 1;
         }
+    }
+    for (token, event) in net.poll_sockets() {
+        crate::websocket::on_event(cx, token, event);
+        cx.checkpoint();
+        delivered += 1;
     }
     delivered
 }
