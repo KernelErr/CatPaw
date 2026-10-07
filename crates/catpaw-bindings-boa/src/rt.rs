@@ -1493,6 +1493,56 @@ fn trap_set(_this: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<Js
     Ok(JsValue::new(ok))
 }
 
+/// What a name on the window refers to, as script sees it: an element, a
+/// collection of several, or nothing.
+fn named_window_value(name: &str, ctx: &mut Context) -> JsResult<Option<JsValue>> {
+    match with_cx(ctx, |cx| catpaw_web::named_window_property(cx, name)) {
+        Some(value) => ret(Ok(value), ctx).map(Some),
+        None => Ok(None),
+    }
+}
+
+fn named_window_get(_this: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+    let target = arg(args, 0).as_object().ok_or_else(illegal_invocation)?;
+    let key = arg(args, 1);
+    if let Some(name) = trap_key(key)
+        && let Some(value) = named_window_value(&name, ctx)?
+    {
+        return Ok(value);
+    }
+    target.get(property_key(key, ctx)?, ctx)
+}
+
+fn named_window_has(_this: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+    let target = arg(args, 0).as_object().ok_or_else(illegal_invocation)?;
+    let key = arg(args, 1);
+    if let Some(name) = trap_key(key)
+        && named_window_value(&name, ctx)?.is_some()
+    {
+        return Ok(JsValue::new(true));
+    }
+    let has = target.has_property(property_key(key, ctx)?, ctx)?;
+    Ok(JsValue::new(has))
+}
+
+fn named_window_descriptor(
+    _this: &JsValue,
+    args: &[JsValue],
+    ctx: &mut Context,
+) -> JsResult<JsValue> {
+    let target = arg(args, 0).as_object().ok_or_else(illegal_invocation)?;
+    let key = arg(args, 1);
+    if let Some(name) = trap_key(key)
+        && let Some(value) = named_window_value(&name, ctx)?
+    {
+        return data_descriptor(value, false, false, ctx);
+    }
+    let key = property_key(key, ctx)?;
+    Ok(own_descriptor(&target, &key, ctx)?
+        .map(JsValue::from)
+        .unwrap_or_default())
+}
+
 fn trap_has(_this: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
     let t = trap(args, ctx)?;
     let key = arg(args, 1);
@@ -1998,6 +2048,18 @@ fn install_interface(
         hidden_descriptor(constructor.clone()),
     );
     if def.global {
+        // The named properties object sits between Window.prototype and
+        // EventTarget.prototype: the ids and names of the document's
+        // elements, reachable as globals (HTML, "named access on the
+        // Window object"), without shadowing anything the window has.
+        let target = JsObject::with_null_proto();
+        target.set_prototype(proto.prototype());
+        let named = JsProxy::builder(target)
+            .get(named_window_get)
+            .has(named_window_has)
+            .get_own_property_descriptor(named_window_descriptor)
+            .build(ctx)?;
+        proto.set_prototype(Some(named.into()));
         global.set_prototype(Some(proto.clone()));
     }
     rt.protos.borrow_mut()[def.id as usize] = Some(proto);

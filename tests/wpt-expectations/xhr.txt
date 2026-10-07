@@ -15,10 +15,6 @@ xhr/abort-during-navigation.window.html	-
 xhr/abort-during-navigation.window.html	XHR should not fire abort or error events when cancelled by navigation
 xhr/abort-during-upload.any.html	XMLHttpRequest: abort() while sending data
 xhr/abort-event-order.htm	XMLHttpRequest: The abort() method: abort and loadend events
-xhr/abort-upload-event-abort.any.html	-
-xhr/abort-upload-event-abort.any.html	XMLHttpRequest: The abort() method: Fire a progress event named abort on the XMLHttpRequestUpload object
-xhr/abort-upload-event-loadend.any.html	-
-xhr/abort-upload-event-loadend.any.html	XMLHttpRequest: The abort() method: Fire a progress event named loadend on the XMLHttpRequestUpload object
 xhr/access-control-and-redirects-async-same-origin.any.html	Request with credentials is redirected to a cross-origin response with Access-Control-Allow-Origin=* (with star)
 xhr/access-control-and-redirects-async-same-origin.any.html	Request with credentials is redirected to a cross-origin response with a specific Access-Control-Allow-Origin
 xhr/access-control-and-redirects-async-same-origin.any.html	Request with credentials is redirected to a cross-origin response with a specific Access-Control-Allow-Origin (no credentials)
@@ -121,14 +117,9 @@ xhr/event-error-order.sub.html	XMLHttpRequest: event - error (order of events)
 xhr/event-error.sub.any.html	-
 xhr/event-error.sub.any.html	error while reading body should report zeros for loaded and total
 xhr/event-error.sub.any.html	onerror should be called
-xhr/event-loadstart-upload.any.html	XMLHttpRequest: The send() method: Fire a progress event named loadstart on upload object (synchronous flag is unset)
 xhr/event-readystatechange-loaded.any.html	XMLHttpRequest: the LOADING state change may be emitted multiple times
 xhr/event-timeout-order.any.html	XMLHttpRequest: event - timeout (order of events)
 xhr/event-timeout.any.html	XMLHttpRequest: timeout event
-xhr/event-upload-progress-crossorigin.any.html	Upload events registered on time (http://www1.web-platform.test:8000/xhr/resources/corsenabled.py)
-xhr/event-upload-progress-crossorigin.any.html	Upload events registered on time (resources/redirect.py?code=307&location=http://www1.web-platform.test:8000/xhr/resources/corsenabled.py)
-xhr/event-upload-progress.any.html	Upload events registered on time (http://www1.web-platform.test:8000/xhr/resources/corsenabled.py)
-xhr/event-upload-progress.any.html	Upload events registered on time (resources/redirect.py?code=307&location=http://www1.web-platform.test:8000/xhr/resources/corsenabled.py)
 xhr/firing-events-http-content-length.html	ProgressEvent: firing events for HTTP with Content-Length
 xhr/firing-events-http-no-content-length.html	ProgressEvent: firing events for HTTP with no Content-Length
 xhr/formdata.html	Newly created FormData contains entries added to "formData" IDL attribute of FormDataEvent.
@@ -557,12 +548,6 @@ xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (310, GET, con
 xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (350, GET, content.py)
 xhr/send-redirect.htm	XMLHttpRequest: send() - Redirects (basics) (399, GET, content.py)
 xhr/send-response-event-order.htm	XMLHttpRequest: The send() method: event order when synchronous flag is unset
-xhr/send-response-upload-event-loadend.htm	-
-xhr/send-response-upload-event-loadend.htm	XMLHttpRequest: The send() method: Fire a progress event named loadend on the XMLHttpRequestUpload (synchronous flag is unset)
-xhr/send-response-upload-event-loadstart.htm	-
-xhr/send-response-upload-event-loadstart.htm	XMLHttpRequest: The send() method: Fire a progress event named loadstart on the XMLHttpRequestUpload (synchronous flag is unset)
-xhr/send-response-upload-event-progress.htm	-
-xhr/send-response-upload-event-progress.htm	XMLHttpRequest: The send() method: Fire a progress event named progress on the XMLHttpRequestUpload (synchronous flag is unset)
 xhr/send-sync-blocks-async.htm	XMLHttpRequest: sync requests should block events on pending async requests
 xhr/send-sync-no-response-event-load.htm	XMLHttpRequest: The send() method: Fire an event named load (no response entity body and the synchronous flag is set)
 xhr/send-sync-no-response-event-loadend.htm	XMLHttpRequest: The send() method: Fire an event named loadend (no response entity body and the synchronous flag is set)

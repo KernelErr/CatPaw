@@ -43,6 +43,9 @@ pub struct XhrObject {
     /// completion can tell it is no longer wanted.
     generation: u32,
     pinned: bool,
+    /// The size of the body being sent; the upload gets progress events
+    /// when there is one.
+    upload_total: usize,
 }
 platform_object!(XhrObject, XMLHttpRequest);
 
@@ -91,11 +94,35 @@ fn fail(cx: &mut Cx<'_>, this: ObjectId, event: &str) {
     });
     release(cx, this);
     fire(cx, this, "readystatechange");
+    if let Some((upload, _)) = upload_in_progress(cx, this) {
+        fire_progress_on(cx, upload, event, 0, 0);
+        fire_progress_on(cx, upload, "loadend", 0, 0);
+    }
     fire_progress(cx, this, event, 0);
     fire_progress(cx, this, "loadend", 0);
 }
 
+/// The upload object and the body size, while a body is being sent and
+/// script has the upload object to listen on.
+fn upload_in_progress(cx: &Cx<'_>, this: ObjectId) -> Option<(ObjectId, usize)> {
+    let (upload, total) = xhr(cx, this, |x| (x.upload, x.upload_total)).ok()?;
+    let upload = upload.filter(|&id| cx.page.object_exists(id))?;
+    (total > 0).then_some((upload, total))
+}
+
+fn fire_progress_on(cx: &mut Cx<'_>, target: ObjectId, type_: &str, loaded: usize, total: usize) {
+    let event = events::progress_event(cx, type_, loaded as f64, Some(total as f64));
+    events::dispatch(cx, EventTargetRef::Object(target), event);
+}
+
 fn succeed(cx: &mut Cx<'_>, this: ObjectId, response: NetResponse) {
+    // The body went out in full before the response came back.
+    if let Some((upload, total)) = upload_in_progress(cx, this) {
+        fire_progress_on(cx, upload, "progress", total, total);
+        fire_progress_on(cx, upload, "load", total, total);
+        fire_progress_on(cx, upload, "loadend", total, total);
+        let _ = xhr(cx, this, |x| x.upload_total = 0);
+    }
     let loaded = response.body.len();
     let _ = xhr(cx, this, |x| {
         x.response = Some(response);
@@ -397,13 +424,41 @@ impl web::XMLHttpRequestImpl for Web {
             };
         }
 
+        // Upload events go to listeners registered before send(), as the
+        // specification's upload listener flag has it.
+        let upload_total = match xhr(cx, this, |x| x.upload)? {
+            Some(upload) if cx.page.object_exists(upload) => {
+                let target = EventTargetRef::Object(upload);
+                let listening = [
+                    "loadstart",
+                    "progress",
+                    "load",
+                    "loadend",
+                    "abort",
+                    "error",
+                    "timeout",
+                ]
+                .iter()
+                .any(|t| events::has_listeners(cx.page, target, t));
+                if listening {
+                    out.body.as_ref().map_or(0, Vec::len)
+                } else {
+                    0
+                }
+            }
+            _ => 0,
+        };
         let generation = xhr(cx, this, |x| {
             x.sending = true;
             x.pinned = true;
+            x.upload_total = upload_total;
             x.generation
         })?;
         cx.pin(this);
         fire_progress(cx, this, "loadstart", 0);
+        if let Some((upload, total)) = upload_in_progress(cx, this) {
+            fire_progress_on(cx, upload, "loadstart", 0, total);
+        }
         // A loadstart listener may have aborted or reopened the request.
         let still_wanted = xhr(cx, this, |x| x.generation == generation && x.sending)?;
         if !still_wanted {
@@ -596,6 +651,7 @@ impl web::XMLHttpRequestImpl for Web {
             response: None,
             generation: 0,
             pinned: false,
+            upload_total: 0,
         }))
     }
 }

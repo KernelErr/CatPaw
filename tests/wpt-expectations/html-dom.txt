@@ -62,8 +62,6 @@ html/dom/aria-element-reflection-labelledby.html	Setting ariaLabelledByElements 
 html/dom/aria-element-reflection-labelledby.html	Setting ariaLabelledByElements on an element before inserting it in the document should cause the label to be updated once the element is inserted
 html/dom/aria-element-reflection-labelledby.html	Setting ariaLabelledByElements should determine the computed label for the labelled element
 html/dom/aria-element-reflection.html	Attaching element reference before it's inserted into the DOM.
-html/dom/aria-element-reflection.html	Caching invariant different attributes.
-html/dom/aria-element-reflection.html	Caching invariant different elements.
 html/dom/aria-element-reflection.html	Changing the ID of an element doesn't lose the reference.
 html/dom/aria-element-reflection.html	Cross-document references and moves.
 html/dom/aria-element-reflection.html	Deleting a reflected element should return null for the IDL attribute and the content attribute will be empty.
@@ -74,7 +72,6 @@ html/dom/aria-element-reflection.html	Moving explicitly set elements around with
 html/dom/aria-element-reflection.html	Passing values of the wrong type should throw a TypeError
 html/dom/aria-element-reflection.html	Reparenting an element into a descendant shadow scope hides the element reference.
 html/dom/aria-element-reflection.html	Reparenting referenced element cannot cause retargeting of reference.
-html/dom/aria-element-reflection.html	Reparenting.
 html/dom/aria-element-reflection.html	Setting an element reference that crosses into a shadow tree is disallowed, but setting one that is in a shadow inclusive ancestor is allowed.
 html/dom/aria-element-reflection.html	Setting the IDL attribute to an element which is not the first element in DOM order with its ID causes the content attribute to be an empty string
 html/dom/aria-element-reflection.html	aria-activedescendant element reflection
@@ -85,7 +82,6 @@ html/dom/aria-element-reflection.html	aria-errormessage
 html/dom/aria-element-reflection.html	aria-flowto.
 html/dom/aria-element-reflection.html	aria-labelledby.
 html/dom/aria-element-reflection.html	aria-owns.
-html/dom/aria-element-reflection.html	ariaErrorMessageElement is not defined
 html/dom/aria-element-reflection.html	shadow DOM behaviour for FrozenArray element reflection.
 html/dom/directionality/bdi-element-invalid-dir.html	-
 html/dom/documents/dom-tree-accessors/Document.currentScript.html	-
@@ -465,6 +461,7 @@ html/dom/elements/global-attributes/translate-inherit-no-parent-element.html	Sha
 html/dom/elements/global-attributes/translate-non-html-translation-mode.html	Non-HTML elements default to translate-enabled
 html/dom/elements/global-attributes/translate-non-html-translation-mode.html	Non-HTML elements inherit their parent's no-translation state
 html/dom/elements/global-attributes/translate-non-html-translation-mode.html	Non-HTML elements inherit their parent's translation-enabled state
+html/dom/elements/images/bypass-cache-revalidation.html	-
 html/dom/elements/images/bypass-cache-revalidation.html	Images can bypass no-cache
 html/dom/elements/name-content-attribute-and-property.html	-
 html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-001a.html	-
@@ -497,11 +494,8 @@ html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-ch
 html/dom/elements/the-innertext-and-outertext-properties/dynamic-getter.html	display: none applied to child element ("<div id='target'>abc<div id='child'>def")
 html/dom/elements/the-innertext-and-outertext-properties/dynamic-getter.html	text-transform applied to child element ("<div id='target'><div id='child'>abc")
 html/dom/elements/the-innertext-and-outertext-properties/dynamic-getter.html	text-transform applied to parent element ("<div id='parent'><div id='target'>abc")
-html/dom/elements/the-innertext-and-outertext-properties/getter-first-letter-marker-multicol.html	Test innerText/outerText for a combination of a list item with ::first-letter in multicol
 html/dom/elements/the-innertext-and-outertext-properties/getter.html	-
 html/dom/elements/the-innertext-and-outertext-properties/innertext-domnoderemoved-crash.html	-
-html/dom/elements/the-innertext-and-outertext-properties/innertext-whitespace-pre-line.html	innerText has collapsed whitespace but preserved newlines with pre-line
-html/dom/elements/the-innertext-and-outertext-properties/innertext-whitespace-pre-line.html	innerText should be the same for the pre-line and pre examples
 html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	CR after <br> should be invisible if it's collapsible
 html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	CR after <div> should be invisible if it's collapsible
 html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	CR after <hr> should be invisible if it's collapsible
@@ -638,41 +632,24 @@ html/dom/render-blocking/blocking-idl-attr.html	Supported tokens of the 'blockin
 html/dom/render-blocking/blocking-idl-attr.html	Supported tokens of the 'blocking' IDL attribute of the script element
 html/dom/render-blocking/blocking-idl-attr.html	Supported tokens of the 'blocking' IDL attribute of the style element
 html/dom/render-blocking/element-render-blocking-002.html	blocking defers until needed element is parsed
-html/dom/render-blocking/element-render-blocking-004.html	-
-html/dom/render-blocking/element-render-blocking-005.html	-
-html/dom/render-blocking/element-render-blocking-006.html	-
+html/dom/render-blocking/element-render-blocking-004.html	removing link in the head makes it no longer blocking
+html/dom/render-blocking/element-render-blocking-005.html	removing 'blocking' makes it no longer blocking
 html/dom/render-blocking/element-render-blocking-007.html	link with non-matching media has no effect
-html/dom/render-blocking/element-render-blocking-008.html	-
-html/dom/render-blocking/element-render-blocking-009.html	-
-html/dom/render-blocking/element-render-blocking-010.html	-
-html/dom/render-blocking/element-render-blocking-011.html	-
-html/dom/render-blocking/element-render-blocking-012.html	-
-html/dom/render-blocking/element-render-blocking-013.html	-
+html/dom/render-blocking/element-render-blocking-009.html	changing media to non-matching makes it non blocking
+html/dom/render-blocking/element-render-blocking-010.html	changing rel to non-expect makes it non blocking
+html/dom/render-blocking/element-render-blocking-013.html	removing href makes it no longer blocking
 html/dom/render-blocking/element-render-blocking-014.html	link in the body has no effect
-html/dom/render-blocking/element-render-blocking-015.html	-
 html/dom/render-blocking/element-render-blocking-015.html	removing link the body makes it non blocking
-html/dom/render-blocking/element-render-blocking-016.html	-
 html/dom/render-blocking/element-render-blocking-016.html	removing 'blocking' in the body makes it non blocking
-html/dom/render-blocking/element-render-blocking-017.html	-
 html/dom/render-blocking/element-render-blocking-017.html	adding 'blocking=render' in the body has no effect
-html/dom/render-blocking/element-render-blocking-018.html	-
 html/dom/render-blocking/element-render-blocking-018.html	changing media to matching in the body has no effect
-html/dom/render-blocking/element-render-blocking-019.html	-
 html/dom/render-blocking/element-render-blocking-019.html	changing media to non-matching in the body makes it non blocking
-html/dom/render-blocking/element-render-blocking-020.html	-
 html/dom/render-blocking/element-render-blocking-020.html	changing rel to non-expect in the body makes it non blocking
-html/dom/render-blocking/element-render-blocking-021.html	-
 html/dom/render-blocking/element-render-blocking-021.html	changing rel to expect in the body has no effect
-html/dom/render-blocking/element-render-blocking-022.html	-
 html/dom/render-blocking/element-render-blocking-022.html	adding href in the body has no effect
-html/dom/render-blocking/element-render-blocking-023.html	-
 html/dom/render-blocking/element-render-blocking-023.html	removing href in the body makes it non blocking
-html/dom/render-blocking/element-render-blocking-025.html	-
 html/dom/render-blocking/element-render-blocking-025.html	adding an id in the body satisfies render block
-html/dom/render-blocking/element-render-blocking-026.html	-
 html/dom/render-blocking/element-render-blocking-026.html	removing id after it was renderer keeps render block satisfied
-html/dom/render-blocking/element-render-blocking-027.html	-
-html/dom/render-blocking/element-render-blocking-028.html	-
 html/dom/render-blocking/element-render-blocking-028.html	removing some links but not all keeps at least the matching link blocking
 html/dom/render-blocking/element-render-blocking-029.html	blocking defers frames until full parsing
 html/dom/render-blocking/element-render-blocking-030.html	blocking defers frames until full parsing

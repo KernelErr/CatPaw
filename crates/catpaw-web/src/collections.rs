@@ -177,6 +177,14 @@ pub fn static_node_list(page: &PageState, items: Vec<NodeId>) -> ObjectId {
     page.alloc(NodeListObject(ListState::new(ListSource::Static, items)))
 }
 
+/// A static `HTMLCollection` holding `items`.
+pub fn static_html_collection(page: &PageState, items: Vec<NodeId>) -> ObjectId {
+    page.alloc(HtmlCollectionObject(ListState::new(
+        ListSource::Static,
+        items,
+    )))
+}
+
 /// A live `HTMLCollection`.
 pub fn html_collection(page: &PageState, source: ListSource) -> ObjectId {
     page.alloc(HtmlCollectionObject(ListState::new(source, Vec::new())))

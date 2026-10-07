@@ -4228,6 +4228,7 @@ pub trait DocumentImpl {
     fn hidden(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool>;
     fn visibility_state(cx: &mut Cx<'_>, this: NodeId) -> Fallible<DocumentVisibilityState>;
     fn get_selection(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<ObjectId>>;
+    fn constructor(cx: &mut Cx<'_>) -> Fallible<NodeId>;
 }
 
 pub trait DocumentFragmentImpl {

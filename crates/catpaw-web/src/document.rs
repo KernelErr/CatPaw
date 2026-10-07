@@ -4,7 +4,9 @@
 //! others (`DOMParser`, `document.implementation`); they have a tree and
 //! nothing else, and answer accordingly.
 
-use catpaw_dom::{Dom, FragmentKind, LocalName, Namespace, NodeId, NodeKind, QualName, QuirksMode};
+use catpaw_dom::{
+    DocumentData, Dom, FragmentKind, LocalName, Namespace, NodeId, NodeKind, QualName, QuirksMode,
+};
 use catpaw_js::{Callback, Exception, Fallible, ObjectId, WindowRef};
 
 use crate::collections::{self, ListSource};
@@ -72,6 +74,17 @@ fn charset(cx: &Cx<'_>, document: NodeId) -> String {
 }
 
 impl web::DocumentImpl for Web {
+    /// `new Document()`: an XML document, with the page's URL.
+    fn constructor(cx: &mut Cx<'_>) -> Fallible<NodeId> {
+        let url = cx.page.url.borrow().clone();
+        Ok(cx.dom_mut().create_document(DocumentData {
+            quirks_mode: QuirksMode::NoQuirks,
+            url: Some(url),
+            is_xml: true,
+            content_type: Some("application/xml".to_string()),
+        }))
+    }
+
     fn url(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {
         Ok(url(cx, this))
     }

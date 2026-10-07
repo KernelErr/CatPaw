@@ -56,8 +56,6 @@ dom/events/Body-FrameSet-Event-Handlers.html	Reflect HTMLFrameSetElement.onscrol
 dom/events/CustomEvent.html	initCustomEvent's default parameter values.
 dom/events/Event-constructors.any.html	Event constructors 3
 dom/events/Event-constructors.any.html	Event constructors 4
-dom/events/Event-dispatch-bubbles-false.html	In new Document()
-dom/events/Event-dispatch-bubbles-true.html	In new Document()
 dom/events/Event-dispatch-click.html	-
 dom/events/Event-dispatch-click.html	basic with click()
 dom/events/Event-dispatch-click.html	basic with dispatchEvent()
@@ -303,10 +301,12 @@ dom/events/scrolling/scroll-event-fired-to-iframe.html	scrollX and scrollY being
 dom/events/scrolling/scroll-event-fired-to-iframe.html	scrollX and scrollY being set with the same value.
 dom/events/scrolling/scroll-event-fired-to-iframe.html	scrollX and scrollY should fire scroll event.
 dom/events/scrolling/scroll-event-fired-to-iframe.html	scrollX and scrollY when scrolling above maximum Scroll.
+dom/events/scrolling/scroll-event-not-fired-on-ancestor-style-change.html	-
 dom/events/scrolling/scroll-event-not-fired-on-ancestor-style-change.html	Setting and removing 'overflow' on an ancestor fires no scroll event.
 dom/events/scrolling/scroll-events-fired-once-per-frame-across-display-none.html	Only one scroll event fires when scrolling, toggling display: none, and scrolling again in the same frame
 dom/events/scrolling/scroll-events-fired-once-per-frame-across-display-none.html	Only one scrollend event fires when scrolling, toggling display: none, and scrolling again in the same frame
 dom/events/scrolling/scrollIntoView-in-onscroll-to-sticky.html	-
+dom/events/scrolling/scrollIntoView-in-onscroll-to-sticky.html	scrollIntoView-in-onscroll-to-sticky
 dom/events/scrolling/scrollend-event-fired-after-instant-scroll-in-microtask.html	-
 dom/events/scrolling/scrollend-event-fired-after-instant-scroll-in-microtask.html	scrolling state is false at the end of the test
 dom/events/scrolling/scrollend-event-fired-after-layout-clamping.html	scrollend event fires when layout clamps scroll offset
@@ -317,11 +317,27 @@ dom/events/scrolling/scrollend-event-fired-after-snap.html	Tests that scrollend 
 dom/events/scrolling/scrollend-event-fired-after-snap.html	Tests that scrollend is fired after scroll snap animation completion.
 dom/events/scrolling/scrollend-event-fired-for-mandatory-snap-point-after-load.html	scrollend event fired after load for mandatory snap point
 dom/events/scrolling/scrollend-event-fired-for-programmatic-scroll.html	-
+dom/events/scrolling/scrollend-event-fired-for-programmatic-scroll.html	Tests scrollend event for calling scrollBy with behavior 'auto' on root.
+dom/events/scrolling/scrollend-event-fired-for-programmatic-scroll.html	Tests scrollend event for calling scrollBy with behavior 'auto' on subframe.
+dom/events/scrolling/scrollend-event-fired-for-programmatic-scroll.html	Tests scrollend event for calling scrollBy with behavior 'smooth' on root.
+dom/events/scrolling/scrollend-event-fired-for-programmatic-scroll.html	Tests scrollend event for calling scrollBy with behavior 'smooth' on subframe.
+dom/events/scrolling/scrollend-event-fired-for-programmatic-scroll.html	Tests scrollend event for calling scrollTo with behavior 'auto' on root.
+dom/events/scrolling/scrollend-event-fired-for-programmatic-scroll.html	Tests scrollend event for calling scrollTo with behavior 'auto' on subframe.
+dom/events/scrolling/scrollend-event-fired-for-programmatic-scroll.html	Tests scrollend event for calling scrollTo with behavior 'smooth' on root.
+dom/events/scrolling/scrollend-event-fired-for-programmatic-scroll.html	Tests scrollend event for calling scrollTo with behavior 'smooth' on subframe.
 dom/events/scrolling/scrollend-event-fired-for-scroll-attr-change.html	-
+dom/events/scrolling/scrollend-event-fired-for-scroll-attr-change.html	Tests scrollend event for [scrollLeft] behavior:'auto' on root.
+dom/events/scrolling/scrollend-event-fired-for-scroll-attr-change.html	Tests scrollend event for [scrollLeft] behavior:'auto' on subframe.
+dom/events/scrolling/scrollend-event-fired-for-scroll-attr-change.html	Tests scrollend event for [scrollLeft] behavior:'smooth' on root.
+dom/events/scrolling/scrollend-event-fired-for-scroll-attr-change.html	Tests scrollend event for [scrollLeft] behavior:'smooth' on subframe.
+dom/events/scrolling/scrollend-event-fired-for-scroll-attr-change.html	Tests scrollend event for [scrollTop] behavior:'auto' on root.
+dom/events/scrolling/scrollend-event-fired-for-scroll-attr-change.html	Tests scrollend event for [scrollTop] behavior:'auto' on subframe.
+dom/events/scrolling/scrollend-event-fired-for-scroll-attr-change.html	Tests scrollend event for [scrollTop] behavior:'smooth' on root.
+dom/events/scrolling/scrollend-event-fired-for-scroll-attr-change.html	Tests scrollend event for [scrollTop] behavior:'smooth' on subframe.
 dom/events/scrolling/scrollend-event-fired-for-scrollIntoView.html	-
 dom/events/scrolling/scrollend-event-fired-to-document.html	testing, horizontal
 dom/events/scrolling/scrollend-event-fired-to-document.html	testing, vertical
-dom/events/scrolling/scrollend-event-fired-to-element-with-overscroll-behavior.html	-
+dom/events/scrolling/scrollend-event-fired-to-element-with-overscroll-behavior.html	Tests that the scroll is not propagated beyond div with non-auto overscroll-behavior.
 dom/events/scrolling/scrollend-event-fired-to-window.html	-
 dom/events/scrolling/scrollend-event-fired-to-window.html	testing, vertical
 dom/events/scrolling/scrollend-event-fires-for-repeat-key-ending-after-scroll-container-end-is-reached.html	scrollend event is fired after repeated Page Down key presses reach the end of the scroll region.
@@ -347,14 +363,17 @@ dom/events/scrolling/scrollend-fires-to-text-input.html	scrolled input field sho
 dom/events/scrolling/scrollend-fires-to-text-input.html	scrolled input field should receive scrollend with scrollBy({ behavior: 'smooth' }).
 dom/events/scrolling/scrollend-fires-to-text-input.html	scrolled input field should receive scrollend with scrollTo({ behavior: 'instant' }).
 dom/events/scrolling/scrollend-fires-to-text-input.html	scrolled input field should receive scrollend with scrollTo({ behavior: 'smooth' }).
-dom/events/scrolling/scrollend-with-snap-on-fractional-offset.html	-
+dom/events/scrolling/scrollend-with-snap-on-fractional-offset.html	snap to fractional offset fires scrollend exactly once.
 dom/events/scrolling/visibility-hidden-scrolls.html	-
 dom/events/scrolling/visibility-hidden-scrolls.html	Scrolling over a visibility: visible child should scroll a visibility: hidden scroller.
 dom/events/scrolling/visibility-hidden-scrolls.html	Scrolling should chain to a visibility: hidden element.
 dom/events/scrolling/wheel-event-composed.html	-
 dom/events/scrolling/wheel-event-composed.html	wheel event must be composed
+dom/events/scrolling/wheel-event-no-scroll-after-prevent-default.html	-
 dom/events/scrolling/wheel-event-no-scroll-after-prevent-default.html	When `preventDefault` is called on a WheelEvent, scrolling should be prevented.
-dom/events/scrolling/wheel-event-transactions-basic.html	-
+dom/events/scrolling/wheel-event-transactions-basic.html	The wheel event transactions target may not be a scroll frame
+dom/events/scrolling/wheel-event-transactions-basic.html	Wheel events should be captured to one target #1
+dom/events/scrolling/wheel-event-transactions-basic.html	Wheel events should be captured to one target #2
 dom/events/scrolling/wheel-event-transactions-multiple-action-chains.html	Two separate webdriver action chains should have different wheel event transactions
 dom/events/scrolling/wheel-event-transactions-target-display-change.html	Modify the initial wheel event target to display:contents
 dom/events/scrolling/wheel-event-transactions-target-display-change.html	Modify the initial wheel event target to display:none
@@ -363,7 +382,8 @@ dom/events/scrolling/wheel-event-transactions-target-move.html	Move the initial 
 dom/events/scrolling/wheel-event-transactions-target-removal.html	Remove the initial wheel event target.
 dom/events/scrolling/wheel-event-transactions-target-resize.html	Resize the initial target and use a passive:false listener
 dom/events/scrolling/wheel-event-transactions-target-resize.html	Resize the initial target and use a passive:true listener
-dom/events/shadow-relatedTarget.html	-
+dom/events/shadow-relatedTarget.html	relatedTarget should not leak at capturing phase, at window object.
+dom/events/shadow-relatedTarget.html	relatedTarget should not leak at target.
 dom/events/webkit-animation-end-event.html	-
 dom/events/webkit-animation-end-event.html	dispatchEvent of a webkitAnimationEnd event does not trigger an unprefixed event handler or listener
 dom/events/webkit-animation-end-event.html	dispatchEvent of a webkitAnimationEnd event does trigger a prefixed event handler or listener
@@ -443,10 +463,6 @@ dom/nodes/Document-URL.html	Document.URL with redirect
 dom/nodes/Document-adoptNode-DocumentFragment-with-host.window.html	adoptNode() shadow root: throws HierarchyRequestError
 dom/nodes/Document-characterSet-normalization-1.html	-
 dom/nodes/Document-characterSet-normalization-2.html	-
-dom/nodes/Document-constructor.html	new Document(): URL parsing
-dom/nodes/Document-constructor.html	new Document(): characterSet aliases
-dom/nodes/Document-constructor.html	new Document(): children
-dom/nodes/Document-constructor.html	new Document(): interfaces
 dom/nodes/Document-constructor.html	new Document(): metadata
 dom/nodes/Document-contentType/contentType/contenttype_bmp.html	-
 dom/nodes/Document-contentType/contentType/contenttype_bmp.html	BMP document.contentType === 'image/bmp'
@@ -628,7 +644,6 @@ dom/nodes/Document-createEvent.https.html	-
 dom/nodes/Document-createProcessingInstruction.html	Should throw an INVALID_CHARACTER_ERR for target "A×" and data "x".
 dom/nodes/Document-createProcessingInstruction.html	Should throw an INVALID_CHARACTER_ERR for target "·A" and data "x".
 dom/nodes/Document-createProcessingInstruction.html	Should throw an INVALID_CHARACTER_ERR for target "×A" and data "x".
-dom/nodes/Document-doctype.html	new Document()
 dom/nodes/Document-importNode.html	Import an Attr node with namespace/prefix correctly.
 dom/nodes/DocumentFragment-getElementById.html	Empty string ID values
 dom/nodes/Element-classlist.html	-
@@ -681,7 +696,6 @@ dom/nodes/Node-baseURI.html	For attributes in elements belonging to document fra
 dom/nodes/Node-baseURI.html	For attributes in elements belonging to document, baseURI should be document URL
 dom/nodes/Node-baseURI.html	For attributes in elements unassigned to document, baseURI should be document URL
 dom/nodes/Node-baseURI.html	For attributes unassigned to element, baseURI should be document URL
-dom/nodes/Node-childNodes.html	Node.childNodes on a Document.
 dom/nodes/Node-cloneNode-document-allow-declarative-shadow-roots.window.html	cloneNode() and document's allow declarative shadow roots
 dom/nodes/Node-cloneNode-on-inactive-document-crash.html	-
 dom/nodes/Node-cloneNode.html	createAttribute
@@ -691,8 +705,11 @@ dom/nodes/Node-contains.html	-
 dom/nodes/Node-insertBefore.html	Should check the 'parent' type before checking whether 'child' is a child of 'parent'
 dom/nodes/Node-isConnected.html	Test with iframes
 dom/nodes/Node-isSameNode.html	attributes should be compared on reference
-dom/nodes/Node-lookupNamespaceURI.html	-
 dom/nodes/Node-lookupNamespaceURI.html	Child element should have XMLNS namespace
+dom/nodes/Node-lookupNamespaceURI.html	Connected Attr has namespace URI matching "xml"
+dom/nodes/Node-lookupNamespaceURI.html	Connected Attr no namespace URI matching "xmlns"
+dom/nodes/Node-lookupNamespaceURI.html	Disconnected Attr has no namespace URI matching "xml"
+dom/nodes/Node-lookupNamespaceURI.html	Disconnected Attr has no namespace URI matching "xmlns"
 dom/nodes/Node-lookupNamespaceURI.html	Element should have XML namespace
 dom/nodes/Node-lookupNamespaceURI.html	Element should have XMLNS namespace
 dom/nodes/Node-lookupNamespaceURI.html	Element should have namespace with xmlns prefix
@@ -727,15 +744,10 @@ dom/nodes/ParentNode-replaceChildren.html	Document.replaceChildren() with a doct
 dom/nodes/ParentNode-replaceChildren.html	Document.replaceChildren() with an element, replacing an existing doctype and element.
 dom/nodes/Text-constructor.html	-
 dom/nodes/Text-constructor.html	new Text() should get the correct ownerDocument across globals
-dom/nodes/adoption.window.html	adoptNode() and DocumentFragment
 dom/nodes/adoption.window.html	adoptNode() and DocumentFragment with host
 dom/nodes/adoption.window.html	adoptNode() and ShadowRoot
-dom/nodes/adoption.window.html	appendChild() and DocumentFragment
 dom/nodes/adoption.window.html	appendChild() and DocumentFragment with host
-dom/nodes/adoption.window.html	appendChild() and ShadowRoot
 dom/nodes/attach-shadow-realm-after-adoption.html	-
-dom/nodes/attributes-namednodemap-cross-document.window.html	Moving an attribute between documents
-dom/nodes/attributes-namednodemap-cross-document.window.html	Replacing an attribute across documents
 dom/nodes/case.html	-
 dom/nodes/crashtests/attribute-index-when-no-attributes.html	-
 dom/nodes/crashtests/childNodes-last_visited-unwrap-crash.html	-
@@ -759,15 +771,12 @@ dom/nodes/insertBefore-iframe-crash.html	-
 dom/nodes/insertion-removing-steps/Node-append-form-and-script-from-fragment.html	When adding a script+form in a fragment and the form matches an associated element, the script that checks whether the button is associated to the form should run after inserting the form
 dom/nodes/insertion-removing-steps/Node-append-meta-referrer-and-script-from-fragment.html	<meta name=referrer> gets processed and applied in the post-insertion steps
 dom/nodes/insertion-removing-steps/Node-appendChild-script-and-button-from-div.html	Script inserted before a form-associated button can observe the button's form, because by the time the script executes, the DOM insertion that associates the button with the form is already done
-dom/nodes/insertion-removing-steps/Node-appendChild-script-and-default-style-meta-from-fragment.html	-
 dom/nodes/insertion-removing-steps/Node-appendChild-script-and-default-style-meta-from-fragment.html	Inserting <meta> that uses alternate stylesheets, applies the style during DOM post-insertion steps
 dom/nodes/insertion-removing-steps/Node-appendChild-script-and-iframe.html	Script inserted after an iframe in the same appendChild() call can observe the iframe's non-null contentWindow
 dom/nodes/insertion-removing-steps/Node-appendChild-script-and-source-from-fragment.html	Empty <source> immediately sets media.networkState during DOM insertion, so that an earlier-running script can observe networkState
 dom/nodes/insertion-removing-steps/Node-appendChild-script-and-style.html	Earlier-inserted <script> (via a DocumentFragment) synchronously observes a later-inserted <link rel=stylesheet>'s CSSStyleSheet creation
 dom/nodes/insertion-removing-steps/Node-appendChild-script-and-style.html	Earlier-inserted <script> (via a append()) synchronously observes a later-inserted <link rel=stylesheet>'s CSSStyleSheet creation
 dom/nodes/insertion-removing-steps/Node-appendChild-script-and-style.html	Earlier-inserted <script> (via a div) synchronously observes a later-inserted <link rel=stylesheet>'s CSSStyleSheet creation
-dom/nodes/insertion-removing-steps/Node-appendChild-script-in-script.html	-
-dom/nodes/insertion-removing-steps/Node-appendChild-script-in-script.html	An outer script whose preparation/execution gets triggered by the insertion of a 'nested'/'inner' script, executes *before* the inner script executes
 dom/nodes/insertion-removing-steps/change-event.window.html	<input> element does not fire change event upon DOM removal
 dom/nodes/insertion-removing-steps/change-event.window.html	<textarea> element does not fire change event upon DOM removal
 dom/nodes/insertion-removing-steps/frame-post-connection-steps.html	A script after frame and iframe elements observes post-connection order
@@ -924,6 +933,7 @@ dom/nodes/moveBefore/script-move-before.html	Synchronous script execution in HTM
 dom/nodes/moveBefore/script-move-before.html	Synchronous script execution in SVGScriptElement during moveBefore should be blocked
 dom/nodes/moveBefore/select-option-optgroup.html	Option selectedness is updated on option and optgroup DOM moves
 dom/nodes/moveBefore/select-option-optgroup.html	Selected index is updated when an option moves within the same select
+dom/nodes/moveBefore/selection-preserve.html	-
 dom/nodes/moveBefore/selection-preserve.html	moveBefore anchor node moved up to expand selection and absorb nodes
 dom/nodes/moveBefore/selection-preserve.html	moveBefore focus node moved up to shrink selection and exclude nodes; focus node gets reset
 dom/nodes/moveBefore/selection-preserve.html	moveBefore move intersecting nodes out of a selection
@@ -983,11 +993,8 @@ dom/nodes/processing-instruction-attributes.html	-
 dom/nodes/query-target-in-load-event.html	-
 dom/nodes/query-target-in-load-event.html	document.querySelector(":target") must work when called in the window.load event
 dom/nodes/query-target-in-load-event.part.html	-
-dom/nodes/querySelector-empty-id.html	querySelector attribute matching empty id
-dom/nodes/querySelector-id-nth-child.html	querySelector matching #id + constant nth-child()
 dom/nodes/remove-and-adopt-thcrash.html	Check that removing a node and then adopting its parent into a different window/document doesn't crash.
 dom/nodes/remove-from-shadow-host-and-adopt-into-iframe.html	-
-dom/nodes/remove-next-sibling-during-replace-with.html	remove-next-sibling-during-replace-with
 dom/nodes/remove-unscopable.html	after() should be unscopable
 dom/nodes/remove-unscopable.html	append() should be unscopable
 dom/nodes/remove-unscopable.html	before() should be unscopable

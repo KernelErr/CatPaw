@@ -295,7 +295,10 @@ fn read_body(cx: &mut Cx<'_>, this: ObjectId, done: BodyDone) -> Fallible<()> {
         return Err(Exception::type_error("The body has already been read"));
     }
     let (bytes, stream) = with_body(cx, this, |body, used, stream| {
-        *used = true;
+        // A null body is never used, whatever is read from it.
+        if body.is_some() || stream.is_some() {
+            *used = true;
+        }
         (body.take(), *stream)
     })?;
     match (bytes, stream) {
@@ -492,8 +495,16 @@ fn build_request(
                     "Cannot construct a Request with a Request object that has already been used",
                 ));
             }
+            // The bytes move to the new request; a stream handed out for
+            // them stays with the source, which counts as used. A body that
+            // is a stream moves as it is.
             let body = source.body.take();
-            if body.is_some() {
+            let body_stream = if body.is_some() {
+                None
+            } else {
+                source.body_stream.take()
+            };
+            if body.is_some() || body_stream.is_some() {
                 source.body_used = true;
             }
             Ok(RequestObject {
@@ -502,7 +513,7 @@ fn build_request(
                 headers: source.headers.clone(),
                 body,
                 body_used: false,
-                body_stream: None,
+                body_stream,
                 mode: source.mode,
                 credentials: source.credentials,
                 cache: source.cache,
@@ -567,6 +578,11 @@ fn build_request(
         }
         // A stream is read when the request is sent or its body read.
         if let BodyInit::ReadableStream(stream) = body {
+            if init.duplex != Some(web::RequestDuplex::Half) {
+                return Err(Exception::type_error(
+                    "The duplex option must be \"half\" to send a ReadableStream body",
+                ));
+            }
             if crate::streams::is_disturbed_or_locked(cx, stream) {
                 return Err(Exception::type_error("The stream is disturbed or locked"));
             }

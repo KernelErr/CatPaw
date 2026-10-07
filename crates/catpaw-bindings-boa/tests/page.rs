@@ -1408,3 +1408,46 @@ fn processing_instructions_and_namespaced_tag_names() {
         assert_eq!(eval(&mut page, source), expected, "{source}");
     }
 }
+
+#[test]
+fn named_elements_are_window_properties() {
+    let mut page = load(
+        "<div id=host></div><form name=f></form><img name=pic><div id=dup></div><span id=dup></span><p id=both name=both></p><script>function attempt(f) { try { return String(f()); } catch (e) { return e.name; } }</script>",
+    );
+    for (source, expected) in [
+        (
+            "[host === document.getElementById('host'), host instanceof HTMLDivElement, window.host === host, typeof f, f.tagName, self.pic.tagName, dup instanceof HTMLCollection, dup.length, both.tagName].join(' ')",
+            "true true true object FORM IMG true 2 P",
+        ),
+        (
+            "['host' in window, 'nothing' in window, typeof nothing, attempt(function () { return nothing; }), Object.getOwnPropertyDescriptor(window, 'host') === undefined, window.hasOwnProperty('host')].join(' ')",
+            "true false undefined ReferenceError true false",
+        ),
+        (
+            "var pic = 'mine'; var alsoGlobal = 1; [pic, window.pic, typeof alsoGlobal].join(' ')",
+            "mine mine number",
+        ),
+        (
+            "document.getElementById('host').remove(); var fresh = document.createElement('b'); fresh.id = 'later'; document.body.appendChild(fresh); [typeof host, later.tagName, attempt(function () { return host; })].join(' ')",
+            "undefined B ReferenceError",
+        ),
+        (
+            "Object.getPrototypeOf(Object.getPrototypeOf(window)) !== EventTarget.prototype && Object.getPrototypeOf(Object.getPrototypeOf(Object.getPrototypeOf(window))) === EventTarget.prototype",
+            "true",
+        ),
+    ] {
+        assert_eq!(eval(&mut page, source), expected, "{source}");
+    }
+}
+
+#[test]
+fn a_document_can_be_constructed() {
+    let mut page = load("");
+    assert_eq!(
+        eval(
+            &mut page,
+            "var d = new Document(); [String(d), d.contentType, d.URL === document.URL, d.documentElement, d.childNodes.length, d.createElement('x').namespaceURI, d.createElement('x').localName, d instanceof Document, d instanceof XMLDocument, d.defaultView, d.compatMode].map(String).join(' ')"
+        ),
+        "[object Document] application/xml true null 0 null x true false null CSS1Compat"
+    );
+}

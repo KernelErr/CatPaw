@@ -85,8 +85,6 @@ fetch/api/basic/conditional-get.any.html	Testing conditional GET with ETags
 fetch/api/basic/error-after-response.any.html	Response reader closed promise should reject after a network error happening after resolving fetch promise
 fetch/api/basic/error-after-response.any.html	Response reader read() promise should reject after a network error happening after resolving fetch promise
 fetch/api/basic/fetch-in-popup-from-iframe.html	Fetch from initial empty document in popup opened from iframe
-fetch/api/basic/gc.any.html	GC/CC should not abruptly close the stream while being consumed by Response
-fetch/api/basic/gc.any.html	GC/CC should not discard a FormData body's Blob before its stream is read
 fetch/api/basic/header-value-combining.any.html	response.headers.get('content-length') expects 0
 fetch/api/basic/header-value-combining.any.html	response.headers.get('content-length') expects 0, 0
 fetch/api/basic/header-value-combining.any.html	response.headers.get('double-trouble') expects , 
@@ -180,7 +178,10 @@ fetch/api/basic/request-upload.h2.any.html	Fetch with POST with ReadableStream
 fetch/api/basic/request-upload.h2.any.html	Fetch with POST with ReadableStream on 421 response should return the response and not retry.
 fetch/api/basic/request-upload.h2.any.html	Fetch with POST with empty ReadableStream
 fetch/api/basic/request-upload.h2.any.html	ReadbleStream should be closed on signal.abort
-fetch/api/basic/request-upload.h2.any.html	Synchronous feature detect
+fetch/api/basic/request-upload.h2.any.html	Streaming upload should fail on a 401 response
+fetch/api/basic/request-upload.h2.any.html	Streaming upload with body containing a String
+fetch/api/basic/request-upload.h2.any.html	Streaming upload with body containing a number
+fetch/api/basic/request-upload.h2.any.html	Streaming upload with body containing null
 fetch/api/basic/request-upload.h2.any.html	Synchronous feature detect fails if feature unsupported
 fetch/api/basic/response-null-body.any.html	Response.body is null for responses with method=HEAD
 fetch/api/basic/response-null-body.any.html	Response.body is null for responses with status=204 (method=GET)
@@ -903,6 +904,10 @@ fetch/api/redirect/redirect-to-dataurl.any.html	Testing data URL loading after s
 fetch/api/redirect/redirect-to-dataurl.any.html	Testing data URL loading after same-origin redirection (no-cors mode)
 fetch/api/redirect/redirect-to-dataurl.any.html	Testing data URL loading after same-origin redirection (same-origin mode)
 fetch/api/redirect/redirect-upload.h2.any.html	Fetch upload streaming should be accepted on 303
+fetch/api/redirect/redirect-upload.h2.any.html	Fetch upload streaming should fail on 301
+fetch/api/redirect/redirect-upload.h2.any.html	Fetch upload streaming should fail on 302
+fetch/api/redirect/redirect-upload.h2.any.html	Fetch upload streaming should fail on 307
+fetch/api/redirect/redirect-upload.h2.any.html	Fetch upload streaming should fail on 308
 fetch/api/request/destination/fetch-destination-frame.https.html	Initialize global state
 fetch/api/request/destination/fetch-destination-frame.https.html	frame fetches with a "frame" Request.destination
 fetch/api/request/destination/fetch-destination-iframe.https.html	Initialize global state
@@ -1098,16 +1103,11 @@ fetch/api/request/request-headers.any.html	Check that no-cors request constructo
 fetch/api/request/request-headers.any.html	Check that no-cors request constructor is filtering headers provided as part of request parameter
 fetch/api/request/request-init-001.sub.html	Check referrer init value of /relative/ressource and associated getter
 fetch/api/request/request-init-001.sub.html	Check referrer init value of http://test.url and associated getter
-fetch/api/request/request-init-contenttype.any.html	Can override Content-Type for Request with ReadableStream body
-fetch/api/request/request-init-contenttype.any.html	Default Content-Type for Request with ReadableStream body
 fetch/api/request/request-init-priority.any.html	fetch() with an invalid priority returns a rejected promise with a TypeError
 fetch/api/request/request-init-stream.any.html	-
 fetch/api/request/request-init-stream.any.html	Constructing a Request with a Request on which body.getReader() is called
 fetch/api/request/request-init-stream.any.html	Constructing a Request with a Request on which body.getReader().read() is called
 fetch/api/request/request-init-stream.any.html	Constructing a Request with a Request on which read() and releaseLock() are called
-fetch/api/request/request-init-stream.any.html	Constructing a Request with a stream holds the original object.
-fetch/api/request/request-init-stream.any.html	It is OK to omit duplex when init.body is not given and input.body is given.
-fetch/api/request/request-init-stream.any.html	It is OK to set .duplex = 'half' when the body is a ReadableStream.
 fetch/api/request/request-keepalive-quota.html	A Keep-Alive fetch() should not be allowed if the Quota is used up.
 fetch/api/request/request-keepalive-quota.html	A Keep-Alive fetch() should return only its allocated Quota upon promise resolution.
 fetch/api/request/request-keepalive-quota.html	A Keep-Alive fetch() with a body over the Quota Limit should reject.
@@ -1153,79 +1153,29 @@ fetch/api/response/response-consume-stream.any.html	Read blob response's body as
 fetch/api/response/response-consume-stream.any.html	Read form data response's body as readableStream with mode=byob
 fetch/api/response/response-consume-stream.any.html	Read text response's body as readableStream with mode=byob
 fetch/api/response/response-consume-stream.any.html	Reading with offset from Response stream
-fetch/api/response/response-consume.html	-
 fetch/api/response/response-consume.html	Consume response's body: from fetch to blob
 fetch/api/response/response-consume.html	Consume response's body: from multipart form data blob to formData
-fetch/api/response/response-consume.html	Consume response's body: from stream to arrayBuffer
-fetch/api/response/response-consume.html	Consume response's body: from stream to blob
-fetch/api/response/response-consume.html	Consume response's body: from stream to json
-fetch/api/response/response-consume.html	Consume response's body: from stream to text
-fetch/api/response/response-consume.html	Consume response's body: from stream with correct multipart type to formData
-fetch/api/response/response-consume.html	Consume response's body: from stream with correct urlencoded type to formData
-fetch/api/response/response-consume.html	Consume response's body: from stream without correct multipart type to formData (error case)
-fetch/api/response/response-consume.html	Consume response's body: from stream without correct urlencoded type to formData (error case)
 fetch/api/response/response-error-from-stream.any.html	-
-fetch/api/response/response-error-from-stream.any.html	ReadableStream pull() Error propagates to Response.arrayBuffer() Promise
-fetch/api/response/response-error-from-stream.any.html	ReadableStream pull() Error propagates to Response.blob() Promise
-fetch/api/response/response-error-from-stream.any.html	ReadableStream pull() Error propagates to Response.bytes() Promise
-fetch/api/response/response-error-from-stream.any.html	ReadableStream pull() Error propagates to Response.formData() Promise
-fetch/api/response/response-error-from-stream.any.html	ReadableStream pull() Error propagates to Response.json() Promise
-fetch/api/response/response-error-from-stream.any.html	ReadableStream pull() Error propagates to Response.text() Promise
-fetch/api/response/response-error-from-stream.any.html	ReadableStream start() Error propagates to Response.arrayBuffer() Promise
-fetch/api/response/response-error-from-stream.any.html	ReadableStream start() Error propagates to Response.blob() Promise
-fetch/api/response/response-error-from-stream.any.html	ReadableStream start() Error propagates to Response.bytes() Promise
-fetch/api/response/response-error-from-stream.any.html	ReadableStream start() Error propagates to Response.formData() Promise
-fetch/api/response/response-error-from-stream.any.html	ReadableStream start() Error propagates to Response.json() Promise
-fetch/api/response/response-error-from-stream.any.html	ReadableStream start() Error propagates to Response.text() Promise
 fetch/api/response/response-error.any.html	Throws TypeError when responseInit's statusText is Ā
 fetch/api/response/response-form-data.html	Validate buggy form data - empty
 fetch/api/response/response-from-stream.any.html	-
-fetch/api/response/response-init-contenttype.any.html	Can override Content-Type for Response with ReadableStream body
-fetch/api/response/response-init-contenttype.any.html	Default Content-Type for Response with ReadableStream body
 fetch/api/response/response-static-json.any.html	Check response returned by static json() with input U+dead
 fetch/api/response/response-static-json.any.html	Check response returned by static json() with input U+df06U+d834
-fetch/api/response/response-stream-bad-chunk.any.html	ReadableStream with non-Uint8Array chunk passed to Response.arrayBuffer() causes TypeError
-fetch/api/response/response-stream-bad-chunk.any.html	ReadableStream with non-Uint8Array chunk passed to Response.blob() causes TypeError
-fetch/api/response/response-stream-bad-chunk.any.html	ReadableStream with non-Uint8Array chunk passed to Response.bytes() causes TypeError
-fetch/api/response/response-stream-bad-chunk.any.html	ReadableStream with non-Uint8Array chunk passed to Response.formData() causes TypeError
-fetch/api/response/response-stream-bad-chunk.any.html	ReadableStream with non-Uint8Array chunk passed to Response.json() causes TypeError
-fetch/api/response/response-stream-bad-chunk.any.html	ReadableStream with non-Uint8Array chunk passed to Response.text() causes TypeError
 fetch/api/response/response-stream-disturbed-1.any.html	-
-fetch/api/response/response-stream-disturbed-1.any.html	Getting arrayBuffer after getting the Response body - not disturbed, not locked (body source: stream)
-fetch/api/response/response-stream-disturbed-1.any.html	Getting blob after getting the Response body - not disturbed, not locked (body source: stream)
-fetch/api/response/response-stream-disturbed-1.any.html	Getting json after getting the Response body - not disturbed, not locked (body source: stream)
-fetch/api/response/response-stream-disturbed-1.any.html	Getting text after getting the Response body - not disturbed, not locked (body source: stream)
-fetch/api/response/response-stream-disturbed-2.any.html	Getting arrayBuffer after getting a locked Response body (body source: stream)
-fetch/api/response/response-stream-disturbed-2.any.html	Getting blob after getting a locked Response body (body source: stream)
-fetch/api/response/response-stream-disturbed-2.any.html	Getting json after getting a locked Response body (body source: stream)
-fetch/api/response/response-stream-disturbed-2.any.html	Getting text after getting a locked Response body (body source: stream)
-fetch/api/response/response-stream-disturbed-3.any.html	Getting arrayBuffer after reading the Response body (body source: stream)
-fetch/api/response/response-stream-disturbed-3.any.html	Getting blob after reading the Response body (body source: stream)
-fetch/api/response/response-stream-disturbed-3.any.html	Getting json after reading the Response body (body source: stream)
-fetch/api/response/response-stream-disturbed-3.any.html	Getting text after reading the Response body (body source: stream)
-fetch/api/response/response-stream-disturbed-4.any.html	Getting arrayBuffer after cancelling the Response body (body source: stream)
-fetch/api/response/response-stream-disturbed-4.any.html	Getting blob after cancelling the Response body (body source: stream)
-fetch/api/response/response-stream-disturbed-4.any.html	Getting json after cancelling the Response body (body source: stream)
-fetch/api/response/response-stream-disturbed-4.any.html	Getting text after cancelling the Response body (body source: stream)
 fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as arrayBuffer (body source: fetch)
-fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as arrayBuffer (body source: stream)
 fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as arrayBuffer (body source: string)
 fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as blob (body source: fetch)
-fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as blob (body source: stream)
 fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as blob (body source: string)
 fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as json (body source: fetch)
-fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as json (body source: stream)
 fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as json (body source: string)
 fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as text (body source: fetch)
-fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as text (body source: stream)
 fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as text (body source: string)
+fetch/api/response/response-stream-disturbed-6.any.html	-
 fetch/api/response/response-stream-disturbed-6.any.html	A closed stream on which read() has been called
 fetch/api/response/response-stream-disturbed-6.any.html	A non-closed stream on which cancel() has been called
 fetch/api/response/response-stream-disturbed-6.any.html	A non-closed stream on which read() has been called
 fetch/api/response/response-stream-disturbed-6.any.html	An errored stream on which cancel() has been called
 fetch/api/response/response-stream-disturbed-6.any.html	An errored stream on which read() has been called
-fetch/api/response/response-stream-disturbed-by-pipe.any.html	using pipeThrough on Response body should disturb it synchronously
-fetch/api/response/response-stream-disturbed-by-pipe.any.html	using pipeTo on Response body should disturb it synchronously
 fetch/api/response/response-stream-with-broken-then.any.html	-
 fetch/api/response/response-stream-with-broken-then.any.html	Attempt to inject 8.2 via Object.prototype.then.
 fetch/api/response/response-stream-with-broken-then.any.html	Attempt to inject undefined via Object.prototype.then.

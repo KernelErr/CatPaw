@@ -23112,12 +23112,19 @@ pub mod document {
         rt::ret(r, ctx)
     }
 
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "Document")?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::DocumentImpl>::constructor(cx));
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_node(id, new_target, I::Document, ctx);
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::Document,
         name: "Document",
         parent: Some(I::Node),
         global: false,
-        constructor: None,
+        constructor: Some(ctor),
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {

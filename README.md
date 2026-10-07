@@ -28,8 +28,8 @@ isolated contexts.
 > no-layout forms, and console APIs, on an event loop with virtual time.
 > React, Vue, Svelte, Lit, htmx and Alpine sites run; the Boa engine is
 > vendored with fixes described in `vendor/`. web-platform-tests run in CI
-> against recorded expectations: `dom` 2733 of 4133 subtests pass, `html/dom`
-> 486 of 1056, `fetch/api` 987 of 2172, `xhr` 320 of 974 (much of the rest
+> against recorded expectations: `dom` 2753 of 4164 subtests pass, `html/dom`
+> 498 of 1066, `fetch/api` 1037 of 2172, `xhr` 330 of 974 (much of the rest
 > needs iframes, layout or WPT's Python handlers). Not there yet: layout,
 > canvas, media, workers, WebAssembly, `Range`, and the members of HTML
 > elements that go beyond their attributes.

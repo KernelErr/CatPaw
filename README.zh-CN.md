@@ -16,7 +16,7 @@ agent 真正需要的东西——带稳定引用的紧凑语义快照、精确�
 > `fetch`/`XMLHttpRequest`（执行 CORS 检查）、Streams、`data:` URL、`sendBeacon`、storage、编码、`crypto` 随机数与摘要、
 > 无布局形态的字体加载与 Selection API，以及 console 等 API 的绑定由 Web IDL 生成；事件循环支持虚拟时间。
 > React、Vue、Svelte、Lit、htmx、Alpine 站点均可运行；Boa 引擎以附带修复的形式 vendor 在 `vendor/` 下（见其中说明）。
-> web-platform-tests 在 CI 中按记录的预期运行：`dom` 4133 个子测试通过 2733，`html/dom` 1056 通过 486，`fetch/api` 2172 通过 987，`xhr` 974 通过 320（其余大多需要 iframe、布局或 WPT 的 Python 处理器）。
+> web-platform-tests 在 CI 中按记录的预期运行：`dom` 4164 个子测试通过 2753，`html/dom` 1066 通过 498，`fetch/api` 2172 通过 1037，`xhr` 974 通过 330（其余大多需要 iframe、布局或 WPT 的 Python 处理器）。
 > 尚未支持：布局、canvas、媒体、Worker、WebAssembly、`Range`，以及 HTML 元素中超出属性反射的成员。
 >
 > 不依赖 JavaScript 即可用的部分：基于 rustls 的 HTTP/1.1 与 HTTP/2、重定向、cookie、

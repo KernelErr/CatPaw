@@ -1,6 +1,9 @@
 //! `Window` and the objects reachable from it that have no tree of their
 //! own: `Location`, `Navigator`, `Performance`, `Storage`.
 
+use std::cell::{Cell, RefCell};
+use std::collections::HashMap;
+
 use base64::Engine as _;
 use base64::alphabet;
 use base64::engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig};
@@ -595,6 +598,61 @@ impl web::LocationImpl for Web {
 }
 
 // ---- Navigator ------------------------------------------------------------
+
+/// The elements the window's named properties refer to, by name, rebuilt
+/// when the document changes.
+#[derive(Default)]
+pub(crate) struct NamedElements {
+    version: Cell<Option<u64>>,
+    names: RefCell<HashMap<String, Vec<NodeId>>>,
+}
+
+/// <https://html.spec.whatwg.org/#named-access-on-the-window-object>: the
+/// element whose id is `name`, or whose name is for an embed, form, img,
+/// object or iframe; a collection when there are several. (An iframe is
+/// the element itself here: there are no nested browsing contexts.)
+pub fn named_window_property(cx: &mut Cx<'_>, name: &str) -> Option<Value> {
+    if name.is_empty() {
+        return None;
+    }
+    let nodes: Vec<NodeId> = {
+        let dom = cx.dom();
+        let cache = &cx.page.named_elements;
+        if cache.version.get() != Some(dom.version()) {
+            let mut names: HashMap<String, Vec<NodeId>> = HashMap::new();
+            for node in dom.descendants(dom.document()) {
+                let Some(el) = dom.element(node) else {
+                    continue;
+                };
+                let id = el.attr("id").filter(|i| !i.is_empty());
+                if let Some(id) = id {
+                    names.entry(id.to_string()).or_default().push(node);
+                }
+                let named_kind = el.is_html()
+                    && matches!(
+                        &*el.name.local,
+                        "embed" | "form" | "img" | "object" | "iframe"
+                    );
+                if named_kind
+                    && let Some(n) = el.attr("name").filter(|n| !n.is_empty())
+                    && id != Some(n)
+                {
+                    names.entry(n.to_string()).or_default().push(node);
+                }
+            }
+            *cache.names.borrow_mut() = names;
+            cache.version.set(Some(dom.version()));
+        }
+        cache.names.borrow().get(name).cloned().unwrap_or_default()
+    };
+    match nodes.as_slice() {
+        [] => None,
+        [one] => Some(Value::Node(*one)),
+        _ => Some(Value::Object(crate::collections::static_html_collection(
+            cx.page, nodes,
+        ))),
+    }
+}
 
 impl web::NavigatorIDImpl for Web {
     fn app_code_name(_cx: &mut Cx<'_>, _this: ObjectId) -> Fallible<String> {

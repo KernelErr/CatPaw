@@ -264,3 +264,15 @@ fn object_urls_resolve_in_the_page() {
         "true / true / 200 / text/plain / obj / TypeError"
     );
 }
+
+#[test]
+fn xhr_uploads_report_progress() {
+    let (mut page, _) = load(FIXTURE);
+    assert_eq!(
+        step(
+            &mut page,
+            "var x = new XMLHttpRequest(); var seen = []; ['loadstart', 'progress', 'load', 'loadend', 'abort', 'error'].forEach(function (t) { x.upload.addEventListener(t, function (e) { seen.push(t + ':' + e.loaded + '/' + e.total); }); }); x.open('POST', '/form'); x.send('hello'); await new Promise(function (ok) { x.onloadend = ok; }); log.push(seen.join(','), x.upload === x.upload); var y = new XMLHttpRequest(); var quiet = []; y.upload.onprogress = function () { quiet.push('progress'); }; y.open('GET', '/form'); y.send(); await new Promise(function (ok) { y.onloadend = ok; }); log.push(quiet.length); var z = new XMLHttpRequest(); var aborted = []; z.upload.onabort = function (e) { aborted.push('abort'); }; z.upload.onloadend = function (e) { aborted.push('loadend'); }; z.open('POST', '/form'); z.send('bye'); z.abort(); log.push(aborted.join(','));"
+        ),
+        "loadstart:0/5,progress:5/5,load:5/5,loadend:5/5 / true / 0 / abort,loadend"
+    );
+}

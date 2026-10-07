@@ -142,6 +142,7 @@ members = [
 ]
 
 [interfaces.Document]
+constructor = true
 members = [
   "URL", "documentURI", "compatMode", "characterSet", "charset", "inputEncoding",
   "contentType", "doctype", "documentElement", "getElementsByTagName",

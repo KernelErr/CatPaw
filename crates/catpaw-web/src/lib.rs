@@ -57,6 +57,7 @@ mod traversal;
 mod ui_events;
 mod url_api;
 mod window;
+pub use window::named_window_property;
 mod xhr;
 mod xpath;
 
