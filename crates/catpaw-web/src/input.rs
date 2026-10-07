@@ -771,7 +771,10 @@ pub fn fill(cx: &mut Cx<'_>, el: NodeId, text: &str) -> Result<(), InputError> {
         }
     }
     let kind = editable(&cx.dom(), el).ok_or(InputError::NotEditable)?;
-    focus_for_input(cx, focus_target(&cx.dom(), el).or(Some(el)));
+    // Not in one statement: the borrow of the document would last through
+    // the focus listeners, which may change it.
+    let focus = focus_target(&cx.dom(), el).or(Some(el));
+    focus_for_input(cx, focus);
     let text = text.to_string();
     if control_value(cx, el, kind) != text {
         edit_value(

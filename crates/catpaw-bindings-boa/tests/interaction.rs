@@ -156,6 +156,23 @@ fn typing_edits_the_focused_control_with_key_and_input_events() {
 }
 
 #[test]
+fn focus_listeners_may_change_the_document_while_a_field_is_filled() {
+    // Wikipedia's search box builds its suggestion list when it gets focus.
+    let mut page = load(
+        r#"<!doctype html><input id=i><script>document.getElementById('i').addEventListener('focus', function () { document.body.appendChild(document.createElement('ul')).id = 'suggest'; });</script>"#,
+    );
+    let i = find(&page, "i");
+    page.with_cx(|cx| input::fill(cx, i, "rust").expect("fill"));
+    assert_eq!(
+        eval(
+            &mut page,
+            "document.getElementById('i').value + ' ' + !!document.getElementById('suggest')"
+        ),
+        "rust true"
+    );
+}
+
+#[test]
 fn fill_check_and_select_report_their_changes() {
     let mut page = load(&format!(
         r#"<!doctype html>{LOG}<input id=i><input id=c type=checkbox><select id=s><option value=a>A</option><option value=b>B</option></select>

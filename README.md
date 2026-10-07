@@ -247,8 +247,21 @@ to open; its numbers include the calls that wait for the user's approval
 (logins, the form post, the upload), which Playwright MCP does not make.
 The tool list, a cost on every turn, is 10.7 KB for CatPaw and 20.3 KB for
 Playwright MCP.
+
+On content sites, measured the same way on the same day (these
+recordings stay out of the repository), the budget does most of the
+work: CatPaw folds a long article to 4000 tokens, which the agent opens
+part by part, where Playwright MCP's snapshot of the same article runs to
+160 000.
+
+| task | CatPaw calls | CatPaw bytes (~tokens) | Playwright MCP calls | Playwright MCP bytes (~tokens) |
+|---|---|---|---|---|
+| Hacker News, second page | 2 | 14618 (~4177) | 4 | 98113 (~28032) |
+| Wikipedia, search to an article | 2 | 11224 (~3207) | 4 | 569358 (~162674) |
+
 `cargo run -p xtask --features engine -- tasks report --baseline tools/baseline/playwright-mcp.json`
-regenerates the table, and
+regenerates the first table (with `--local`, the second, from tasks and
+recordings of your own in `tests/tasks/local/`), and
 [`tools/baseline/playwright-mcp.mjs`](tools/baseline/playwright-mcp.mjs)
 measures the baseline.
 

@@ -14,7 +14,7 @@
 // task runs three times, and the median run counts.
 //
 //   npm install --prefix <dir> @playwright/mcp@<version>
-//   node tools/baseline/playwright-mcp.mjs <dir>/node_modules/.bin/playwright-mcp [task ids]
+//   node tools/baseline/playwright-mcp.mjs <dir>/node_modules/.bin/playwright-mcp [--local] [task ids]
 //
 // BASELINE_VERBOSE=1 prints each call and snapshot to stderr.
 //
@@ -37,7 +37,11 @@ import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const [bin, ...only] = process.argv.slice(2);
+const argv = process.argv.slice(2);
+// --local measures the tasks in tests/tasks/local/ (content sites, kept
+// out of the repository) and keeps the numbers there too.
+const local = argv.includes('--local');
+const [bin, ...only] = argv.filter((a) => a !== '--local');
 const verbose = process.env.BASELINE_VERBOSE === '1';
 if (!bin) {
   console.error('usage: playwright-mcp.mjs <playwright-mcp binary> [task ids]');
@@ -251,7 +255,7 @@ async function run(task) {
   return result;
 }
 
-const tasksDir = join(root, 'tests/tasks');
+const tasksDir = join(root, local ? 'tests/tasks/local' : 'tests/tasks');
 const ids = readdirSync(tasksDir)
   .filter((id) => existsSync(join(tasksDir, id, 'task.json')))
   .filter((id) => only.length === 0 || only.includes(id))
@@ -275,7 +279,9 @@ function packageOf(path) {
   return `${server.name} ${server.version}`;
 }
 
-const path = join(root, 'tools/baseline/playwright-mcp.json');
+const path = local
+  ? join(tasksDir, 'playwright-mcp.json')
+  : join(root, 'tools/baseline/playwright-mcp.json');
 // Measuring some tasks again keeps what was measured of the others.
 const kept = only.length > 0 && existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')).tasks : {};
 const out = {
