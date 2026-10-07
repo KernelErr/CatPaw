@@ -612,12 +612,12 @@ members = ["selectorText"]
 members = ["sheet"]
 
 # --------------------------------------------------------------- selection
-# The selection has no ranges until `Range` exists: it reports itself empty
-# and takes the calls that would set it.
+# The selection holds one live range, as browsers do.
 [interfaces.Selection]
 members = [
   "anchorNode", "anchorOffset", "focusNode", "focusOffset", "isCollapsed", "rangeCount",
-  "type", "direction", "removeAllRanges", "empty", "collapse", "setPosition",
+  "type", "direction", "getRangeAt", "addRange", "removeRange", "removeAllRanges", "empty",
+  "collapse", "setPosition",
   "collapseToStart", "collapseToEnd", "extend", "setBaseAndExtent", "selectAllChildren",
   "modify", "deleteFromDocument", "containsNode",
 ]

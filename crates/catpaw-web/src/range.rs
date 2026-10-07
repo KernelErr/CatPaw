@@ -157,6 +157,16 @@ fn bounds(cx: &Cx<'_>, id: ObjectId) -> Fallible<(Boundary, Boundary)> {
     range(cx, id, |r| (r.start, r.end))
 }
 
+/// A range's boundary points, for the selection.
+pub(crate) fn bounds_of(cx: &Cx<'_>, id: ObjectId) -> Fallible<(Boundary, Boundary)> {
+    bounds(cx, id)
+}
+
+/// The order of two boundary points of one tree.
+pub(crate) fn compare_points(dom: &Dom, a: Boundary, b: Boundary) -> Ordering {
+    position(dom, a, b)
+}
+
 /// Makes a live range, registered for updates.
 pub(crate) fn new_range(cx: &Cx<'_>, start: Boundary, end: Boundary) -> ObjectId {
     let id = cx.page.alloc(RangeObject {

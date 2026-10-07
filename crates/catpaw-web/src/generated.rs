@@ -3781,6 +3781,9 @@ pub trait SelectionImpl {
     fn range_count(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
     fn type_(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
     fn direction(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn get_range_at(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<ObjectId>;
+    fn add_range(cx: &mut Cx<'_>, this: ObjectId, range: ObjectId) -> Fallible<()>;
+    fn remove_range(cx: &mut Cx<'_>, this: ObjectId, range: ObjectId) -> Fallible<()>;
     fn remove_all_ranges(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
     fn empty(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
     fn collapse(cx: &mut Cx<'_>, this: ObjectId, node: Option<NodeId>, offset: u32)

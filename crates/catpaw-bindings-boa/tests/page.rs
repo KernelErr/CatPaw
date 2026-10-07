@@ -1292,41 +1292,6 @@ fn beacons_go_out_in_the_background() {
 }
 
 #[test]
-fn the_selection_is_empty_but_present() {
-    let mut page = load(
-        "<p id=p>text</p><script>function attempt(f) { try { return String(f()); } catch (e) { return e.name; } }</script>",
-    );
-    for (source, expected) in [
-        (
-            "var s = getSelection(); [s === document.getSelection(), s === window.getSelection(), Object.prototype.toString.call(s), s.type, s.rangeCount, s.isCollapsed, s.anchorNode, s.focusNode, s.anchorOffset, s.direction, s.toString() === ''].map(String).join(' ')",
-            "true true [object Selection] None 0 true null null 0 none true",
-        ),
-        (
-            "s.removeAllRanges(); s.empty(); s.collapse(null); s.collapse(document.body, 0); var p = document.getElementById('p'); s.setBaseAndExtent(p, 0, p.firstChild, 4); s.selectAllChildren(p); s.modify('move', 'forward', 'word'); s.containsNode(p) + ' ' + s.type",
-            "false None",
-        ),
-        (
-            "attempt(function () { s.collapse(p.firstChild, 5); })",
-            "IndexSizeError",
-        ),
-        (
-            "attempt(function () { s.collapseToStart(); })",
-            "InvalidStateError",
-        ),
-        (
-            "attempt(function () { s.selectAllChildren(document.doctype || document.implementation.createDocumentType('html', '', '')); })",
-            "InvalidNodeTypeError",
-        ),
-        (
-            "String(document.implementation.createHTMLDocument('').getSelection())",
-            "null",
-        ),
-    ] {
-        assert_eq!(eval(&mut page, source), expected, "{source}");
-    }
-}
-
-#[test]
 fn subtle_crypto_digests() {
     let mut page = load("<script>var log = [];</script>");
     assert_eq!(
@@ -1450,4 +1415,55 @@ fn a_document_can_be_constructed() {
         ),
         "[object Document] application/xml true null 0 null x true false null CSS1Compat"
     );
+}
+
+#[test]
+fn the_selection_holds_one_range() {
+    let mut page = load(
+        "<p id=p>text</p><p id=q>more</p><script>function attempt(f) { try { return String(f()); } catch (e) { return e.name; } }</script>",
+    );
+    for (source, expected) in [
+        (
+            "var s = getSelection(); var p = document.getElementById('p'), q = document.getElementById('q'); [s === document.getSelection(), Object.prototype.toString.call(s), s.type, s.rangeCount, s.isCollapsed, s.anchorNode, s.direction, s.toString() === '', attempt(function () { return s.getRangeAt(0); })].map(String).join(' ')",
+            "true [object Selection] None 0 true null none true IndexSizeError",
+        ),
+        (
+            "s.collapse(p.firstChild, 2); [s.type, s.rangeCount, s.isCollapsed, s.anchorNode === p.firstChild, s.anchorOffset, s.focusOffset, s.direction, s.getRangeAt(0) instanceof Range, s.getRangeAt(0).collapsed].join(' ')",
+            "Caret 1 true true 2 2 forward true true",
+        ),
+        (
+            "s.extend(q.firstChild, 3); [s.type, s.anchorNode === p.firstChild, s.focusNode === q.firstChild, s.direction, s.toString(), s.getRangeAt(0).startOffset, s.containsNode(p), s.containsNode(p, true), s.containsNode(q), s.containsNode(q, true)].join(' ')",
+            "Range true true forward xtmor 2 false true false true",
+        ),
+        (
+            "s.extend(p.firstChild, 0); [s.direction, s.anchorOffset, s.focusOffset, s.getRangeAt(0).startOffset, s.getRangeAt(0).endOffset, s.toString()].join(' ')",
+            "backward 2 0 0 2 te",
+        ),
+        (
+            "s.setBaseAndExtent(q.firstChild, 4, p.firstChild, 1); s.direction + ' ' + s.toString() + ' ' + s.anchorNode.data + ' ' + s.focusOffset",
+            "backward extmore more 1",
+        ),
+        (
+            "s.selectAllChildren(q); var r = s.getRangeAt(0); [r.startContainer === q, r.endOffset, s.toString(), attempt(function () { s.selectAllChildren(document.implementation.createDocumentType('html', '', '')); }), attempt(function () { s.collapse(p.firstChild, 9); })].join(' ')",
+            "true 1 more InvalidNodeTypeError IndexSizeError",
+        ),
+        (
+            "s.collapseToStart(); var caret = s.isCollapsed; s.removeAllRanges(); [caret, s.type, attempt(function () { s.collapseToEnd(); }), attempt(function () { s.extend(p, 0); })].join(' ')",
+            "true None InvalidStateError InvalidStateError",
+        ),
+        (
+            "var range = document.createRange(); range.selectNodeContents(p); s.addRange(range); var other = document.createRange(); s.addRange(other); [s.rangeCount, s.getRangeAt(0) === range, attempt(function () { s.removeRange(other); }), s.toString()].join(' ')",
+            "1 true NotFoundError text",
+        ),
+        (
+            "s.deleteFromDocument(); [p.textContent === '', s.isCollapsed, s.type].join(' '); s.removeRange(range); s.rangeCount + ' ' + p.textContent.length + ' ' + s.type",
+            "0 0 None",
+        ),
+        (
+            "String(document.implementation.createHTMLDocument('').getSelection())",
+            "null",
+        ),
+    ] {
+        assert_eq!(eval(&mut page, source), expected, "{source}");
+    }
 }

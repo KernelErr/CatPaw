@@ -12681,6 +12681,47 @@ pub mod selection {
         rt::ret(r, ctx)
     }
 
+    fn op_get_range_at(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Selection, ctx)?;
+        rt::require_args(args, 1, "Selection.getRangeAt")?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SelectionImpl>::get_range_at(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_add_range(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Selection, ctx)?;
+        rt::require_args(args, 1, "Selection.addRange")?;
+        let a0 = rt::object_from_js(rt::arg(args, 0), I::Range, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SelectionImpl>::add_range(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_remove_range(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Selection, ctx)?;
+        rt::require_args(args, 1, "Selection.removeRange")?;
+        let a0 = rt::object_from_js(rt::arg(args, 0), I::Range, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SelectionImpl>::remove_range(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn op_remove_all_ranges(
         this_js: &JsValue,
         args: &[JsValue],
@@ -12941,6 +12982,21 @@ pub mod selection {
             },
         ],
         ops: &[
+            rt::OpDef {
+                name: "getRangeAt",
+                func: op_get_range_at,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "addRange",
+                func: op_add_range,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "removeRange",
+                func: op_remove_range,
+                length: 1,
+            },
             rt::OpDef {
                 name: "removeAllRanges",
                 func: op_remove_all_ranges,
