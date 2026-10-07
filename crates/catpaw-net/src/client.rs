@@ -20,6 +20,7 @@ use url::Url;
 use crate::bot_auth::{BotAuthConfig, BotAuthSigner};
 use crate::cookies::CookieJar;
 use crate::decode::decode_body;
+use crate::policy::{self, FilteringResolver};
 
 /// The default User-Agent. Deployers are expected to set their own, with a
 /// contact URL, when they register as a signed agent.
@@ -50,6 +51,12 @@ pub enum NetError {
     Tls(String),
     #[error("bot auth: {0}")]
     BotAuth(#[from] crate::bot_auth::BotAuthError),
+    #[error("the response is larger than the {0} byte limit")]
+    TooLarge(usize),
+    #[error("refused: {0} (private networks are off by default)")]
+    PrivateAddress(String),
+    #[error("proxy: {0}")]
+    Proxy(String),
 }
 
 #[derive(Debug, Clone)]
@@ -60,6 +67,18 @@ pub struct NetConfig {
     /// Overall budget for one hop (connect, headers, body).
     pub timeout: Duration,
     pub bot_auth: Option<BotAuthConfig>,
+    /// The most bytes a response body may have on the wire.
+    pub max_response_bytes: usize,
+    /// The most bytes a response body may decode to.
+    pub max_decoded_bytes: usize,
+    /// Whether requests may go to loopback, private and link-local
+    /// addresses (off by default: a page must not reach the machine or its
+    /// network).
+    pub allow_private_network: bool,
+    /// An HTTP (`CONNECT`) or SOCKS5 proxy every connection goes through.
+    pub proxy: Option<Url>,
+    /// Cookies to start with, as [`CookieJar::to_json`] writes them.
+    pub cookies_json: Option<String>,
 }
 
 impl Default for NetConfig {
@@ -70,6 +89,11 @@ impl Default for NetConfig {
             max_redirects: 20,
             timeout: Duration::from_secs(30),
             bot_auth: None,
+            max_response_bytes: 32 * 1024 * 1024,
+            max_decoded_bytes: 64 * 1024 * 1024,
+            allow_private_network: false,
+            proxy: None,
+            cookies_json: None,
         }
     }
 }
@@ -167,7 +191,7 @@ struct Hop {
 
 /// An HTTP client with its own cookie jar and identity.
 pub struct NetClient {
-    inner: Client<HttpsConnector<HttpConnector>, Full<Bytes>>,
+    inner: Client<Connector, Full<Bytes>>,
     config: NetConfig,
     cookies: CookieJar,
     signer: Option<BotAuthSigner>,
@@ -206,25 +230,114 @@ fn is_redirect(status: StatusCode) -> bool {
     )
 }
 
+/// The transport: TLS over a direct connection, or over a tunnel through
+/// the proxy.
+type Connector = HttpsConnector<ProxyOrDirect>;
+
+/// A connection made directly (names resolved and filtered here) or
+/// through a `CONNECT` or SOCKS5 proxy (which resolves the target).
+#[derive(Clone)]
+enum ProxyOrDirect {
+    Direct(HttpConnector<FilteringResolver>),
+    Tunnel(hyper_util::client::legacy::connect::proxy::Tunnel<HttpConnector<FilteringResolver>>),
+    Socks(hyper_util::client::legacy::connect::proxy::SocksV5<HttpConnector<FilteringResolver>>),
+}
+
+impl tower_service::Service<Uri> for ProxyOrDirect {
+    type Response = hyper_util::rt::TokioIo<tokio::net::TcpStream>;
+    type Error = Box<dyn std::error::Error + Send + Sync>;
+    type Future = std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<Self::Response, Self::Error>> + Send>,
+    >;
+
+    fn poll_ready(
+        &mut self,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Result<(), Self::Error>> {
+        match self {
+            ProxyOrDirect::Direct(c) => c.poll_ready(cx).map_err(Into::into),
+            ProxyOrDirect::Tunnel(c) => c.poll_ready(cx).map_err(Into::into),
+            ProxyOrDirect::Socks(c) => c.poll_ready(cx).map_err(Into::into),
+        }
+    }
+
+    fn call(&mut self, uri: Uri) -> Self::Future {
+        match self {
+            ProxyOrDirect::Direct(c) => {
+                let fut = c.call(uri);
+                Box::pin(async move { fut.await.map_err(Into::into) })
+            }
+            ProxyOrDirect::Tunnel(c) => {
+                let fut = c.call(uri);
+                Box::pin(async move { fut.await.map_err(Into::into) })
+            }
+            ProxyOrDirect::Socks(c) => {
+                let fut = c.call(uri);
+                Box::pin(async move { fut.await.map_err(Into::into) })
+            }
+        }
+    }
+}
+
 impl NetClient {
     pub fn new(config: NetConfig) -> Result<Self, NetError> {
         let tls = build_tls_config()?;
+        let mut http = HttpConnector::new_with_resolver(FilteringResolver {
+            allow_private: config.allow_private_network,
+        });
+        http.enforce_http(false);
+        let transport = match &config.proxy {
+            None => ProxyOrDirect::Direct(http),
+            Some(proxy) => {
+                // The proxy itself may well be on a private network; the
+                // target's address is the proxy's business.
+                let (uri, auth) = policy::proxy_parts(proxy).map_err(NetError::Proxy)?;
+                let mut via = HttpConnector::new_with_resolver(FilteringResolver {
+                    allow_private: true,
+                });
+                via.enforce_http(false);
+                if proxy.scheme().starts_with("socks5") {
+                    let mut socks =
+                        hyper_util::client::legacy::connect::proxy::SocksV5::new(uri, via);
+                    if !proxy.username().is_empty() {
+                        socks = socks.with_auth(
+                            proxy.username().to_string(),
+                            proxy.password().unwrap_or_default().to_string(),
+                        );
+                    }
+                    ProxyOrDirect::Socks(socks)
+                } else {
+                    let mut tunnel =
+                        hyper_util::client::legacy::connect::proxy::Tunnel::new(uri, via);
+                    if let Some(auth) = auth {
+                        tunnel = tunnel.with_auth(auth);
+                    }
+                    ProxyOrDirect::Tunnel(tunnel)
+                }
+            }
+        };
         let https = hyper_rustls::HttpsConnectorBuilder::new()
             .with_tls_config(tls)
             .https_or_http()
             .enable_http1()
             .enable_http2()
-            .build();
+            .wrap_connector(transport);
         let inner = Client::builder(TokioExecutor::new()).build(https);
         let signer = config
             .bot_auth
             .as_ref()
             .map(BotAuthSigner::new)
             .transpose()?;
+        let cookies = CookieJar::new();
+        if let Some(json) = &config.cookies_json {
+            cookies
+                .load_json(json)
+                .map_err(|e| NetError::InvalidUrl(format!("cookie file: {e}")))?;
+        }
         Ok(Self {
             inner,
             config,
-            cookies: CookieJar::new(),
+            cookies,
             signer,
         })
     }
@@ -311,6 +424,13 @@ impl NetClient {
         body: Option<Bytes>,
         credentials: bool,
     ) -> Result<Hop, NetError> {
+        if self.config.proxy.is_none() {
+            policy::check_host(url, self.config.allow_private_network)
+                .map_err(NetError::PrivateAddress)?;
+        } else if let Some(url::Host::Ipv4(_) | url::Host::Ipv6(_)) = url.host() {
+            policy::check_host(url, self.config.allow_private_network)
+                .map_err(NetError::PrivateAddress)?;
+        }
         let uri: Uri = url
             .as_str()
             .parse()
@@ -371,11 +491,27 @@ impl NetClient {
             self.cookies.store_response(url, &parts.headers);
         }
 
-        let collected = tokio::time::timeout(timeout, incoming.collect())
+        // A body that would exceed the limit is dropped as soon as that is
+        // known, by the declared length or as it arrives.
+        let limit = self.config.max_response_bytes;
+        if let Some(declared) = parts
+            .headers
+            .get(CONTENT_LENGTH)
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.trim().parse::<usize>().ok())
+            && declared > limit
+        {
+            return Err(NetError::TooLarge(limit));
+        }
+        let raw = tokio::time::timeout(timeout, read_body_limited(incoming, limit))
             .await
             .map_err(|_| NetError::Timeout(timeout))??;
-        let raw = collected.to_bytes();
-        let decoded = decode_body(&parts.headers, raw).map_err(NetError::Decode)?;
+        let decoded = decode_body(&parts.headers, raw, self.config.max_decoded_bytes).map_err(
+            |e| match e {
+                crate::decode::DecodeError::TooLarge(limit) => NetError::TooLarge(limit),
+                crate::decode::DecodeError::Failed(message) => NetError::Decode(message),
+            },
+        )?;
 
         let mut headers = parts.headers;
         // The body is now decoded; these headers would describe the wire form.
@@ -387,6 +523,24 @@ impl NetClient {
             body: decoded,
         })
     }
+}
+
+/// Reads a body up to `limit` bytes; past it the connection is dropped.
+async fn read_body_limited(
+    mut body: hyper::body::Incoming,
+    limit: usize,
+) -> Result<Bytes, NetError> {
+    let mut out = Vec::new();
+    while let Some(frame) = body.frame().await {
+        let frame = frame?;
+        if let Ok(data) = frame.into_data() {
+            if out.len() + data.len() > limit {
+                return Err(NetError::TooLarge(limit));
+            }
+            out.extend_from_slice(&data);
+        }
+    }
+    Ok(Bytes::from(out))
 }
 
 fn header_value(s: &str) -> Result<HeaderValue, NetError> {

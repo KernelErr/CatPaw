@@ -9,6 +9,7 @@ pub mod bot_auth;
 pub mod client;
 pub mod cookies;
 pub mod decode;
+pub mod policy;
 
 pub use bot_auth::{BotAuthConfig, BotAuthError, BotAuthSigner, KeyPair, SignedHeaders};
 pub use bytes::Bytes;

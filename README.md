@@ -21,7 +21,15 @@ isolated contexts.
 > `scrollTo`, `scrollIntoView`, `elementFromPoint`), as do
 > `IntersectionObserver` and `ResizeObserver`. Screenshots
 > (`catpaw fetch --js --screenshot out.png [--full-page]`) paint backgrounds,
-> borders and text with tiny-skia.
+> borders and text with tiny-skia. Input: trusted pointer and keyboard
+> sequences with focus, typing, activation (links, buttons, labels,
+> `details`), form submission in every encoding and the navigations that
+> follow, driven by `--action "click <selector>"`, `fill`, `type`, `press`,
+> `check`, `select`. Network: response bodies are capped on the wire and
+> after decoding (`--max-response-mb`), loopback and private addresses are
+> refused unless `--allow-private-network` says otherwise, HTTP `CONNECT`
+> and SOCKS5 proxies (`--proxy`), cookie files kept between runs
+> (`--cookie-jar`).
 >
 > With `catpaw fetch --js`: classic scripts (inline, external, `defer`,
 > `async`, script-inserted, `document.write`) and module scripts (static and
@@ -94,6 +102,9 @@ catpaw fetch https://httpbin.org/forms/post --forms
 # From a checkout (not in the published 0.0.1 yet): run the page's scripts first
 cargo run -p catpaw -- fetch https://news.ycombinator.com --js --console
 cargo run -p catpaw -- fetch https://example.com --js --eval "document.title"
+# Log in through a form and keep the session for the next run
+cargo run -p catpaw -- fetch https://site.example/login --js --cookie-jar ./jar.json \
+    --action "fill #username bob" --action "fill #password secret" --action "press Enter" --text
 catpaw keygen --out ./agent-key.json
 catpaw fetch https://crawltest.com/cdn-cgi/web-bot-auth \
     --bot-auth-key ./agent-key.json --signature-agent https://your-agent.example --text

@@ -9,7 +9,7 @@ agent 真正需要的东西——带稳定引用的紧凑语义快照、精确�
 
 > 状态：**pre-alpha**。里程碑 M0（"抓取与阅读"）与 M1（"脚本运行"，基于 Boa 的 JavaScript）已完成，M2（"交互"）进行中。
 >
-> M2 当前进展：布局。块级、flex、grid 盒由 Taffy 排布，行内内容由 Parley 在内置字体集上整形断行，且只在有人索取几何信息时才计算；CSSOM View（`getBoundingClientRect`、`getClientRects`、`offset*`/`client*`/`scroll*`、`scrollTo`、`scrollIntoView`、`elementFromPoint`）以及 `IntersectionObserver`、`ResizeObserver` 都基于它作答。截图（`catpaw fetch --js --screenshot out.png [--full-page]`）用 tiny-skia 绘制背景、边框与文字。
+> M2 当前进展：布局。块级、flex、grid 盒由 Taffy 排布，行内内容由 Parley 在内置字体集上整形断行，且只在有人索取几何信息时才计算；CSSOM View（`getBoundingClientRect`、`getClientRects`、`offset*`/`client*`/`scroll*`、`scrollTo`、`scrollIntoView`、`elementFromPoint`）以及 `IntersectionObserver`、`ResizeObserver` 都基于它作答。截图（`catpaw fetch --js --screenshot out.png [--full-page]`）用 tiny-skia 绘制背景、边框与文字。输入：受信的指针与键盘事件序列，含焦点、打字、激活行为（链接、按钮、label、`details`）、各种编码的表单提交及其引发的导航，由 `--action "click <selector>"`、`fill`、`type`、`press`、`check`、`select` 驱动。网络：响应体在线上和解码后都有上限（`--max-response-mb`），回环与私网地址默认拒绝（`--allow-private-network` 放行），支持 HTTP `CONNECT` 与 SOCKS5 代理（`--proxy`），cookie 文件跨运行保留（`--cookie-jar`）。
 >
 > 通过 `catpaw fetch --js` 使用：经典脚本（内联、外链、`defer`、`async`、
 > 脚本动态插入、`document.write`）与模块脚本（静态与动态 import、import map）在 Boa 上与解析器交错执行；核心 DOM（全部 HTML/SVG 元素接口、属性对象、树遍历、XPath、`Range` 与 `Selection`、`DOMParser`、`document.implementation`、文档集合与具名访问如 `document.forms`、`document.myForm`）、
@@ -56,6 +56,9 @@ catpaw fetch https://httpbin.org/forms/post --forms
 # 源码目录下（尚未包含在已发布的 0.0.1 中）：先执行页面脚本再读取
 cargo run -p catpaw -- fetch https://news.ycombinator.com --js --console
 cargo run -p catpaw -- fetch https://example.com --js --eval "document.title"
+# 通过表单登录，并把会话留给下一次运行
+cargo run -p catpaw -- fetch https://site.example/login --js --cookie-jar ./jar.json \
+    --action "fill #username bob" --action "fill #password secret" --action "press Enter" --text
 catpaw keygen --out ./agent-key.json
 ```
 

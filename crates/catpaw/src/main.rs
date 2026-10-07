@@ -93,6 +93,20 @@ struct FetchArgs {
     /// Per-request timeout in seconds.
     #[arg(long, default_value_t = 30)]
     timeout: u64,
+    /// The most megabytes a response body may have (on the wire; decoded
+    /// bodies may be twice that).
+    #[arg(long, default_value_t = 32)]
+    max_response_mb: usize,
+    /// Let requests reach loopback, private and link-local addresses.
+    #[arg(long)]
+    allow_private_network: bool,
+    /// An HTTP (CONNECT) or SOCKS5 proxy, e.g. http://user:pass@host:3128
+    /// or socks5h://host:1080.
+    #[arg(long)]
+    proxy: Option<String>,
+    /// A cookie file (JSON) to load before the request and save after it.
+    #[arg(long)]
+    cookie_jar: Option<PathBuf>,
     /// Print response headers to stderr.
     #[arg(long)]
     show_headers: bool,
@@ -272,6 +286,21 @@ fn net_config(args: &FetchArgs) -> Result<NetConfig> {
         timeout: Duration::from_secs(args.timeout),
         ..NetConfig::default()
     };
+    config.max_response_bytes = args.max_response_mb.saturating_mul(1024 * 1024);
+    config.max_decoded_bytes = config.max_response_bytes.saturating_mul(2);
+    config.allow_private_network = args.allow_private_network;
+    if let Some(proxy) = &args.proxy {
+        config.proxy =
+            Some(Url::parse(proxy).with_context(|| format!("parsing the proxy URL {proxy}"))?);
+    }
+    if let Some(path) = &args.cookie_jar
+        && path.exists()
+    {
+        config.cookies_json = Some(
+            std::fs::read_to_string(path)
+                .with_context(|| format!("reading the cookie file {}", path.display()))?,
+        );
+    }
     if let Some(ua) = &args.user_agent {
         config.user_agent = ua.clone();
     }
@@ -308,6 +337,7 @@ async fn fetch(args: FetchArgs) -> Result<()> {
     let doc = fetch_document(&client, &url)
         .await
         .with_context(|| format!("fetching {url}"))?;
+    save_cookie_jar(&args, client.cookies())?;
     let fetch_ms = started.elapsed().as_millis();
     let response = &doc.response;
     eprintln!(
@@ -494,6 +524,20 @@ fn fetch_with_scripts(args: FetchArgs) -> Result<()> {
     };
     let started = Instant::now();
     catpaw_engine::with_page(url.clone(), options, move |page| -> Result<()> {
+        let result = fetch_with_scripts_on(&args, page, started);
+        save_cookie_jar(&args, page.net().client().cookies())?;
+        result
+    })
+    .with_context(|| format!("loading {url}"))?
+}
+
+/// The output of `fetch --js`, once the page is open.
+fn fetch_with_scripts_on(
+    args: &FetchArgs,
+    page: &mut catpaw_engine::Page,
+    started: Instant,
+) -> Result<()> {
+    {
         let document = page.document().clone();
         eprintln!(
             "GET {} -> {} {} ({} bytes, {} redirect(s), {})",
@@ -505,7 +549,9 @@ fn fetch_with_scripts(args: FetchArgs) -> Result<()> {
             document.encoding,
         );
         if document.cloudflare_challenge {
-            eprintln!("note: the response is a Cloudflare challenge page (cf-mitigated: challenge)");
+            eprintln!(
+                "note: the response is a Cloudflare challenge page (cf-mitigated: challenge)"
+            );
         }
         if args.show_headers {
             for (name, value) in &document.headers {
@@ -562,8 +608,7 @@ fn fetch_with_scripts(args: FetchArgs) -> Result<()> {
         }
         if let Some(path) = &args.screenshot {
             let png = page.screenshot(args.full_page);
-            std::fs::write(path, &png)
-                .with_context(|| format!("writing {}", path.display()))?;
+            std::fs::write(path, &png).with_context(|| format!("writing {}", path.display()))?;
             eprintln!("screenshot: {} ({} bytes)", path.display(), png.len());
             if args.eval.is_none() {
                 return Ok(());
@@ -582,16 +627,16 @@ fn fetch_with_scripts(args: FetchArgs) -> Result<()> {
             return Ok(());
         }
 
-        let view = chosen_view(&args);
+        let view = chosen_view(args);
         let page_url = page.url();
         let dom = page.dom();
         let oracle: Box<dyn StyleOracle> = if args.no_css || view == View::Html {
             Box::new(AttributeOracle)
         } else {
             let style_started = Instant::now();
-            let (engine, fetched) = page
-                .net()
-                .block_on(style_document(page.net().client(), &dom, &page_url));
+            let (engine, fetched) =
+                page.net()
+                    .block_on(style_document(page.net().client(), &dom, &page_url));
             eprintln!(
                 "{} nodes; styled with {} author sheet(s) ({} fetched) in {} ms",
                 dom.len(),
@@ -601,7 +646,14 @@ fn fetch_with_scripts(args: FetchArgs) -> Result<()> {
             );
             Box::new(EngineOracle(engine))
         };
-        render(&args, view, &dom, oracle.as_ref())
-    })
-    .with_context(|| format!("loading {url}"))?
+        render(args, view, &dom, oracle.as_ref())
+    }
+}
+
+fn save_cookie_jar(args: &FetchArgs, jar: &catpaw_net::CookieJar) -> Result<()> {
+    if let Some(path) = &args.cookie_jar {
+        std::fs::write(path, jar.to_json())
+            .with_context(|| format!("writing the cookie file {}", path.display()))?;
+    }
+    Ok(())
 }

@@ -107,6 +107,28 @@ impl CookieJar {
     }
 
     /// All unexpired cookies, for inspection and checkpoints.
+    /// The jar as JSON (one cookie per line, as `cookie_store` writes it),
+    /// for keeping between runs. Session cookies are included.
+    pub fn to_json(&self) -> String {
+        let store = self.store.lock().unwrap_or_else(|e| e.into_inner());
+        let mut out = Vec::new();
+        let _ = cookie_store::serde::json::save_incl_expired_and_nonpersistent(&store, &mut out);
+        String::from_utf8_lossy(&out).into_owned()
+    }
+
+    /// Adds the cookies of a jar saved with [`CookieJar::to_json`].
+    pub fn load_json(&self, json: &str) -> Result<usize, String> {
+        let loaded = cookie_store::serde::json::load_all(json.as_bytes())
+            .map_err(|e| format!("reading the cookie file: {e}"))?;
+        let mut store = self.store.lock().unwrap_or_else(|e| e.into_inner());
+        let mut count = 0;
+        for cookie in loaded.iter_any() {
+            let _ = store.insert_raw(cookie, &cookie_url(cookie));
+            count += 1;
+        }
+        Ok(count)
+    }
+
     pub fn entries(&self) -> Vec<CookieEntry> {
         self.store
             .lock()
@@ -122,6 +144,24 @@ impl CookieJar {
             })
             .collect()
     }
+}
+
+/// A URL the cookie would have been set from, for re-inserting it.
+fn cookie_url(cookie: &cookie_store::Cookie<'_>) -> Url {
+    let domain = match &cookie.domain {
+        cookie_store::CookieDomain::HostOnly(host) | cookie_store::CookieDomain::Suffix(host) => {
+            host.as_str()
+        }
+        _ => "localhost",
+    };
+    let scheme = if cookie.secure().unwrap_or(false) {
+        "https"
+    } else {
+        "http"
+    };
+    let path = cookie.path().unwrap_or("/");
+    Url::parse(&format!("{scheme}://{domain}{path}"))
+        .unwrap_or_else(|_| Url::parse("http://localhost/").expect("a valid URL"))
 }
 
 #[cfg(test)]
