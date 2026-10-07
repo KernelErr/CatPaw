@@ -60,6 +60,20 @@ impl IntoJs for web::DocumentVisibilityState {
     }
 }
 
+impl FromJs for web::EndingType {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::EndingType::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid EndingType")))
+    }
+}
+
+impl IntoJs for web::EndingType {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
 impl FromJs for web::FontFaceLoadStatus {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let s = rt::string_from_js(v, ctx)?;
@@ -412,6 +426,31 @@ impl IntoJs for web::AssignedNodesOptions {
     }
 }
 
+impl FromJs for web::BlobPropertyBag {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "BlobPropertyBag")?;
+        Ok(Self {
+            type_: match rt::dictionary_member(&obj, "type", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "".to_string(),
+            },
+            endings: match rt::dictionary_member(&obj, "endings", ctx)? {
+                Some(m) => <web::EndingType as FromJs>::from_js((&m), ctx)?,
+                None => web::EndingType::Transparent,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::BlobPropertyBag {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "type", self.type_, ctx)?;
+        rt::set_member(&obj, "endings", self.endings, ctx)?;
+        Ok(obj.into())
+    }
+}
+
 impl FromJs for web::CSSStyleSheetInit {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let obj = rt::dictionary_object(v, "CSSStyleSheetInit")?;
@@ -644,6 +683,36 @@ impl IntoJs for web::EventListenerOptions {
     fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
         let obj = rt::new_plain_object(ctx);
         rt::set_member(&obj, "capture", self.capture, ctx)?;
+        Ok(obj.into())
+    }
+}
+
+impl FromJs for web::FilePropertyBag {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "FilePropertyBag")?;
+        Ok(Self {
+            type_: match rt::dictionary_member(&obj, "type", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "".to_string(),
+            },
+            endings: match rt::dictionary_member(&obj, "endings", ctx)? {
+                Some(m) => <web::EndingType as FromJs>::from_js((&m), ctx)?,
+                None => web::EndingType::Transparent,
+            },
+            last_modified: match rt::dictionary_member(&obj, "lastModified", ctx)? {
+                Some(m) => Some(rt::to_i64((&m), ctx)?),
+                None => None,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::FilePropertyBag {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "type", self.type_, ctx)?;
+        rt::set_member(&obj, "endings", self.endings, ctx)?;
+        rt::set_member(&obj, "lastModified", self.last_modified, ctx)?;
         Ok(obj.into())
     }
 }
@@ -1987,7 +2056,7 @@ impl FromJs for web::RequestInit {
                     if (&m).is_null_or_undefined() {
                         None
                     } else {
-                        Some(<web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString as FromJs>::from_js((&m), ctx)?)
+                        Some(<web::ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString as FromJs>::from_js((&m), ctx)?)
                     }
                 }
                 None => None,
@@ -2691,49 +2760,87 @@ impl IntoJs for web::BooleanOrScrollIntoViewOptions {
     }
 }
 
-impl FromJs for web::DocumentOrBufferSourceOrURLSearchParamsOrString {
+impl FromJs for web::BufferSourceOrBlobOrString {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if rt::is_instance(v, I::Blob, ctx) {
+            return Ok(web::BufferSourceOrBlobOrString::Blob(rt::object_from_js(
+                v,
+                I::Blob,
+                ctx,
+            )?));
+        }
+        if rt::is_buffer(v) {
+            return Ok(web::BufferSourceOrBlobOrString::BufferSource(
+                rt::buffer_from_js(v, ctx)?,
+            ));
+        }
+        Ok(web::BufferSourceOrBlobOrString::String(rt::string_from_js(
+            v, ctx,
+        )?))
+    }
+}
+
+impl IntoJs for web::BufferSourceOrBlobOrString {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+            web::BufferSourceOrBlobOrString::BufferSource(v) => v.into_js(ctx),
+            web::BufferSourceOrBlobOrString::Blob(v) => v.into_js(ctx),
+            web::BufferSourceOrBlobOrString::String(v) => v.into_js(ctx),
+        }
+    }
+}
+
+impl FromJs for web::DocumentOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         if rt::is_instance(v, I::Document, ctx) {
             return Ok(
-                web::DocumentOrBufferSourceOrURLSearchParamsOrString::Document(rt::node_from_js(
-                    v,
-                    I::Document,
-                    ctx,
-                )?),
-            );
-        }
-        if rt::is_instance(v, I::URLSearchParams, ctx) {
-            return Ok(
-                web::DocumentOrBufferSourceOrURLSearchParamsOrString::URLSearchParams(
-                    rt::object_from_js(v, I::URLSearchParams, ctx)?,
+                web::DocumentOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::Document(
+                    rt::node_from_js(v, I::Document, ctx)?,
                 ),
             );
         }
+        if rt::is_instance(v, I::Blob, ctx) {
+            return Ok(
+                web::DocumentOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::Blob(
+                    rt::object_from_js(v, I::Blob, ctx)?,
+                ),
+            );
+        }
+        if rt::is_instance(v, I::FormData, ctx) {
+            return Ok(
+                web::DocumentOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::FormData(
+                    rt::object_from_js(v, I::FormData, ctx)?,
+                ),
+            );
+        }
+        if rt::is_instance(v, I::URLSearchParams, ctx) {
+            return Ok(web::DocumentOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::URLSearchParams(rt::object_from_js(v, I::URLSearchParams, ctx)?));
+        }
         if rt::is_buffer(v) {
             return Ok(
-                web::DocumentOrBufferSourceOrURLSearchParamsOrString::BufferSource(
+                web::DocumentOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::BufferSource(
                     rt::buffer_from_js(v, ctx)?,
                 ),
             );
         }
         Ok(
-            web::DocumentOrBufferSourceOrURLSearchParamsOrString::String(rt::string_from_js(
-                v, ctx,
-            )?),
+            web::DocumentOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::String(
+                rt::string_from_js(v, ctx)?,
+            ),
         )
     }
 }
 
-impl IntoJs for web::DocumentOrBufferSourceOrURLSearchParamsOrString {
+impl IntoJs for web::DocumentOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString {
     fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
         match self {
-            web::DocumentOrBufferSourceOrURLSearchParamsOrString::Document(v) => v.into_js(ctx),
-            web::DocumentOrBufferSourceOrURLSearchParamsOrString::BufferSource(v) => v.into_js(ctx),
-            web::DocumentOrBufferSourceOrURLSearchParamsOrString::URLSearchParams(v) => {
-                v.into_js(ctx)
-            }
-            web::DocumentOrBufferSourceOrURLSearchParamsOrString::String(v) => v.into_js(ctx),
-        }
+web::DocumentOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::Document(v) => v.into_js(ctx),
+web::DocumentOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::Blob(v) => v.into_js(ctx),
+web::DocumentOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::BufferSource(v) => v.into_js(ctx),
+web::DocumentOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::FormData(v) => v.into_js(ctx),
+web::DocumentOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::URLSearchParams(v) => v.into_js(ctx),
+web::DocumentOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::String(v) => v.into_js(ctx),
+}
     }
 }
 
@@ -2841,6 +2948,28 @@ impl IntoJs for web::EventListenerOptionsOrBoolean {
     }
 }
 
+impl FromJs for web::FileOrString {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if rt::is_instance(v, I::File, ctx) {
+            return Ok(web::FileOrString::File(rt::object_from_js(
+                v,
+                I::File,
+                ctx,
+            )?));
+        }
+        Ok(web::FileOrString::String(rt::string_from_js(v, ctx)?))
+    }
+}
+
+impl IntoJs for web::FileOrString {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+            web::FileOrString::File(v) => v.into_js(ctx),
+            web::FileOrString::String(v) => v.into_js(ctx),
+        }
+    }
+}
+
 impl FromJs for web::MediaListOrString {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         if rt::is_instance(v, I::MediaList, ctx) {
@@ -2881,51 +3010,45 @@ impl IntoJs for web::NodeOrString {
     }
 }
 
-impl FromJs for web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString {
+impl FromJs for web::ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         if rt::is_instance(v, I::ReadableStream, ctx) {
+            return Ok(web::ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::ReadableStream(rt::object_from_js(v, I::ReadableStream, ctx)?));
+        }
+        if rt::is_instance(v, I::Blob, ctx) {
             return Ok(
-                web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString::ReadableStream(
-                    rt::object_from_js(v, I::ReadableStream, ctx)?,
+                web::ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::Blob(
+                    rt::object_from_js(v, I::Blob, ctx)?,
                 ),
             );
+        }
+        if rt::is_instance(v, I::FormData, ctx) {
+            return Ok(web::ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::FormData(rt::object_from_js(v, I::FormData, ctx)?));
         }
         if rt::is_instance(v, I::URLSearchParams, ctx) {
-            return Ok(
-                web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString::URLSearchParams(
-                    rt::object_from_js(v, I::URLSearchParams, ctx)?,
-                ),
-            );
+            return Ok(web::ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::URLSearchParams(rt::object_from_js(v, I::URLSearchParams, ctx)?));
         }
         if rt::is_buffer(v) {
-            return Ok(
-                web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString::BufferSource(
-                    rt::buffer_from_js(v, ctx)?,
-                ),
-            );
+            return Ok(web::ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::BufferSource(rt::buffer_from_js(v, ctx)?));
         }
         Ok(
-            web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString::String(rt::string_from_js(
-                v, ctx,
-            )?),
+            web::ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::String(
+                rt::string_from_js(v, ctx)?,
+            ),
         )
     }
 }
 
-impl IntoJs for web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString {
+impl IntoJs for web::ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString {
     fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
         match self {
-            web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString::ReadableStream(v) => {
-                v.into_js(ctx)
-            }
-            web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString::BufferSource(v) => {
-                v.into_js(ctx)
-            }
-            web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString::URLSearchParams(v) => {
-                v.into_js(ctx)
-            }
-            web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString::String(v) => v.into_js(ctx),
-        }
+web::ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::ReadableStream(v) => v.into_js(ctx),
+web::ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::Blob(v) => v.into_js(ctx),
+web::ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::BufferSource(v) => v.into_js(ctx),
+web::ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::FormData(v) => v.into_js(ctx),
+web::ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::URLSearchParams(v) => v.into_js(ctx),
+web::ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::String(v) => v.into_js(ctx),
+}
     }
 }
 
@@ -2947,6 +3070,28 @@ impl IntoJs for web::RequestOrString {
         match self {
             web::RequestOrString::Request(v) => v.into_js(ctx),
             web::RequestOrString::String(v) => v.into_js(ctx),
+        }
+    }
+}
+
+impl FromJs for web::StringOrArrayBuffer {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if rt::is_buffer(v) {
+            return Ok(web::StringOrArrayBuffer::ArrayBuffer(rt::buffer_from_js(
+                v, ctx,
+            )?));
+        }
+        Ok(web::StringOrArrayBuffer::String(rt::string_from_js(
+            v, ctx,
+        )?))
+    }
+}
+
+impl IntoJs for web::StringOrArrayBuffer {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+            web::StringOrArrayBuffer::String(v) => v.into_js(ctx),
+            web::StringOrArrayBuffer::ArrayBuffer(v) => v.into_js(ctx),
         }
     }
 }
@@ -3190,6 +3335,148 @@ pub mod abort_controller {
             func: op_abort,
             length: 0,
         }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod blob {
+    use super::*;
+
+    fn get_size(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Blob, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::BlobImpl>::size(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_type(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Blob, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::BlobImpl>::type_(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_slice(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Blob, ctx)?;
+        let a0 = if args.len() > 0 && !args[0].is_undefined() {
+            Some(rt::to_i64(rt::arg(args, 0), ctx)?)
+        } else {
+            None
+        };
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            Some(rt::to_i64(rt::arg(args, 1), ctx)?)
+        } else {
+            None
+        };
+        let a2 = if args.len() > 2 && !args[2].is_undefined() {
+            Some(rt::string_from_js(rt::arg(args, 2), ctx)?)
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::BlobImpl>::slice(cx, this, a0, a1, a2)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_stream(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Blob, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::BlobImpl>::stream(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_text(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Blob, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::BlobImpl>::text(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_array_buffer(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Blob, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::BlobImpl>::array_buffer(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_bytes(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Blob, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::BlobImpl>::bytes(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "Blob")?;
+        let a0 = if args.len() > 0 && !args[0].is_undefined() {
+            Some(rt::sequence_from_js(rt::arg(args, 0), ctx, |v, ctx| {
+                Ok(<web::BufferSourceOrBlobOrString as FromJs>::from_js(
+                    v, ctx,
+                )?)
+            })?)
+        } else {
+            None
+        };
+        let a1 = <web::BlobPropertyBag as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::BlobImpl>::constructor(cx, a0, a1));
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::Blob, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::Blob,
+        name: "Blob",
+        parent: None,
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "size",
+                getter: get_size,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "type",
+                getter: get_type,
+                setter: None,
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "slice",
+                func: op_slice,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "stream",
+                func: op_stream,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "text",
+                func: op_text,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "arrayBuffer",
+                func: op_array_buffer,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "bytes",
+                func: op_bytes,
+                length: 0,
+            },
+        ],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -4884,6 +5171,385 @@ pub mod event_target {
     };
 }
 
+pub mod file {
+    use super::*;
+
+    fn get_name(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::File, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FileImpl>::name(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_last_modified(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::File, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FileImpl>::last_modified(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "File")?;
+        rt::require_args(args, 2, "File constructor")?;
+        let a0 = rt::sequence_from_js(rt::arg(args, 0), ctx, |v, ctx| {
+            Ok(<web::BufferSourceOrBlobOrString as FromJs>::from_js(
+                v, ctx,
+            )?)
+        })?;
+        let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
+        let a2 = <web::FilePropertyBag as FromJs>::from_js(rt::arg(args, 2), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FileImpl>::constructor(cx, a0, a1, a2)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::File, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::File,
+        name: "File",
+        parent: Some(I::Blob),
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 2,
+        attrs: &[
+            rt::AttrDef {
+                name: "name",
+                getter: get_name,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "lastModified",
+                getter: get_last_modified,
+                setter: None,
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod file_reader {
+    use super::*;
+
+    fn get_ready_state(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FileReader, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FileReaderImpl>::ready_state(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_result(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FileReader, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FileReaderImpl>::result(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_error(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FileReader, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FileReaderImpl>::error(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_onloadstart(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FileReader, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "loadstart")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onloadstart(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FileReader, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "loadstart", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onprogress(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FileReader, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "progress")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onprogress(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FileReader, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "progress", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onload(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FileReader, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "load")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onload(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FileReader, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "load", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onabort(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FileReader, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "abort")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onabort(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FileReader, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "abort", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onerror(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FileReader, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "error")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onerror(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FileReader, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "error", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onloadend(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FileReader, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "loadend")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onloadend(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FileReader, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "loadend", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn op_read_as_array_buffer(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::FileReader, ctx)?;
+        rt::require_args(args, 1, "FileReader.readAsArrayBuffer")?;
+        let a0 = rt::object_from_js(rt::arg(args, 0), I::Blob, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FileReaderImpl>::read_as_array_buffer(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_read_as_binary_string(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::FileReader, ctx)?;
+        rt::require_args(args, 1, "FileReader.readAsBinaryString")?;
+        let a0 = rt::object_from_js(rt::arg(args, 0), I::Blob, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FileReaderImpl>::read_as_binary_string(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_read_as_text(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::FileReader, ctx)?;
+        rt::require_args(args, 1, "FileReader.readAsText")?;
+        let a0 = rt::object_from_js(rt::arg(args, 0), I::Blob, ctx)?;
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            Some(rt::string_from_js(rt::arg(args, 1), ctx)?)
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FileReaderImpl>::read_as_text(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_read_as_data_url(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::FileReader, ctx)?;
+        rt::require_args(args, 1, "FileReader.readAsDataURL")?;
+        let a0 = rt::object_from_js(rt::arg(args, 0), I::Blob, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FileReaderImpl>::read_as_data_url(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_abort(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::FileReader, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FileReaderImpl>::abort(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "FileReader")?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FileReaderImpl>::constructor(cx));
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::FileReader, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::FileReader,
+        name: "FileReader",
+        parent: Some(I::EventTarget),
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "readyState",
+                getter: get_ready_state,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "result",
+                getter: get_result,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "error",
+                getter: get_error,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "onloadstart",
+                getter: get_onloadstart,
+                setter: Some(set_onloadstart),
+            },
+            rt::AttrDef {
+                name: "onprogress",
+                getter: get_onprogress,
+                setter: Some(set_onprogress),
+            },
+            rt::AttrDef {
+                name: "onload",
+                getter: get_onload,
+                setter: Some(set_onload),
+            },
+            rt::AttrDef {
+                name: "onabort",
+                getter: get_onabort,
+                setter: Some(set_onabort),
+            },
+            rt::AttrDef {
+                name: "onerror",
+                getter: get_onerror,
+                setter: Some(set_onerror),
+            },
+            rt::AttrDef {
+                name: "onloadend",
+                getter: get_onloadend,
+                setter: Some(set_onloadend),
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "readAsArrayBuffer",
+                func: op_read_as_array_buffer,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "readAsBinaryString",
+                func: op_read_as_binary_string,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "readAsText",
+                func: op_read_as_text,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "readAsDataURL",
+                func: op_read_as_data_url,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "abort",
+                func: op_abort,
+                length: 0,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[("EMPTY", 0_f64), ("LOADING", 1_f64), ("DONE", 2_f64)],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod font_face {
     use super::*;
 
@@ -5469,6 +6135,182 @@ pub mod font_face_set {
         static_ops: &[],
         consts: &[],
         iterable: rt::Iterable::Set(set_values),
+        exotic: None,
+    };
+}
+
+pub mod form_data {
+    use super::*;
+
+    fn op_append(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::FormData, ctx)?;
+        if args.len() >= 2 && rt::is_instance(rt::arg(args, 1), I::Blob, ctx) {
+            rt::require_args(args, 2, "FormData.append")?;
+            let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+            let a1 = rt::object_from_js(rt::arg(args, 1), I::Blob, ctx)?;
+            let a2 = if args.len() > 2 && !args[2].is_undefined() {
+                Some(rt::string_from_js(rt::arg(args, 2), ctx)?)
+            } else {
+                None
+            };
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::FormDataImpl>::append_overload2(cx, this, a0, a1, a2)
+            });
+            rt::ret(r, ctx)
+        } else if args.len() >= 2 && true {
+            rt::require_args(args, 2, "FormData.append")?;
+            let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+            let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::FormDataImpl>::append(cx, this, a0, a1)
+            });
+            rt::ret(r, ctx)
+        } else {
+            Err(rt::type_error(
+                "FormData.append: no overload matches the arguments",
+            ))
+        }
+    }
+
+    fn op_delete(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::FormData, ctx)?;
+        rt::require_args(args, 1, "FormData.delete")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FormDataImpl>::delete(cx, this, a0));
+        rt::ret(r, ctx)
+    }
+
+    fn op_get(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::FormData, ctx)?;
+        rt::require_args(args, 1, "FormData.get")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FormDataImpl>::get(cx, this, a0));
+        rt::ret(r, ctx)
+    }
+
+    fn op_get_all(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::FormData, ctx)?;
+        rt::require_args(args, 1, "FormData.getAll")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FormDataImpl>::get_all(cx, this, a0));
+        rt::ret(r, ctx)
+    }
+
+    fn op_has(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::FormData, ctx)?;
+        rt::require_args(args, 1, "FormData.has")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FormDataImpl>::has(cx, this, a0));
+        rt::ret(r, ctx)
+    }
+
+    fn op_set(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::FormData, ctx)?;
+        if args.len() >= 2 && rt::is_instance(rt::arg(args, 1), I::Blob, ctx) {
+            rt::require_args(args, 2, "FormData.set")?;
+            let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+            let a1 = rt::object_from_js(rt::arg(args, 1), I::Blob, ctx)?;
+            let a2 = if args.len() > 2 && !args[2].is_undefined() {
+                Some(rt::string_from_js(rt::arg(args, 2), ctx)?)
+            } else {
+                None
+            };
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::FormDataImpl>::set_overload2(cx, this, a0, a1, a2)
+            });
+            rt::ret(r, ctx)
+        } else if args.len() >= 2 && true {
+            rt::require_args(args, 2, "FormData.set")?;
+            let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+            let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
+            let r = rt::with_cx(ctx, |cx| <Web as web::FormDataImpl>::set(cx, this, a0, a1));
+            rt::ret(r, ctx)
+        } else {
+            Err(rt::type_error(
+                "FormData.set: no overload matches the arguments",
+            ))
+        }
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "FormData")?;
+        let a0 = if args.len() > 0 && !args[0].is_undefined() {
+            Some(rt::node_from_js(rt::arg(args, 0), I::HTMLFormElement, ctx)?)
+        } else {
+            None
+        };
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            if rt::arg(args, 1).is_null_or_undefined() {
+                None
+            } else {
+                Some(rt::node_from_js(rt::arg(args, 1), I::HTMLElement, ctx)?)
+            }
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FormDataImpl>::constructor(cx, a0, a1)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::FormData, ctx);
+    }
+
+    fn iterate(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FormData, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FormDataImpl>::iterate(cx, this));
+        rt::ret_pairs(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::FormData,
+        name: "FormData",
+        parent: None,
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[
+            rt::OpDef {
+                name: "append",
+                func: op_append,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "delete",
+                func: op_delete,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "get",
+                func: op_get,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "getAll",
+                func: op_get_all,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "has",
+                func: op_has,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "set",
+                func: op_set,
+                length: 2,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::Pairs(iterate),
         exotic: None,
     };
 }
@@ -7409,7 +8251,7 @@ pub mod navigator {
             if rt::arg(args, 1).is_null_or_undefined() {
                 None
             } else {
-                Some(<web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString as FromJs>::from_js(rt::arg(args, 1), ctx)?)
+                Some(<web::ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString as FromJs>::from_js(rt::arg(args, 1), ctx)?)
             }
         } else {
             None
@@ -10413,10 +11255,24 @@ pub mod request {
         rt::ret(r, ctx)
     }
 
+    fn op_blob(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Request, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::BodyImpl>::blob(cx, this));
+        rt::ret(r, ctx)
+    }
+
     fn op_bytes(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_object(this_js, I::Request, ctx)?;
         let r = rt::with_cx(ctx, |cx| <Web as web::BodyImpl>::bytes(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_form_data(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Request, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::BodyImpl>::form_data(cx, this));
         rt::ret(r, ctx)
     }
 
@@ -10540,8 +11396,18 @@ pub mod request {
                 length: 0,
             },
             rt::OpDef {
+                name: "blob",
+                func: op_blob,
+                length: 0,
+            },
+            rt::OpDef {
                 name: "bytes",
                 func: op_bytes,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "formData",
+                func: op_form_data,
                 length: 0,
             },
             rt::OpDef {
@@ -10766,10 +11632,24 @@ pub mod response {
         rt::ret(r, ctx)
     }
 
+    fn op_blob(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Response, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::BodyImpl>::blob(cx, this));
+        rt::ret(r, ctx)
+    }
+
     fn op_bytes(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_object(this_js, I::Response, ctx)?;
         let r = rt::with_cx(ctx, |cx| <Web as web::BodyImpl>::bytes(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_form_data(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Response, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::BodyImpl>::form_data(cx, this));
         rt::ret(r, ctx)
     }
 
@@ -10793,7 +11673,7 @@ pub mod response {
             if rt::arg(args, 0).is_null_or_undefined() {
                 None
             } else {
-                Some(<web::ReadableStreamOrBufferSourceOrURLSearchParamsOrString as FromJs>::from_js(rt::arg(args, 0), ctx)?)
+                Some(<web::ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString as FromJs>::from_js(rt::arg(args, 0), ctx)?)
             }
         } else {
             None
@@ -10872,8 +11752,18 @@ pub mod response {
                 length: 0,
             },
             rt::OpDef {
+                name: "blob",
+                func: op_blob,
+                length: 0,
+            },
+            rt::OpDef {
                 name: "bytes",
                 func: op_bytes,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "formData",
+                func: op_form_data,
                 length: 0,
             },
             rt::OpDef {
@@ -12601,6 +13491,30 @@ pub mod url {
         Ok(JsValue::undefined())
     }
 
+    fn static_op_create_object_url(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::require_args(args, 1, "URL.createObjectURL")?;
+        let a0 = rt::object_from_js(rt::arg(args, 0), I::Blob, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::URLImpl>::create_object_url(cx, a0));
+        rt::ret(r, ctx)
+    }
+
+    fn static_op_revoke_object_url(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::require_args(args, 1, "URL.revokeObjectURL")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::URLImpl>::revoke_object_url(cx, a0));
+        rt::ret(r, ctx)
+    }
+
     fn static_op_parse(
         this_js: &JsValue,
         args: &[JsValue],
@@ -12739,6 +13653,16 @@ pub mod url {
         ],
         static_attrs: &[],
         static_ops: &[
+            rt::OpDef {
+                name: "createObjectURL",
+                func: static_op_create_object_url,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "revokeObjectURL",
+                func: static_op_revoke_object_url,
+                length: 1,
+            },
             rt::OpDef {
                 name: "parse",
                 func: static_op_parse,
@@ -43573,12 +44497,7 @@ pub mod xml_http_request {
             if rt::arg(args, 0).is_null_or_undefined() {
                 None
             } else {
-                Some(
-                    <web::DocumentOrBufferSourceOrURLSearchParamsOrString as FromJs>::from_js(
-                        rt::arg(args, 0),
-                        ctx,
-                    )?,
-                )
+                Some(<web::DocumentOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString as FromJs>::from_js(rt::arg(args, 0), ctx)?)
             }
         } else {
             None
@@ -47816,6 +48735,7 @@ pub mod ns_console {
 /// Interface definitions, parents before children.
 pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &abort_controller::DEF,
+    &blob::DEF,
     &css_rule::DEF,
     &css_rule_list::DEF,
     &css_style_declaration::DEF,
@@ -47829,8 +48749,11 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &dom_token_list::DEF,
     &event::DEF,
     &event_target::DEF,
+    &file::DEF,
+    &file_reader::DEF,
     &font_face::DEF,
     &font_face_set::DEF,
+    &form_data::DEF,
     &html_collection::DEF,
     &hash_change_event::DEF,
     &headers::DEF,

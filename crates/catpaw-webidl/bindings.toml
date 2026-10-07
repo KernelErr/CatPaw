@@ -603,6 +603,29 @@ members = [
   "modify", "deleteFromDocument", "containsNode",
 ]
 
+# ---------------------------------------------------------------- File API
+# Blobs are bytes in memory; FileList comes with file inputs (none yet).
+[interfaces.Blob]
+constructor = true
+members = ["size", "type", "slice", "stream", "text", "arrayBuffer", "bytes"]
+
+[interfaces.File]
+constructor = true
+members = ["name", "lastModified"]
+
+[interfaces.FileReader]
+constructor = true
+members = [
+  "readAsArrayBuffer", "readAsBinaryString", "readAsText", "readAsDataURL", "abort",
+  "readyState", "result", "error",
+]
+# DOMException is made by the prelude, not a platform object.
+any_return = ["error"]
+
+[interfaces.FormData]
+constructor = true
+members = ["append", "delete", "get", "getAll", "has", "set"]
+
 # ------------------------------------------------------------ font loading
 # No fonts are fetched or shaped: faces count as loaded once asked for.
 [interfaces.FontFace]
@@ -689,7 +712,7 @@ members = [
 ]
 
 [mixins.Body]
-members = ["body", "bodyUsed", "arrayBuffer", "bytes", "json", "text"]
+members = ["body", "bodyUsed", "arrayBuffer", "blob", "bytes", "formData", "json", "text"]
 
 [interfaces.XMLHttpRequestEventTarget]
 
@@ -710,6 +733,7 @@ constructor = true
 members = [
   "href", "origin", "protocol", "username", "password", "host", "hostname", "port",
   "pathname", "search", "searchParams", "hash", "toJSON", "canParse", "parse",
+  "createObjectURL", "revokeObjectURL",
 ]
 
 [interfaces.URLSearchParams]

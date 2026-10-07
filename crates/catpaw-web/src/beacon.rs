@@ -7,7 +7,9 @@
 use catpaw_js::{Exception, Fallible, ObjectId};
 
 use crate::cors::{self, Credentials, Mode, Outgoing};
-use crate::generated::{self as web, ReadableStreamOrBufferSourceOrURLSearchParamsOrString};
+use crate::generated::{
+    self as web, ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString,
+};
 use crate::net::RequestKind;
 use crate::page::Cx;
 use crate::{Web, fetch};
@@ -18,7 +20,7 @@ impl web::NavigatorImpl for Web {
         cx: &mut Cx<'_>,
         _this: ObjectId,
         url: String,
-        data: Option<ReadableStreamOrBufferSourceOrURLSearchParamsOrString>,
+        data: Option<ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString>,
     ) -> Fallible<bool> {
         let Some(url) = cx.page.resolve_url(&url) else {
             return Err(Exception::type_error(format!("Invalid URL: {url}")));

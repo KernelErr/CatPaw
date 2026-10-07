@@ -12,8 +12,8 @@ use url::Url;
 use crate::abort::{self, AbortAlgorithm};
 use crate::cors::{self, Credentials, Exposure, Mode, Outgoing, Readable};
 use crate::generated::{
-    self as web, ReadableStreamOrBufferSourceOrURLSearchParamsOrString as BodyInit, ReferrerPolicy,
-    RequestCache, RequestCredentials, RequestDestination, RequestInit, RequestMode,
+    self as web, ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString as BodyInit,
+    ReferrerPolicy, RequestCache, RequestCredentials, RequestDestination, RequestInit, RequestMode,
     RequestOrString, RequestRedirect, ResponseInit, ResponseType,
     StringSequenceSequenceOrStringStringRecord as HeadersInit,
 };
@@ -210,10 +210,7 @@ impl web::HeadersImpl for Web {
 // ---- bodies ----------------------------------------------------------------
 
 /// The bytes of a body given by script, and the Content-Type it implies.
-pub(crate) fn extract_body(
-    cx: &Cx<'_>,
-    body: BodyInit,
-) -> Fallible<(Vec<u8>, Option<&'static str>)> {
+pub(crate) fn extract_body(cx: &Cx<'_>, body: BodyInit) -> Fallible<(Vec<u8>, Option<String>)> {
     Ok(match body {
         // Bodies are kept as bytes: a stream would have to be read first.
         BodyInit::ReadableStream(_) => {
@@ -222,12 +219,42 @@ pub(crate) fn extract_body(
             ));
         }
         BodyInit::BufferSource(bytes) => (bytes, None),
-        BodyInit::String(text) => (text.into_bytes(), Some("text/plain;charset=UTF-8")),
+        BodyInit::String(text) => (
+            text.into_bytes(),
+            Some("text/plain;charset=UTF-8".to_string()),
+        ),
         BodyInit::URLSearchParams(id) => (
             crate::url_api::serialized_params(cx, id)?.into_bytes(),
-            Some("application/x-www-form-urlencoded;charset=UTF-8"),
+            Some("application/x-www-form-urlencoded;charset=UTF-8".to_string()),
         ),
+        BodyInit::Blob(id) => {
+            let (bytes, type_) = crate::file_api::blob_contents(cx, id)?;
+            (bytes.to_vec(), (!type_.is_empty()).then_some(type_))
+        }
+        BodyInit::FormData(id) => {
+            let (bytes, content_type) = crate::file_api::multipart_body(cx, id)?;
+            (bytes, Some(content_type))
+        }
     })
+}
+
+/// A header of the request or response `this`.
+fn header_value(cx: &Cx<'_>, this: ObjectId, name: &str) -> Option<String> {
+    let find = |headers: &HeaderList| {
+        headers
+            .iter()
+            .find(|(n, _)| n.eq_ignore_ascii_case(name))
+            .map(|(_, v)| v.clone())
+    };
+    if let Some(found) = cx
+        .page
+        .try_with::<ResponseObject, _>(this, |r| find(&r.headers))
+    {
+        return found;
+    }
+    cx.page
+        .try_with::<RequestObject, _>(this, |r| find(&r.headers))
+        .flatten()
 }
 
 fn decode_utf8(bytes: &[u8]) -> String {
@@ -311,6 +338,24 @@ impl web::BodyImpl for Web {
 
     fn body_used(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool> {
         body_is_used(cx, this)
+    }
+
+    fn blob(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef> {
+        let content_type = header_value(cx, this, "content-type").unwrap_or_default();
+        body_promise(cx, this, move |cx, bytes| {
+            Ok(Value::Object(crate::file_api::new_blob(
+                cx,
+                bytes,
+                &content_type,
+            )))
+        })
+    }
+
+    fn form_data(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef> {
+        let content_type = header_value(cx, this, "content-type");
+        body_promise(cx, this, move |cx, bytes| {
+            crate::file_api::parse_body(cx, &bytes, content_type.as_deref()).map(Value::Object)
+        })
     }
 
     fn array_buffer(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef> {
@@ -648,7 +693,7 @@ fn is_null_body_status(status: u16) -> bool {
 
 fn synthetic_response(
     cx: &Cx<'_>,
-    body: Option<(Vec<u8>, Option<&'static str>)>,
+    body: Option<(Vec<u8>, Option<String>)>,
     init: ResponseInit,
 ) -> Fallible<ResponseObject> {
     if !(200..=599).contains(&init.status) {
@@ -748,7 +793,7 @@ impl web::ResponseImpl for Web {
             .ok_or_else(|| Exception::type_error("The data is not JSON serializable"))?;
         let response = synthetic_response(
             cx,
-            Some((text.into_bytes(), Some("application/json"))),
+            Some((text.into_bytes(), Some("application/json".to_string()))),
             init,
         )?;
         Ok(cx.page.alloc(response))

@@ -261,6 +261,8 @@ pub struct PageState {
     pub(crate) traversers: crate::traversal::Traversers,
     pub(crate) custom_elements: crate::custom_elements::Registry,
     pub(crate) fonts: crate::fonts::FontSets,
+    /// The `blob:` URLs the page made.
+    pub blob_urls: RefCell<crate::file_api::BlobUrls>,
     pub(crate) reactions: crate::promises::Reactions,
     /// When the document's loading reached its milestones.
     pub timing: crate::navigation_timing::DocumentTiming,
@@ -329,6 +331,7 @@ impl PageState {
             traversers: Default::default(),
             custom_elements: Default::default(),
             fonts: Default::default(),
+            blob_urls: Default::default(),
             reactions: Default::default(),
             timing: Default::default(),
             microtask_queue: RefCell::new(None),

@@ -23,6 +23,7 @@ use crate::Cx;
 #[repr(u16)]
 pub enum InterfaceId {
     AbortController,
+    Blob,
     CSSRule,
     CSSRuleList,
     CSSStyleDeclaration,
@@ -36,8 +37,11 @@ pub enum InterfaceId {
     DOMTokenList,
     Event,
     EventTarget,
+    File,
+    FileReader,
     FontFace,
     FontFaceSet,
+    FormData,
     HTMLCollection,
     HashChangeEvent,
     Headers,
@@ -233,9 +237,10 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 208;
-    pub const ALL: [InterfaceId; 208] = [
+    pub const COUNT: usize = 212;
+    pub const ALL: [InterfaceId; 212] = [
         InterfaceId::AbortController,
+        InterfaceId::Blob,
         InterfaceId::CSSRule,
         InterfaceId::CSSRuleList,
         InterfaceId::CSSStyleDeclaration,
@@ -249,8 +254,11 @@ impl InterfaceId {
         InterfaceId::DOMTokenList,
         InterfaceId::Event,
         InterfaceId::EventTarget,
+        InterfaceId::File,
+        InterfaceId::FileReader,
         InterfaceId::FontFace,
         InterfaceId::FontFaceSet,
+        InterfaceId::FormData,
         InterfaceId::HTMLCollection,
         InterfaceId::HashChangeEvent,
         InterfaceId::Headers,
@@ -448,6 +456,7 @@ impl InterfaceId {
     pub fn name(self) -> &'static str {
         match self {
             InterfaceId::AbortController => "AbortController",
+            InterfaceId::Blob => "Blob",
             InterfaceId::CSSRule => "CSSRule",
             InterfaceId::CSSRuleList => "CSSRuleList",
             InterfaceId::CSSStyleDeclaration => "CSSStyleDeclaration",
@@ -461,8 +470,11 @@ impl InterfaceId {
             InterfaceId::DOMTokenList => "DOMTokenList",
             InterfaceId::Event => "Event",
             InterfaceId::EventTarget => "EventTarget",
+            InterfaceId::File => "File",
+            InterfaceId::FileReader => "FileReader",
             InterfaceId::FontFace => "FontFace",
             InterfaceId::FontFaceSet => "FontFaceSet",
+            InterfaceId::FormData => "FormData",
             InterfaceId::HTMLCollection => "HTMLCollection",
             InterfaceId::HashChangeEvent => "HashChangeEvent",
             InterfaceId::Headers => "Headers",
@@ -661,6 +673,7 @@ impl InterfaceId {
     pub fn from_name(name: &str) -> Option<InterfaceId> {
         Some(match name {
             "AbortController" => InterfaceId::AbortController,
+            "Blob" => InterfaceId::Blob,
             "CSSRule" => InterfaceId::CSSRule,
             "CSSRuleList" => InterfaceId::CSSRuleList,
             "CSSStyleDeclaration" => InterfaceId::CSSStyleDeclaration,
@@ -674,8 +687,11 @@ impl InterfaceId {
             "DOMTokenList" => InterfaceId::DOMTokenList,
             "Event" => InterfaceId::Event,
             "EventTarget" => InterfaceId::EventTarget,
+            "File" => InterfaceId::File,
+            "FileReader" => InterfaceId::FileReader,
             "FontFace" => InterfaceId::FontFace,
             "FontFaceSet" => InterfaceId::FontFaceSet,
+            "FormData" => InterfaceId::FormData,
             "HTMLCollection" => InterfaceId::HTMLCollection,
             "HashChangeEvent" => InterfaceId::HashChangeEvent,
             "Headers" => InterfaceId::Headers,
@@ -875,6 +891,7 @@ impl InterfaceId {
     pub fn parent(self) -> Option<InterfaceId> {
         match self {
             InterfaceId::AbortController => None,
+            InterfaceId::Blob => None,
             InterfaceId::CSSRule => None,
             InterfaceId::CSSRuleList => None,
             InterfaceId::CSSStyleDeclaration => None,
@@ -888,8 +905,11 @@ impl InterfaceId {
             InterfaceId::DOMTokenList => None,
             InterfaceId::Event => None,
             InterfaceId::EventTarget => None,
+            InterfaceId::File => Some(InterfaceId::Blob),
+            InterfaceId::FileReader => Some(InterfaceId::EventTarget),
             InterfaceId::FontFace => None,
             InterfaceId::FontFaceSet => Some(InterfaceId::EventTarget),
+            InterfaceId::FormData => None,
             InterfaceId::HTMLCollection => None,
             InterfaceId::HashChangeEvent => Some(InterfaceId::Event),
             InterfaceId::Headers => None,
@@ -1301,6 +1321,29 @@ impl DocumentVisibilityState {
         Some(match s {
             "visible" => DocumentVisibilityState::Visible,
             "hidden" => DocumentVisibilityState::Hidden,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum EndingType {
+    Transparent,
+    Native,
+}
+
+impl EndingType {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            EndingType::Transparent => "transparent",
+            EndingType::Native => "native",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "transparent" => EndingType::Transparent,
+            "native" => EndingType::Native,
             _ => return None,
         })
     }
@@ -1950,6 +1993,12 @@ pub struct AssignedNodesOptions {
 }
 
 #[derive(Clone, Debug)]
+pub struct BlobPropertyBag {
+    pub type_: String,
+    pub endings: EndingType,
+}
+
+#[derive(Clone, Debug)]
 pub struct CSSStyleSheetInit {
     pub base_url: Option<String>,
     pub media: MediaListOrString,
@@ -1997,6 +2046,13 @@ pub struct EventInit {
 #[derive(Clone, Debug)]
 pub struct EventListenerOptions {
     pub capture: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct FilePropertyBag {
+    pub type_: String,
+    pub endings: EndingType,
+    pub last_modified: Option<i64>,
 }
 
 #[derive(Clone, Debug)]
@@ -2268,7 +2324,7 @@ pub struct ReadableWritablePair {
 pub struct RequestInit {
     pub method: Option<String>,
     pub headers: Option<StringSequenceSequenceOrStringStringRecord>,
-    pub body: Option<ReadableStreamOrBufferSourceOrURLSearchParamsOrString>,
+    pub body: Option<ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString>,
     pub referrer: Option<String>,
     pub referrer_policy: Option<ReferrerPolicy>,
     pub mode: Option<RequestMode>,
@@ -2416,9 +2472,18 @@ pub enum BooleanOrScrollIntoViewOptions {
 }
 
 #[derive(Clone, Debug)]
-pub enum DocumentOrBufferSourceOrURLSearchParamsOrString {
-    Document(NodeId),
+pub enum BufferSourceOrBlobOrString {
     BufferSource(Vec<u8>),
+    Blob(ObjectId),
+    String(String),
+}
+
+#[derive(Clone, Debug)]
+pub enum DocumentOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString {
+    Document(NodeId),
+    Blob(ObjectId),
+    BufferSource(Vec<u8>),
+    FormData(ObjectId),
     URLSearchParams(ObjectId),
     String(String),
 }
@@ -2448,6 +2513,12 @@ pub enum EventListenerOptionsOrBoolean {
 }
 
 #[derive(Clone, Debug)]
+pub enum FileOrString {
+    File(ObjectId),
+    String(String),
+}
+
+#[derive(Clone, Debug)]
 pub enum MediaListOrString {
     MediaList(ObjectId),
     String(String),
@@ -2460,9 +2531,11 @@ pub enum NodeOrString {
 }
 
 #[derive(Clone, Debug)]
-pub enum ReadableStreamOrBufferSourceOrURLSearchParamsOrString {
+pub enum ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString {
     ReadableStream(ObjectId),
+    Blob(ObjectId),
     BufferSource(Vec<u8>),
+    FormData(ObjectId),
     URLSearchParams(ObjectId),
     String(String),
 }
@@ -2471,6 +2544,12 @@ pub enum ReadableStreamOrBufferSourceOrURLSearchParamsOrString {
 pub enum RequestOrString {
     Request(ObjectId),
     String(String),
+}
+
+#[derive(Clone, Debug)]
+pub enum StringOrArrayBuffer {
+    String(String),
+    ArrayBuffer(Vec<u8>),
 }
 
 #[derive(Clone, Debug)]
@@ -2525,7 +2604,9 @@ pub trait BodyImpl {
     fn body(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<ObjectId>>;
     fn body_used(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
     fn array_buffer(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
+    fn blob(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
     fn bytes(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
+    fn form_data(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
     fn json(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
     fn text(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
 }
@@ -2758,6 +2839,27 @@ pub trait AbortControllerImpl {
     fn constructor(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
 }
 
+pub trait BlobImpl {
+    fn size(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u64>;
+    fn type_(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn slice(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        start: Option<i64>,
+        end: Option<i64>,
+        content_type: Option<String>,
+    ) -> Fallible<ObjectId>;
+    fn stream(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn text(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
+    fn array_buffer(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
+    fn bytes(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        blob_parts: Option<Vec<BufferSourceOrBlobOrString>>,
+        options: BlobPropertyBag,
+    ) -> Fallible<ObjectId>;
+}
+
 pub trait CSSRuleImpl {
     fn css_text(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
     fn set_css_text(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
@@ -2942,6 +3044,34 @@ pub trait EventTargetImpl {
     fn constructor(cx: &mut Cx<'_>) -> Fallible<EventTargetRef>;
 }
 
+pub trait FileImpl {
+    fn name(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn last_modified(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<i64>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        file_bits: Vec<BufferSourceOrBlobOrString>,
+        file_name: String,
+        options: FilePropertyBag,
+    ) -> Fallible<ObjectId>;
+}
+
+pub trait FileReaderImpl {
+    fn read_as_array_buffer(cx: &mut Cx<'_>, this: ObjectId, blob: ObjectId) -> Fallible<()>;
+    fn read_as_binary_string(cx: &mut Cx<'_>, this: ObjectId, blob: ObjectId) -> Fallible<()>;
+    fn read_as_text(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        blob: ObjectId,
+        encoding: Option<String>,
+    ) -> Fallible<()>;
+    fn read_as_data_url(cx: &mut Cx<'_>, this: ObjectId, blob: ObjectId) -> Fallible<()>;
+    fn abort(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn ready_state(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u16>;
+    fn result(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<StringOrArrayBuffer>>;
+    fn error(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
+    fn constructor(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
+}
+
 pub trait FontFaceImpl {
     fn family(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
     fn set_family(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
@@ -2985,6 +3115,35 @@ pub trait FontFaceSetImpl {
     fn ready(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
     fn status(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<FontFaceSetLoadStatus>;
     fn set_values(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<ObjectId>>;
+}
+
+pub trait FormDataImpl {
+    fn append(cx: &mut Cx<'_>, this: ObjectId, name: String, value: String) -> Fallible<()>;
+    fn append_overload2(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        name: String,
+        blob_value: ObjectId,
+        filename: Option<String>,
+    ) -> Fallible<()>;
+    fn delete(cx: &mut Cx<'_>, this: ObjectId, name: String) -> Fallible<()>;
+    fn get(cx: &mut Cx<'_>, this: ObjectId, name: String) -> Fallible<Option<FileOrString>>;
+    fn get_all(cx: &mut Cx<'_>, this: ObjectId, name: String) -> Fallible<Vec<FileOrString>>;
+    fn has(cx: &mut Cx<'_>, this: ObjectId, name: String) -> Fallible<bool>;
+    fn set(cx: &mut Cx<'_>, this: ObjectId, name: String, value: String) -> Fallible<()>;
+    fn set_overload2(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        name: String,
+        blob_value: ObjectId,
+        filename: Option<String>,
+    ) -> Fallible<()>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        form: Option<NodeId>,
+        submitter: Option<NodeId>,
+    ) -> Fallible<ObjectId>;
+    fn iterate(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<(String, FileOrString)>>;
 }
 
 pub trait HTMLCollectionImpl {
@@ -3184,7 +3343,7 @@ pub trait NavigatorImpl {
         cx: &mut Cx<'_>,
         this: ObjectId,
         url: String,
-        data: Option<ReadableStreamOrBufferSourceOrURLSearchParamsOrString>,
+        data: Option<ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString>,
     ) -> Fallible<bool>;
 }
 
@@ -3520,7 +3679,7 @@ pub trait ResponseImpl {
     fn clone(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
     fn constructor(
         cx: &mut Cx<'_>,
-        body: Option<ReadableStreamOrBufferSourceOrURLSearchParamsOrString>,
+        body: Option<ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString>,
         init: ResponseInit,
     ) -> Fallible<ObjectId>;
 }
@@ -3694,6 +3853,8 @@ pub trait UIEventImpl {
 }
 
 pub trait URLImpl {
+    fn create_object_url(cx: &mut Cx<'_>, obj: ObjectId) -> Fallible<String>;
+    fn revoke_object_url(cx: &mut Cx<'_>, url: String) -> Fallible<()>;
     fn parse(cx: &mut Cx<'_>, url: String, base: Option<String>) -> Fallible<Option<ObjectId>>;
     fn can_parse(cx: &mut Cx<'_>, url: String, base: Option<String>) -> Fallible<bool>;
     fn href(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
@@ -4461,7 +4622,7 @@ pub trait XMLHttpRequestImpl {
     fn send(
         cx: &mut Cx<'_>,
         this: ObjectId,
-        body: Option<DocumentOrBufferSourceOrURLSearchParamsOrString>,
+        body: Option<DocumentOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString>,
     ) -> Fallible<()>;
     fn abort(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
     fn response_url(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;

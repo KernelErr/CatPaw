@@ -182,9 +182,31 @@ fn percent_decode(input: &[u8]) -> Vec<u8> {
     out
 }
 
+/// A response the page answers itself: a `data:` URL, or a `blob:` URL
+/// the page made.
+pub fn local_response(page: &PageState, url: &Url) -> Option<NetResult> {
+    if url.scheme() == "blob" {
+        return Some(match page.blob_urls.borrow().get(url.as_str()) {
+            Some((bytes, type_)) => Ok(NetResponse {
+                url: url.clone(),
+                status: 200,
+                status_text: "OK".to_string(),
+                headers: vec![
+                    ("content-type".to_string(), type_),
+                    ("content-length".to_string(), bytes.len().to_string()),
+                ],
+                body: bytes.to_vec(),
+                redirected: false,
+            }),
+            None => Err("the blob URL is not known".to_string()),
+        });
+    }
+    data_url_response(url)
+}
+
 /// Fetches `request` on the calling thread.
 pub fn fetch_blocking(page: &PageState, request: NetRequest) -> NetResult {
-    if let Some(result) = data_url_response(&request.url) {
+    if let Some(result) = local_response(page, &request.url) {
         return result;
     }
     match page.net() {
@@ -201,7 +223,7 @@ pub fn start_request(
     request: NetRequest,
     callback: impl FnOnce(&mut Cx<'_>, NetResult) + 'static,
 ) -> Option<u64> {
-    if let Some(result) = data_url_response(&request.url) {
+    if let Some(result) = local_response(page, &request.url) {
         crate::event_loop::queue_task(page, "data URL", move |cx| callback(cx, result));
         return None;
     }

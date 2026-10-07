@@ -10,7 +10,7 @@ use url::Url;
 use crate::cors::{self, Credentials, Mode, Outgoing, Pending, Readable};
 use crate::event_loop::{self, TimerAction};
 use crate::generated::{
-    self as web, DocumentOrBufferSourceOrURLSearchParamsOrString as XhrBody,
+    self as web, DocumentOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString as XhrBody,
     XMLHttpRequestResponseType as ResponseType,
 };
 use crate::net::{NetResponse, RequestKind};
@@ -336,20 +336,31 @@ impl web::XMLHttpRequestImpl for Web {
             Some(body) => {
                 let (bytes, content_type) = match body {
                     XhrBody::BufferSource(bytes) => (bytes, None),
-                    XhrBody::String(text) => (text.into_bytes(), Some("text/plain;charset=UTF-8")),
+                    XhrBody::String(text) => (
+                        text.into_bytes(),
+                        Some("text/plain;charset=UTF-8".to_string()),
+                    ),
                     XhrBody::URLSearchParams(id) => (
                         crate::url_api::serialized_params(cx, id)?.into_bytes(),
-                        Some("application/x-www-form-urlencoded;charset=UTF-8"),
+                        Some("application/x-www-form-urlencoded;charset=UTF-8".to_string()),
                     ),
                     XhrBody::Document(node) => (
                         to_html(&cx.dom(), node, true).into_bytes(),
-                        Some("text/html;charset=UTF-8"),
+                        Some("text/html;charset=UTF-8".to_string()),
                     ),
+                    XhrBody::Blob(id) => {
+                        let (bytes, type_) = crate::file_api::blob_contents(cx, id)?;
+                        (bytes.to_vec(), (!type_.is_empty()).then_some(type_))
+                    }
+                    XhrBody::FormData(id) => {
+                        let (bytes, content_type) = crate::file_api::multipart_body(cx, id)?;
+                        (bytes, Some(content_type))
+                    }
                 };
                 if let Some(content_type) = content_type
                     && !headers.iter().any(|(n, _)| n == "content-type")
                 {
-                    headers.push(("content-type".to_string(), content_type.to_string()));
+                    headers.push(("content-type".to_string(), content_type));
                 }
                 Some(bytes)
             }
@@ -531,7 +542,9 @@ impl web::XMLHttpRequestImpl for Web {
         let (kind, done, text, bytes) = xhr(cx, this, |x| {
             let done = x.state == DONE && x.response.is_some();
             let bytes = match (&x.response, x.response_type) {
-                (Some(r), ResponseType::Arraybuffer) if done => Some(r.body.clone()),
+                (Some(r), ResponseType::Arraybuffer | ResponseType::Blob) if done => {
+                    Some(r.body.clone())
+                }
                 _ => None,
             };
             (x.response_type, done, response_text(x), bytes)
@@ -541,8 +554,16 @@ impl web::XMLHttpRequestImpl for Web {
             _ if !done => Value::Null,
             ResponseType::Arraybuffer => bytes.map_or(Value::Null, Value::ArrayBuffer),
             ResponseType::Json => cx.script.parse_json(&text).unwrap_or(Value::Null),
-            // Blob and Document responses are not supported yet.
-            ResponseType::Blob | ResponseType::Document => Value::Null,
+            ResponseType::Blob => match bytes {
+                Some(bytes) => {
+                    let mime = Self::get_response_header(cx, this, "content-type".to_string())?
+                        .unwrap_or_default();
+                    Value::Object(crate::file_api::new_blob(cx, bytes, &mime))
+                }
+                None => Value::Null,
+            },
+            // Document responses are not supported yet.
+            ResponseType::Document => Value::Null,
         })
     }
 

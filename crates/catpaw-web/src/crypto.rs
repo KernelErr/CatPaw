@@ -19,6 +19,23 @@ platform_object!(CryptoObject, Crypto);
 pub struct SubtleCryptoObject;
 platform_object!(SubtleCryptoObject, SubtleCrypto);
 
+/// A version 4 UUID from the system's randomness.
+pub(crate) fn uuid_v4() -> Fallible<String> {
+    let mut bytes = [0u8; 16];
+    fill_random(&mut bytes)?;
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    let hex: Vec<String> = bytes.iter().map(|b| format!("{b:02x}")).collect();
+    Ok(format!(
+        "{}-{}-{}-{}-{}",
+        hex[0..4].concat(),
+        hex[4..6].concat(),
+        hex[6..8].concat(),
+        hex[8..10].concat(),
+        hex[10..16].concat()
+    ))
+}
+
 /// The most `getRandomValues()` hands out in one call.
 pub const RANDOM_VALUES_LIMIT: usize = 65536;
 

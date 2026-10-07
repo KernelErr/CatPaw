@@ -79,6 +79,15 @@ fn read(cx: &Cx<'_>, this: ObjectId, f: impl FnOnce(&Url) -> &str) -> Fallible<S
 }
 
 impl web::URLImpl for Web {
+    fn create_object_url(cx: &mut Cx<'_>, obj: ObjectId) -> Fallible<String> {
+        crate::file_api::create_object_url(cx, obj)
+    }
+
+    fn revoke_object_url(cx: &mut Cx<'_>, url: String) -> Fallible<()> {
+        crate::file_api::revoke_object_url(cx.page, &url);
+        Ok(())
+    }
+
     fn parse(cx: &mut Cx<'_>, url: String, base: Option<String>) -> Fallible<Option<ObjectId>> {
         Ok(parse_url(&url, base.as_deref()).map(|url| {
             cx.page.alloc(UrlObject {
