@@ -6,14 +6,23 @@
 //! share a page runs on a thread of its own and the session sends it
 //! closures (see `catpaw_engine::GroupHandle`).
 
+pub mod confirm;
+mod files;
+pub mod journal;
 pub mod jsonrpc;
 pub mod mcp;
 mod oracle;
 mod output;
+pub mod policy;
+pub mod profile;
 pub mod session;
 mod tab;
 mod target;
 
+pub use catpaw_protocol::OPTIONAL_TOOLS;
+pub use confirm::ApprovalConfig;
+pub use journal::JournalConfig;
 pub use mcp::{McpServer, serve_stdio, serve_stdio_with};
 pub use output::ToolOutput;
-pub use session::{Session, SessionConfig};
+pub use policy::{Policy, Preset};
+pub use session::{Asker, Session, SessionConfig};

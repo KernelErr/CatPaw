@@ -7,7 +7,7 @@
   },
   "random_seed": 1,
   "time_origin": 1790000000000,
-  "steps_min": 3,
+  "steps_min": 4,
   "steps": [
     {
       "tool": "type",
@@ -27,6 +27,16 @@
       "tool": "click",
       "args": {
         "target": "button \"Login\""
+      }
+    },
+    {
+      "approve": "c1"
+    },
+    {
+      "tool": "click",
+      "args": {
+        "target": "button \"Login\"",
+        "confirmation": "c1"
       }
     }
   ],

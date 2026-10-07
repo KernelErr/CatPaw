@@ -9,14 +9,18 @@ pub struct ToolOutput {
     pub text: String,
     pub image: Option<Vec<u8>>,
     pub is_error: bool,
+    /// What the call started that the policy holds for the user's
+    /// approval (`submit → POST https://…`); the session asks for it.
+    pub held: Option<String>,
+    /// The call typed into a password field (journals keep the length).
+    pub secret_input: bool,
 }
 
 impl ToolOutput {
     pub fn ok(text: String) -> Self {
         Self {
             text,
-            image: None,
-            is_error: false,
+            ..Self::default()
         }
     }
 }
@@ -61,8 +65,8 @@ impl Failure {
         }
         ToolOutput {
             text,
-            image: None,
             is_error: true,
+            ..ToolOutput::default()
         }
     }
 }

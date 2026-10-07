@@ -18,12 +18,15 @@ of the model on every turn.
    than with an MCP crate: the surface is small, the same session will
    serve JSON-RPC over WebSocket later, and the crates still change often.
    Stdout carries protocol messages only; lines are read on a thread of
-   their own so that later versions can answer cancellations and
-   elicitations while a call runs.
+   their own, so that a call can ask the client (`elicitation/create`) and
+   read its answer while it runs; requests that arrive meanwhile wait
+   their turn, pings are answered at once.
 2. **Tools.** `navigate`, `snapshot`, `click`, `type`, `press`, `select`,
-   `act` (hover, check, uncheck, focus, clear, scroll), `wait`, `read`
-   (markdown, text, links, forms, tables, find, html), `screenshot`,
-   `evaluate`, `tabs` and `logs`; `handoff` and a hidden `session` follow. Frequent actions are tools of
+   `act` (hover, check, uncheck, focus, clear, scroll, upload), `wait`,
+   `read` (markdown, text, links, forms, tables, find, html), `screenshot`,
+   `evaluate`, `tabs` and `logs`; `session` (checkpoints) is listed only
+   when the server is started with `--tools session`, and `handoff`
+   follows. Frequent actions are tools of
    their own because their required fields differ: a schema that requires
    `text` catches the commonest small-model mistake (the right action with
    a field missing) before it reaches the page. Rare actions share `act`.
@@ -33,7 +36,7 @@ of the model on every turn.
    `cargo xtask protocol --check` keeps it current. Deriving them
    (schemars, as first planned) would put words in front of the model that
    nobody chose. A test parses every example with the tool's parameter type
-   and keeps the whole list under 9000 bytes (6.4 KB for the eleven tools
+   and keeps the whole list under 10 000 bytes (6.4 KB for the eleven tools
    today). Unknown fields are refused with the names of the right ones.
 4. **Targets** are one string: a ref `e12` (a whole snapshot line or
    `[ref=e12]` is accepted, since models copy those), `text:<visible
@@ -78,15 +81,32 @@ of the model on every turn.
    group that lives on a thread of its own (pages are not `Send`); a popup
    is a tab of the group. A group that panics is closed and reported as
    `error Crashed`; the server and the other tabs carry on.
-8. **Confirmation (M3 phase 4).** Navigations and script requests that a
-   policy holds are stopped at the network boundary after dispatch, so a
-   confirmed action is released, never repeated; uploads (and `evaluate`
-   under the strict policy) are stopped before dispatch. With MCP
-   elicitation the user approves within the same call. Without it the
-   result is `needs_confirmation cN` with a local approval page; the agent
-   re-issues the same call with `confirmation: "cN"` once the user has
-   approved. Approval needs a secret the agent never sees. Presets:
-   `default` (POST navigations and uploads), `strict`, `open`.
+8. **Confirmation.** A policy decides what waits for the user. Under
+   `default`, a navigation that sends data (a form posted by a click, a
+   key or script) and choosing files to upload; `strict` adds script
+   requests that send data to another site and `evaluate`; `open` asks
+   for nothing (test runs). `--trust <host>` exempts a host,
+   `--allowed-domain <domain>` limits what tabs may show (anything else is
+   `blocked policy: …`). Navigations and script requests are held where
+   they would leave for the network, after the action ran, so an
+   approved action is let go and never carried out again; uploads and
+   `evaluate` are stopped before they run. The result names what would
+   happen, with secrets masked:
+   `needs_confirmation c1: click e8 button "Login" would submit → POST
+   https://…/authenticate (fields: username=tomsmith, password=***)`. A
+   host that offers MCP elicitation asks its user within the same call
+   (a boolean `approve`; declining gives `blocked user: declined c1`).
+   Otherwise the result gives the address of a page on 127.0.0.1 where
+   the user approves with a key kept in a file (made on first use in the
+   user's data directory, or `--approval-key-file`); the browser keeps the
+   key in a cookie after the first time, and the page refuses other hosts
+   and other origins. The agent never sees the key: no result prints it,
+   and its browser refuses private addresses. It then repeats the call
+   with `confirmation: "c1"`; the repeat must match the original call
+   (tool and arguments) or it is refused, an unanswered one says
+   `(still pending)`, and confirmations run out after ten minutes. This
+   bounds an agent that holds only the browser tools; an agent with a
+   shell is bounded by its host's own permission prompts.
 
 9. **Diffs after actions.** An action answers with what changed since
    the tab's last snapshot (ADR 0005, amended): `~` changed, `+` added
@@ -128,14 +148,25 @@ of the model on every turn.
     the same results byte for byte, on any platform. WebSockets are refused
     during replay; they are not recorded yet.
 13. **The task set.** `tests/tasks/<id>/` holds a goal on a site made for
-    automation practice, the calls an agent would make, checks of the
-    outcome, the recording and the expected transcript (each call and its
-    result). `cargo xtask tasks record` runs a task live and keeps the
+    automation practice, the calls an agent would make (and where the user
+    approves a confirmation, on the approval page with the key), checks
+    of the outcome, the recording and the expected transcript (each call
+    and its result). `cargo xtask tasks record` runs a task live and keeps the
     recording only when two replays of it agree; CI replays every task
     twice against its transcript, offline, so a change in what agents see
     shows up as a diff of the transcript. Content sites (Hacker News,
     Wikipedia, MDN) are tasks too, but their recordings stay out of the
     repository (`tests/tasks/local/`).
+14. **Flight recorder, profiles and checkpoints.** `--flight-log <dir>`
+    keeps a journal: one JSON line per call (tool, arguments, first line
+    of the result, consequences, URL, time taken) and per confirmation
+    and decision; `--flight-screens` adds a screenshot per page action.
+    It never holds cookies or the bodies of held requests, and text typed
+    into a password field becomes its length. `--profile <dir>` keeps the
+    cookie jar, `localStorage`, saved checkpoints and the journals between
+    sessions, written after every call that acts. The `session` tool
+    saves a checkpoint (cookies, storage, each tab's URL and scroll),
+    restores it (tabs load again, refs start afresh) and lists them.
 
 ## Consequences
 

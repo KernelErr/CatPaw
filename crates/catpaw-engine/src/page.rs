@@ -143,7 +143,6 @@ struct Frame {
     depth: u32,
     // Dropped before `net`: the page state refers to it.
     boa: BoaPage,
-    #[allow(dead_code)]
     net: Rc<EngineNet>,
     /// The serialized origin its messages carry (`srcdoc` and blank
     /// frames take their parent's).
@@ -173,7 +172,6 @@ struct WorkerRun {
     local: WorkerId,
     // Dropped before `net`: the page state refers to it.
     boa: BoaPage,
-    #[allow(dead_code)]
     net: Rc<EngineNet>,
     report: LoopReport,
     virtual_used: f64,
@@ -187,6 +185,44 @@ pub struct WorkerInfo {
     pub key: u32,
     pub owner: ScopeId,
     pub url: Url,
+}
+
+/// What an embedder decides about a navigation before it is fetched
+/// (see [`Page::set_navigation_gate`]).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Gate {
+    /// Fetch it.
+    Allow,
+    /// Keep it, unfetched, until [`Page::release_held`] or
+    /// [`Page::drop_held`].
+    Hold,
+    /// Refuse it, for this reason.
+    Deny(String),
+}
+
+/// A navigation about to be fetched, as a gate sees it. A popup's first
+/// document can be allowed or refused; holding lets it through.
+#[derive(Debug)]
+pub struct GateRequest<'a> {
+    pub frame: FrameId,
+    /// The top frame or a popup: a document a tab shows, not a frame
+    /// within one.
+    pub top_level: bool,
+    pub method: &'a str,
+    pub url: &'a Url,
+    /// A submission's body and its content type.
+    pub body: Option<&'a (String, Vec<u8>)>,
+}
+
+/// Decides about navigations; see [`Page::set_navigation_gate`].
+pub type NavigationGate = Box<dyn FnMut(&GateRequest<'_>) -> Gate>;
+
+/// A navigation a gate held.
+#[derive(Clone, Debug)]
+pub struct HeldNavigation {
+    pub frame: FrameId,
+    pub request: NavigationRequest,
+    referrer: Option<Url>,
 }
 
 /// Something that happened to a page's frames, for the embedder to report
@@ -213,6 +249,18 @@ pub enum PageEvent {
         frame: FrameId,
         url: Url,
         error: String,
+    },
+    /// The gate held a navigation (see [`Page::held`]).
+    NavigationHeld {
+        frame: FrameId,
+        method: String,
+        url: Url,
+    },
+    /// The gate refused a navigation.
+    NavigationBlocked {
+        frame: FrameId,
+        url: Url,
+        reason: String,
     },
 }
 
@@ -258,6 +306,10 @@ pub struct Page {
     top_virtual_used: f64,
     /// What happened since the embedder last asked.
     events: Vec<PageEvent>,
+    gate: Option<NavigationGate>,
+    held: Option<HeldNavigation>,
+    /// Set while a held navigation is released: it passes the gate.
+    releasing: bool,
 }
 
 /// Why an action could not be carried out.
@@ -408,6 +460,9 @@ impl Page {
             report: idle_report(),
             top_virtual_used: 0.0,
             events: Vec::new(),
+            gate: None,
+            held: None,
+            releasing: false,
         }
     }
 
@@ -456,6 +511,127 @@ impl Page {
         std::mem::take(&mut self.events)
     }
 
+    /// Lets `gate` decide about every navigation of a tab's document or a
+    /// frame's before it is fetched (`None`: all go). A held navigation
+    /// waits, unfetched, for [`Page::release_held`]; one at a time is
+    /// kept, and it goes when its frame loads another document or closes.
+    pub fn set_navigation_gate(&mut self, gate: Option<NavigationGate>) {
+        self.gate = gate;
+    }
+
+    /// The navigation the gate holds, if any.
+    pub fn held(&self) -> Option<&HeldNavigation> {
+        self.held.as_ref()
+    }
+
+    /// Carries out the held navigation as though the gate had let it
+    /// through, then what the new document asks for (which meets the
+    /// gate again). `false` when nothing was held.
+    pub fn release_held(&mut self) -> Result<bool, EngineError> {
+        let Some(held) = self.held.take() else {
+            return Ok(false);
+        };
+        self.user_acted();
+        self.releasing = true;
+        let result = if held.frame == FrameId(0) {
+            self.navigate_with(held.request, held.referrer)
+        } else {
+            self.navigate_frame(held.frame, held.request);
+            Ok(())
+        };
+        self.releasing = false;
+        result?;
+        self.run_frames();
+        self.follow_navigations()?;
+        Ok(true)
+    }
+
+    /// Forgets the held navigation; `false` when nothing was held.
+    pub fn drop_held(&mut self) -> bool {
+        self.held.take().is_some()
+    }
+
+    /// Lets `gate` decide about the requests script makes in the page, its
+    /// frames and its workers (`None`: all go). Held requests stay
+    /// pending for the page without keeping it busy.
+    pub fn set_request_gate(&mut self, gate: Option<Rc<crate::net::RequestGate>>) {
+        self.net.set_request_gate(gate);
+    }
+
+    fn nets(&self) -> impl Iterator<Item = &Rc<EngineNet>> {
+        std::iter::once(&self.net)
+            .chain(self.frames.iter().map(|f| &f.net))
+            .chain(self.workers.iter().map(|w| &w.net))
+    }
+
+    /// The requests script made that the gate holds: method and URL.
+    pub fn held_requests(&self) -> Vec<(String, Url)> {
+        self.nets().flat_map(|net| net.held_requests()).collect()
+    }
+
+    /// Sends the held requests; the page sees their answers when it next
+    /// runs.
+    pub fn release_held_requests(&mut self) {
+        for net in self.nets() {
+            net.release_held();
+        }
+    }
+
+    /// Fails the held requests, as a network that refused them would.
+    pub fn drop_held_requests(&mut self) {
+        for net in self.nets() {
+            net.drop_held();
+        }
+    }
+
+    /// Asks the gate about a navigation of `frame`, and reports a held or
+    /// refused one.
+    fn pass_gate(
+        &mut self,
+        frame: FrameId,
+        method: &str,
+        url: &Url,
+        body: Option<&(String, Vec<u8>)>,
+    ) -> Gate {
+        if self.releasing {
+            self.releasing = false;
+            return Gate::Allow;
+        }
+        let top_level = frame == FrameId(0) || self.tree.borrow().is_popup(frame);
+        let Some(gate) = self.gate.as_mut() else {
+            return Gate::Allow;
+        };
+        let decision = gate(&GateRequest {
+            frame,
+            top_level,
+            method,
+            url,
+            body,
+        });
+        if let Gate::Deny(reason) = &decision {
+            self.events.push(PageEvent::NavigationBlocked {
+                frame,
+                url: url.clone(),
+                reason: reason.clone(),
+            });
+        }
+        decision
+    }
+
+    /// Keeps a navigation the gate held, in place of any held before.
+    fn hold(&mut self, frame: FrameId, request: NavigationRequest, referrer: Option<Url>) {
+        self.events.push(PageEvent::NavigationHeld {
+            frame,
+            method: request.method.clone(),
+            url: request.url.clone(),
+        });
+        self.held = Some(HeldNavigation {
+            frame,
+            request,
+            referrer,
+        });
+    }
+
     /// Loads the document a navigation request asks for, in place of the
     /// current one: the same network (cookies included), a new page.
     fn navigate(&mut self, request: NavigationRequest) -> Result<(), EngineError> {
@@ -478,6 +654,29 @@ impl Page {
         } else {
             None
         };
+        let passed = match target {
+            Some(index) => {
+                let url = self.session[index].clone();
+                self.pass_gate(FrameId(0), "GET", &url, None)
+            }
+            None => self.pass_gate(
+                FrameId(0),
+                &request.method,
+                &request.url,
+                request.body.as_ref(),
+            ),
+        };
+        match passed {
+            Gate::Allow => {}
+            Gate::Hold => {
+                self.hold(FrameId(0), request, referrer);
+                return Ok(());
+            }
+            Gate::Deny(_) => return Ok(()),
+        }
+        if self.held.as_ref().is_some_and(|h| h.frame == FrameId(0)) {
+            self.held = None;
+        }
         let (method, url, body) = match target {
             Some(index) => ("GET".to_string(), self.session[index].clone(), None),
             None => (request.method, request.url, request.body),
@@ -823,6 +1022,13 @@ impl Page {
                 (DocumentInfo::local(&url, &html), html, parent_origin)
             }
             (None, Some(url)) => {
+                // A popup's first document can be refused, not held.
+                if element.is_none()
+                    && let Gate::Deny(_) = self.pass_gate(id, "GET", &url, None)
+                {
+                    fail(&parent_page);
+                    return;
+                }
                 let fetched = self.net.fetch_document("GET", &url, None, Some(&referrer));
                 match fetched {
                     Ok(fetched) => {
@@ -909,6 +1115,9 @@ impl Page {
         }
         self.tree.borrow_mut().remove(id);
         self.drop_workers_of(ScopeId::Frame(id));
+        if self.held.as_ref().is_some_and(|h| h.frame == id) {
+            self.held = None;
+        }
         if let Some(index) = self.frames.iter().position(|f| f.id == id) {
             let frame = self.frames.remove(index);
             if frame.element.is_none() {
@@ -1192,6 +1401,17 @@ impl Page {
             return;
         }
         let referrer = self.frames[index].boa.page().url.borrow().clone();
+        match self.pass_gate(id, &request.method, &request.url, request.body.as_ref()) {
+            Gate::Allow => {}
+            Gate::Hold => {
+                self.hold(id, request, Some(referrer));
+                return;
+            }
+            Gate::Deny(_) => return,
+        }
+        if self.held.as_ref().is_some_and(|h| h.frame == id) {
+            self.held = None;
+        }
         let method = request.method.clone();
         let fetched =
             self.net
@@ -1517,8 +1737,17 @@ impl Page {
     /// Whether the page had nothing left to do when the event loop stopped
     /// (or, under a settle policy, nothing it waits for).
     pub fn is_settled(&self) -> bool {
-        self.report.stop.is_settled()
-            && self.frames.iter().all(|f| f.report.stop.is_settled())
+        // A run that stopped for a navigation which then did not happen
+        // (held or refused by the gate, or failed) left a settled page.
+        let settled = |stop: StopReason, page: &PageState| {
+            stop.is_settled()
+                || (stop == StopReason::Navigation && page.navigation.borrow().is_none())
+        };
+        settled(self.report.stop, self.boa.page())
+            && self
+                .frames
+                .iter()
+                .all(|f| settled(f.report.stop, f.boa.page()))
             && self.workers.iter().all(|w| w.report.stop.is_settled())
     }
 

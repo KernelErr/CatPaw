@@ -10,6 +10,7 @@ pub struct Navigate {
     pub url: Option<String>,
     pub go: Option<Go>,
     pub snapshot: Option<SnapshotMode>,
+    pub confirmation: Option<String>,
 }
 
 /// What an action returns of the page after it.
@@ -38,6 +39,8 @@ pub struct ActionOptions {
     pub snapshot: Option<SnapshotMode>,
     pub dialog: Option<DialogChoice>,
     pub prompt_text: Option<String>,
+    /// The confirmation (`cN`) a re-issued call carries.
+    pub confirmation: Option<String>,
 }
 
 macro_rules! action_options {
@@ -48,6 +51,7 @@ macro_rules! action_options {
                     snapshot: self.snapshot,
                     dialog: self.dialog,
                     prompt_text: self.prompt_text.clone(),
+                    confirmation: self.confirmation.clone(),
                 }
             }
         }
@@ -110,6 +114,7 @@ pub struct Click {
     pub snapshot: Option<SnapshotMode>,
     pub dialog: Option<DialogChoice>,
     pub prompt_text: Option<String>,
+    pub confirmation: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -124,6 +129,7 @@ pub struct Type {
     pub snapshot: Option<SnapshotMode>,
     pub dialog: Option<DialogChoice>,
     pub prompt_text: Option<String>,
+    pub confirmation: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -135,6 +141,7 @@ pub struct Press {
     pub snapshot: Option<SnapshotMode>,
     pub dialog: Option<DialogChoice>,
     pub prompt_text: Option<String>,
+    pub confirmation: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -145,6 +152,7 @@ pub struct Select {
     pub snapshot: Option<SnapshotMode>,
     pub dialog: Option<DialogChoice>,
     pub prompt_text: Option<String>,
+    pub confirmation: Option<String>,
 }
 
 /// A string, or an array of them.
@@ -170,9 +178,12 @@ pub struct Act {
     pub kind: ActKind,
     pub target: Option<String>,
     pub dy: Option<f64>,
+    /// For upload: paths of local files.
+    pub files: Option<Vec<String>>,
     pub snapshot: Option<SnapshotMode>,
     pub dialog: Option<DialogChoice>,
     pub prompt_text: Option<String>,
+    pub confirmation: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -184,6 +195,7 @@ pub enum ActKind {
     Focus,
     Clear,
     Scroll,
+    Upload,
 }
 
 impl ActKind {
@@ -195,6 +207,7 @@ impl ActKind {
             ActKind::Focus => "focus",
             ActKind::Clear => "clear",
             ActKind::Scroll => "scroll",
+            ActKind::Upload => "upload",
         }
     }
 }
@@ -315,6 +328,7 @@ pub struct Screenshot {
 pub struct Evaluate {
     pub script: String,
     pub target: Option<String>,
+    pub confirmation: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -334,6 +348,21 @@ pub enum TabsOp {
     Close,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct Session {
+    pub op: SessionOp,
+    pub name: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SessionOp {
+    Save,
+    Restore,
+    List,
+}
+
 /// A tool call with its arguments parsed.
 #[derive(Debug, Clone)]
 pub enum Call {
@@ -350,6 +379,7 @@ pub enum Call {
     Tabs(Tabs),
     Wait(Wait),
     Logs(Logs),
+    Session(Session),
 }
 
 fn args<T: DeserializeOwned>(value: serde_json::Value) -> Result<T, String> {
@@ -377,6 +407,7 @@ pub fn parse(name: &str, value: serde_json::Value) -> Result<Call, String> {
         "tabs" => Call::Tabs(args(value)?),
         "wait" => Call::Wait(args(value)?),
         "logs" => Call::Logs(args(value)?),
+        "session" => Call::Session(args(value)?),
         other => return Err(format!("no tool is called {other:?}")),
     })
 }

@@ -9,7 +9,8 @@
 // `role "name"` takes the ref from the last snapshot; `css:` and `text:`
 // targets pass as selectors (text exactly, as CatPaw prefers it). A
 // `read` step takes no call, since the last snapshot already shows what
-// it reads. The checks run after the steps and are not counted. Each
+// it reads, and neither does the user's approval of a confirmation or the
+// call CatPaw repeats once it is given. The checks run after the steps and are not counted. Each
 // task runs three times, and the median run counts.
 //
 //   npm install --prefix <dir> @playwright/mcp@<version>
@@ -20,9 +21,18 @@
 // Writes tools/baseline/playwright-mcp.json.
 
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
@@ -141,7 +151,13 @@ async function run(task) {
 
     await call('browser_navigate', { url: task.start_url });
     result.first_view_bytes = result.bytes;
-    for (const { tool, args } of task.steps) {
+    for (const step of task.steps) {
+      const { tool, args } = step;
+      // Playwright MCP asks no one: the user's approval and the call
+      // CatPaw repeats with it take nothing there.
+      if (step.approve !== undefined || step.decline !== undefined || args?.confirmation !== undefined) {
+        continue;
+      }
       switch (tool) {
         case 'navigate':
           await call('browser_navigate', { url: args.url });
@@ -168,6 +184,17 @@ async function run(task) {
             await call('browser_evaluate', { function: `() => window.scrollBy(${args.dx ?? 0}, ${args.dy ?? 0})` });
           } else if (args.kind === 'check' || args.kind === 'uncheck') {
             await call('browser_click', element(args));
+          } else if (args.kind === 'upload') {
+            // Clicking the input opens the file chooser, which takes the
+            // files; Playwright MCP reads files only under its working
+            // directory, so they are copied there.
+            await call('browser_click', element(args));
+            const paths = args.files.map((f) => {
+              const copy = join(cwd, basename(f));
+              copyFileSync(join(tasksDir, task.id, f), copy);
+              return copy;
+            });
+            await call('browser_file_upload', { paths });
           } else {
             throw new Error(`act ${args.kind}: no mapping`);
           }

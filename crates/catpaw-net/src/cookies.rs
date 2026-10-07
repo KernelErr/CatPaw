@@ -106,7 +106,11 @@ impl CookieJar {
         self.len() == 0
     }
 
-    /// All unexpired cookies, for inspection and checkpoints.
+    /// Forgets every cookie (a checkpoint being restored, say).
+    pub fn clear(&self) {
+        self.store.lock().unwrap_or_else(|e| e.into_inner()).clear();
+    }
+
     /// The jar as JSON (one cookie per line, as `cookie_store` writes it),
     /// for keeping between runs. Session cookies are included.
     pub fn to_json(&self) -> String {
@@ -129,6 +133,7 @@ impl CookieJar {
         Ok(count)
     }
 
+    /// All unexpired cookies, for inspection and checkpoints.
     pub fn entries(&self) -> Vec<CookieEntry> {
         self.store
             .lock()

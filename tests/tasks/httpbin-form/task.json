@@ -1,0 +1,58 @@
+{
+  "id": "httpbin-form",
+  "goal": "Order a large pizza with bacon for Ada Lovelace; the order is a form post, so the user approves it first",
+  "start_url": "https://httpbin.org/forms/post",
+  "credentials": {
+    "public": true
+  },
+  "random_seed": 1,
+  "time_origin": 1790000000000,
+  "steps_min": 5,
+  "steps": [
+    {
+      "tool": "type",
+      "args": {
+        "target": "textbox \"Customer name:\"",
+        "text": "Ada Lovelace"
+      }
+    },
+    {
+      "tool": "act",
+      "args": {
+        "kind": "check",
+        "target": "radio \"Large\""
+      }
+    },
+    {
+      "tool": "act",
+      "args": {
+        "kind": "check",
+        "target": "checkbox \"Bacon\""
+      }
+    },
+    {
+      "tool": "click",
+      "args": {
+        "target": "button \"Submit order\""
+      }
+    },
+    {
+      "approve": "c1"
+    },
+    {
+      "tool": "click",
+      "args": {
+        "target": "button \"Submit order\"",
+        "confirmation": "c1"
+      }
+    }
+  ],
+  "success": [
+    {
+      "text_contains": "\"custname\": \"Ada Lovelace\""
+    },
+    {
+      "text_contains": "\"topping\": \"bacon\""
+    }
+  ]
+}

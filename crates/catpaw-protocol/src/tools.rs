@@ -35,10 +35,22 @@ impl ToolDef {
     }
 }
 
-/// The definition of the tool called `name`.
+/// The definition of the tool called `name`, optional ones included.
 pub fn tool(name: &str) -> Option<&'static ToolDef> {
-    TOOLS.iter().find(|t| t.name == name)
+    TOOLS.iter().chain(OPTIONAL_TOOLS).find(|t| t.name == name)
 }
+
+/// Tools listed only when the server is asked to (`--tools session`).
+pub static OPTIONAL_TOOLS: &[ToolDef] = &[ToolDef {
+    name: "session",
+    title: "Session checkpoints",
+    description: "Save the session (cookies, storage, the tabs and where they are) under a name, restore it later, or list what is saved. Restoring loads each tab again; refs start afresh.\nExample: {\"op\":\"save\",\"name\":\"logged-in\"}",
+    schema: r#"{"type":"object","properties":{
+"op":{"type":"string","enum":["save","restore","list"]},
+"name":{"type":"string","description":"For save and restore"}
+},"required":["op"],"additionalProperties":false}"#,
+    read_only: false,
+}];
 
 pub static TOOLS: &[ToolDef] = &[
     ToolDef {
@@ -48,7 +60,8 @@ pub static TOOLS: &[ToolDef] = &[
         schema: r#"{"type":"object","properties":{
 "url":{"type":"string","description":"https:// is assumed when no scheme is given"},
 "go":{"type":"string","enum":["back","forward","reload"],"description":"A history move instead of a URL"},
-"snapshot":{"type":"string","enum":["full","diff","none"]}
+"snapshot":{"type":"string","enum":["full","diff","none"]},
+"confirmation":{"type":"string"}
 },"additionalProperties":false}"#,
         read_only: false,
     },
@@ -76,7 +89,8 @@ pub static TOOLS: &[ToolDef] = &[
 "force":{"type":"boolean","description":"Skip the checks (covered, disabled, moving) and click the element itself"},
 "snapshot":{"type":"string","enum":["diff","full","none"]},
 "dialog":{"type":"string","enum":["accept","dismiss"]},
-"promptText":{"type":"string"}
+"promptText":{"type":"string"},
+"confirmation":{"type":"string"}
 },"required":["target"],"additionalProperties":false}"#,
         read_only: false,
     },
@@ -91,7 +105,8 @@ pub static TOOLS: &[ToolDef] = &[
 "submit":{"type":"boolean","description":"Press Enter afterwards"},
 "snapshot":{"type":"string","enum":["diff","full","none"]},
 "dialog":{"type":"string","enum":["accept","dismiss"]},
-"promptText":{"type":"string"}
+"promptText":{"type":"string"},
+"confirmation":{"type":"string"}
 },"required":["text"],"additionalProperties":false}"#,
         read_only: false,
     },
@@ -105,7 +120,8 @@ pub static TOOLS: &[ToolDef] = &[
 "repeat":{"type":"integer","minimum":1,"maximum":50},
 "snapshot":{"type":"string","enum":["diff","full","none"]},
 "dialog":{"type":"string","enum":["accept","dismiss"]},
-"promptText":{"type":"string"}
+"promptText":{"type":"string"},
+"confirmation":{"type":"string"}
 },"required":["key"],"additionalProperties":false}"#,
         read_only: false,
     },
@@ -118,21 +134,24 @@ pub static TOOLS: &[ToolDef] = &[
 "option":{"anyOf":[{"type":"string"},{"type":"array","items":{"type":"string"}}]},
 "snapshot":{"type":"string","enum":["diff","full","none"]},
 "dialog":{"type":"string","enum":["accept","dismiss"]},
-"promptText":{"type":"string"}
+"promptText":{"type":"string"},
+"confirmation":{"type":"string"}
 },"required":["target","option"],"additionalProperties":false}"#,
         read_only: false,
     },
     ToolDef {
         name: "act",
         title: "Other action",
-        description: "Less common element actions: hover, check, uncheck, focus, clear (empty a field), scroll (target into view, or the page by dy pixels; one screen down by default).\nExample: {\"kind\":\"check\",\"target\":\"e14\"}",
+        description: "Less common element actions: hover, check, uncheck, focus, clear (empty a field), scroll (target into view, or the page by dy pixels; one screen down by default), upload (choose local files in a file input).\nExample: {\"kind\":\"check\",\"target\":\"e14\"}",
         schema: r#"{"type":"object","properties":{
-"kind":{"type":"string","enum":["hover","check","uncheck","focus","clear","scroll"]},
+"kind":{"type":"string","enum":["hover","check","uncheck","focus","clear","scroll","upload"]},
 "target":{"type":"string","description":"Ref (e12), text:<visible text>, role \"name\" or css:<selector>"},
 "dy":{"type":"number","description":"Page scroll in pixels; negative scrolls up"},
+"files":{"type":"array","items":{"type":"string"},"description":"For upload: paths of local files"},
 "snapshot":{"type":"string","enum":["diff","full","none"]},
 "dialog":{"type":"string","enum":["accept","dismiss"]},
-"promptText":{"type":"string"}
+"promptText":{"type":"string"},
+"confirmation":{"type":"string"}
 },"required":["kind"],"additionalProperties":false}"#,
         read_only: false,
     },
@@ -165,7 +184,8 @@ pub static TOOLS: &[ToolDef] = &[
         description: "Run JavaScript in the page and return the result as a console shows it; promises are awaited. The script is an expression, or statements that return. el is the target's element; $ref(\"e12\") gives any ref's element.\nExample: {\"script\":\"el.value\",\"target\":\"e5\"}",
         schema: r#"{"type":"object","properties":{
 "script":{"type":"string"},
-"target":{"type":"string","description":"Ref (e12), text:<visible text>, role \"name\" or css:<selector>"}
+"target":{"type":"string","description":"Ref (e12), text:<visible text>, role \"name\" or css:<selector>"},
+"confirmation":{"type":"string"}
 },"required":["script"],"additionalProperties":false}"#,
         read_only: false,
     },

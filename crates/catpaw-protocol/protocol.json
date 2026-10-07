@@ -1,5 +1,33 @@
 {
-  "instructions": "CatPaw is a headless browser. Navigate to a URL, read the snapshot that comes back, act on elements by their ref, read the result, repeat.\n\nSnapshot lines: `e12 link \"Sign in\"` is an element (ref, role, name), followed by its state in brackets: [value=...], [checked], [disabled], [expanded]; [clickable] marks an element that looks clickable without a role. `text: ...` lines are page text. Indentation is nesting. The first line gives the snapshot id, tab, document, URL and title, and settled=no when the page was still busy.\n\nAfter an action you get what changed since the last snapshot: `~` changed, `+` added (new refs are usable at once), `-` removed, `>` moved; `(replaces e13)` means the page re-rendered that element under a new ref. A new document comes back whole. Pass snapshot:\"full\" for the whole page.\n\nRefs: an element keeps its ref across snapshots until it leaves the page, and refs are never reused. A ref that went stale gives `error StaleRef` naming the likely replacement. Prefer refs; use css:<selector> for elements no snapshot shows and xy:<x>,<y> as a last resort.\n\nResults start with `ok`, `error <Code>` (nothing happened; the message says why and what to try), `needs_confirmation` (the user must approve; follow the message) or `blocked` (not allowed; do not retry). Lines starting with `!` report consequences: navigations, new tabs, dialogs, requests, console errors, and what kept the page busy.\n\ntype replaces a field's value unless append is true. Dialogs are dismissed unless the action says dialog:\"accept\" (promptText answers a prompt). Windows a page opens become tabs. When something is still loading, wait for it. To read content rather than act on it, use read; logs shows console messages and requests. Screenshots cost many tokens; take them when layout or images matter.\n",
+  "instructions": "CatPaw is a headless browser. Navigate to a URL, read the snapshot that comes back, act on elements by their ref, read the result, repeat.\n\nSnapshot lines: `e12 link \"Sign in\"` is an element (ref, role, name), followed by its state in brackets: [value=...], [checked], [disabled], [expanded]; [clickable] marks an element that looks clickable without a role. `text: ...` lines are page text. Indentation is nesting. The first line gives the snapshot id, tab, document, URL and title, and settled=no when the page was still busy.\n\nAfter an action you get what changed since the last snapshot: `~` changed, `+` added (new refs are usable at once), `-` removed, `>` moved; `(replaces e13)` means the page re-rendered that element under a new ref. A new document comes back whole. Pass snapshot:\"full\" for the whole page.\n\nRefs: an element keeps its ref across snapshots until it leaves the page, and refs are never reused. A ref that went stale gives `error StaleRef` naming the likely replacement. Prefer refs; use css:<selector> for elements no snapshot shows and xy:<x>,<y> as a last resort.\n\nResults start with `ok`, `error <Code>` (nothing happened; the message says why and what to try), `needs_confirmation cN` (the user must approve first: ask them, then repeat the same call with confirmation:\"cN\") or `blocked` (not allowed; do not retry). Lines starting with `!` report consequences: navigations, new tabs, dialogs, requests, console errors, and what kept the page busy.\n\ntype replaces a field's value unless append is true. Dialogs are dismissed unless the action says dialog:\"accept\" (promptText answers a prompt). Windows a page opens become tabs. When something is still loading, wait for it. To read content rather than act on it, use read; logs shows console messages and requests. Screenshots cost many tokens; take them when layout or images matter.\n",
+  "optionalTools": [
+    {
+      "description": "Save the session (cookies, storage, the tabs and where they are) under a name, restore it later, or list what is saved. Restoring loads each tab again; refs start afresh.\nExample: {\"op\":\"save\",\"name\":\"logged-in\"}",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "description": "For save and restore",
+            "type": "string"
+          },
+          "op": {
+            "enum": [
+              "save",
+              "restore",
+              "list"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "op"
+        ],
+        "type": "object"
+      },
+      "name": "session",
+      "title": "Session checkpoints"
+    }
+  ],
   "protocolVersions": [
     "2025-06-18",
     "2025-03-26",
@@ -11,6 +39,9 @@
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation": {
+            "type": "string"
+          },
           "go": {
             "description": "A history move instead of a URL",
             "enum": [
@@ -103,6 +134,9 @@
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation": {
+            "type": "string"
+          },
           "dialog": {
             "enum": [
               "accept",
@@ -147,6 +181,9 @@
             "description": "Keep the current value and add to it",
             "type": "boolean"
           },
+          "confirmation": {
+            "type": "string"
+          },
           "dialog": {
             "enum": [
               "accept",
@@ -190,6 +227,9 @@
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation": {
+            "type": "string"
+          },
           "dialog": {
             "enum": [
               "accept",
@@ -234,6 +274,9 @@
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation": {
+            "type": "string"
+          },
           "dialog": {
             "enum": [
               "accept",
@@ -280,10 +323,13 @@
       "title": "Select option"
     },
     {
-      "description": "Less common element actions: hover, check, uncheck, focus, clear (empty a field), scroll (target into view, or the page by dy pixels; one screen down by default).\nExample: {\"kind\":\"check\",\"target\":\"e14\"}",
+      "description": "Less common element actions: hover, check, uncheck, focus, clear (empty a field), scroll (target into view, or the page by dy pixels; one screen down by default), upload (choose local files in a file input).\nExample: {\"kind\":\"check\",\"target\":\"e14\"}",
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation": {
+            "type": "string"
+          },
           "dialog": {
             "enum": [
               "accept",
@@ -295,6 +341,13 @@
             "description": "Page scroll in pixels; negative scrolls up",
             "type": "number"
           },
+          "files": {
+            "description": "For upload: paths of local files",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "kind": {
             "enum": [
               "hover",
@@ -302,7 +355,8 @@
               "uncheck",
               "focus",
               "clear",
-              "scroll"
+              "scroll",
+              "upload"
             ],
             "type": "string"
           },
@@ -402,6 +456,9 @@
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
+          "confirmation": {
+            "type": "string"
+          },
           "script": {
             "type": "string"
           },

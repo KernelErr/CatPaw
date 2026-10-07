@@ -45,6 +45,7 @@ pub enum InterfaceId {
     Event,
     EventTarget,
     File,
+    FileList,
     FileReader,
     FontFace,
     FontFaceSet,
@@ -267,8 +268,8 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 242;
-    pub const ALL: [InterfaceId; 242] = [
+    pub const COUNT: usize = 243;
+    pub const ALL: [InterfaceId; 243] = [
         InterfaceId::AbortController,
         InterfaceId::AbstractRange,
         InterfaceId::Blob,
@@ -292,6 +293,7 @@ impl InterfaceId {
         InterfaceId::Event,
         InterfaceId::EventTarget,
         InterfaceId::File,
+        InterfaceId::FileList,
         InterfaceId::FileReader,
         InterfaceId::FontFace,
         InterfaceId::FontFaceSet,
@@ -538,6 +540,7 @@ impl InterfaceId {
             InterfaceId::Event => "Event",
             InterfaceId::EventTarget => "EventTarget",
             InterfaceId::File => "File",
+            InterfaceId::FileList => "FileList",
             InterfaceId::FileReader => "FileReader",
             InterfaceId::FontFace => "FontFace",
             InterfaceId::FontFaceSet => "FontFaceSet",
@@ -785,6 +788,7 @@ impl InterfaceId {
             "Event" => InterfaceId::Event,
             "EventTarget" => InterfaceId::EventTarget,
             "File" => InterfaceId::File,
+            "FileList" => InterfaceId::FileList,
             "FileReader" => InterfaceId::FileReader,
             "FontFace" => InterfaceId::FontFace,
             "FontFaceSet" => InterfaceId::FontFaceSet,
@@ -1033,6 +1037,7 @@ impl InterfaceId {
             InterfaceId::Event => None,
             InterfaceId::EventTarget => None,
             InterfaceId::File => Some(InterfaceId::Blob),
+            InterfaceId::FileList => None,
             InterfaceId::FileReader => Some(InterfaceId::EventTarget),
             InterfaceId::FontFace => None,
             InterfaceId::FontFaceSet => Some(InterfaceId::EventTarget),
@@ -4057,6 +4062,12 @@ pub trait FileImpl {
     ) -> Fallible<ObjectId>;
 }
 
+pub trait FileListImpl {
+    fn item(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<ObjectId>>;
+    fn length(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn indexed_get(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<ObjectId>>;
+}
+
 pub trait FileReaderImpl {
     fn read_as_array_buffer(cx: &mut Cx<'_>, this: ObjectId, blob: ObjectId) -> Fallible<()>;
     fn read_as_binary_string(cx: &mut Cx<'_>, this: ObjectId, blob: ObjectId) -> Fallible<()>;
@@ -5831,6 +5842,8 @@ pub trait HTMLInputElementImpl {
     fn checked(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool>;
     fn set_checked(cx: &mut Cx<'_>, this: NodeId, value: bool) -> Fallible<()>;
     fn form(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
+    fn files(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<ObjectId>>;
+    fn set_files(cx: &mut Cx<'_>, this: NodeId, value: Option<ObjectId>) -> Fallible<()>;
     fn type_(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
     fn set_type(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
     fn default_value(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;

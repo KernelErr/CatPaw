@@ -778,6 +778,37 @@ pub fn select_option(cx: &mut Cx<'_>, select: NodeId, value: &str) -> Result<(),
 
 /// Selects exactly `options` of a `select` (only the first, in a
 /// single-select), with `input` and `change`, as a user picking them would.
+/// Chooses files in an `<input type=file>`, as its file picker would:
+/// each file is a name, a MIME type and the bytes. The input fires
+/// `input` and `change`.
+pub fn choose_files(
+    cx: &mut Cx<'_>,
+    input: NodeId,
+    files: Vec<(String, String, Vec<u8>)>,
+) -> Result<(), InputError> {
+    {
+        let dom = cx.dom();
+        if !dom.contains(input) || !dom.is_connected(input) {
+            return Err(InputError::Detached);
+        }
+        let is_file = dom.is_html_element(input, "input")
+            && dom
+                .attr(input, "type")
+                .is_some_and(|t| t.trim().eq_ignore_ascii_case("file"));
+        if !is_file {
+            return Err(InputError::NotEditable);
+        }
+        if forms::is_disabled(&dom, input) {
+            return Err(InputError::Disabled);
+        }
+    }
+    focus_for_input(cx, Some(input));
+    crate::file_api::choose_files(cx, input, files);
+    events::fire(cx, EventTargetRef::Node(input), "input", true, false);
+    events::fire(cx, EventTargetRef::Node(input), "change", true, false);
+    Ok(())
+}
+
 pub fn select_options(
     cx: &mut Cx<'_>,
     select: NodeId,

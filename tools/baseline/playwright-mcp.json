@@ -18,6 +18,13 @@
       "first_view_bytes": 32260,
       "passed": true
     },
+    "httpbin-form": {
+      "calls": 9,
+      "snapshot_reads": 4,
+      "bytes": 7477,
+      "first_view_bytes": 1814,
+      "passed": true
+    },
     "internet-dropdown": {
       "calls": 4,
       "snapshot_reads": 2,
@@ -49,8 +56,8 @@
     "internet-login": {
       "calls": 6,
       "snapshot_reads": 2,
-      "bytes": 2876,
-      "first_view_bytes": 1489,
+      "bytes": 2940,
+      "first_view_bytes": 1520,
       "passed": true
     },
     "internet-prompt": {
@@ -58,6 +65,13 @@
       "snapshot_reads": 2,
       "bytes": 1968,
       "first_view_bytes": 1343,
+      "passed": true
+    },
+    "internet-upload": {
+      "calls": 8,
+      "snapshot_reads": 4,
+      "bytes": 3239,
+      "first_view_bytes": 988,
       "passed": true
     },
     "internet-windows": {

@@ -83,6 +83,27 @@ pub mod advice {
         "advice: the page has nothing left to do; what you wait for will not come on its own";
 }
 
+/// The first words of results that are neither `ok` nor `error`, and
+/// what follows them.
+pub mod outcome {
+    /// The user must approve before the call can go on.
+    pub const NEEDS_CONFIRMATION: &str = "needs_confirmation";
+    /// Not allowed; retrying will not help.
+    pub const BLOCKED: &str = "blocked";
+    /// How to get a confirmation approved, before its URL.
+    pub const ASK_USER: &str = "ask the user to approve at";
+    /// How to go on once it is.
+    pub const REISSUE: &str = "then repeat the same call with confirmation:";
+    /// A confirmation the user has not answered yet.
+    pub const STILL_PENDING: &str = "(still pending)";
+    /// The reason a policy gives for asking.
+    pub const POLICY: &str = "policy";
+    /// The reason when the user said no.
+    pub const DECLINED: &str = "user: declined";
+    /// The reason when the confirmation ran out.
+    pub const EXPIRED: &str = "expired";
+}
+
 /// Words that start consequence lines (`! <word> ...`), in the order the
 /// lines appear.
 pub mod consequence {

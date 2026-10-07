@@ -80,6 +80,89 @@ fn new_file(cx: &Cx<'_>, bytes: Vec<u8>, type_: &str, name: &str, last_modified:
     })
 }
 
+// -------------------------------------------------------------- FileList
+
+/// What a file input chose (`input.files`).
+pub struct FileListObject {
+    /// Pinned for as long as the page lives: script may hold the list.
+    files: Vec<ObjectId>,
+}
+platform_object!(FileListObject, FileList);
+
+impl web::FileListImpl for Web {
+    fn item(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<ObjectId>> {
+        cx.page
+            .with::<FileListObject, _>(this, |l| l.files.get(index as usize).copied())
+    }
+
+    fn length(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32> {
+        cx.page
+            .with::<FileListObject, _>(this, |l| l.files.len() as u32)
+    }
+
+    fn indexed_get(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<ObjectId>> {
+        Self::item(cx, this, index)
+    }
+}
+
+/// The `FileList` of a file input: the same object until the choice
+/// changes.
+pub(crate) fn file_list(cx: &mut Cx<'_>, input: NodeId) -> ObjectId {
+    if let Some(&list) = cx.page.file_lists.borrow().get(&input) {
+        return list;
+    }
+    let list = cx.page.alloc(FileListObject { files: Vec::new() });
+    cx.pin(list);
+    cx.page.file_lists.borrow_mut().insert(input, list);
+    list
+}
+
+/// Makes `list` (a `FileList`, or nothing for none) what a file input
+/// chose.
+pub(crate) fn set_file_list(cx: &mut Cx<'_>, input: NodeId, list: Option<ObjectId>) {
+    let list = list.unwrap_or_else(|| cx.page.alloc(FileListObject { files: Vec::new() }));
+    cx.pin(list);
+    let old = cx.page.file_lists.borrow_mut().insert(input, list);
+    if let Some(old) = old {
+        cx.unpin(old);
+    }
+}
+
+/// The files a file input chose.
+pub(crate) fn chosen_files(cx: &Cx<'_>, input: NodeId) -> Vec<ObjectId> {
+    let list = cx.page.file_lists.borrow().get(&input).copied();
+    list.and_then(|list| {
+        cx.page
+            .with::<FileListObject, _>(list, |l| l.files.clone())
+            .ok()
+    })
+    .unwrap_or_default()
+}
+
+/// The name of a file.
+pub(crate) fn file_name(cx: &Cx<'_>, file: ObjectId) -> Option<String> {
+    blob(cx, file, |b| b.file.as_ref().map(|f| f.name.clone()))
+        .ok()
+        .flatten()
+}
+
+/// Chooses files in a file input, as its file picker would: each is a
+/// name, a type and the bytes. The input then fires `input` and `change`
+/// (the caller's part, as a user's choice).
+pub(crate) fn choose_files(cx: &mut Cx<'_>, input: NodeId, files: Vec<(String, String, Vec<u8>)>) {
+    let now = now_ms(cx);
+    let ids: Vec<ObjectId> = files
+        .into_iter()
+        .map(|(name, type_, bytes)| {
+            let id = new_file(cx, bytes, &type_, &name, now);
+            cx.pin(id);
+            id
+        })
+        .collect();
+    let list = cx.page.alloc(FileListObject { files: ids });
+    set_file_list(cx, input, Some(list));
+}
+
 /// The current time as the page sees it (`Date.now()` agrees).
 fn now_ms(cx: &Cx<'_>) -> i64 {
     cx.page.clock.unix_ms().floor() as i64
@@ -507,7 +590,22 @@ pub(crate) fn entry_list(
         match local.as_str() {
             "input" => {
                 match type_.as_str() {
-                    "button" | "submit" | "reset" | "image" | "file" => continue,
+                    "button" | "submit" | "reset" | "image" => continue,
+                    "file" => {
+                        // No file chosen sends an empty, nameless one.
+                        let files = chosen_files(cx, control);
+                        if files.is_empty() {
+                            let now = now_ms(cx);
+                            let id = new_file(cx, Vec::new(), "application/octet-stream", "", now);
+                            cx.pin(id);
+                            out.push((name.clone(), Entry::File(id)));
+                        }
+                        for file in files {
+                            cx.pin(file);
+                            out.push((name.clone(), Entry::File(file)));
+                        }
+                        continue;
+                    }
                     "checkbox" | "radio" if !is_checked(cx, control) => continue,
                     _ => {}
                 }

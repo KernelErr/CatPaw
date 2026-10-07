@@ -42,8 +42,9 @@ connects to a hosted server) and occasionally take over.
 ## Crate map
 
 ```
-catpaw (CLI) → catpaw-server (MCP over stdio: sessions, tab groups on threads of their own, actions;
-                              later JSON-RPC/WS and hand-off)
+catpaw (CLI) → catpaw-server (MCP over stdio: sessions, tab groups on threads of their own, actions,
+                              policies and confirmations with a local approval page, flight journal,
+                              profiles and checkpoints; later JSON-RPC/WS and hand-off)
   → catpaw-protocol (tool definitions, parameters, result wording; protocol.json)
   → catpaw-agent (CST snapshots, refs, read views; depends on catpaw-dom only)
   → catpaw-engine (engine threads, backend selection, embedding API)

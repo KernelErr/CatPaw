@@ -8241,6 +8241,81 @@ pub mod file {
     };
 }
 
+pub mod file_list {
+    use super::*;
+
+    fn get_length(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::FileList, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FileListImpl>::length(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_item(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::FileList, ctx)?;
+        rt::require_args(args, 1, "FileList.item")?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::FileListImpl>::item(cx, this, a0));
+        rt::ret(r, ctx)
+    }
+
+    fn exotic_length(h: rt::Handle, ctx: &mut Context) -> JsResult<u32> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| <Web as web::FileListImpl>::length(cx, this));
+        r.map_err(|e| rt::exception_to_js(e, ctx))
+    }
+
+    fn exotic_indexed_get(
+        h: rt::Handle,
+        index: u32,
+        ctx: &mut Context,
+    ) -> JsResult<Option<JsValue>> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::FileListImpl>::indexed_get(cx, this, index)
+        });
+        rt::ret_opt(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::FileList,
+        name: "FileList",
+        parent: None,
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "length",
+            getter: get_length,
+            setter: None,
+        }],
+        ops: &[rt::OpDef {
+            name: "item",
+            func: op_item,
+            length: 1,
+        }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: Some(rt::ExoticDef {
+            length: Some(exotic_length),
+            indexed_get: Some(exotic_indexed_get),
+            named_get: None,
+            named_properties: None,
+            named_set: None,
+            named_delete: None,
+            override_builtins: false,
+            attribute_like: false,
+            unenumerable_names: false,
+        }),
+    };
+}
+
 pub mod file_reader {
     use super::*;
 
@@ -39853,6 +39928,28 @@ pub mod html_input_element {
         rt::ret(r, ctx)
     }
 
+    fn get_files(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLInputElementImpl>::files(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_files(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLInputElement, ctx)?;
+        let a0 = if rt::arg(args, 0).is_null_or_undefined() {
+            None
+        } else {
+            Some(rt::object_from_js(rt::arg(args, 0), I::FileList, ctx)?)
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLInputElementImpl>::set_files(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
     fn get_form_action(
         this_js: &JsValue,
         _args: &[JsValue],
@@ -40516,6 +40613,11 @@ pub mod html_input_element {
                 name: "form",
                 getter: get_form,
                 setter: None,
+            },
+            rt::AttrDef {
+                name: "files",
+                getter: get_files,
+                setter: Some(set_files),
             },
             rt::AttrDef {
                 name: "formAction",
@@ -57590,6 +57692,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &event::DEF,
     &event_target::DEF,
     &file::DEF,
+    &file_list::DEF,
     &file_reader::DEF,
     &font_face::DEF,
     &font_face_set::DEF,

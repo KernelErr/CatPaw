@@ -683,6 +683,7 @@ dependencies = [
  "catpaw-protocol",
  "catpaw-style",
  "catpaw-web",
+ "getrandom 0.3.4",
  "regex",
  "serde_json",
  "url",

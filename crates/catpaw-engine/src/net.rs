@@ -26,6 +26,8 @@ use tokio::sync::mpsc::{UnboundedSender, unbounded_channel};
 use tokio::task::AbortHandle;
 use url::Url;
 
+use crate::page::Gate;
+
 /// One request the page made, for diagnostics.
 #[derive(Clone, Debug)]
 pub struct RequestRecord {
@@ -131,7 +133,16 @@ pub struct EngineNet {
     /// poll in the order the requests were made: a replay interleaves
     /// the same way every time.
     ready: RefCell<std::collections::VecDeque<(u64, NetResult)>>,
+    /// Decides about the requests script makes; shared with the hosts of
+    /// the page's frames and workers.
+    gate: Rc<RefCell<Option<Rc<RequestGate>>>>,
+    /// Requests the gate held: started for the page, not sent.
+    held: RefCell<Vec<(u64, NetRequest, usize)>>,
 }
+
+/// Decides about a request script makes (`fetch`, `XMLHttpRequest`,
+/// `sendBeacon`) before it is sent.
+pub type RequestGate = dyn Fn(&NetRequest) -> Gate;
 
 async fn perform(client: &NetClient, request: NetRequest) -> NetResult {
     let method = Method::from_bytes(request.method.as_bytes())
@@ -205,6 +216,8 @@ impl EngineNet {
             socket_events: RefCell::new(Vec::new()),
             log: Rc::new(RefCell::new(Vec::new())),
             ready: RefCell::new(std::collections::VecDeque::new()),
+            gate: Rc::new(RefCell::new(None)),
+            held: RefCell::new(Vec::new()),
         }
     }
 
@@ -256,11 +269,65 @@ impl EngineNet {
             socket_events: RefCell::new(Vec::new()),
             log: self.log.clone(),
             ready: RefCell::new(std::collections::VecDeque::new()),
+            gate: self.gate.clone(),
+            held: RefCell::new(Vec::new()),
         }
     }
 
     pub fn client(&self) -> &NetClient {
         &self.client
+    }
+
+    /// Lets `gate` decide about the requests script makes, here and in
+    /// the hosts of the page's frames and workers (`None`: all go).
+    pub fn set_request_gate(&self, gate: Option<Rc<RequestGate>>) {
+        *self.gate.borrow_mut() = gate;
+    }
+
+    /// The requests the gate holds: method and URL.
+    pub fn held_requests(&self) -> Vec<(String, Url)> {
+        self.held
+            .borrow()
+            .iter()
+            .map(|(_, request, _)| (request.method.clone(), request.url.clone()))
+            .collect()
+    }
+
+    /// Sends the held requests, as though the gate had let them through.
+    pub fn release_held(&self) {
+        let held = std::mem::take(&mut *self.held.borrow_mut());
+        for (token, request, index) in held {
+            self.dispatch(token, request, index);
+        }
+    }
+
+    /// Fails the held requests as refused by the network.
+    pub fn drop_held(&self) {
+        let held = std::mem::take(&mut *self.held.borrow_mut());
+        for (token, _, index) in held {
+            let result: NetResult = Err("the request was not allowed".to_string());
+            self.finish(index, &result);
+            self.ready.borrow_mut().push_back((token, result));
+        }
+    }
+
+    /// Sends a request started for the page.
+    fn dispatch(&self, token: u64, request: NetRequest, index: usize) {
+        if self.client.is_replaying() {
+            let result = self.runtime.block_on(perform(&self.client, request));
+            self.finish(index, &result);
+            self.ready.borrow_mut().push_back((token, result));
+            return;
+        }
+        let client = self.client.clone();
+        let tx = self.tx.clone();
+        let task = self.runtime.spawn(async move {
+            let result = perform(&client, request).await;
+            let _ = tx.send(HostEvent::Response(token, result));
+        });
+        self.inflight
+            .borrow_mut()
+            .insert(token, (task.abort_handle(), index));
     }
 
     /// Runs a future on the network runtime and waits for it. Must not be
@@ -368,21 +435,20 @@ impl NetHost for EngineNet {
         let token = self.next_token.get();
         self.next_token.set(token + 1);
         let index = self.record(&request);
-        if self.client.is_replaying() {
-            let result = self.runtime.block_on(perform(&self.client, request));
-            self.finish(index, &result);
-            self.ready.borrow_mut().push_back((token, result));
-            return token;
+        let scripted = matches!(
+            request.kind,
+            RequestKind::Fetch | RequestKind::Xhr | RequestKind::Beacon
+        );
+        let gate = self.gate.borrow().clone();
+        match gate.filter(|_| scripted).map(|gate| gate(&request)) {
+            Some(Gate::Hold) => self.held.borrow_mut().push((token, request, index)),
+            Some(Gate::Deny(reason)) => {
+                let result: NetResult = Err(format!("blocked: {reason}"));
+                self.finish(index, &result);
+                self.ready.borrow_mut().push_back((token, result));
+            }
+            Some(Gate::Allow) | None => self.dispatch(token, request, index),
         }
-        let client = self.client.clone();
-        let tx = self.tx.clone();
-        let task = self.runtime.spawn(async move {
-            let result = perform(&client, request).await;
-            let _ = tx.send(HostEvent::Response(token, result));
-        });
-        self.inflight
-            .borrow_mut()
-            .insert(token, (task.abort_handle(), index));
         token
     }
 
@@ -411,9 +477,14 @@ impl NetHost for EngineNet {
 
     fn abort(&self, token: u64) {
         self.ready.borrow_mut().retain(|(t, _)| *t != token);
+        self.held.borrow_mut().retain(|(t, _, _)| *t != token);
         if let Some((task, _)) = self.inflight.borrow_mut().remove(&token) {
             task.abort();
         }
+    }
+
+    fn is_held(&self, token: u64) -> bool {
+        self.held.borrow().iter().any(|(t, _, _)| *t == token)
     }
 
     fn inflight(&self) -> usize {

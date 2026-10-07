@@ -153,7 +153,7 @@ claude mcp add catpaw -- "$PWD/target/release/catpaw" mcp --stdio
 ```
 
 The tools are `navigate`, `snapshot`, `click`, `type`, `press`, `select`,
-`act` (hover, check, uncheck, focus, clear, scroll), `wait`, `read`
+`act` (hover, check, uncheck, focus, clear, scroll, upload), `wait`, `read`
 (markdown, text, links, forms, tables, find, html), `screenshot`,
 `evaluate`, `tabs` and `logs`; windows a page opens become tabs. Elements
 are named by refs that stay valid until the element leaves the page. An
@@ -180,11 +180,29 @@ and the protocol are described in
 `cargo run -p xtask --features engine -- snapshot-bench` measures snapshot sizes on
 live pages.
 
+Side effects wait for the user. Under the default policy a navigation
+that sends data (a form submission) and an upload stop with
+`needs_confirmation c1: click e8 button "Login" would submit → POST
+https://…/authenticate (fields: username=tomsmith, password=***)`. A host
+that supports MCP elicitation asks its user there and then; otherwise the
+user approves on a local page whose address the result gives, with a key
+the agent never sees, and the agent repeats the call with
+`confirmation: "c1"`: the held submission goes, once, and nothing is
+clicked again. `--policy strict` also asks before scripts send data to
+other sites and before `evaluate`, `--policy open` asks for nothing, and
+`--trust <host>` and `--allowed-domain <domain>` adjust either.
+`--flight-log <dir>` keeps a journal of every call (`--flight-screens`
+adds a screenshot per action; typed passwords are kept as their length),
+`--profile <dir>` keeps cookies, localStorage, checkpoints and the journal
+between sessions, and `--tools session` adds a tool that saves and
+restores checkpoints. `act` with `kind: "upload"` chooses local files in a
+file input.
+
 `--record-har run.har.zst` keeps a session's traffic and `--replay-har
 run.har.zst` serves it back with no network; with `--random-seed` and
 `--time-origin` as well, a replay gives the same results byte for byte.
-Sixteen tasks on sites made for automation practice (Sauce Demo, Books and
-Quotes to Scrape, the-internet, TodoMVC) live in [`tests/tasks/`](tests/tasks/),
+Eighteen tasks on sites made for automation practice (Sauce Demo, Books
+and Quotes to Scrape, the-internet, TodoMVC, httpbin) live in [`tests/tasks/`](tests/tasks/),
 each with its recording and the transcript an agent sees; CI replays them
 twice, offline, and both runs must equal the transcript. What an agent
 reads over each task, against Playwright MCP taking the same steps:
@@ -193,21 +211,23 @@ reads over each task, against Playwright MCP taking the same steps:
 |---|---|---|---|---|
 | books-category | 3 | 14814 (~4233) | 6 | 64648 (~18471) |
 | books-pagination | 2 | 13445 (~3841) | 4 | 64942 (~18555) |
-| internet-dropdown | 2 | 900 (~257) | 4 | 1937 (~553) |
-| internet-dynamic | 3 | 1390 (~397) | 6 | 2922 (~835) |
-| internet-entry-ad | 2 | 1534 (~438) | 4 | 2305 (~659) |
+| httpbin-form | 6 | 2248 (~642) | 9 | 7477 (~2136) |
+| internet-dropdown | 2 | 720 (~206) | 4 | 1937 (~553) |
+| internet-dynamic | 3 | 1030 (~294) | 6 | 2922 (~835) |
+| internet-entry-ad | 2 | 1174 (~335) | 4 | 2305 (~659) |
 | internet-frames | 2 | 859 (~245) | 3 | 980 (~280) |
-| internet-login | 4 | 2355 (~673) | 6 | 2876 (~822) |
-| internet-prompt | 2 | 1340 (~383) | 5 | 1968 (~562) |
-| internet-windows | 3 | 1000 (~286) | 5 | 2217 (~633) |
+| internet-login | 5 | 2118 (~605) | 6 | 2940 (~840) |
+| internet-prompt | 2 | 980 (~280) | 5 | 1968 (~562) |
+| internet-upload | 5 | 1829 (~523) | 8 | 3239 (~925) |
+| internet-windows | 3 | 820 (~234) | 5 | 2217 (~633) |
 | quotes-js-pagination | 2 | 1452 (~415) | 4 | 9394 (~2684) |
-| quotes-login | 4 | 4020 (~1149) | 6 | 12497 (~3571) |
+| quotes-login | 5 | 4409 (~1260) | 6 | 12497 (~3571) |
 | quotes-scroll | 3 | 906 (~259) | 5 | 11922 (~3406) |
 | quotes-table | 2 | 5179 (~1480) | 2 | 8658 (~2474) |
-| saucedemo-checkout | 11 | 7757 (~2216) | 18 | 20992 (~5998) |
-| saucedemo-sort | 4 | 6011 (~1717) | 7 | 12814 (~3661) |
+| saucedemo-checkout | 11 | 7397 (~2113) | 18 | 20992 (~5998) |
+| saucedemo-sort | 4 | 5651 (~1615) | 7 | 12814 (~3661) |
 | todomvc | 5 | 1833 (~524) | 10 | 9128 (~2608) |
-| all | 54 | 64795 (~18513) | 95 | 230200 (~65771) |
+| all | 67 | 66864 (~19104) | 112 | 240980 (~68851) |
 
 Bytes are all the tool results an agent receives over a task (tokens
 estimated at 3.5 bytes each). CatPaw's numbers come from the recordings;
@@ -217,8 +237,10 @@ snapshot in a file and links it from a result whenever the page changed;
 an agent reads it to see the page and find its next target, so the file
 counts too, as one more call. CatPaw answers an action with what changed,
 and caps a whole snapshot at 4000 tokens, folding the rest for the agent
-to open. The tool list, a cost on every turn, is 9.6 KB for CatPaw and
-20.3 KB for Playwright MCP.
+to open; its numbers include the calls that wait for the user's approval
+(logins, the form post, the upload), which Playwright MCP does not make.
+The tool list, a cost on every turn, is 10.0 KB for CatPaw and 20.3 KB for
+Playwright MCP.
 `cargo run -p xtask --features engine -- tasks report --baseline tools/baseline/playwright-mcp.json`
 regenerates the table, and
 [`tools/baseline/playwright-mcp.mjs`](tools/baseline/playwright-mcp.mjs)

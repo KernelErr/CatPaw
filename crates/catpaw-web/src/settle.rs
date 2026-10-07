@@ -246,6 +246,8 @@ pub enum RequestClass {
     LongStream,
     /// An asset (style sheet, image, font) slow to load.
     SlowAsset,
+    /// Held back, unsent, until the embedder lets it go.
+    Held,
 }
 
 impl RequestClass {
@@ -258,6 +260,7 @@ impl RequestClass {
             RequestClass::SlowThirdParty => "slow third party",
             RequestClass::LongStream => "stream",
             RequestClass::SlowAsset => "slow asset",
+            RequestClass::Held => "held",
         }
     }
 }
@@ -467,12 +470,21 @@ fn site_of(host: &str) -> &str {
     &host[host.len() - keep..]
 }
 
-/// Whether two URLs are of the same site (scheme aside).
-fn same_site(a: &Url, b: &Url) -> bool {
+/// Whether two URLs are of the same site (scheme aside), the site being
+/// the host's last two labels (three under `co.uk` and the like).
+pub fn same_site(a: &Url, b: &Url) -> bool {
     match (a.host_str(), b.host_str()) {
         (Some(x), Some(y)) => site_of(x) == site_of(y),
         _ => true,
     }
+}
+
+/// Whether the request `token` is held back by the embedder.
+pub(crate) fn is_held(page: &PageState, token: u64) -> bool {
+    page.net
+        .borrow()
+        .as_ref()
+        .is_some_and(|net| net.is_held(token))
 }
 
 /// Whether `policy` waits for a request in flight.
@@ -486,7 +498,7 @@ pub(crate) fn blocking_requests(page: &PageState, policy: &SettlePolicy) -> usiz
     let started = page.net_started.borrow();
     let requests = started
         .iter()
-        .filter(|(token, _)| callbacks.contains_key(token))
+        .filter(|(token, _)| callbacks.contains_key(token) && !is_held(page, **token))
         .filter(|(_, info)| classify_request(page, policy, info) == RequestClass::Relevant)
         .count();
     requests + page.sockets.connecting(page)
@@ -547,7 +559,7 @@ pub fn report(page: &PageState, policy: &SettlePolicy) -> PendingReport {
     let mut requests: Vec<PendingRequest> = started
         .iter()
         .filter(|(token, _)| callbacks.contains_key(token))
-        .map(|(_, info)| {
+        .map(|(token, info)| {
             let timer_site = match info.initiator {
                 Initiator::Timer { site } => timer_site(page, site).map(|s| s.site),
                 _ => None,
@@ -556,7 +568,11 @@ pub fn report(page: &PageState, policy: &SettlePolicy) -> PendingReport {
                 method: info.method.clone(),
                 url: info.url.clone(),
                 kind: info.kind,
-                class: classify_request(page, policy, info),
+                class: if is_held(page, *token) {
+                    RequestClass::Held
+                } else {
+                    classify_request(page, policy, info)
+                },
                 age: info.real_start.elapsed(),
                 initiator: info.initiator,
                 site: info.site.clone(),

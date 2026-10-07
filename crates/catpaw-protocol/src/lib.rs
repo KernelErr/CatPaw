@@ -11,7 +11,7 @@ pub mod params;
 pub mod tools;
 pub mod wording;
 
-pub use tools::{TOOLS, ToolDef, tool};
+pub use tools::{OPTIONAL_TOOLS, TOOLS, ToolDef, tool};
 
 /// What `initialize` tells the host about using the tools (MCP
 /// `instructions`; hosts usually put it in the system prompt).
@@ -24,7 +24,7 @@ After an action you get what changed since the last snapshot: `~` changed, `+` a
 
 Refs: an element keeps its ref across snapshots until it leaves the page, and refs are never reused. A ref that went stale gives `error StaleRef` naming the likely replacement. Prefer refs; use css:<selector> for elements no snapshot shows and xy:<x>,<y> as a last resort.
 
-Results start with `ok`, `error <Code>` (nothing happened; the message says why and what to try), `needs_confirmation` (the user must approve; follow the message) or `blocked` (not allowed; do not retry). Lines starting with `!` report consequences: navigations, new tabs, dialogs, requests, console errors, and what kept the page busy.
+Results start with `ok`, `error <Code>` (nothing happened; the message says why and what to try), `needs_confirmation cN` (the user must approve first: ask them, then repeat the same call with confirmation:\"cN\") or `blocked` (not allowed; do not retry). Lines starting with `!` report consequences: navigations, new tabs, dialogs, requests, console errors, and what kept the page busy.
 
 type replaces a field's value unless append is true. Dialogs are dismissed unless the action says dialog:\"accept\" (promptText answers a prompt). Windows a page opens become tabs. When something is still loading, wait for it. To read content rather than act on it, use read; logs shows console messages and requests. Screenshots cost many tokens; take them when layout or images matter.
 ";
@@ -35,10 +35,12 @@ pub const PROTOCOL_VERSIONS: &[&str] = &["2025-06-18", "2025-03-26", "2024-11-05
 /// `protocol.json` holds).
 pub fn protocol_json() -> String {
     let tools: Vec<serde_json::Value> = TOOLS.iter().map(ToolDef::to_json).collect();
+    let optional: Vec<serde_json::Value> = OPTIONAL_TOOLS.iter().map(ToolDef::to_json).collect();
     let doc = serde_json::json!({
         "instructions": INSTRUCTIONS,
         "protocolVersions": PROTOCOL_VERSIONS,
         "tools": tools,
+        "optionalTools": optional,
     });
     let mut out = serde_json::to_string_pretty(&doc).expect("static JSON serializes");
     out.push('\n');
@@ -51,7 +53,7 @@ mod tests {
 
     #[test]
     fn every_schema_parses_and_names_match() {
-        for def in TOOLS {
+        for def in TOOLS.iter().chain(OPTIONAL_TOOLS) {
             let schema: serde_json::Value =
                 serde_json::from_str(def.schema).unwrap_or_else(|e| panic!("{}: {e}", def.name));
             assert_eq!(schema["type"], "object", "{}", def.name);
@@ -71,7 +73,7 @@ mod tests {
             .iter()
             .map(|t| t.name.len() + t.description.len() + t.schema.len())
             .sum();
-        assert!(size < 9000, "tool definitions grew to {size} bytes");
+        assert!(size < 10_000, "tool definitions grew to {size} bytes");
         assert!(INSTRUCTIONS.split_whitespace().count() < 360);
     }
 }

@@ -142,6 +142,12 @@ pub trait NetHost {
     /// Number of started requests that have not been delivered or aborted.
     fn inflight(&self) -> usize;
 
+    /// Whether a started request is held back, unsent, until the embedder
+    /// lets it go (it then does not keep the page busy).
+    fn is_held(&self, _token: u64) -> bool {
+        false
+    }
+
     /// The `Cookie` header value script may see for `url` (`document.cookie`).
     fn cookies_for(&self, url: &Url) -> String;
 
@@ -314,12 +320,18 @@ pub fn abort_request(page: &PageState, token: u64) {
 }
 
 /// Number of requests whose results are still awaited, not counting
-/// background ones such as beacons.
+/// background ones such as beacons or those the embedder holds.
 pub fn inflight(page: &PageState) -> usize {
+    let held = page
+        .net_callbacks
+        .borrow()
+        .keys()
+        .filter(|&&token| crate::settle::is_held(page, token))
+        .count();
     page.net_callbacks
         .borrow()
         .len()
-        .saturating_sub(page.background_requests.get())
+        .saturating_sub(page.background_requests.get() + held)
         + page.sockets.connecting(page)
 }
 
@@ -346,6 +358,7 @@ pub fn real_time_before(
     started
         .iter()
         .filter(|(token, _)| page.net_callbacks.borrow().contains_key(token))
+        .filter(|(token, _)| !crate::settle::is_held(page, **token))
         .filter(|(_, info)| policy.is_none_or(|p| crate::settle::waits_for(page, p, info)))
         .filter_map(|(_, info)| {
             let would_fire = info.real_start

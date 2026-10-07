@@ -29,8 +29,16 @@ ok type e6 textbox
 ~ e6 textbox [value=- → ***]
 
 > click {"target":"button \"Login\""}
-ok click e7 button "Login" → https://quotes.toscrape.com/ (POST, 200)
-# s4 tab=t1 doc=d2 navigated-from=d1 url=https://quotes.toscrape.com/ title="Quotes to Scrape" vp=1280x720 scroll=0,0 filter=interesting nodes=95/161 settled=yes full=navigated
+needs_confirmation c1: click e7 button "Login" would submit → POST https://quotes.toscrape.com/login (fields: csrf_token=***, username=catpaw, password=***)
+  ask the user to approve at http://127.0.0.1:PORT/confirm/c1 (expires in 10m), then repeat the same call with confirmation:"c1"
+# s4 diff-from=s3 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e7 settled=yes no changes
+
+> (user) approve c1
+approved
+
+> click {"confirmation":"c1","target":"button \"Login\""}
+ok click e7 button "Login" (confirmed c1) → https://quotes.toscrape.com/ (POST, 200)
+# s5 tab=t1 doc=d2 navigated-from=d1 url=https://quotes.toscrape.com/ title="Quotes to Scrape" vp=1280x720 scroll=0,0 filter=interesting nodes=95/161 settled=yes full=navigated
 e13 heading [level=1]
   e14 link "Quotes to Scrape"
 e15 paragraph

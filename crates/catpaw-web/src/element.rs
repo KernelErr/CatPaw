@@ -1658,6 +1658,26 @@ impl web::HTMLInputElementImpl for Web {
         Ok(crate::forms::form_owner(&cx.dom(), this))
     }
 
+    fn files(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<ObjectId>> {
+        node::check(cx, this)?;
+        if input_type(&cx.dom(), this) != "file" {
+            return Ok(None);
+        }
+        Ok(Some(crate::file_api::file_list(cx, this)))
+    }
+
+    /// Takes another `FileList` (as `input.files = dataTransfer.files`
+    /// does); `null` changes nothing.
+    fn set_files(cx: &mut Cx<'_>, this: NodeId, value: Option<ObjectId>) -> Fallible<()> {
+        node::check(cx, this)?;
+        if let Some(list) = value
+            && input_type(&cx.dom(), this) == "file"
+        {
+            crate::file_api::set_file_list(cx, this, Some(list));
+        }
+        Ok(())
+    }
+
     fn type_(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {
         node::check(cx, this)?;
         Ok(input_type(&cx.dom(), this))
@@ -1698,6 +1718,14 @@ impl web::HTMLInputElementImpl for Web {
 
     fn value(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {
         node::check(cx, this)?;
+        if input_type(&cx.dom(), this) == "file" {
+            // The first file's name behind the path browsers make up.
+            let first = crate::file_api::chosen_files(cx, this).first().copied();
+            return Ok(first
+                .and_then(|f| crate::file_api::file_name(cx, f))
+                .map(|name| format!("C:\\fakepath\\{name}"))
+                .unwrap_or_default());
+        }
         let dirty = cx
             .page
             .form_state
@@ -1728,6 +1756,10 @@ impl web::HTMLInputElementImpl for Web {
             "file" if !value.is_empty() => Err(Exception::invalid_state(
                 "A file input's value can only be set to the empty string",
             )),
+            "file" => {
+                crate::file_api::set_file_list(cx, this, None);
+                Ok(())
+            }
             _ => {
                 cx.page
                     .form_state
@@ -1769,6 +1801,14 @@ impl web::HTMLTextAreaElementImpl for Web {
 
     fn value(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {
         node::check(cx, this)?;
+        if input_type(&cx.dom(), this) == "file" {
+            // The first file's name behind the path browsers make up.
+            let first = crate::file_api::chosen_files(cx, this).first().copied();
+            return Ok(first
+                .and_then(|f| crate::file_api::file_name(cx, f))
+                .map(|name| format!("C:\\fakepath\\{name}"))
+                .unwrap_or_default());
+        }
         let dirty = cx
             .page
             .form_state

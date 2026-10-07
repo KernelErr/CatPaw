@@ -85,11 +85,19 @@ enum Check {
     Eval(String, String),
 }
 
+/// One step of a task: a call the agent makes, or the user deciding a
+/// confirmation (on the approval page, with the key).
+#[derive(Clone)]
+enum Step {
+    Call(String, Value),
+    Decide(String, bool),
+}
+
 struct Task {
     id: String,
     dir: PathBuf,
     start_url: String,
-    steps: Vec<(String, Value)>,
+    steps: Vec<Step>,
     checks: Vec<Check>,
     seed: u64,
     time_origin: f64,
@@ -133,10 +141,18 @@ fn load(select: &Select) -> Result<Vec<Task>> {
             .to_string();
         let mut steps = Vec::new();
         for step in spec["steps"].as_array().into_iter().flatten() {
+            if let Some(c) = step["approve"].as_str() {
+                steps.push(Step::Decide(c.to_string(), true));
+                continue;
+            }
+            if let Some(c) = step["decline"].as_str() {
+                steps.push(Step::Decide(c.to_string(), false));
+                continue;
+            }
             let tool = step["tool"]
                 .as_str()
                 .with_context(|| format!("{id}: a step without a tool"))?;
-            steps.push((tool.to_string(), step["args"].clone()));
+            steps.push(Step::Call(tool.to_string(), step["args"].clone()));
         }
         let mut checks = Vec::new();
         for check in spec["success"].as_array().into_iter().flatten() {
@@ -205,22 +221,95 @@ fn call(server: &mut McpServer, id: &mut u64, tool: &str, args: &Value) -> Resul
     Ok((text, reply["result"]["isError"] == true))
 }
 
+/// The approval page's address in a result, which names a port of the
+/// moment: transcripts keep `PORT` in its place.
+fn approval_url(text: &str) -> Option<&str> {
+    text.split_whitespace()
+        .find(|w| w.starts_with("http://127.0.0.1:") && w.contains("/confirm/c"))
+}
+
+fn without_port(text: &str) -> String {
+    match approval_url(text) {
+        Some(url) => {
+            let rest = url.trim_start_matches("http://127.0.0.1:");
+            let path = rest.split_once('/').map(|(_, p)| p).unwrap_or("");
+            text.replace(url, &format!("http://127.0.0.1:PORT/{path}"))
+        }
+        None => text.to_string(),
+    }
+}
+
+/// Decides a confirmation on the approval page, as the user would, with
+/// the approval key.
+fn decide(url: &str, key: &str, approve: bool) -> Result<String> {
+    use std::io::{Read, Write};
+    let rest = url
+        .strip_prefix("http://127.0.0.1:")
+        .context("not an approval URL")?;
+    let (port, path) = rest.split_once('/').context("not an approval URL")?;
+    let body = format!("decision={}", if approve { "approve" } else { "decline" });
+    let mut stream = std::net::TcpStream::connect(("127.0.0.1", port.parse::<u16>()?))?;
+    write!(
+        stream,
+        "POST /{path} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nAuthorization: Bearer {key}\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: {}\r\n\r\n{body}",
+        body.len()
+    )?;
+    let mut reply = String::new();
+    stream.read_to_string(&mut reply)?;
+    let state = reply
+        .split("\"state\":\"")
+        .nth(1)
+        .and_then(|r| r.split('"').next())
+        .context("the approval page did not say")?;
+    Ok(state.to_string())
+}
+
 fn run(task: &Task, recording: Recording) -> Result<Run> {
     let mut config = SessionConfig::default();
     config.options.net.recording = Some(recording);
     config.options.page.random_seed = Some(task.seed);
     config.options.page.time_origin_unix_ms = Some(task.time_origin);
+    config.files_root = Some(task.dir.clone());
+    let key_file = std::env::temp_dir()
+        .join(format!("catpaw-tasks-{}", std::process::id()))
+        .join("approval-key");
+    config.approval.key_file = Some(key_file.clone());
     let session = Session::new(config).context("starting a session")?;
     let mut server = McpServer::new(session);
     let mut id = 0;
     let mut transcript = String::new();
     let mut result_bytes = 0;
-    let mut calls = vec![("navigate".to_string(), json!({"url": task.start_url}))];
-    calls.extend(task.steps.iter().cloned());
-    for (tool, args) in &calls {
-        let (text, _) = call(&mut server, &mut id, tool, args)?;
-        result_bytes += text.len();
-        transcript.push_str(&format!("> {tool} {args}\n{text}\n\n"));
+    let mut calls = 0;
+    let mut steps = vec![Step::Call(
+        "navigate".to_string(),
+        json!({"url": task.start_url}),
+    )];
+    steps.extend(task.steps.iter().cloned());
+    let mut last = String::new();
+    for step in &steps {
+        match step {
+            Step::Call(tool, args) => {
+                let (text, _) = call(&mut server, &mut id, tool, args)?;
+                calls += 1;
+                result_bytes += text.len();
+                transcript.push_str(&format!("> {tool} {args}\n{}\n\n", without_port(&text)));
+                last = text;
+            }
+            Step::Decide(confirmation, approve) => {
+                let url = approval_url(&last)
+                    .filter(|url| url.ends_with(&format!("/confirm/{confirmation}")))
+                    .with_context(|| {
+                        format!(
+                            "{}: the step before did not ask for {confirmation}",
+                            task.id
+                        )
+                    })?;
+                let key = std::fs::read_to_string(&key_file)?;
+                let state = decide(url, key.trim(), *approve)?;
+                let verb = if *approve { "approve" } else { "decline" };
+                transcript.push_str(&format!("> (user) {verb} {confirmation}\n{state}\n\n"));
+            }
+        }
     }
     let mut passed = true;
     for check in &task.checks {
@@ -269,7 +358,7 @@ fn run(task: &Task, recording: Recording) -> Result<Run> {
     Ok(Run {
         transcript,
         passed,
-        calls: calls.len(),
+        calls,
         result_bytes,
     })
 }

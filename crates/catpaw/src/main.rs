@@ -214,6 +214,40 @@ struct McpArgs {
     /// runs).
     #[arg(long)]
     time_origin: Option<f64>,
+    /// What needs the user's approval: default (form submissions and
+    /// uploads), strict (also script sending data to other sites, and
+    /// evaluate) or open (nothing; for test runs).
+    #[arg(long, default_value = "default")]
+    policy: String,
+    /// A host (with its subdomains) whose submissions need no approval;
+    /// may repeat.
+    #[arg(long = "trust", value_name = "HOST")]
+    trusted: Vec<String>,
+    /// Let tabs show pages of this domain (with its subdomains) only; may
+    /// repeat.
+    #[arg(long = "allowed-domain", value_name = "DOMAIN")]
+    allowed_domains: Vec<String>,
+    /// The file with the key that approves confirmations on the local
+    /// approval page (made when missing; by default in the user's data
+    /// directory).
+    #[arg(long)]
+    approval_key_file: Option<PathBuf>,
+    /// The port of the local approval page (any free one by default).
+    #[arg(long, default_value_t = 0)]
+    approval_port: u16,
+    /// Keep a journal of every call (and confirmation) in this directory.
+    #[arg(long)]
+    flight_log: Option<PathBuf>,
+    /// With a journal: keep a screenshot after each page action.
+    #[arg(long)]
+    flight_screens: bool,
+    /// A directory that keeps cookies, localStorage, checkpoints and the
+    /// journal between sessions.
+    #[arg(long, conflicts_with_all = ["cookie_jar", "storage"])]
+    profile: Option<PathBuf>,
+    /// Offer an optional tool: session (checkpoints); may repeat.
+    #[arg(long = "tools", value_name = "TOOL")]
+    tools: Vec<String>,
 }
 
 #[derive(Args)]
@@ -270,7 +304,38 @@ fn mcp(args: McpArgs) -> Result<()> {
     };
     config.options.page.random_seed = args.random_seed;
     config.options.page.time_origin_unix_ms = args.time_origin;
+    config.policy = catpaw_server::Policy {
+        preset: catpaw_server::Preset::parse(&args.policy).with_context(|| {
+            format!(
+                "--policy {:?}: expected default, strict or open",
+                args.policy
+            )
+        })?,
+        trusted: args.trusted.clone(),
+        allowed_domains: args.allowed_domains.clone(),
+    };
+    config.approval = catpaw_server::ApprovalConfig {
+        key_file: args.approval_key_file.clone(),
+        port: args.approval_port,
+    };
+    config.journal = args
+        .flight_log
+        .clone()
+        .map(|dir| catpaw_server::JournalConfig {
+            dir,
+            screens: args.flight_screens,
+        });
+    config.profile = args.profile.clone();
+    for tool in &args.tools {
+        if !catpaw_server::OPTIONAL_TOOLS.iter().any(|t| t.name == tool) {
+            bail!("--tools {tool:?}: the optional tools are session");
+        }
+    }
+    config.tools = args.tools.clone();
     let outcome = catpaw_server::serve_stdio_with(config, |session| {
+        if let Err(e) = session.save_profile() {
+            eprintln!("catpaw: saving the profile: {e}");
+        }
         match session.save_recording() {
             Ok(Some(n)) => eprintln!("catpaw: recorded {n} requests"),
             Ok(None) => {}

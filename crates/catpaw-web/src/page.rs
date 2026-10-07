@@ -315,6 +315,9 @@ pub struct PageState {
     /// Current value and checkedness of form controls whose state has
     /// diverged from their content attributes.
     pub(crate) form_state: RefCell<HashMap<NodeId, FormControlState>>,
+    /// The `FileList` of each file input that chose files (or was asked
+    /// for its `files`), pinned.
+    pub(crate) file_lists: RefCell<HashMap<NodeId, ObjectId>>,
 
     console: RefCell<Vec<ConsoleMessage>>,
     console_sink: RefCell<Option<ConsoleSink>>,
@@ -419,6 +422,7 @@ impl PageState {
             storage: [RefCell::new(IndexMap::new()), RefCell::new(IndexMap::new())],
             id_index: RefCell::new((u64::MAX, HashMap::new())),
             form_state: RefCell::new(HashMap::new()),
+            file_lists: RefCell::new(HashMap::new()),
             console: RefCell::new(Vec::new()),
             console_sink: RefCell::new(None),
             console_state: RefCell::new(ConsoleState::default()),

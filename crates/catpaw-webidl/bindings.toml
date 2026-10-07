@@ -572,7 +572,7 @@ members = ["text"]
 members = ["text"]
 
 [interfaces.HTMLInputElement]
-members = ["value", "checked", "form", "defaultValue", "select", "type"]
+members = ["value", "checked", "form", "defaultValue", "select", "type", "files"]
 
 [interfaces.HTMLTextAreaElement]
 members = ["value", "form", "defaultValue", "select", "type"]
@@ -770,7 +770,11 @@ members = [
 ]
 
 # ---------------------------------------------------------------- File API
-# Blobs are bytes in memory; FileList comes with file inputs (none yet).
+# Blobs are bytes in memory; a FileList holds what a file input chose.
+[interfaces.FileList]
+exotic = true
+members = ["item", "length"]
+
 [interfaces.Blob]
 constructor = true
 members = ["size", "type", "slice", "stream", "text", "arrayBuffer", "bytes"]

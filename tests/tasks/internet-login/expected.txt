@@ -1,6 +1,5 @@
 > navigate {"url":"https://the-internet.herokuapp.com/login"}
 ok navigate → https://the-internet.herokuapp.com/login (200)
-! console error: Failed to load https://298279967.log.optimizely.com/event?a=298279967&d=298279967&y=false&n=https%3A%2F%2Fthe-internet.herokuapp.com%2Flogin&u=oeu1790000000000…
 ! console error: Uncaught SyntaxError: expected token 'identifier', got '=' in identifier parsing at line 1307, col 10
 # s1 tab=t1 doc=d1 url=https://the-internet.herokuapp.com/login title="The Internet" vp=1280x720 scroll=0,0 filter=interesting nodes=10/45 settled=yes
 e1 link "Fork me on GitHub"
@@ -25,12 +24,17 @@ ok type e7 textbox "Password"
 ~ e7 textbox "Password" [value=- → ***]
 
 > click {"target":"button \"Login\""}
-ok click e8 button "Login" → https://the-internet.herokuapp.com/secure (POST, 200)
-! console error: Failed to load https://298279967.log.optimizely.com/event?a=298279967&d=298279967&y=false&n=https%3A%2F%2Fthe-internet.herokuapp.com%2Fsecure&u=oeu179000000000…
-! console error: Failed to load https://298279967.log.optimizely.com/event?a=298279967&d=298279967&y=false&n=engagement&g=298283957&u=oeu1790000000000r0.8623854709019251&wxhr=t…
-! console error: Failed to load https://298279967.log.optimizely.com/event?a=298279967&d=298279967&y=false&n=https%3A%2F%2Fthe-internet.herokuapp.com%2Flogin&u=oeu1790000000000…
-! console +1 more errors
-# s4 tab=t1 doc=d2 navigated-from=d1 url=https://the-internet.herokuapp.com/secure title="The Internet" vp=1280x720 scroll=0,0 filter=interesting nodes=8/37 settled=yes full=navigated
+needs_confirmation c1: click e8 button "Login" would submit → POST https://the-internet.herokuapp.com/authenticate (fields: username=tomsmith, password=***)
+  ask the user to approve at http://127.0.0.1:PORT/confirm/c1 (expires in 10m), then repeat the same call with confirmation:"c1"
+# s4 diff-from=s3 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e8 settled=yes no changes
+
+> (user) approve c1
+approved
+
+> click {"confirmation":"c1","target":"button \"Login\""}
+ok click e8 button "Login" (confirmed c1) → https://the-internet.herokuapp.com/secure (POST, 200)
+! console error: Uncaught SyntaxError: expected token 'identifier', got '=' in identifier parsing at line 1307, col 10
+# s5 tab=t1 doc=d2 navigated-from=d1 url=https://the-internet.herokuapp.com/secure title="The Internet" vp=1280x720 scroll=0,0 filter=interesting nodes=8/37 settled=yes full=navigated
 text: You logged into a secure area!
 e10 link "×"
 e11 link "Fork me on GitHub"

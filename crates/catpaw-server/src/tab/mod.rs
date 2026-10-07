@@ -10,6 +10,7 @@ mod view;
 mod wait;
 
 use std::collections::{BTreeMap, VecDeque};
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::atomic::AtomicU32;
@@ -19,14 +20,17 @@ use catpaw_agent::snapshot::quote;
 use catpaw_agent::{ExtraAttrs, Filter, Format, RefError, RefKey, RefScope, RefTable, SnapLine};
 use catpaw_dom::NodeId;
 use catpaw_engine::{
-    EngineError, FrameId, FrameInfo, LoopLimits, Page, PageOptions, SettlePolicy, SharedNet,
+    EngineError, FrameId, FrameInfo, Gate, GateRequest, LoopLimits, Page, PageOptions,
+    SettlePolicy, SharedNet,
 };
 use catpaw_protocol::wording::{ErrorCode, advice};
+use catpaw_web::net::NetRequest;
 use catpaw_web::{PageState, agent};
 use url::Url;
 
 use crate::oracle::EngineOracle;
 use crate::output::Failure;
+use crate::policy::{Policy, Preset, Verdict};
 use crate::target::{self, Target};
 
 /// The budget of a snapshot when the call gives none, in tokens.
@@ -185,6 +189,47 @@ pub(crate) struct GroupState {
     page: Page,
     tabs: BTreeMap<u32, Tab>,
     next_tab: Arc<AtomicU32>,
+    /// Where relative paths of uploaded files start.
+    files_root: Option<PathBuf>,
+}
+
+/// What a group needs from its session beyond the page options.
+#[derive(Clone, Debug, Default)]
+pub(crate) struct GroupSetup {
+    pub policy: Policy,
+    pub files_root: Option<PathBuf>,
+}
+
+/// Puts `policy` in front of a page's navigations and (under the strict
+/// preset) the requests its scripts make.
+fn install_gates(page: &mut Page, policy: &Policy) {
+    let navigations = policy.clone();
+    page.set_navigation_gate(Some(Box::new(
+        move |request: &GateRequest<'_>| match navigations.navigation(
+            request.method,
+            request.url,
+            request.top_level,
+        ) {
+            Verdict::Allow => Gate::Allow,
+            Verdict::Confirm => Gate::Hold,
+            Verdict::Block(reason) => Gate::Deny(reason),
+        },
+    )));
+    if policy.preset == Preset::Strict {
+        let requests = policy.clone();
+        page.set_request_gate(Some(Rc::new(move |request: &NetRequest| {
+            let origin = request
+                .headers
+                .iter()
+                .find(|(name, _)| name.eq_ignore_ascii_case("origin"))
+                .map(|(_, value)| value.as_str());
+            match requests.request(&request.method, &request.url, origin) {
+                Verdict::Allow => Gate::Allow,
+                Verdict::Confirm => Gate::Hold,
+                Verdict::Block(reason) => Gate::Deny(reason),
+            }
+        })));
+    }
 }
 
 /// Whether a ref's node is still in the document it was shown in.
@@ -240,8 +285,10 @@ impl GroupState {
         net: &SharedNet,
         first: u32,
         next_tab: Arc<AtomicU32>,
+        setup: GroupSetup,
     ) -> Result<Self, EngineError> {
-        let page = Page::blank(options, net)?;
+        let mut page = Page::blank(options, net)?;
+        install_gates(&mut page, &setup.policy);
         let epoch = page.document_epoch(FrameId(0)).unwrap_or(0);
         let mut tabs = BTreeMap::new();
         tabs.insert(first, Tab::new(first, FrameId(0), None, epoch, 0));
@@ -249,6 +296,7 @@ impl GroupState {
             page,
             tabs,
             next_tab,
+            files_root: setup.files_root,
         })
     }
 
@@ -291,6 +339,31 @@ impl GroupState {
     /// group).
     pub(crate) fn is_top(&self, tab: u32) -> bool {
         self.tabs.get(&tab).is_some_and(|t| t.root == FrameId(0))
+    }
+
+    /// The URL of a tab's document and how far its window is scrolled.
+    pub(crate) fn place(&self, tab: u32) -> Option<(Url, (f32, f32))> {
+        let root = self.tabs.get(&tab)?.root;
+        let state = self.page.frame_state(root)?;
+        Some((state.url.borrow().clone(), agent::window_scroll(state)))
+    }
+
+    /// Scrolls a tab's window to `(x, y)`.
+    pub(crate) fn scroll_to(&mut self, tab: u32, x: f32, y: f32) {
+        let Some(root) = self.tabs.get(&tab).map(|t| t.root) else {
+            return;
+        };
+        let _ = self.page.input_in(root, |cx| {
+            let (from_x, from_y) = agent::window_scroll(cx.page);
+            agent::scroll_by(cx, x - from_x, y - from_y);
+            Ok(())
+        });
+    }
+
+    /// A PNG of a tab's viewport.
+    pub(crate) fn screen(&self, tab: u32) -> Option<Vec<u8>> {
+        let root = self.tabs.get(&tab)?.root;
+        self.page.screenshot_of(root, false)
     }
 
     fn tab_mut(&mut self, tab: u32) -> Result<&mut Tab, Failure> {

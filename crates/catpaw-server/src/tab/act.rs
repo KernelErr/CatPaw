@@ -5,11 +5,11 @@ use std::sync::atomic::Ordering;
 
 use catpaw_agent::snapshot::{quote, truncate};
 use catpaw_engine::{
-    ActionError, ConsoleLevel, DialogAnswer, DialogPolicy, EngineError, FrameId, InputError,
-    LoopLimits, PageEvent, SettlePolicy, Value,
+    ActionError, ConsoleLevel, DialogAnswer, DialogPolicy, EngineError, FrameId, HeldNavigation,
+    InputError, LoopLimits, PageEvent, SettlePolicy, Value,
 };
 use catpaw_protocol::params::{self, ActionOptions, DialogChoice, SnapshotMode};
-use catpaw_protocol::wording::{ErrorCode, advice, consequence};
+use catpaw_protocol::wording::{ErrorCode, advice, consequence, outcome};
 use catpaw_web::page::Cx;
 use catpaw_web::{agent, input};
 use url::Url;
@@ -39,6 +39,10 @@ pub(super) struct Report {
     /// (`pushState`, a fragment).
     pub same_document: Option<Url>,
     pub lines: Vec<String>,
+    /// What the policy holds for the user's approval.
+    pub held: Option<String>,
+    /// A navigation the policy refused: where to, and why.
+    pub blocked: Option<(Url, String)>,
 }
 
 impl Report {
@@ -56,6 +60,101 @@ impl Report {
         } else {
             String::new()
         }
+    }
+}
+
+/// Whether a form field's name says it holds a secret.
+fn secret_field(name: &str) -> bool {
+    name.to_ascii_lowercase()
+        .split(|c: char| !c.is_ascii_alphanumeric())
+        .any(|word| {
+            [
+                "pass", "pwd", "secret", "token", "card", "cvv", "cvc", "ssn", "otp",
+            ]
+            .iter()
+            .any(|s| word.starts_with(s))
+                || word == "pin"
+        })
+}
+
+/// The fields of a submission's body, `name=value` (secrets masked,
+/// values cut short), as many as fit.
+fn describe_fields(kind: &str, body: &[u8]) -> String {
+    let mut fields: Vec<(String, String)> = Vec::new();
+    let lower = kind.to_ascii_lowercase();
+    if lower.starts_with("application/x-www-form-urlencoded") {
+        fields = url::form_urlencoded::parse(body).into_owned().collect();
+    } else if let Some(boundary) = lower
+        .find("boundary=")
+        .map(|i| kind[i + 9..].trim_matches('"').to_string())
+    {
+        let text = String::from_utf8_lossy(body);
+        for part in text.split(&format!("--{boundary}")) {
+            let Some((head, value)) = part.split_once("\r\n\r\n") else {
+                continue;
+            };
+            let attr = |key: &str| {
+                head.split(';').find_map(|p| {
+                    p.trim()
+                        .strip_prefix(&format!("{key}=\""))
+                        .and_then(|v| v.split('"').next())
+                        .map(str::to_string)
+                })
+            };
+            let Some(name) = attr("name") else { continue };
+            let value = match attr("filename") {
+                Some(file) => format!("(file {file})"),
+                None => value.trim_end_matches("\r\n").to_string(),
+            };
+            fields.push((name, value));
+        }
+    }
+    let empty = fields.iter().filter(|(_, v)| v.is_empty()).count();
+    fields.retain(|(_, v)| !v.is_empty());
+    let mut out: Vec<String> = fields
+        .iter()
+        .take(8)
+        .map(|(name, value)| {
+            let value = if secret_field(name) {
+                "***".to_string()
+            } else {
+                truncate(value, 40)
+            };
+            format!("{name}={value}")
+        })
+        .collect();
+    if fields.len() > 8 {
+        out.push(format!("+{} more", fields.len() - 8));
+    }
+    if empty > 0 {
+        out.push(format!("{empty} empty"));
+    }
+    out.join(", ")
+}
+
+/// Whether a console message is about a request to a host the settle
+/// policy ignores (analytics): noise to the agent.
+fn about_ignored_host(text: &str, policy: &SettlePolicy) -> bool {
+    text.split_whitespace()
+        .filter(|w| w.starts_with("http://") || w.starts_with("https://"))
+        .filter_map(|w| Url::parse(w.trim_end_matches([':', ',', ')', '.', '…'])).ok())
+        .any(|url| policy.ignores_host(&url))
+}
+
+/// What a held navigation would do, for the confirmation.
+fn describe_held(held: &HeldNavigation) -> String {
+    let request = &held.request;
+    let target = format!("{} {}", request.method, truncate(request.url.as_str(), 160));
+    match &request.body {
+        Some((kind, body)) => {
+            let fields = describe_fields(kind, body);
+            if fields.is_empty() {
+                format!("submit → {target}")
+            } else {
+                format!("submit → {target} (fields: {fields})")
+            }
+        }
+        None => format!("load → {target}"),
     }
 }
 
@@ -112,6 +211,14 @@ impl GroupState {
                 } if Some(frame) == root => {
                     events.push(format!("navigated {method} {url} {status}"));
                     report.navigated = Some((method, url, status));
+                }
+                PageEvent::NavigationHeld { method, url, .. } => {
+                    events.push(format!("held {method} {url}"));
+                    report.held = self.page.held().map(describe_held);
+                }
+                PageEvent::NavigationBlocked { url, reason, .. } => {
+                    events.push(format!("blocked {url}: {reason}"));
+                    report.blocked = Some((url, reason));
                 }
                 PageEvent::NavigationFailed { frame, url, error } if Some(frame) == root => {
                     events.push(format!("navigation failed {url}: {error}"));
@@ -208,7 +315,7 @@ impl GroupState {
             let errors: Vec<String> = state
                 .console_since(if fresh { 0 } else { base.console })
                 .into_iter()
-                .filter(|m| m.level == ConsoleLevel::Error)
+                .filter(|m| m.level == ConsoleLevel::Error && !about_ignored_host(&m.text, &policy))
                 .map(|m| m.text)
                 .collect();
             for text in errors.iter().take(CONSOLE_LINES) {
@@ -226,6 +333,22 @@ impl GroupState {
                     errors.len() - CONSOLE_LINES
                 ));
             }
+        }
+        let requests = self.page.held_requests();
+        if !requests.is_empty() {
+            let mut sent: Vec<String> = requests
+                .iter()
+                .take(3)
+                .map(|(method, url)| format!("{method} {}", truncate(url.as_str(), 120)))
+                .collect();
+            if requests.len() > 3 {
+                sent.push(format!("+{} more", requests.len() - 3));
+            }
+            let what = format!("send → {}", sent.join(", "));
+            report.held = Some(match report.held.take() {
+                Some(navigation) => format!("{navigation}, and {what}"),
+                None => what,
+            });
         }
         if let Some(root) = root {
             report.lines.extend(self.not_settled(root));
@@ -248,6 +371,21 @@ impl GroupState {
         mode: Option<SnapshotMode>,
         view: View,
     ) -> CallResult {
+        if let Some((url, reason)) = &report.blocked {
+            let action = status.strip_prefix("ok ").unwrap_or(&status);
+            let mut text = format!(
+                "{} {}: {action} → {} ({reason})",
+                outcome::BLOCKED,
+                outcome::POLICY,
+                truncate(url.as_str(), 160)
+            );
+            for line in &report.lines {
+                text.push('\n');
+                text.push_str(line);
+            }
+            return Ok(ToolOutput::ok(text));
+        }
+        let held = report.held.clone();
         let mut text = status;
         text.push_str(&report.suffix());
         for line in &report.lines {
@@ -259,7 +397,40 @@ impl GroupState {
             text.push('\n');
             text.push_str(&page);
         }
-        Ok(ToolOutput::ok(text))
+        Ok(ToolOutput {
+            held,
+            ..ToolOutput::ok(text)
+        })
+    }
+
+    /// Lets what the policy held go (a navigation, requests), as though
+    /// the action had not been stopped, and reports like that action.
+    pub(crate) fn release_held(&mut self, tab: u32, status: String, view: View) -> CallResult {
+        let base = self.baseline(tab);
+        let navigation = self.page.held().is_some();
+        let requests = !self.page.held_requests().is_empty();
+        if !navigation && !requests {
+            return Err(Failure::new(
+                ErrorCode::BadArgument,
+                "nothing is held any more: the page moved on",
+            ));
+        }
+        self.page.release_held_requests();
+        let result = self.page.release_held();
+        // Let the page take in what came back.
+        self.page.settle(&super::action_limits());
+        let report = self.finish(tab, &base);
+        if let Err(e) = result {
+            return Err(Failure::new(ErrorCode::NavigationFailed, e.to_string()));
+        }
+        self.page_result(tab, status, report, None, view)
+    }
+
+    /// Drops what the policy held: the navigation does not happen, and the
+    /// requests fail for the page.
+    pub(crate) fn drop_held(&mut self) {
+        self.page.drop_held();
+        self.page.drop_held_requests();
     }
 
     /// Runs `f` with dialogs answered as `options` say, then back to
@@ -570,9 +741,16 @@ impl GroupState {
         if p.submit {
             status.push_str(" + Enter");
         }
+        let secret = self.page.frame_state(aim.frame).is_some_and(|state| {
+            let dom = state.dom.borrow();
+            dom.is_html_element(aim.node, "input")
+                && dom
+                    .attr(aim.node, "type")
+                    .is_some_and(|t| t.trim().eq_ignore_ascii_case("password"))
+        });
         let text = p.text;
         let (append, submit) = (p.append, p.submit);
-        self.act_on(tab, aim, status, &options, view, move |cx, aim| {
+        let mut output = self.act_on(tab, aim, status, &options, view, move |cx, aim| {
             if append {
                 input::focus(cx, aim.node)?;
                 input::type_text(cx, &text)?;
@@ -583,7 +761,11 @@ impl GroupState {
                 input::press(cx, "Enter")?;
             }
             Ok(())
-        })
+        });
+        if let Ok(output) = &mut output {
+            output.secret_input = secret;
+        }
+        output
     }
 
     pub(crate) fn press(&mut self, tab: u32, p: params::Press, view: View) -> CallResult {
@@ -685,6 +867,9 @@ impl GroupState {
     pub(crate) fn act(&mut self, tab: u32, p: params::Act, view: View) -> CallResult {
         let options = p.options();
         let kind = p.kind;
+        if kind == params::ActKind::Upload {
+            return self.upload(tab, p, view);
+        }
         if kind == params::ActKind::Scroll && p.target.is_none() {
             let (_, state) = self.root_state(tab)?;
             let dy =
@@ -760,8 +945,31 @@ impl GroupState {
                     agent::scroll_into_view(cx, aim.node);
                     Ok(())
                 }
+                params::ActKind::Upload => unreachable!("uploads are handled above"),
             },
         )
+    }
+
+    /// Chooses local files in a file input. The input may be hidden (sites
+    /// often hide it behind a styled button): only a disabled one refuses.
+    fn upload(&mut self, tab: u32, p: params::Act, view: View) -> CallResult {
+        let options = p.options();
+        let target = p
+            .target
+            .as_deref()
+            .ok_or_else(|| Failure::bad_argument("upload needs target: the file input"))?;
+        let paths = p
+            .files
+            .filter(|f| !f.is_empty())
+            .ok_or_else(|| Failure::bad_argument("upload needs files: paths of local files"))?;
+        let names = crate::files::describe(self.files_root.as_deref(), &paths)?;
+        let files = crate::files::read(self.files_root.as_deref(), &paths)?;
+        let aim = self.aim(tab, target)?;
+        let what = self.aimed(tab, &aim);
+        let status = format!("ok upload {what} ← {names}");
+        self.act_on(tab, aim, status, &options, view, move |cx, aim| {
+            input::choose_files(cx, aim.node, files)
+        })
     }
 
     pub(crate) fn screenshot(&mut self, tab: u32, p: params::Screenshot) -> CallResult {
@@ -775,7 +983,7 @@ impl GroupState {
         Ok(ToolOutput {
             text: format!("ok screenshot t{tab} {what} {w}x{h}"),
             image: Some(png),
-            is_error: false,
+            ..ToolOutput::default()
         })
     }
 

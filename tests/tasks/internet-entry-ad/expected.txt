@@ -1,6 +1,5 @@
 > navigate {"url":"https://the-internet.herokuapp.com/entry_ad"}
 ok navigate → https://the-internet.herokuapp.com/entry_ad (200)
-! console error: Failed to load https://298279967.log.optimizely.com/event?a=298279967&d=298279967&y=false&n=https%3A%2F%2Fthe-internet.herokuapp.com%2Fentry_ad&u=oeu1790000000…
 ! console error: Uncaught SyntaxError: expected token 'identifier', got '=' in identifier parsing at line 1307, col 10
 # s1 tab=t1 doc=d1 url=https://the-internet.herokuapp.com/entry_ad title="The Internet" vp=1280x720 scroll=0,0 filter=interesting nodes=12/46 settled=yes
 e1 link "Fork me on GitHub"
@@ -19,7 +18,6 @@ e10 generic [clickable]
 > click {"target":"text:Close"}
 ok click e11 paragraph "Close"
 ! network POST /entry_ad 200
-! console error: Failed to load https://298279967.log.optimizely.com/event?a=298279967&d=298279967&y=false&n=engagement&g=298283957&u=oeu1790000000000r0.7500711809616252&wxhr=t…
 # s2 diff-from=s1 tab=t1 doc=d1 url=(same) scroll=0,0 settled=yes changed=0 added=2 removed=4 unchanged=6
 - e7 generic
 - e8 heading "This is a modal window"

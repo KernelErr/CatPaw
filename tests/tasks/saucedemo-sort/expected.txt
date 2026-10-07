@@ -1,7 +1,5 @@
 > navigate {"url":"https://www.saucedemo.com/"}
 ok navigate → https://www.saucedemo.com/ (200)
-! console error: Failed to load https://events.backtrace.io/api/unique-events/submit?universe=UNIVERSE&token=TOKEN: CORS preflight failed: replay: no recorded answer for OPTION…
-! console error: Failed to load https://events.backtrace.io/api/summed-events/submit?universe=UNIVERSE&token=TOKEN: CORS preflight failed: replay: no recorded answer for OPTION…
 # s1 tab=t1 doc=d1 url=https://www.saucedemo.com/ title="Swag Labs" vp=1280x720 scroll=0,0 filter=interesting nodes=10/43 settled=yes
 text: Swag Labs
 e1 main
