@@ -12,7 +12,8 @@ isolated contexts.
 
 > Status: **pre-alpha**. Milestones M0 ("fetch & read"), M1 ("scripts
 > run", JavaScript via Boa) and M2 ("interact") are complete; M3 (the
-> agent API) is next. See the roadmap below.
+> agent API) is under way: `catpaw mcp --stdio` serves the agent tools over
+> MCP (see [From an agent](#from-an-agent-mcp)). See the roadmap below.
 >
 > What M2 brought: layout. Block, flex and grid boxes are laid out by Taffy and
 > inline content shaped and line-broken by Parley over a bundled font set,
@@ -79,8 +80,8 @@ isolated contexts.
 > React, Vue, Svelte, Lit, htmx and Alpine sites run; the Boa engine is
 > vendored with fixes described in `vendor/`. web-platform-tests run in CI
 > against recorded expectations, served by an in-process stand-in for WPT's
-> server and the Python handlers its fetch and XHR tests use: `dom` 2976 of
-> 4213 subtests pass, `html/dom` 582 of 1066, `fetch/api` 1908 of 2237,
+> server and the Python handlers its fetch and XHR tests use: `dom` 3019 of
+> 4246 subtests pass, `html/dom` 582 of 1066, `fetch/api` 1908 of 2237,
 > `xhr` 870 of 1205, `css/cssom-view` 478 of 1198 (much of the rest needs
 > frames or workers the test harness does not run, layout, or server
 > behaviour the stand-in does not emulate). Not there yet: images,
@@ -139,6 +140,45 @@ catpaw fetch https://crawltest.com/cdn-cgi/web-bot-auth \
     --bot-auth-key ./agent-key.json --signature-agent https://your-agent.example --text
 ```
 
+### From an agent (MCP)
+
+`catpaw mcp --stdio` serves the browser to an agent over the Model Context
+Protocol. From a checkout, build it and register it with your host, for
+example Claude Code:
+
+```sh
+cargo build --release -p catpaw
+claude mcp add catpaw -- "$PWD/target/release/catpaw" mcp --stdio
+```
+
+The tools are `navigate`, `snapshot`, `click`, `type`, `press`, `select`,
+`act` (hover, check, uncheck, focus, clear, scroll), `read` (markdown, text,
+links, forms), `screenshot`, `evaluate` and `tabs`; windows a page opens
+become tabs. Elements are named by refs that stay valid until the element
+leaves the page, and every action answers with what happened and a fresh
+snapshot:
+
+```text
+ok click e11 link "Travel" → https://books.toscrape.com/catalogue/category/books/travel_2/index.html (200)
+# s2 tab=t1 doc=d2 url=https://books.toscrape.com/catalogue/category/books/travel_2/index.html title="Travel | Books to Scrape - Sandbox" vp=1280x720 scroll=0,0 filter=interesting nodes=143/366 settled=yes
+e207 banner
+  e208 link "Books to Scrape"
+  text: We love being scraped!
+e209 list
+  e210 link "Home"
+  e211 link "Books"
+  e212 listitem: Travel
+…
+```
+
+Errors say what to try next (`error StaleRef e13 button "Remove"
+(removed)`, then the likely replacement and an `advice:` line). The format
+and the protocol are described in
+[ADR 0005](docs/adr/0005-cst-snapshot-format.md) and
+[ADR 0006](docs/adr/0006-agent-protocol.md);
+`cargo xtask snapshot-bench --features bench` measures snapshot sizes on
+live pages.
+
 The library crates are published too: `catpaw-net`, `catpaw-fetch`, `catpaw-dom`,
 `catpaw-style`, `catpaw-agent`.
 
@@ -160,8 +200,8 @@ checked-in output, `--list <Interface>` shows what an interface offers).
 | M0 fetch & read (done) | HTTP/1.1+2, cookies, Web Bot Auth signing, HTML parsing into the arena DOM, UA + author stylesheets via Stylo, CST snapshot v0, markdown/text/forms views, CLI | `catpaw fetch … --snapshot` works on real pages; WPT tree-construction suite runs in CI with recorded expectations |
 | M1 scripts run (done) | Boa realms, generated bindings, event loop with virtual time, parser/script interleaving, fetch/XHR, script budget, in-process WPT runner (in place of the WebDriver subset first planned) | WPT `dom/`, `html/dom/`, `fetch/api/`, `xhr/` subsets pass against recorded expectations; React and Vue apps hydrate server-rendered markup (timed in the test suite) |
 | M2 interact (done) | Layout, hit-testing, input events, forms, navigation and history, iframes and popups, storage, observers, screenshots, Canvas 2D, Web Crypto, WebSocket, Workers | Log in to a real site; the Turnstile widget completes (done with the test site key: the widget's frame and worker run, the page's callback receives the token) |
-| M3 agent API | JSON-RPC/WS, MCP, snapshot diffs, settledness, action consequences, checkpoints, HAR record/replay, SDKs | An agent completes WebArena tasks over MCP |
-| M4 fidelity & challenges | Challenge detection, human hand-off, test zone with each Cloudflare challenge mode, Signed Agent registration | Measured pass rates; hand-off end to end |
+| M3 agent API (in progress) | MCP over stdio with compact snapshots, diffs and token budgets, settledness with pending reports, action consequences, read views, popups as tabs, HAR record/replay with virtual time, confirmation policies, flight recorder, checkpoints and profiles, human hand-off, `catpaw setup`; JSON-RPC/WS and SDKs later | A task set on practice sites completes over MCP and replays byte for byte from recorded HARs; confirmation and hand-off work from Claude Code |
+| M4 fidelity & challenges | Challenge detection, test zone with each Cloudflare challenge mode, Signed Agent registration | Measured pass rates |
 | M5 scale & compat | Multi-tenant limits, OpenTelemetry, Docker, CDP subset, V8 backend parity | 1000 contexts on one host; puppeteer-core smoke tests |
 
 ## Repository layout

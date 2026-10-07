@@ -26,4 +26,5 @@ anyhow.workspace = true
 url.workspace = true
 catpaw-style = { path = "../catpaw-style", version = "0.0.1" }
 catpaw-engine = { path = "../catpaw-engine", version = "0.0.1" }
+catpaw-server = { path = "../catpaw-server", version = "0.0.1" }
 serde_json.workspace = true

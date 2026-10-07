@@ -512,6 +512,7 @@ dependencies = [
  "catpaw-engine",
  "catpaw-fetch",
  "catpaw-net",
+ "catpaw-server",
  "catpaw-style",
  "clap",
  "serde_json",
@@ -665,10 +666,26 @@ dependencies = [
 [[package]]
 name = "catpaw-protocol"
 version = "0.0.1"
+dependencies = [
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "catpaw-server"
 version = "0.0.1"
+dependencies = [
+ "base64 0.23.1",
+ "catpaw-agent",
+ "catpaw-dom",
+ "catpaw-engine",
+ "catpaw-net",
+ "catpaw-protocol",
+ "catpaw-style",
+ "catpaw-web",
+ "serde_json",
+ "url",
+]
 
 [[package]]
 name = "catpaw-style"
@@ -4931,6 +4948,8 @@ dependencies = [
  "anyhow",
  "catpaw-bindings-boa",
  "catpaw-dom",
+ "catpaw-protocol",
+ "catpaw-server",
  "catpaw-web",
  "catpaw-webidl",
  "clap",

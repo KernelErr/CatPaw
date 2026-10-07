@@ -3,6 +3,9 @@
 mod bindgen;
 #[cfg(feature = "wpt")]
 mod harness;
+mod protocol;
+#[cfg(feature = "bench")]
+mod snapshot_bench;
 mod tree_construction;
 mod wpt;
 #[cfg(feature = "wpt")]
@@ -25,6 +28,12 @@ enum Cmd {
     TreeConstruction(tree_construction::Args),
     /// Regenerate the Web IDL bindings (or verify them with --check).
     Bindgen(bindgen::Args),
+    /// Write the agent protocol to crates/catpaw-protocol/protocol.json
+    /// (or verify it with --check).
+    Protocol(protocol::Args),
+    /// Measure snapshot and read sizes on live pages (needs `--features bench`).
+    #[cfg(feature = "bench")]
+    SnapshotBench(snapshot_bench::Args),
     /// Run testharness.js tests from web-platform-tests in CatPaw pages and
     /// compare the results with tests/wpt-expectations (needs `--features wpt`).
     #[cfg(feature = "wpt")]
@@ -46,6 +55,9 @@ fn main() -> Result<()> {
     match Cli::parse().cmd {
         Cmd::TreeConstruction(args) => tree_construction::run(args),
         Cmd::Bindgen(args) => bindgen::run(args),
+        Cmd::Protocol(args) => protocol::run(args),
+        #[cfg(feature = "bench")]
+        Cmd::SnapshotBench(args) => snapshot_bench::run(args),
         #[cfg(feature = "wpt")]
         Cmd::Wpt(args) => harness::run(args),
         #[cfg(feature = "wpt")]

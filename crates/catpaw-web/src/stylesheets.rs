@@ -61,6 +61,8 @@ pub(crate) struct Styles {
     pub(crate) adopted: RefCell<HashMap<NodeId, Vec<ObjectId>>>,
     /// Bumped by every edit made through the CSSOM.
     pub(crate) edits: Cell<u64>,
+    /// The DOM version and CSSOM edit count of the last full restyle.
+    styled: Cell<Option<(u64, u64)>>,
 }
 
 /// The text of a `link` element's sheet, once it has loaded.
@@ -355,6 +357,19 @@ pub(crate) fn with_engine<R>(page: &PageState, f: impl FnOnce(&mut StyleEngine, 
         page.styles.version.set(Some(version));
     }
     f(engine, &dom)
+}
+
+/// Runs `f` with every element's style resolved for the document as it is
+/// now (restyling only when the document or the sheets changed).
+pub(crate) fn with_styles<R>(page: &PageState, f: impl FnOnce(&StyleEngine, &Dom) -> R) -> R {
+    with_engine(page, |engine, dom| {
+        let version = (dom.version(), page.styles.edits.get());
+        if page.styles.styled.get() != Some(version) {
+            engine.restyle(dom);
+            page.styles.styled.set(Some(version));
+        }
+        f(engine, dom)
+    })
 }
 
 /// The computed value of `property` for `element` or one of its

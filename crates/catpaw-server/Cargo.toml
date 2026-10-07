@@ -5,6 +5,16 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 publish = false
-description = "CatPaw browser engine: server"
+description = "CatPaw browser engine: the agent server (MCP over stdio)"
 
 [dependencies]
+catpaw-agent = { path = "../catpaw-agent", version = "0.0.1" }
+catpaw-dom = { path = "../catpaw-dom", version = "0.0.1" }
+catpaw-engine = { path = "../catpaw-engine", version = "0.0.1" }
+catpaw-net = { path = "../catpaw-net", version = "0.0.1" }
+catpaw-protocol = { path = "../catpaw-protocol", version = "0.0.1" }
+catpaw-style = { path = "../catpaw-style", version = "0.0.1" }
+catpaw-web = { path = "../catpaw-web", version = "0.0.1" }
+base64.workspace = true
+serde_json.workspace = true
+url.workspace = true

@@ -14,7 +14,7 @@ use std::time::Instant;
 use catpaw_bindings_boa::BoaPage;
 use catpaw_dom::Dom;
 use catpaw_dom::NodeId;
-use catpaw_fetch::{FetchedDocument, fetch_document, fetch_document_with};
+use catpaw_fetch::FetchedDocument;
 use catpaw_js::Value;
 use catpaw_net::{NetConfig, NetError};
 use catpaw_web::event_loop::{self, LoopLimits, LoopReport, StopReason};
@@ -25,7 +25,7 @@ use catpaw_web::workers::{self, WorkerCommand, WorkerId};
 use catpaw_web::{ConsoleLevel, PageConfig, PageState, promises, scripting};
 use url::Url;
 
-use crate::net::EngineNet;
+use crate::net::{EngineNet, SharedNet};
 
 /// How many frames a page may have besides the top one.
 pub const MAX_FRAMES: usize = 32;
@@ -151,6 +151,8 @@ struct Frame {
     virtual_used: f64,
     /// Whether the parent has been told the frame loaded.
     load_reported: bool,
+    /// Navigations since the user last acted: a chain of them (a reload
+    /// loop in script) stops at `max_navigations`.
     navigations: usize,
 }
 
@@ -184,6 +186,33 @@ pub struct WorkerInfo {
     pub key: u32,
     pub owner: ScopeId,
     pub url: Url,
+}
+
+/// Something that happened to a page's frames, for the embedder to report
+/// (see [`Page::take_events`]).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PageEvent {
+    /// `window.open()` opened a top-level page of its own.
+    PopupOpened {
+        frame: FrameId,
+        opener: FrameId,
+        url: Url,
+    },
+    /// A popup closed (itself, or with its opener's frame).
+    PopupClosed { frame: FrameId },
+    /// A frame (the top one included) loaded another document.
+    Navigated {
+        frame: FrameId,
+        method: String,
+        url: Url,
+        status: u16,
+    },
+    /// A frame could not load the document it was sent to.
+    NavigationFailed {
+        frame: FrameId,
+        url: Url,
+        error: String,
+    },
 }
 
 /// A frame of a page, as the embedder sees it.
@@ -223,6 +252,8 @@ pub struct Page {
     options: PageOptions,
     report: LoopReport,
     top_virtual_used: f64,
+    /// What happened since the embedder last asked.
+    events: Vec<PageEvent>,
 }
 
 /// Why an action could not be carried out.
@@ -321,7 +352,7 @@ impl Page {
     /// see [`with_page`].
     pub fn open(url: &Url, options: &PageOptions) -> Result<Self, EngineError> {
         let net = Rc::new(EngineNet::new(options.net.clone())?);
-        let fetched = net.block_on(fetch_document(net.client(), url))?;
+        let fetched = net.fetch_document("GET", url, None, None)?;
         let info = DocumentInfo::from_fetch(&fetched);
         let tree = Rc::new(RefCell::new(FrameTree::default()));
         let boa = load(
@@ -362,12 +393,67 @@ impl Page {
             options: options.clone(),
             report: idle_report(),
             top_virtual_used: 0.0,
+            events: Vec::new(),
         }
+    }
+
+    /// An empty page (`about:blank`) on a context's shared network, to be
+    /// sent somewhere with [`Page::goto`].
+    pub fn blank(options: &PageOptions, net: &SharedNet) -> Result<Self, EngineError> {
+        let net = Rc::new(EngineNet::from_shared(net));
+        let url = Url::parse("about:blank").expect("about:blank parses");
+        let info = DocumentInfo::local(&url, "");
+        let tree = Rc::new(RefCell::new(FrameTree::default()));
+        let boa = load(
+            &net,
+            &info,
+            "",
+            None,
+            options,
+            &options.storage,
+            top_placement(&tree, (0, 0)),
+        )?;
+        Ok(Self::with_top(boa, tree, net, info, options))
+    }
+
+    /// Navigates the top frame to `url` as typed into an address bar (no
+    /// referrer), following what the new document then asks for. From the
+    /// initial blank page the entry is replaced, as browsers do.
+    pub fn goto(&mut self, url: Url) -> Result<(), EngineError> {
+        let replace = self.session.len() == 1 && self.session[0].as_str() == "about:blank";
+        self.navigate_with(NavigationRequest::get(url, replace), None)?;
+        self.follow_navigations()
+    }
+
+    /// Loads the current document again.
+    pub fn reload(&mut self) -> Result<(), EngineError> {
+        let request = NavigationRequest {
+            reload: true,
+            ..NavigationRequest::get(self.url(), true)
+        };
+        let referrer = Some(self.url());
+        self.navigate_with(request, referrer)?;
+        self.follow_navigations()
+    }
+
+    /// The events since the last call: popups opened and closed,
+    /// documents loaded or not.
+    pub fn take_events(&mut self) -> Vec<PageEvent> {
+        std::mem::take(&mut self.events)
     }
 
     /// Loads the document a navigation request asks for, in place of the
     /// current one: the same network (cookies included), a new page.
     fn navigate(&mut self, request: NavigationRequest) -> Result<(), EngineError> {
+        let referrer = Some(self.url());
+        self.navigate_with(request, referrer)
+    }
+
+    fn navigate_with(
+        &mut self,
+        request: NavigationRequest,
+        referrer: Option<Url>,
+    ) -> Result<(), EngineError> {
         // Where the new document goes in the session history.
         let target = if request.traverse != 0 {
             let target = self.session_index as i64 + i64::from(request.traverse);
@@ -382,14 +468,20 @@ impl Page {
             Some(index) => ("GET".to_string(), self.session[index].clone(), None),
             None => (request.method, request.url, request.body),
         };
-        let referrer = self.url();
-        let fetched = self.net.block_on(fetch_document_with(
-            self.net.client(),
-            &method,
-            &url,
-            body,
-            Some(&referrer),
-        ))?;
+        let fetched = match self
+            .net
+            .fetch_document(&method, &url, body, referrer.as_ref())
+        {
+            Ok(fetched) => fetched,
+            Err(e) => {
+                self.events.push(PageEvent::NavigationFailed {
+                    frame: FrameId(0),
+                    url: url.clone(),
+                    error: e.to_string(),
+                });
+                return Err(e.into());
+            }
+        };
         let info = DocumentInfo::from_fetch(&fetched);
         match target {
             Some(index) => self.session_index = index,
@@ -406,25 +498,40 @@ impl Page {
             self.session_index as u32,
             (self.session.len() - self.session_index - 1) as u32,
         );
-        let tree = Rc::new(RefCell::new(FrameTree::default()));
         self.remember_storage();
+        // The old document's frames and workers go; the popups it opened
+        // are pages of their own and stay, still in the same frame tree.
+        let old_frames: Vec<FrameId> = self
+            .frames
+            .iter()
+            .filter(|f| f.parent == FrameId(0) && f.element.is_some())
+            .map(|f| f.id)
+            .collect();
+        for id in old_frames {
+            self.close_frame(id);
+        }
+        self.drop_workers_of(ScopeId::Frame(FrameId(0)));
+        if self.frame(self.current).is_none_or(|f| f.element.is_some()) {
+            self.current = FrameId(0);
+        }
         let boa = load(
             &self.net,
             &info,
             fetched.html(),
-            Some(&referrer),
+            referrer.as_ref(),
             &self.options,
             &self.storage,
-            top_placement(&tree, history),
+            top_placement(&self.tree, history),
         )?;
-        // The frames and workers belonged to the old document.
-        self.workers.clear();
-        self.frames.clear();
-        self.tree = tree;
-        self.current = FrameId(0);
         self.boa = boa;
         self.top_virtual_used = 0.0;
         self.navigations.push(info.url.clone());
+        self.events.push(PageEvent::Navigated {
+            frame: FrameId(0),
+            method,
+            url: info.url.clone(),
+            status: info.status,
+        });
         self.document = info;
         self.run_frames();
         Ok(())
@@ -700,22 +807,14 @@ impl Page {
                 (DocumentInfo::local(&url, &html), html, parent_origin)
             }
             (None, Some(url)) => {
-                let fetched = self.net.block_on(fetch_document_with(
-                    self.net.client(),
-                    "GET",
-                    &url,
-                    None,
-                    Some(&referrer),
-                ));
+                let fetched = self.net.fetch_document("GET", &url, None, Some(&referrer));
                 match fetched {
                     Ok(fetched) => {
                         let info = DocumentInfo::from_fetch(&fetched);
-                        self.net.record_document("GET", &url, Some(info.status));
                         let origin = frames::origin_of(&info.url);
                         (info, fetched.html().to_string(), origin)
                     }
                     Err(e) => {
-                        self.net.record_document("GET", &url, None);
                         parent_page.log(
                             ConsoleLevel::Error,
                             format!("Failed to load frame {url}: {e}"),
@@ -753,6 +852,13 @@ impl Page {
                 return;
             }
         };
+        if element.is_none() {
+            self.events.push(PageEvent::PopupOpened {
+                frame: id,
+                opener: parent,
+                url: info.url.clone(),
+            });
+        }
         self.frames.push(Frame {
             id,
             parent,
@@ -789,8 +895,15 @@ impl Page {
         self.drop_workers_of(ScopeId::Frame(id));
         if let Some(index) = self.frames.iter().position(|f| f.id == id) {
             let frame = self.frames.remove(index);
+            if frame.element.is_none() {
+                self.events.push(PageEvent::PopupClosed { frame: id });
+            }
             if self.current == id {
-                self.current = frame.parent;
+                self.current = if frame.element.is_none() {
+                    FrameId(0)
+                } else {
+                    frame.parent
+                };
             }
         }
     }
@@ -1063,28 +1176,26 @@ impl Page {
             return;
         }
         let referrer = self.frames[index].boa.page().url.borrow().clone();
-        let fetched = self.net.block_on(fetch_document_with(
-            self.net.client(),
-            &request.method,
-            &request.url,
-            request.body,
-            Some(&referrer),
-        ));
+        let method = request.method.clone();
+        let fetched =
+            self.net
+                .fetch_document(&request.method, &request.url, request.body, Some(&referrer));
         let fetched = match fetched {
             Ok(fetched) => fetched,
             Err(e) => {
-                self.net
-                    .record_document(&request.method, &request.url, None);
                 parent_page.log(
                     ConsoleLevel::Error,
                     format!("Failed to load frame {}: {e}", request.url),
                 );
+                self.events.push(PageEvent::NavigationFailed {
+                    frame: id,
+                    url: request.url.clone(),
+                    error: e.to_string(),
+                });
                 return;
             }
         };
         let info = DocumentInfo::from_fetch(&fetched);
-        self.net
-            .record_document(&request.method, &request.url, Some(info.status));
         let inner: Vec<FrameId> = self
             .frames
             .iter()
@@ -1132,6 +1243,12 @@ impl Page {
                 frame.virtual_used = 0.0;
                 frame.load_reported = false;
                 frame.navigations += 1;
+                self.events.push(PageEvent::Navigated {
+                    frame: id,
+                    method,
+                    url: info.url.clone(),
+                    status: info.status,
+                });
             }
             Err(e) => {
                 parent_page.log(ConsoleLevel::Error, format!("Failed to open frame: {e}"));
@@ -1439,6 +1556,123 @@ impl Page {
             .ok_or_else(|| ActionError::NotFound(selector.to_string()))
     }
 
+    /// The document epoch of a frame (see `PageState::epoch`).
+    pub fn document_epoch(&self, frame: FrameId) -> Option<u64> {
+        self.page_of(frame).map(|page| page.epoch)
+    }
+
+    /// The URL of a frame's document.
+    pub fn url_of(&self, frame: FrameId) -> Option<Url> {
+        self.page_of(frame).map(|page| page.url.borrow().clone())
+    }
+
+    /// Whether a frame is a popup (a top-level page `window.open()` made).
+    pub fn is_popup(&self, frame: FrameId) -> bool {
+        self.frame(frame).is_some_and(|f| f.element.is_none())
+    }
+
+    /// A PNG of a frame's page: its viewport, or its whole document.
+    pub fn screenshot_of(&self, frame: FrameId, full_page: bool) -> Option<Vec<u8>> {
+        self.page_of(frame)
+            .map(|page| catpaw_web::screenshot(page, full_page))
+    }
+
+    /// Closes a popup, as `window.close()` would.
+    pub fn close_popup(&mut self, frame: FrameId) -> Result<(), ActionError> {
+        if !self.is_popup(frame) {
+            return Err(ActionError::NoFrame(format!("frame {}", frame.0)));
+        }
+        self.close_frame(frame);
+        Ok(())
+    }
+
+    /// Runs `action` on the page of `frame` (input, as a user would give
+    /// it), then runs the event loops and follows any navigation it
+    /// started.
+    pub fn input_in<R>(
+        &mut self,
+        frame: FrameId,
+        action: impl FnOnce(&mut catpaw_web::page::Cx<'_>) -> Result<R, catpaw_web::input::InputError>,
+    ) -> Result<R, ActionError> {
+        let boa = self
+            .boa_of(frame)
+            .ok_or_else(|| ActionError::NoFrame(format!("frame {}", frame.0)))?;
+        let result = boa.with_cx(action)?;
+        self.user_acted();
+        self.run_frames();
+        self.follow_navigations()?;
+        Ok(result)
+    }
+
+    /// Navigates a tab (the top frame or a popup) to `url` as typed into
+    /// its address bar, following what the new document then asks for.
+    pub fn goto_in(&mut self, frame: FrameId, url: Url) -> Result<(), ActionError> {
+        if frame == FrameId(0) {
+            return Ok(self.goto(url)?);
+        }
+        if !self.is_popup(frame) {
+            return Err(ActionError::NoFrame(format!("frame {}", frame.0)));
+        }
+        self.user_acted();
+        self.navigate_frame(frame, NavigationRequest::get(url, false));
+        self.run_frames();
+        self.follow_navigations()?;
+        Ok(())
+    }
+
+    /// A user action starts new navigation chains in every frame.
+    fn user_acted(&mut self) {
+        for frame in &mut self.frames {
+            frame.navigations = 0;
+        }
+    }
+
+    /// Calls a function compiled from `body` with `params` bound to `args`
+    /// in the realm of `frame`, waits (within `limits`) for the promise it
+    /// may return, and renders the result as a console would. `Err`
+    /// describes an exception or a rejection.
+    pub fn call_in(
+        &mut self,
+        frame: FrameId,
+        params: &[&str],
+        body: &str,
+        args: Vec<Value>,
+        limits: &LoopLimits,
+    ) -> Result<String, String> {
+        let boa = self
+            .boa_of(frame)
+            .ok_or_else(|| format!("frame {} is closed", frame.0))?;
+        let outcome: Rc<RefCell<Option<Result<Value, Value>>>> = Rc::default();
+        let slot = outcome.clone();
+        boa.with_cx(|cx| -> Result<(), String> {
+            let url = cx.page.url.borrow().to_string();
+            let function = cx
+                .script
+                .compile_function(params, body, &url)
+                .map_err(|e| cx.script.describe_exception(&e))?;
+            let value = cx
+                .script
+                .call(&function, &Value::Undefined, &args)
+                .map_err(|e| cx.script.describe_exception(&e))?;
+            promises::when_settled(cx, value, move |_, result| {
+                *slot.borrow_mut() = Some(result);
+            });
+            Ok(())
+        })?;
+        self.settle(limits);
+        let settled = outcome.borrow_mut().take();
+        let boa = self
+            .boa_of(frame)
+            .ok_or_else(|| "the frame closed while the script ran".to_string())?;
+        match settled {
+            Some(Ok(value)) => Ok(boa.with_cx(|cx| cx.script.display(&[value]))),
+            Some(Err(reason)) => Err(boa.with_cx(|cx| {
+                format!("the promise was rejected: {}", cx.script.display(&[reason]))
+            })),
+            None => Err("the promise did not settle".to_string()),
+        }
+    }
+
     /// Runs an input action in the current frame, settles the page and
     /// follows any navigation it started.
     fn act(
@@ -1446,6 +1680,7 @@ impl Page {
         action: impl FnOnce(&mut catpaw_web::page::Cx<'_>) -> Result<(), catpaw_web::input::InputError>,
     ) -> Result<(), ActionError> {
         self.current_boa().with_cx(action)?;
+        self.user_acted();
         self.run_frames();
         self.follow_navigations()?;
         Ok(())

@@ -38,10 +38,14 @@ connects to a hosted server) and occasionally take over.
   need confirmation unless a domain is allowed); confirmation through MCP
   elicitation or the local viewer; attribution of host, model and task; and
   rate/page quotas that stop runaway agents.
+
 ## Crate map
 
 ```
-catpaw (CLI) → catpaw-server (JSON-RPC/WS, MCP, hand-off) → catpaw-agent (CST snapshots, actions, settledness)
+catpaw (CLI) → catpaw-server (MCP over stdio: sessions, tab groups on threads of their own, actions;
+                              later JSON-RPC/WS and hand-off)
+  → catpaw-protocol (tool definitions, parameters, result wording; protocol.json)
+  → catpaw-agent (CST snapshots, refs, read views; depends on catpaw-dom only)
   → catpaw-engine (engine threads, backend selection, embedding API)
     → catpaw-bindings-boa (generated glue, proxies, WindowProxy/Location)
       → catpaw-web (event loop, navigables, session history, document lifecycle, timers, workers,
@@ -55,9 +59,13 @@ catpaw (CLI) → catpaw-server (JSON-RPC/WS, MCP, hand-off) → catpaw-agent (CS
         → catpaw-fetch (Fetch spec: CORS, redirects, referrer, cache) → catpaw-net (hyper/rustls/h2,
                     cookies + PSL, proxies, HAR, Web Bot Auth signing)
         → catpaw-js (engine-neutral runtime traits)
-catpaw-webidl (IDL model + emitters, used by xtask)   catpaw-protocol (protocol.json via schemars)
-xtask (bindgen, IDL sync, WPT and html5lib runners)
+catpaw-webidl (IDL model + emitters, used by xtask)
+xtask (bindgen, protocol.json, WPT and html5lib runners, snapshot-bench)
 ```
+
+`catpaw-agent` is published on its own and stays free of the engine: what
+needs a live page (tabs, actions, the style and form-state oracle) lives in
+`catpaw-server` (ADR 0006).
 
 `catpaw-web` talks to JavaScript only through `catpaw-js` traits, so there is
 no cycle with the bindings crate. `catpaw-style` and `catpaw-layout` are the

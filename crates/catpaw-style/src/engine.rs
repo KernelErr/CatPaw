@@ -447,6 +447,14 @@ impl StyleEngine {
         self.primary_style(id)
             .is_some_and(|style| style.get_inherited_box().visibility != Visibility::Visible)
     }
+
+    /// `cursor: pointer` on the element (the property inherits, so this is
+    /// also true inside a pointer-cursor ancestor).
+    pub fn is_pointer_cursor(&self, id: NodeId) -> bool {
+        use style::values::computed::ui::CursorKind;
+        self.primary_style(id)
+            .is_some_and(|style| style.get_inherited_ui().cursor.keyword == CursorKind::Pointer)
+    }
 }
 
 fn make_stylesheet(

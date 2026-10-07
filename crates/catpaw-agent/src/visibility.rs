@@ -2,13 +2,42 @@
 
 use catpaw_dom::{Dom, NodeId};
 
-/// Answers style questions the agent layer needs. The style crate implements
-/// this over computed styles; [`AttributeOracle`] approximates it from markup.
+/// Answers the questions about a page that its markup alone cannot: how
+/// it is styled, and what state its controls are in now. The engine
+/// implements this over computed styles and live page state;
+/// [`AttributeOracle`] approximates it from markup, which is all a
+/// parse-only pipeline has.
 pub trait StyleOracle {
     /// `display: none` (the element and its subtree generate no boxes).
     fn is_display_none(&self, dom: &Dom, id: NodeId) -> bool;
     /// `visibility: hidden | collapse` on the element itself.
     fn is_visibility_hidden(&self, dom: &Dom, id: NodeId) -> bool;
+
+    /// The current value of a text control, when the page keeps one apart
+    /// from the markup (what the user typed). `None`: read the markup.
+    fn control_value(&self, _dom: &Dom, _id: NodeId) -> Option<String> {
+        None
+    }
+    /// Whether a checkbox or radio button is checked now.
+    fn is_checked(&self, _dom: &Dom, _id: NodeId) -> Option<bool> {
+        None
+    }
+    /// Whether an `option` is selected now.
+    fn is_option_selected(&self, _dom: &Dom, _id: NodeId) -> Option<bool> {
+        None
+    }
+    /// The options a `select` shows as selected now.
+    fn displayed_options(&self, _dom: &Dom, _select: NodeId) -> Option<Vec<NodeId>> {
+        None
+    }
+    /// `cursor: pointer` on the element.
+    fn is_pointer_cursor(&self, _dom: &Dom, _id: NodeId) -> bool {
+        false
+    }
+    /// Whether the element itself listens for clicks.
+    fn has_activation_listener(&self, _dom: &Dom, _id: NodeId) -> bool {
+        false
+    }
 }
 
 /// Elements the HTML rendering section never displays, regardless of CSS.

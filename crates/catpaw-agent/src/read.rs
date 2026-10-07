@@ -8,7 +8,7 @@ use url::Url;
 use crate::a11y::{
     LabelIndex, collapse_whitespace, is_layout_table, name_for, role_for, subtree_text,
 };
-use crate::snapshot::RefTable;
+use crate::refs::RefScope;
 use crate::visibility::{StyleOracle, is_hidden};
 
 /// How links are rendered in markdown.
@@ -17,7 +17,7 @@ pub enum LinkStyle {
     /// `[text](https://absolute/url)`
     #[default]
     Url,
-    /// `[text](ref:e12)`, resolvable through the snapshot's [`RefTable`].
+    /// `[text](ref:e12)`, resolvable through the snapshot's [`RefTable`](crate::RefTable).
     Ref,
 }
 
@@ -55,14 +55,19 @@ fn content_root(dom: &Dom, main_only: bool) -> NodeId {
 
 /// Plain text with block boundaries as line breaks.
 pub fn text(dom: &Dom, oracle: &dyn StyleOracle) -> String {
-    markdown_with(dom, oracle, None, &ReadOptions::default(), true)
+    text_with(dom, oracle, &ReadOptions::default())
+}
+
+/// Plain text, with options (`main_only`).
+pub fn text_with(dom: &Dom, oracle: &dyn StyleOracle, options: &ReadOptions) -> String {
+    markdown_with(dom, oracle, None, options, true)
 }
 
 /// Markdown rendering of the (main) content.
 pub fn markdown(
     dom: &Dom,
     oracle: &dyn StyleOracle,
-    refs: Option<&mut RefTable>,
+    refs: Option<RefScope<'_>>,
     options: &ReadOptions,
 ) -> String {
     markdown_with(dom, oracle, refs, options, false)
@@ -71,7 +76,7 @@ pub fn markdown(
 fn markdown_with(
     dom: &Dom,
     oracle: &dyn StyleOracle,
-    refs: Option<&mut RefTable>,
+    refs: Option<RefScope<'_>>,
     options: &ReadOptions,
     plain: bool,
 ) -> String {
@@ -101,7 +106,7 @@ fn markdown_with(
 struct MdWriter<'a> {
     dom: &'a Dom,
     oracle: &'a dyn StyleOracle,
-    refs: Option<&'a mut RefTable>,
+    refs: Option<RefScope<'a>>,
     base: Option<Url>,
     link_style: LinkStyle,
     plain: bool,
@@ -184,8 +189,8 @@ impl MdWriter<'_> {
     fn link_target(&mut self, id: NodeId, href: &str) -> String {
         match self.link_style {
             LinkStyle::Url => self.resolve(href),
-            LinkStyle::Ref => match self.refs.as_deref_mut() {
-                Some(refs) => format!("ref:e{}", refs.get_or_assign(id)),
+            LinkStyle::Ref => match self.refs.as_mut() {
+                Some(refs) => format!("ref:e{}", refs.assign(self.dom, id, self.oracle)),
                 None => self.resolve(href),
             },
         }
@@ -432,7 +437,7 @@ impl MdWriter<'_> {
         let mut inner = MdWriter {
             dom: self.dom,
             oracle: self.oracle,
-            refs: self.refs.as_deref_mut(),
+            refs: self.refs.as_mut().map(RefScope::reborrow),
             base: self.base.clone(),
             link_style: self.link_style,
             plain: self.plain,
@@ -566,12 +571,14 @@ fn descendant_label(dom: &Dom, id: NodeId) -> Option<String> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LinkInfo {
+    /// The link's ref, when a ref table was given.
+    pub r#ref: Option<String>,
     pub text: String,
     pub href: String,
 }
 
 /// Every visible link with an `href`, resolved against the document URL.
-pub fn links(dom: &Dom, oracle: &dyn StyleOracle) -> Vec<LinkInfo> {
+pub fn links(dom: &Dom, oracle: &dyn StyleOracle, mut refs: Option<RefScope<'_>>) -> Vec<LinkInfo> {
     let base = dom.url().cloned();
     let mut out = Vec::new();
     for n in dom.descendants(dom.document()) {
@@ -599,6 +606,9 @@ pub fn links(dom: &Dom, oracle: &dyn StyleOracle) -> Vec<LinkInfo> {
                 .unwrap_or_default();
         }
         out.push(LinkInfo {
+            r#ref: refs
+                .as_mut()
+                .map(|r| format!("e{}", r.assign(dom, n, oracle))),
             text,
             href: resolved,
         });
@@ -614,6 +624,8 @@ pub struct FieldInfo {
     pub name: Option<String>,
     pub label: String,
     pub value: String,
+    /// For checkboxes and radio buttons: whether they are checked now.
+    pub checked: Option<bool>,
     pub required: bool,
     pub options: Vec<String>,
 }
@@ -628,11 +640,7 @@ pub struct FormInfo {
 
 /// Forms and their controls (plus controls outside any form, grouped as a
 /// final form with no action).
-pub fn forms(
-    dom: &Dom,
-    oracle: &dyn StyleOracle,
-    mut refs: Option<&mut RefTable>,
-) -> Vec<FormInfo> {
+pub fn forms(dom: &Dom, oracle: &dyn StyleOracle, mut refs: Option<RefScope<'_>>) -> Vec<FormInfo> {
     let labels = LabelIndex::build(dom);
     let base = dom.url().cloned();
     let mut forms: Vec<(Option<NodeId>, FormInfo)> = Vec::new();
@@ -650,8 +658,8 @@ pub fn forms(
                 Some(n),
                 FormInfo {
                     r#ref: refs
-                        .as_deref_mut()
-                        .map(|r| format!("e{}", r.get_or_assign(n))),
+                        .as_mut()
+                        .map(|r| format!("e{}", r.assign(dom, n, oracle))),
                     action,
                     method: el
                         .attr("method")
@@ -701,19 +709,33 @@ pub fn forms(
                     .filter(|&o| dom.is_html_element(o, "option"))
                     .map(|o| subtree_text(dom, o, oracle))
                     .collect();
-                let selected = dom
-                    .descendants(n)
-                    .filter(|&o| dom.is_html_element(o, "option"))
-                    .find(|&o| dom.attr(o, "selected").is_some())
-                    .map(|o| subtree_text(dom, o, oracle))
-                    .or_else(|| opts.first().cloned())
-                    .unwrap_or_default();
+                let selected = match oracle.displayed_options(dom, n) {
+                    Some(shown) => shown
+                        .iter()
+                        .map(|&o| subtree_text(dom, o, oracle))
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                    None => dom
+                        .descendants(n)
+                        .filter(|&o| dom.is_html_element(o, "option"))
+                        .find(|&o| dom.attr(o, "selected").is_some())
+                        .map(|o| subtree_text(dom, o, oracle))
+                        .or_else(|| opts.first().cloned())
+                        .unwrap_or_default(),
+                };
                 (selected, opts)
             }
-            "textarea" => (dom.text_content(n), Vec::new()),
+            "textarea" => (
+                oracle
+                    .control_value(dom, n)
+                    .unwrap_or_else(|| dom.text_content(n)),
+                Vec::new(),
+            ),
             "button" => (subtree_text(dom, n, oracle), Vec::new()),
             _ => {
-                let v = el.attr("value").unwrap_or("").to_string();
+                let v = oracle
+                    .control_value(dom, n)
+                    .unwrap_or_else(|| el.attr("value").unwrap_or("").to_string());
                 let v = if kind == "password" && !v.is_empty() {
                     "***".to_string()
                 } else {
@@ -722,11 +744,17 @@ pub fn forms(
                 (v, Vec::new())
             }
         };
+        let checked = (kind == "checkbox" || kind == "radio").then(|| {
+            oracle
+                .is_checked(dom, n)
+                .unwrap_or_else(|| el.has_attr("checked"))
+        });
         let field = FieldInfo {
             r#ref: refs
-                .as_deref_mut()
-                .map(|r| format!("e{}", r.get_or_assign(n))),
+                .as_mut()
+                .map(|r| format!("e{}", r.assign(dom, n, oracle))),
             kind,
+            checked,
             name: el.attr("name").map(str::to_string),
             label,
             value,
@@ -742,6 +770,12 @@ pub fn forms(
         }
     }
     let mut out: Vec<FormInfo> = forms.into_iter().map(|(_, f)| f).collect();
+    // Buttons outside any form belong to the page, not to a form, unless
+    // there are fields beside them (a form without a `<form>`).
+    let is_button = |f: &FieldInfo| matches!(f.kind.as_str(), "submit" | "button" | "reset");
+    if loose.fields.iter().all(is_button) {
+        loose.fields.clear();
+    }
     if !loose.fields.is_empty() {
         out.push(loose);
     }
@@ -783,10 +817,11 @@ let y = 2;</code></pre>
     fn plain_text_and_links() {
         let dom = parse("<p>Hi <a href=/a>there</a></p><a href='https://o.example/' hidden>x</a>");
         assert_eq!(text(&dom, &AttributeOracle), "Hi there\n");
-        let l = links(&dom, &AttributeOracle);
+        let l = links(&dom, &AttributeOracle, None);
         assert_eq!(
             l,
             vec![LinkInfo {
+                r#ref: None,
                 text: "there".into(),
                 href: "https://example.com/a".into()
             }]

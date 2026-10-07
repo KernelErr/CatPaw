@@ -19,6 +19,9 @@ catpaw-web = { path = "../crates/catpaw-web", optional = true }
 serde_json = { workspace = true, optional = true }
 url = { workspace = true, optional = true }
 catpaw-webidl = { path = "../crates/catpaw-webidl" }
+catpaw-protocol = { path = "../crates/catpaw-protocol" }
+catpaw-server = { path = "../crates/catpaw-server", optional = true }
 
 [features]
 wpt = ["dep:catpaw-bindings-boa", "dep:catpaw-web", "dep:serde_json", "dep:url"]
+bench = ["dep:catpaw-server", "dep:serde_json"]

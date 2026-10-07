@@ -529,11 +529,41 @@ fn collect_text(dom: &Dom, id: NodeId, oracle: &dyn StyleOracle, out: &mut Strin
                     }
                     "select" | "textarea" => {}
                     _ => {
-                        if is_block_level(&el.name.local) {
+                        // A descendant's own text alternative counts
+                        // (accname 2C and 2I): its `aria-label`, else its
+                        // content, else its `title`. Icon-only links and
+                        // buttons are named this way.
+                        if let Some(label) = el.attr("aria-label")
+                            && !label.trim().is_empty()
+                        {
+                            out.push(' ');
+                            out.push_str(label);
+                            out.push(' ');
+                            continue;
+                        }
+                        if !el.is_html() && &*el.name.local == "svg" {
+                            if let Some(title) = text_of_svg_title(dom, child, oracle) {
+                                out.push(' ');
+                                out.push_str(&title);
+                                out.push(' ');
+                            }
+                            continue;
+                        }
+                        let block = is_block_level(&el.name.local);
+                        if block {
                             out.push(' ');
                         }
+                        let start = out.len();
                         collect_text(dom, child, oracle, out);
-                        if is_block_level(&el.name.local) {
+                        if out[start..].trim().is_empty()
+                            && let Some(title) = el.attr("title")
+                            && !title.trim().is_empty()
+                        {
+                            out.push(' ');
+                            out.push_str(title);
+                            out.push(' ');
+                        }
+                        if block {
                             out.push(' ');
                         }
                     }
@@ -599,6 +629,14 @@ fn by_id(dom: &Dom, id: &str) -> Option<NodeId> {
 
 fn nearest_ancestor_label(dom: &Dom, id: NodeId) -> Option<NodeId> {
     dom.ancestors(id).find(|&a| dom.is_html_element(a, "label"))
+}
+
+/// The `<title>` child of an SVG element.
+fn text_of_svg_title(dom: &Dom, svg: NodeId, oracle: &dyn StyleOracle) -> Option<String> {
+    dom.child_elements(svg)
+        .find(|&c| dom.local_name(c).is_some_and(|l| &**l == "title"))
+        .map(|c| subtree_text(dom, c, oracle))
+        .filter(|s| !s.is_empty())
 }
 
 fn text_of_first_child_named(

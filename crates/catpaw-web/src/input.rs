@@ -757,12 +757,6 @@ pub fn set_checked(cx: &mut Cx<'_>, el: NodeId, checked: bool) -> Result<(), Inp
 pub fn select_option(cx: &mut Cx<'_>, select: NodeId, value: &str) -> Result<(), InputError> {
     let option = {
         let dom = cx.dom();
-        if !dom.contains(select) {
-            return Err(InputError::Detached);
-        }
-        if forms::is_disabled(&dom, select) {
-            return Err(InputError::Disabled);
-        }
         let options = forms::options_of(&dom, select);
         options
             .iter()
@@ -775,11 +769,47 @@ pub fn select_option(cx: &mut Cx<'_>, select: NodeId, value: &str) -> Result<(),
                     .find(|&o| forms::option_text(&dom, o) == value)
             })
     };
-    let Some(option) = option else {
+    match option {
+        Some(option) => select_options(cx, select, &[option]),
+        None if !cx.dom().contains(select) => Err(InputError::Detached),
+        None => Err(InputError::NotEditable),
+    }
+}
+
+/// Selects exactly `options` of a `select` (only the first, in a
+/// single-select), with `input` and `change`, as a user picking them would.
+pub fn select_options(
+    cx: &mut Cx<'_>,
+    select: NodeId,
+    options: &[NodeId],
+) -> Result<(), InputError> {
+    let (multiple, all) = {
+        let dom = cx.dom();
+        if !dom.contains(select) || !dom.is_connected(select) {
+            return Err(InputError::Detached);
+        }
+        if forms::is_disabled(&dom, select) {
+            return Err(InputError::Disabled);
+        }
+        (
+            dom.attr(select, "multiple").is_some(),
+            forms::options_of(&dom, select),
+        )
+    };
+    let Some(&first) = options.first() else {
         return Err(InputError::NotEditable);
     };
+    if !all.contains(&first) {
+        return Err(InputError::NotEditable);
+    }
     focus_for_input(cx, Some(select));
-    forms::select_option(cx, option, true);
+    if multiple {
+        for option in all {
+            forms::select_option(cx, option, options.contains(&option));
+        }
+    } else {
+        forms::select_option(cx, first, true);
+    }
     events::fire(cx, EventTargetRef::Node(select), "input", true, false);
     events::fire(cx, EventTargetRef::Node(select), "change", true, false);
     Ok(())

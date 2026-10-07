@@ -249,6 +249,9 @@ struct ObjectEntry {
 
 /// The state of one page.
 pub struct PageState {
+    /// Unique to this document among all the documents of the process:
+    /// node keys of different documents can be equal, epochs cannot.
+    pub epoch: u64,
     pub dom: Rc<RefCell<Dom>>,
     pub config: PageConfig,
     pub clock: Rc<Clock>,
@@ -364,7 +367,9 @@ impl PageState {
         };
         let mut dom = Dom::new();
         dom.document_data_mut().url = Some(url.clone());
+        static NEXT_EPOCH: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
         Self {
+            epoch: NEXT_EPOCH.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
             dom: Rc::new(RefCell::new(dom)),
             config,
             clock: Rc::new(clock),
@@ -475,6 +480,16 @@ impl PageState {
 
     pub fn take_console_messages(&self) -> Vec<ConsoleMessage> {
         std::mem::take(&mut *self.console.borrow_mut())
+    }
+
+    /// How many console messages the page has logged (and not taken).
+    pub fn console_len(&self) -> usize {
+        self.console.borrow().len()
+    }
+
+    /// The console messages from index `from` on.
+    pub fn console_since(&self, from: usize) -> Vec<ConsoleMessage> {
+        self.console.borrow().iter().skip(from).cloned().collect()
     }
 
     /// Records a call to a member that is defined but not implemented.

@@ -13,6 +13,7 @@ use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
 use std::time::Duration;
 
 use bytes::Bytes;
+use catpaw_fetch::{FetchedDocument, fetch_document_with};
 use catpaw_net::WsMessage;
 use catpaw_net::{NetClient, NetConfig, NetError, RequestOptions};
 use catpaw_web::net::{
@@ -44,6 +45,68 @@ const BODY_PREVIEW_BYTES: usize = 4096;
 enum HostEvent {
     Response(u64, NetResult),
     Socket(u64, WsEvent),
+}
+
+/// The network a browsing context's pages share: one runtime and one
+/// client, so one cookie jar. `Send` and `Sync`: page threads each build
+/// their own [`EngineNet`] over it.
+#[derive(Clone)]
+pub struct SharedNet {
+    runtime: Arc<Runtime>,
+    client: Arc<NetClient>,
+}
+
+impl SharedNet {
+    pub fn new(config: NetConfig) -> Result<Self, NetError> {
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
+            .thread_name("catpaw-net")
+            .enable_all()
+            .build()
+            .map_err(|e| NetError::Tls(format!("starting the network runtime: {e}")))?;
+        // The client spawns connection tasks; create it inside the runtime.
+        let client = {
+            let _guard = runtime.enter();
+            NetClient::new(config)?
+        };
+        Ok(Self {
+            runtime: Arc::new(runtime),
+            client: Arc::new(client),
+        })
+    }
+
+    pub fn client(&self) -> &NetClient {
+        &self.client
+    }
+
+    /// Runs a future on the network runtime and waits for it. Must not be
+    /// called from inside an async context.
+    pub fn block_on<F: Future>(&self, future: F) -> F::Output {
+        self.runtime.block_on(future)
+    }
+}
+
+/// The referrer a navigation from `from` to `to` sends, under the default
+/// policy (`strict-origin-when-cross-origin`): the whole URL to the same
+/// origin, the origin elsewhere, nothing from HTTPS to HTTP or from a
+/// document that is not on the web.
+pub fn navigation_referrer(from: &Url, to: &Url) -> Option<Url> {
+    if !matches!(from.scheme(), "http" | "https") {
+        return None;
+    }
+    if from.scheme() == "https" && to.scheme() == "http" {
+        return None;
+    }
+    let mut referrer = from.clone();
+    referrer.set_fragment(None);
+    let _ = referrer.set_username("");
+    let _ = referrer.set_password(None);
+    if from.origin() == to.origin() {
+        return Some(referrer);
+    }
+    referrer.set_path("/");
+    referrer.set_query(None);
+    Some(referrer)
 }
 
 pub struct EngineNet {
@@ -117,21 +180,15 @@ async fn perform(client: &NetClient, request: NetRequest) -> NetResult {
 
 impl EngineNet {
     pub fn new(config: NetConfig) -> Result<Self, NetError> {
-        let runtime = tokio::runtime::Builder::new_multi_thread()
-            .worker_threads(2)
-            .thread_name("catpaw-net")
-            .enable_all()
-            .build()
-            .map_err(|e| NetError::Tls(format!("starting the network runtime: {e}")))?;
-        // The client spawns connection tasks; create it inside the runtime.
-        let client = {
-            let _guard = runtime.enter();
-            NetClient::new(config)?
-        };
+        Ok(Self::from_shared(&SharedNet::new(config)?))
+    }
+
+    /// A host over a context's shared network, with its own request log.
+    pub fn from_shared(net: &SharedNet) -> Self {
         let (tx, rx) = channel();
-        Ok(Self {
-            runtime: Arc::new(runtime),
-            client: Arc::new(client),
+        Self {
+            runtime: net.runtime.clone(),
+            client: net.client.clone(),
             tx,
             rx,
             next_token: Cell::new(1),
@@ -139,7 +196,40 @@ impl EngineNet {
             sockets: RefCell::new(HashMap::new()),
             socket_events: RefCell::new(Vec::new()),
             log: Rc::new(RefCell::new(Vec::new())),
-        })
+        }
+    }
+
+    /// The shared network this host runs on.
+    pub fn shared(&self) -> SharedNet {
+        SharedNet {
+            runtime: self.runtime.clone(),
+            client: self.client.clone(),
+        }
+    }
+
+    /// Fetches a document (a navigation or a frame's) and logs it with the
+    /// page's other requests.
+    pub fn fetch_document(
+        &self,
+        method: &str,
+        url: &Url,
+        body: Option<(String, Vec<u8>)>,
+        referrer: Option<&Url>,
+    ) -> Result<FetchedDocument, NetError> {
+        let referrer = referrer.and_then(|from| navigation_referrer(from, url));
+        let result = self.block_on(fetch_document_with(
+            &self.client,
+            method,
+            url,
+            body,
+            referrer.as_ref(),
+        ));
+        self.record_document(
+            method,
+            url,
+            result.as_ref().ok().map(|d| d.response.status.as_u16()),
+        );
+        result
     }
 
     /// A host for another frame of the same page: the same runtime, client

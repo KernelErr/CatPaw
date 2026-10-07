@@ -10,7 +10,8 @@ use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
 use catpaw_agent::{
-    AttributeOracle, Filter, ReadOptions, RefTable, SnapshotOptions, Snapshotter, StyleOracle,
+    AttributeOracle, ExtraAttrs, Filter, Format, ReadOptions, RefTable, SnapshotOptions,
+    Snapshotter, StyleOracle,
 };
 use catpaw_dom::{Dom, HtmlParseOptions, NodeId, parse_html, to_html};
 use catpaw_engine::{LoopLimits, PageConfig, PageOptions, StopReason};
@@ -37,6 +38,8 @@ enum Cmd {
     Fetch(FetchArgs),
     /// Generate a Web Bot Auth (Ed25519) key pair and its key directory document.
     Keygen(KeygenArgs),
+    /// Serve the agent tools over MCP (Model Context Protocol).
+    Mcp(McpArgs),
 }
 
 #[derive(Clone, Copy, ValueEnum, PartialEq, Eq)]
@@ -72,6 +75,14 @@ struct FetchArgs {
     /// Snapshot filter: all, interesting, interactive.
     #[arg(long, default_value = "interesting")]
     filter: String,
+    /// Snapshot line format: compact (`e12 link "Home"`) or aria
+    /// (`- link "Home" [ref=e12]`, Playwright's aria-snapshot syntax).
+    #[arg(long, default_value = "compact")]
+    format: String,
+    /// Optional snapshot attributes, comma-separated: href, src,
+    /// description; `none` for none.
+    #[arg(long, default_value = "href")]
+    attrs: String,
     /// Soft character budget for the snapshot.
     #[arg(long)]
     max_chars: Option<usize>,
@@ -81,32 +92,8 @@ struct FetchArgs {
     /// Skip stylesheets: decide visibility from markup alone (faster, less accurate).
     #[arg(long)]
     no_css: bool,
-    /// User-Agent header.
-    #[arg(long)]
-    user_agent: Option<String>,
-    /// Path to a key file from `catpaw keygen`; enables Web Bot Auth signing.
-    #[arg(long, requires = "signature_agent")]
-    bot_auth_key: Option<PathBuf>,
-    /// Origin serving the key directory, e.g. https://agent.example
-    #[arg(long)]
-    signature_agent: Option<String>,
-    /// Per-request timeout in seconds.
-    #[arg(long, default_value_t = 30)]
-    timeout: u64,
-    /// The most megabytes a response body may have (on the wire; decoded
-    /// bodies may be twice that).
-    #[arg(long, default_value_t = 32)]
-    max_response_mb: usize,
-    /// Let requests reach loopback, private and link-local addresses.
-    #[arg(long)]
-    allow_private_network: bool,
-    /// An HTTP (CONNECT) or SOCKS5 proxy, e.g. http://user:pass@host:3128
-    /// or socks5h://host:1080.
-    #[arg(long)]
-    proxy: Option<String>,
-    /// A cookie file (JSON) to load before the request and save after it.
-    #[arg(long)]
-    cookie_jar: Option<PathBuf>,
+    #[command(flatten)]
+    net: NetArgs,
     /// Print response headers to stderr.
     #[arg(long)]
     show_headers: bool,
@@ -158,6 +145,59 @@ struct FetchArgs {
     full_page: bool,
 }
 
+/// How to reach the network: identity, limits, proxy, cookies.
+#[derive(Args, Clone)]
+struct NetArgs {
+    /// User-Agent header.
+    #[arg(long)]
+    user_agent: Option<String>,
+    /// Path to a key file from `catpaw keygen`; enables Web Bot Auth signing.
+    #[arg(long, requires = "signature_agent")]
+    bot_auth_key: Option<PathBuf>,
+    /// Origin serving the key directory, e.g. https://agent.example
+    #[arg(long)]
+    signature_agent: Option<String>,
+    /// Per-request timeout in seconds.
+    #[arg(long, default_value_t = 30)]
+    timeout: u64,
+    /// The most megabytes a response body may have (on the wire; decoded
+    /// bodies may be twice that).
+    #[arg(long, default_value_t = 32)]
+    max_response_mb: usize,
+    /// Let requests reach loopback, private and link-local addresses.
+    #[arg(long)]
+    allow_private_network: bool,
+    /// An HTTP (CONNECT) or SOCKS5 proxy, e.g. http://user:pass@host:3128
+    /// or socks5h://host:1080.
+    #[arg(long)]
+    proxy: Option<String>,
+    /// A cookie file (JSON) to load before the request and save after it.
+    #[arg(long)]
+    cookie_jar: Option<PathBuf>,
+}
+
+/// `catpaw mcp`: serve the agent tools.
+#[derive(Args)]
+struct McpArgs {
+    /// Speak MCP over stdin and stdout (newline-delimited JSON-RPC).
+    #[arg(long)]
+    stdio: bool,
+    #[command(flatten)]
+    net: NetArgs,
+    /// Snapshot line format results start with: compact (`e12 link
+    /// "Home"`) or aria (`- link "Home" [ref=e12]`).
+    #[arg(long, default_value = "compact")]
+    format: String,
+    /// A JSON file holding `localStorage` by origin, read at start and
+    /// written back at exit.
+    #[arg(long)]
+    storage: Option<PathBuf>,
+    /// How long (in milliseconds) one run of script may take before it is
+    /// stopped; 0 lets scripts run as long as they like.
+    #[arg(long, default_value_t = 10_000)]
+    script_budget: u64,
+}
+
 #[derive(Args)]
 struct KeygenArgs {
     /// Where to write the private key (JWK JSON). Defaults to ./catpaw-agent-key.json
@@ -180,7 +220,35 @@ fn main() -> Result<()> {
             runtime.block_on(fetch(args))
         }
         Cmd::Keygen(args) => keygen(args),
+        Cmd::Mcp(args) => mcp(args),
     }
+}
+
+fn mcp(args: McpArgs) -> Result<()> {
+    if !args.stdio {
+        bail!("pass --stdio: MCP over stdin and stdout is the only transport so far");
+    }
+    let format = catpaw_agent::Format::parse(&args.format)
+        .with_context(|| format!("--format {:?}: expected compact or aria", args.format))?;
+    let mut config = catpaw_server::SessionConfig {
+        format,
+        ..catpaw_server::SessionConfig::default()
+    };
+    config.options.net = net_config(&args.net)?;
+    config.options.page.script_budget =
+        (args.script_budget > 0).then(|| Duration::from_millis(args.script_budget));
+    config.options.storage = read_storage_file(args.storage.as_deref())?;
+    let outcome = catpaw_server::serve_stdio_with(config, |session| {
+        if let Err(e) = save_cookie_jar(&args.net, session.cookies()) {
+            eprintln!("catpaw: {e:#}");
+        }
+        if let Some(path) = &args.storage
+            && let Err(e) = write_storage_file(path, session.storage())
+        {
+            eprintln!("catpaw: {e:#}");
+        }
+    });
+    outcome.context("serving MCP on stdio")
 }
 
 fn keygen(args: KeygenArgs) -> Result<()> {
@@ -292,7 +360,7 @@ fn parse_url(input: &str) -> Result<Url> {
         .with_context(|| format!("invalid URL {input}"))
 }
 
-fn net_config(args: &FetchArgs) -> Result<NetConfig> {
+fn net_config(args: &NetArgs) -> Result<NetConfig> {
     let mut config = NetConfig {
         timeout: Duration::from_secs(args.timeout),
         ..NetConfig::default()
@@ -342,13 +410,13 @@ fn chosen_view(args: &FetchArgs) -> View {
 
 async fn fetch(args: FetchArgs) -> Result<()> {
     let url = parse_url(&args.url)?;
-    let client = NetClient::new(net_config(&args)?).context("building the HTTP client")?;
+    let client = NetClient::new(net_config(&args.net)?).context("building the HTTP client")?;
 
     let started = Instant::now();
     let doc = fetch_document(&client, &url)
         .await
         .with_context(|| format!("fetching {url}"))?;
-    save_cookie_jar(&args, client.cookies())?;
+    save_cookie_jar(&args.net, client.cookies())?;
     let fetch_ms = started.elapsed().as_millis();
     let response = &doc.response;
     eprintln!(
@@ -411,10 +479,15 @@ fn render(args: &FetchArgs, view: View, dom: &Dom, oracle: &dyn StyleOracle) -> 
         View::Snapshot => {
             let filter = Filter::parse(&args.filter)
                 .with_context(|| format!("unknown filter `{}`", args.filter))?;
+            let format = Format::parse(&args.format)
+                .with_context(|| format!("unknown format `{}`", args.format))?;
+            let extra = ExtraAttrs::parse_list(&args.attrs).map_err(anyhow::Error::msg)?;
             let mut refs = RefTable::new();
             let mut snapshotter = Snapshotter::new(dom, oracle, &mut refs);
             let snapshot = snapshotter.snapshot(&SnapshotOptions {
                 filter,
+                format,
+                extra,
                 max_chars: args.max_chars,
                 ..SnapshotOptions::default()
             });
@@ -430,7 +503,7 @@ fn render(args: &FetchArgs, view: View, dom: &Dom, oracle: &dyn StyleOracle) -> 
         View::Text => print!("{}", catpaw_agent::text(dom, oracle)),
         View::Html => println!("{}", to_html(dom, dom.document(), true)),
         View::Links => {
-            for link in catpaw_agent::links(dom, oracle) {
+            for link in catpaw_agent::links(dom, oracle, None) {
                 println!("{}\t{}", link.href, link.text);
             }
         }
@@ -452,6 +525,9 @@ fn render(args: &FetchArgs, view: View, dom: &Dom, oracle: &dyn StyleOracle) -> 
                     }
                     if !field.value.is_empty() {
                         line.push_str(&format!(" value={:?}", field.value));
+                    }
+                    if field.checked == Some(true) {
+                        line.push_str(" checked");
                     }
                     if field.required {
                         line.push_str(" required");
@@ -602,7 +678,7 @@ fn run_action(page: &mut catpaw_engine::Page, spec: &str) -> Result<()> {
 fn fetch_with_scripts(args: FetchArgs) -> Result<()> {
     let url = parse_url(&args.url)?;
     let options = PageOptions {
-        net: net_config(&args)?,
+        net: net_config(&args.net)?,
         page: PageConfig {
             script_budget: (args.script_budget > 0)
                 .then(|| Duration::from_millis(args.script_budget)),
@@ -612,14 +688,16 @@ fn fetch_with_scripts(args: FetchArgs) -> Result<()> {
             virtual_ms: args.time_budget as f64,
             ..LoopLimits::default()
         },
-        storage: load_storage(&args)?,
+        storage: read_storage_file(args.storage.as_deref())?,
         ..PageOptions::default()
     };
     let started = Instant::now();
     catpaw_engine::with_page(url.clone(), options, move |page| -> Result<()> {
         let result = fetch_with_scripts_on(&args, page, started);
-        save_cookie_jar(&args, page.net().client().cookies())?;
-        save_storage(&args, page)?;
+        save_cookie_jar(&args.net, page.net().client().cookies())?;
+        if let Some(path) = &args.storage {
+            write_storage_file(path, page.storage_snapshot())?;
+        }
         result
     })
     .with_context(|| format!("loading {url}"))?
@@ -750,13 +828,13 @@ fn fetch_with_scripts_on(
     }
 }
 
-/// Reads the `--storage` file: an object of origins, each an object of
-/// `localStorage` keys and values.
-fn load_storage(
-    args: &FetchArgs,
+/// Reads a `--storage` file: an object of origins, each an object of
+/// `localStorage` keys and values. A missing file is empty storage.
+fn read_storage_file(
+    path: Option<&std::path::Path>,
 ) -> Result<std::collections::HashMap<String, Vec<(String, String)>>> {
     let mut out = std::collections::HashMap::new();
-    let Some(path) = &args.storage else {
+    let Some(path) = path else {
         return Ok(out);
     };
     if !path.exists() {
@@ -782,14 +860,15 @@ fn load_storage(
     Ok(out)
 }
 
-fn save_storage(args: &FetchArgs, page: &catpaw_engine::Page) -> Result<()> {
-    let Some(path) = &args.storage else {
-        return Ok(());
-    };
+/// Writes `localStorage` by origin to a `--storage` file.
+fn write_storage_file(
+    path: &std::path::Path,
+    storage: std::collections::HashMap<String, Vec<(String, String)>>,
+) -> Result<()> {
     let mut origins = serde_json::Map::new();
-    let mut snapshot: Vec<_> = page.storage_snapshot().into_iter().collect();
-    snapshot.sort();
-    for (origin, items) in snapshot {
+    let mut storage: Vec<_> = storage.into_iter().collect();
+    storage.sort();
+    for (origin, items) in storage {
         let mut object = serde_json::Map::new();
         for (k, v) in items {
             object.insert(k, serde_json::Value::String(v));
@@ -802,7 +881,7 @@ fn save_storage(args: &FetchArgs, page: &catpaw_engine::Page) -> Result<()> {
     Ok(())
 }
 
-fn save_cookie_jar(args: &FetchArgs, jar: &catpaw_net::CookieJar) -> Result<()> {
+fn save_cookie_jar(args: &NetArgs, jar: &catpaw_net::CookieJar) -> Result<()> {
     if let Some(path) = &args.cookie_jar {
         std::fs::write(path, jar.to_json())
             .with_context(|| format!("writing the cookie file {}", path.display()))?;

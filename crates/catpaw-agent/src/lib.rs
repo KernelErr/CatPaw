@@ -11,11 +11,16 @@
 
 pub mod a11y;
 pub mod read;
+pub mod refs;
 pub mod snapshot;
 pub mod visibility;
 
 pub use read::{
-    FieldInfo, FormInfo, LinkInfo, LinkStyle, ReadOptions, forms, links, markdown, text,
+    FieldInfo, FormInfo, LinkInfo, LinkStyle, ReadOptions, forms, links, markdown, text, text_with,
 };
-pub use snapshot::{Filter, RefTable, Snapshot, SnapshotOptions, Snapshotter};
+pub use refs::{RefEntry, RefError, RefKey, RefScope, RefTable, StaleReason};
+pub use snapshot::{
+    ExtraAttrs, Filter, Format, Header, LineKind, SnapBody, SnapLine, Snapshot, SnapshotOptions,
+    Snapshotter,
+};
 pub use visibility::{AttributeOracle, StyleOracle};

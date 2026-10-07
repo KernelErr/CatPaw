@@ -273,6 +273,7 @@ CatPaw 的第一用户是 LLM agent；人类只做两件事：安装一句话、
 ### 对路线图的调整
 
 M3 的范围改为：MCP 一键接入（`catpaw setup`）、持久 profile、飞行记录仪与回放、策略文件与确认通道、hand-off 查看器；原 M3 的其余内容（JSON-RPC/WS、diff、settled、动作后果、checkpoint v1、HAR 回放、SDK）保留。
+
 ## 里程碑与退出标准
 
 | 里程碑 | 内容 | 退出标准 |
@@ -280,8 +281,8 @@ M3 的范围改为：MCP 一键接入（`catpaw setup`）、持久 profile、飞
 | **M0 fetch & read**（无 JS） | workspace + CI + 文档/ADR；`catpaw-net`（HTTP/1.1+2、TLS、gzip/br/zstd、cookies、重定向、**Web Bot Auth 签名**）；`catpaw-fetch` 最小文档抓取；html5ever → arena DOM；UA 样式表 + Stylo restyle（用于 `display:none` 剪枝）；CST 快照 v0（HTML-AAM 子集 + ARIA 的 role/name）；`read` 的 text/markdown/links/forms；CLI `catpaw fetch <url> --snapshot|--markdown|--html`、`catpaw keygen` | `catpaw fetch https://example.com --snapshot` 输出 CST；HN 首页 markdown 可读；html5lib tree-construction 全过；带密钥的请求在 crawltest.com 得到 200 |
 | **M1 scripts run** | Boa realms + Window（host hooks）；`xtask bindgen` 覆盖 DOM/Events/HTML 核心元素/XHR/fetch/URL/timers/console/Storage/MutationObserver；事件循环 + 虚拟时间；parser-script 交错（inline/external/defer/async/module、`document.write`）；`structuredClone`；CPU 预算；**最小 WebDriver classic**（WPT 需要）；`JsRuntime` 抽象定稿 | WPT `dom/`、`html/dom/`、`fetch/api/`、`xhr/` 子集按 expectations 通过；一个 Next.js 与一个 Vue 应用完成 hydration 并可交互（基准计时入 CI） |
 | **M2 interact** | 布局（Taffy/Parley/表格/浮动）、几何 API、hit-test、指针/键盘事件与焦点模型、表单与提交、导航 + 会话历史 + pushState、iframe（同域/跨域、WindowProxy、postMessage、popup）、持久 localStorage、Intersection/ResizeObserver、截图、Canvas 2D、Web Crypto（RustCrypto）、WebSocket、Web Workers | 能在真实站点完成登录流程；Turnstile 演示页（自有站点嵌入）勾选框点击后 token 回调触发；截图可辨认 |
-| **M3 agent API** | JSON-RPC/WS + stdio + MCP；CST diff、settled、动作后果、read 视图、logs、checkpoint v1、HAR 录制回放、TS/Python SDK | 一个 agent（例如 Claude Code）通过 `catpaw mcp --stdio` 完成 WebArena 自托管子集的任务；eval 在 HAR 回放 + 虚拟时间下可重复 |
-| **M4 fidelity & challenges** | 挑战检测、hand-off 远程查看、自有 Cloudflare 测试 zone、BotBase 提交 + Browser Developer Program 申请、Intl、CSSOM 补全、WPT 覆盖推进 | 自有 zone 的 Managed/JS Challenge 通过率有数据；hand-off 端到端可用；WPT 通过数公开仪表板 |
+| **M3 agent API** | MCP over stdio（`catpaw mcp --stdio`，工具面与结果语法见 ADR 0006）；紧凑 CST、diff 与 token 预算（ADR 0005 修订）；settled 策略与 pending 报告；动作后果与带 advice 的错误；read 视图、logs；frame 拼接、弹窗即 tab；HAR 录制回放 + 虚拟时间 + 随机种子；策略文件与确认通道（elicitation / 本地审批页）；飞行记录仪、checkpoint、持久 profile；hand-off 查看器；`catpaw setup`。JSON-RPC/WS 与 TS/Python SDK 推后 | A 档任务集（练习站点，HAR 入库）经 MCP 完成，`tasks replay --twice --strict` 逐字节可复现；在 Claude Code 中手动跑通确认与 hand-off；WebArena 之后再做 |
+| **M4 fidelity & challenges** | 挑战检测、自有 Cloudflare 测试 zone、BotBase 提交 + Browser Developer Program 申请、Intl、CSSOM 补全、WPT 覆盖推进 | 自有 zone 的 Managed/JS Challenge 通过率有数据；WPT 通过数公开仪表板 |
 | **M5 scale & compat** | 多租户限额、OpenTelemetry、Docker 镜像、CDP 子集（puppeteer-core 冒烟）、V8 后端在 CI 与 Boa 同等覆盖、BiDi 探索 | 单机 1000 context 压测内存/CPU 曲线；puppeteer-core 冒烟通过 |
 
 ## 风险清单（Top 10）
@@ -302,8 +303,8 @@ M3 的范围改为：MCP 一键接入（`catpaw setup`）、持久 profile、飞
 - **单元/集成**：`cargo test --workspace`；`cargo xtask html5lib`（tree-construction 与 tokenizer 测试）；`cargo xtask wpt --include <dirs>` 跑 WPT 子集，expectations 放 `tests/wpt/meta/*.ini`（Servo/Ladybird 做法），CI 分片；test262 由 Boa 上游覆盖，不自跑。
 - **M0 端到端**：`cargo run -p catpaw -- fetch https://example.com --snapshot` 输出带 ref 的 CST；`--markdown` 对 HN 首页可读；`catpaw keygen` + `catpaw fetch https://crawltest.com/cdn-cgi/web-bot-auth --bot-auth-key <file> --signature-agent <url>` 返回 200（需把目录部署到该 URL，否则预期 401，CI 中作为 opt-in 网络测试）。
 - **M1–M2**：Next.js/Vue 示例应用的 hydration 计时与交互脚本；真实站点登录流程脚本（凭证走本地 env，不入库）。
-- **M3**：将 `catpaw mcp --stdio` 配成 MCP server，由一个 agent 完成 WebArena 自托管子集任务；HAR 回放 + 虚拟时间下两次运行逐字节一致。
-- **M4**：自有 Cloudflare zone 的三条挑战规则各跑 N 次记录通过率；hand-off 由人工在浏览器里完成一次 Turnstile 勾选。
+- **M3**：xtask 的确定性 oracle 经 `catpaw mcp --stdio` 实网跑完 A 档任务集；CI 中 HAR 回放两次逐字节一致；在 Claude Code 中手动完成一次 `needs_confirmation` 审批和一次 hand-off 登录。
+- **M4**：自有 Cloudflare zone 的三条挑战规则各跑 N 次记录通过率。
 - **性能基线**：Lightpanda 的 BENCHMARKS.md 场景（本地电商页加载 100 次）对比内存/CPU；目标单页 < 50 MB、空闲 CPU 接近 0。
 - **泄漏**：每个集成测试结束时 `force_collect` + arena 节点普查为 0。
 

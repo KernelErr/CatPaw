@@ -31,6 +31,8 @@ jobs:
         run: cargo clippy --workspace --all-targets
       - name: Generated bindings are up to date
         run: cargo run -p xtask -- bindgen --check
+      - name: protocol.json is up to date
+        run: cargo run -p xtask -- protocol --check
       - name: Test
         run: cargo test --workspace
       - name: tree-construction (WPT html5lib suite)

@@ -13,6 +13,7 @@
 
 mod abort;
 pub mod activation;
+pub mod agent;
 mod attributes;
 mod beacon;
 mod canvas;
