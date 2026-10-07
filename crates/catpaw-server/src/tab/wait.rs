@@ -83,6 +83,8 @@ impl GroupState {
 
     pub(crate) fn wait(&mut self, tab: u32, p: params::Wait, view: View) -> CallResult {
         let what = match p.until {
+            // The session waits for hand-offs; it never sends one here.
+            WaitFor::Handoff => return Err(Failure::bad_argument("no hand-off is open")),
             WaitFor::Settled => "settled".to_string(),
             WaitFor::Text => format!(
                 "text {}",
@@ -131,6 +133,7 @@ impl GroupState {
         let mut ran = false;
         let outcome: Result<(), bool> = loop {
             let met = match p.until {
+                WaitFor::Handoff => true,
                 WaitFor::Settled => self.page.is_settled() && waited > 0.0,
                 WaitFor::Text => self
                     .visible_text(tab)?

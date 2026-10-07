@@ -18,7 +18,7 @@ pub use catpaw_web::settle::{
 };
 pub use catpaw_web::workers::WorkerId;
 pub use catpaw_web::{ConsoleLevel, ConsoleMessage, DialogAnswer, DialogPolicy, PageConfig};
-pub use group::GroupHandle;
+pub use group::{GroupCaller, GroupHandle};
 pub use net::{EngineNet, RequestGate, RequestRecord, SharedNet};
 pub use page::{
     ActionError, DocumentInfo, EngineError, FrameInfo, Gate, GateRequest, HeldNavigation,

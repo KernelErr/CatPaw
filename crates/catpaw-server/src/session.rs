@@ -17,6 +17,7 @@ use catpaw_protocol::wording::{ErrorCode, advice, consequence, outcome};
 use serde_json::{Value, json};
 
 use crate::confirm::{ApprovalConfig, Confirmations, LIFETIME, Stage, State};
+use crate::handoff::Handoffs;
 use crate::journal::{Journal, JournalConfig, redact};
 use crate::output::{CallResult, Failure, ToolOutput};
 use crate::policy::{Policy, Verdict};
@@ -205,6 +206,7 @@ pub struct Session {
     policy: Policy,
     setup: GroupSetup,
     confirmations: Confirmations,
+    handoffs: Handoffs,
     journal: Option<Journal>,
     profile: Option<Profile>,
     checkpoints: BTreeMap<String, Checkpoint>,
@@ -281,6 +283,7 @@ impl Session {
             },
             policy: config.policy,
             confirmations: Confirmations::new(config.approval),
+            handoffs: Handoffs::new(),
             journal,
             profile,
             checkpoints: BTreeMap::new(),
@@ -645,6 +648,69 @@ impl Session {
         }
     }
 
+    /// `handoff`: the user takes over the current tab on a page of their
+    /// own.
+    fn handoff(&mut self, p: params::Handoff) -> CallResult {
+        let tab = self.current_tab()?;
+        let group = self
+            .routes
+            .get(&tab)
+            .and_then(|g| self.groups.get(g))
+            .and_then(|g| g.caller())
+            .ok_or_else(|| Failure::new(ErrorCode::NoTab, format!("t{tab} is closed")))?;
+        let reason = p
+            .reason
+            .map(|r| r.trim().to_string())
+            .filter(|r| !r.is_empty())
+            .unwrap_or_else(|| "Take over this tab".to_string());
+        let (id, url) = self.handoffs.start(tab, &reason, group).map_err(|e| {
+            Failure::new(
+                ErrorCode::Unsupported,
+                format!("the hand-off page could not start: {e}"),
+            )
+        })?;
+        self.journal(
+            "handoff",
+            json!({"id": format!("h{id}"), "tab": format!("t{tab}"), "reason": reason}),
+        );
+        Ok(ToolOutput::ok(format!(
+            "ok handoff h{id} t{tab}: ask the user to open {url} and {}; then wait({{\"for\":\"handoff\"}})",
+            reason_phrase(&reason)
+        )))
+    }
+
+    /// `wait({for: "handoff"})`: until the user gives the tab back.
+    fn wait_handoff(&mut self, p: params::Wait) -> CallResult {
+        let id = self
+            .handoffs
+            .open(self.current)
+            .ok_or_else(|| Failure::bad_argument("no hand-off is open: call handoff first"))?;
+        let timeout = std::time::Duration::from_millis(p.timeout_ms.unwrap_or(600_000));
+        let started = Instant::now();
+        let tab = loop {
+            match self.handoffs.state(id) {
+                Some((tab, true)) => break tab,
+                Some(_) => {}
+                None => return Err(Failure::bad_argument(format!("h{id} is over"))),
+            }
+            if started.elapsed() >= timeout {
+                return Err(Failure::new(
+                    ErrorCode::Timeout,
+                    format!("h{id} is not given back yet"),
+                )
+                .with(advice::HANDOFF));
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        };
+        self.handoffs.close(id);
+        self.journal("handoff-done", json!({"id": format!("h{id}")}));
+        if self.routes.contains_key(&tab) {
+            self.current = Some(tab);
+        }
+        let status = format!("ok wait handoff h{id}: given back");
+        self.on_tab(tab, move |g, tab, view| g.after_handoff(tab, status, view))
+    }
+
     /// Lets what an approved confirmation held go.
     fn release(&mut self, tab: u32, id: u32, action: &str) -> CallResult {
         let status = format!("ok {action} (confirmed c{id})");
@@ -725,10 +791,12 @@ impl Session {
                 self.on_tab(tab, move |g, tab, _| g.evaluate(tab, p, &action_limits()))
             }
             Call::Tabs(p) => self.tabs(p),
+            Call::Wait(p) if p.until == params::WaitFor::Handoff => self.wait_handoff(p),
             Call::Wait(p) => {
                 let tab = self.current_tab()?;
                 self.on_tab(tab, move |g, tab, view| g.wait(tab, p, view))
             }
+            Call::Handoff(p) => self.handoff(p),
             Call::Logs(p) => {
                 let tab = self.current_tab()?;
                 self.on_tab(tab, move |g, tab, _| g.logs(tab, p))
@@ -986,6 +1054,18 @@ impl Session {
         } else {
             format!("open tabs: {}", open.join(", "))
         }
+    }
+}
+
+/// A reason as the end of "ask the user to open … and …": its first
+/// letter lowered, unless it is an acronym.
+fn reason_phrase(reason: &str) -> String {
+    let mut chars = reason.chars();
+    match (chars.next(), chars.next()) {
+        (Some(first), Some(second)) if first.is_uppercase() && !second.is_uppercase() => {
+            first.to_lowercase().chain(reason.chars().skip(1)).collect()
+        }
+        _ => reason.to_string(),
     }
 }
 

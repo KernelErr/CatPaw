@@ -61,6 +61,7 @@ pub mod advice {
         "advice: pick one by its ref, or narrow it with role \"name\" (button \"Sign in\")";
     pub const FULL_NAME: &str = "advice: use the ref, or the name in full as the snapshot shows it";
     pub const NO_TAB: &str = "advice: navigate to a URL first";
+    pub const HANDOFF: &str = "advice: the user still has the tab; wait({\"for\":\"handoff\"}) again once they say they are done";
     pub const NOT_EDITABLE: &str =
         "advice: type into a text field or editable element; click the one that takes the text";
     pub const OCCLUDED: &str =

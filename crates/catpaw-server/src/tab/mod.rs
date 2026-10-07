@@ -29,7 +29,7 @@ use catpaw_web::{PageState, agent};
 use url::Url;
 
 use crate::oracle::EngineOracle;
-use crate::output::Failure;
+use crate::output::{CallResult, Failure};
 use crate::policy::{Policy, Preset, Verdict};
 use crate::target::{self, Target};
 
@@ -364,6 +364,59 @@ impl GroupState {
     pub(crate) fn screen(&self, tab: u32) -> Option<Vec<u8>> {
         let root = self.tabs.get(&tab)?.root;
         self.page.screenshot_of(root, false)
+    }
+
+    /// Input from the user during a hand-off; where the tab is after it.
+    pub(crate) fn hand_input(
+        &mut self,
+        tab: u32,
+        input: crate::handoff::Input,
+    ) -> Result<(String, String), String> {
+        use crate::handoff::Input;
+        use catpaw_web::input;
+        let root = self
+            .tabs
+            .get(&tab)
+            .map(|t| t.root)
+            .ok_or("the tab is closed")?;
+        self.page
+            .input_in(root, move |cx| match input {
+                Input::Click { x, y } => {
+                    input::click_at(cx, x, y);
+                    Ok(())
+                }
+                Input::Text(text) => input::type_text(cx, &text),
+                Input::Key(key) => input::press(cx, &key),
+                Input::Scroll(dy) => {
+                    agent::scroll_by(cx, 0.0, dy);
+                    Ok(())
+                }
+            })
+            .map_err(|e| e.to_string())?;
+        // What the user does is theirs to decide: what the policy held
+        // goes (what it refused stays refused).
+        if self.page.held().is_some() || !self.page.held_requests().is_empty() {
+            self.page.release_held_requests();
+            self.page.release_held().map_err(|e| e.to_string())?;
+            self.page.settle(&action_limits());
+        }
+        let state = self.page.frame_state(root).ok_or("the tab is closed")?;
+        let url = state.url.borrow().to_string();
+        Ok((url, title_of(state)))
+    }
+
+    /// The result of a hand-off given back: what happened meanwhile
+    /// (navigations, new tabs) and the whole page as it is now.
+    pub(crate) fn after_handoff(&mut self, tab: u32, status: String, view: View) -> CallResult {
+        let base = self.baseline(tab);
+        let report = self.finish(tab, &base);
+        self.page_result(
+            tab,
+            status,
+            report,
+            Some(catpaw_protocol::params::SnapshotMode::Full),
+            view,
+        )
     }
 
     fn tab_mut(&mut self, tab: u32) -> Result<&mut Tab, Failure> {

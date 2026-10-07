@@ -8,6 +8,8 @@
 
 pub mod confirm;
 mod files;
+pub mod handoff;
+mod http;
 pub mod journal;
 pub mod jsonrpc;
 pub mod mcp;

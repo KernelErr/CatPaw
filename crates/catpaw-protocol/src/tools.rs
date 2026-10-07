@@ -203,16 +203,25 @@ pub static TOOLS: &[ToolDef] = &[
     ToolDef {
         name: "wait",
         title: "Wait",
-        description: "Let the page run until it settles, a text appears or goes, an element is visible, the URL contains a string, or ms milliseconds pass. Time the page spends only waiting on timers passes at once. Returns what changed.\nExample: {\"for\":\"text\",\"text\":\"Order placed\"}",
+        description: "Let the page run until it settles, a text appears or goes, an element is visible, the URL contains a string, or ms milliseconds pass; or until the user gives back a tab handed over with handoff. Time the page spends only waiting on timers passes at once. Returns what changed.\nExample: {\"for\":\"text\",\"text\":\"Order placed\"}",
         schema: r#"{"type":"object","properties":{
-"for":{"type":"string","enum":["settled","text","gone","visible","url","time"]},
+"for":{"type":"string","enum":["settled","text","gone","visible","url","time","handoff"]},
 "text":{"type":"string","description":"For text and gone"},
 "target":{"type":"string","description":"For visible and gone: ref or css:<selector>"},
 "url":{"type":"string","description":"For url: part of the URL"},
 "ms":{"type":"integer","minimum":1,"description":"For time"},
-"timeoutMs":{"type":"integer","minimum":1,"description":"Default 10000"},
+"timeoutMs":{"type":"integer","minimum":1,"description":"Default 10000; for handoff 600000"},
 "snapshot":{"type":"string","enum":["diff","full","none"]}
 },"required":["for"],"additionalProperties":false}"#,
+        read_only: false,
+    },
+    ToolDef {
+        name: "handoff",
+        title: "Hand over to the user",
+        description: "Hand the current tab to the user, on a page they open in their own browser: to log in, pass a check meant for a person, or do anything you should not do or see. Then wait({\"for\":\"handoff\"}) until they give it back; you see the page, not what they typed.\nExample: {\"reason\":\"Log in to your account\"}",
+        schema: r#"{"type":"object","properties":{
+"reason":{"type":"string","description":"What to ask the user to do"}
+},"additionalProperties":false}"#,
         read_only: false,
     },
     ToolDef {

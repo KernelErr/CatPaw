@@ -22,6 +22,13 @@ const ORDER: &str = r#"<!doctype html><title>Order</title>
 </form>
 <label>Password <input type=password id=pw></label>"#;
 
+const LOGIN: &str = r#"<!doctype html><title>Sign in</title>
+<form method=post action=/welcome>
+  <label>User <input id=user name=user></label>
+  <label>Password <input id=pass name=pass type=password></label>
+  <button>Sign in</button>
+</form>"#;
+
 type Log = Arc<Mutex<Vec<String>>>;
 
 /// Serves `/order`, answers anything else with a page naming the request,
@@ -72,6 +79,8 @@ fn serve() -> (u16, Log) {
                 seen.lock().unwrap().push(entry);
                 let page = if path == "/order" {
                     ORDER.to_string()
+                } else if path == "/login" {
+                    LOGIN.to_string()
                 } else {
                     format!("<!doctype html><title>Done</title><h1>{method} {path}</h1>")
                 };
@@ -466,4 +475,117 @@ fn a_profile_keeps_cookies_and_a_journal() {
     assert!(all.contains("\"tool\":\"type\""), "{all}");
     assert!(all.contains("(7 characters)"), "{all}");
     assert!(!all.contains("hunter2"), "{all}");
+}
+
+/// One request to a hand-off page; the status line and the body.
+fn handoff_request(url: &str, method: &str, suffix: &str, body: &str) -> (String, Vec<u8>) {
+    let rest = url.strip_prefix("http://127.0.0.1:").unwrap();
+    let (port, path) = rest.split_once('/').unwrap();
+    let (path, query) = path.split_once('?').unwrap();
+    let mut stream = TcpStream::connect(("127.0.0.1", port.parse::<u16>().unwrap())).unwrap();
+    let request = format!(
+        "{method} /{path}{suffix}?{query} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{body}",
+        body.len()
+    );
+    stream.write_all(request.as_bytes()).unwrap();
+    let mut out = Vec::new();
+    stream.read_to_end(&mut out).unwrap();
+    let split = out.windows(4).position(|w| w == b"\r\n\r\n").unwrap();
+    let head = String::from_utf8_lossy(&out[..split]).into_owned();
+    (
+        head.lines().next().unwrap().to_string(),
+        out[split + 4..].to_vec(),
+    )
+}
+
+#[test]
+fn the_user_takes_over_and_gives_back() {
+    let mut client = Client::new("handoff", |_| {});
+    let url = format!("{}/login", client.base);
+    client.call("navigate", json!({ "url": url }));
+    let point = |client: &mut Client, id: &str| -> (f64, f64) {
+        let text = client.call(
+            "evaluate",
+            json!({"script": format!("(() => {{ const r = document.getElementById('{id}').getBoundingClientRect(); return (r.x + r.width / 2) + ',' + (r.y + r.height / 2); }})()")}),
+        );
+        let (x, y) = text.lines().last().unwrap().split_once(',').unwrap();
+        (x.parse().unwrap(), y.parse().unwrap())
+    };
+    let user = point(&mut client, "user");
+    let pass = point(&mut client, "pass");
+
+    let started = client.call("handoff", json!({"reason": "Log in to the shop"}));
+    assert!(
+        started.starts_with("ok handoff h1 t1: ask the user to open http://127.0.0.1:"),
+        "{started}"
+    );
+    assert!(
+        started.ends_with(" and log in to the shop; then wait({\"for\":\"handoff\"})"),
+        "{started}"
+    );
+    let link = started
+        .split_whitespace()
+        .find(|w| w.contains("/handoff/h1?t="))
+        .unwrap()
+        .to_string();
+
+    // The user's side: the viewer, a screenshot, clicks and typing.
+    let (status, page) = handoff_request(&link, "GET", "", "");
+    assert_eq!(status, "HTTP/1.1 200 OK");
+    assert!(String::from_utf8_lossy(&page).contains("Hand-off h1: tab t1"));
+    let (status, png) = handoff_request(&link, "GET", "/screen", "");
+    assert_eq!(status, "HTTP/1.1 200 OK");
+    assert!(png.starts_with(b"\x89PNG"));
+    let wrong = link.replace("?t=", "?t=0");
+    assert!(handoff_request(&wrong, "GET", "", "").0.contains("403"));
+    let click = |at: (f64, f64)| json!({"kind": "click", "x": at.0, "y": at.1}).to_string();
+    handoff_request(&link, "POST", "/input", &click(user));
+    handoff_request(
+        &link,
+        "POST",
+        "/input",
+        &json!({"kind": "text", "text": "ada"}).to_string(),
+    );
+    handoff_request(&link, "POST", "/input", &click(pass));
+    handoff_request(
+        &link,
+        "POST",
+        "/input",
+        &json!({"kind": "text", "text": "s3cret"}).to_string(),
+    );
+    let (_, moved) = handoff_request(
+        &link,
+        "POST",
+        "/input",
+        &json!({"kind": "key", "key": "Enter"}).to_string(),
+    );
+    let moved = String::from_utf8_lossy(&moved).into_owned();
+    assert!(
+        moved.contains("/welcome"),
+        "the user's own submission goes: {moved}"
+    );
+    assert_eq!(
+        handoff_request(&link, "POST", "/done", "").0,
+        "HTTP/1.1 200 OK"
+    );
+
+    let back = client.call("wait", json!({"for": "handoff"}));
+    assert!(
+        back.starts_with(&format!(
+            "ok wait handoff h1: given back → {}/welcome (POST, 200)",
+            client.base
+        )),
+        "{back}"
+    );
+    assert!(!back.contains("s3cret"), "{back}");
+    let sent = posts(&client.log);
+    assert_eq!(sent.len(), 1, "{sent:?}");
+    assert!(sent[0].contains("user=ada&pass=s3cret"), "{sent:?}");
+    // Over: the page stops answering, and there is nothing to wait for.
+    assert!(handoff_request(&link, "GET", "", "").0.contains("404"));
+    let none = client.call("wait", json!({"for": "handoff", "timeoutMs": 10}));
+    assert!(
+        none.starts_with("error BadArgument no hand-off is open"),
+        "{none}"
+    );
 }

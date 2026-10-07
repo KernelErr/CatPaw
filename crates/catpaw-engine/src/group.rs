@@ -86,39 +86,85 @@ impl<S: 'static> GroupHandle<S> {
         &self,
         f: impl FnOnce(&mut S) -> R + Send + 'static,
     ) -> Result<R, EngineError> {
-        if !self.is_alive() {
-            return Err(EngineError::Panicked);
-        }
         let jobs = self.jobs.as_ref().ok_or(EngineError::Panicked)?;
-        let (reply_tx, reply_rx) = channel::<Result<R, EngineError>>();
-        let alive = self.alive.clone();
-        let job: Job<S> =
-            Box::new(
-                move |state: &mut S| match catch_unwind(AssertUnwindSafe(|| f(state))) {
-                    Ok(result) => {
-                        let _ = reply_tx.send(Ok(result));
-                    }
-                    Err(_) => {
-                        alive.store(false, Ordering::SeqCst);
-                        let _ = reply_tx.send(Err(EngineError::Panicked));
-                    }
-                },
-            );
-        jobs.send(job).map_err(|_| EngineError::Panicked)?;
-        reply_rx.recv().map_err(|_| EngineError::Panicked)?
+        run_job(jobs, &self.alive, f)
     }
 
     /// Whether the thread is still running (no job panicked).
     pub fn is_alive(&self) -> bool {
         self.alive.load(Ordering::SeqCst)
     }
+
+    /// A way to run jobs on the group from another thread, which does not
+    /// keep the group open: once the handle is dropped, its calls fail.
+    pub fn caller(&self) -> Option<GroupCaller<S>> {
+        Some(GroupCaller {
+            jobs: self.jobs.as_ref()?.clone(),
+            alive: self.alive.clone(),
+        })
+    }
+}
+
+/// Runs jobs on a group from any thread (see [`GroupHandle::caller`]).
+pub struct GroupCaller<S> {
+    jobs: Sender<Job<S>>,
+    alive: Arc<AtomicBool>,
+}
+
+impl<S> Clone for GroupCaller<S> {
+    fn clone(&self) -> Self {
+        Self {
+            jobs: self.jobs.clone(),
+            alive: self.alive.clone(),
+        }
+    }
+}
+
+impl<S: 'static> GroupCaller<S> {
+    /// Runs `f` on the group's state and waits for its result.
+    pub fn call<R: Send + 'static>(
+        &self,
+        f: impl FnOnce(&mut S) -> R + Send + 'static,
+    ) -> Result<R, EngineError> {
+        run_job(&self.jobs, &self.alive, f)
+    }
+}
+
+fn run_job<S: 'static, R: Send + 'static>(
+    jobs: &Sender<Job<S>>,
+    alive: &Arc<AtomicBool>,
+    f: impl FnOnce(&mut S) -> R + Send + 'static,
+) -> Result<R, EngineError> {
+    if !alive.load(Ordering::SeqCst) {
+        return Err(EngineError::Panicked);
+    }
+    let (reply_tx, reply_rx) = channel::<Result<R, EngineError>>();
+    let alive = alive.clone();
+    let job: Job<S> =
+        Box::new(
+            move |state: &mut S| match catch_unwind(AssertUnwindSafe(|| f(state))) {
+                Ok(result) => {
+                    let _ = reply_tx.send(Ok(result));
+                }
+                Err(_) => {
+                    alive.store(false, Ordering::SeqCst);
+                    let _ = reply_tx.send(Err(EngineError::Panicked));
+                }
+            },
+        );
+    jobs.send(job).map_err(|_| EngineError::Panicked)?;
+    reply_rx.recv().map_err(|_| EngineError::Panicked)?
 }
 
 impl<S> Drop for GroupHandle<S> {
     fn drop(&mut self) {
-        // Closing the channel ends the thread's loop; the state is dropped
-        // on its own thread.
-        self.jobs.take();
+        // Callers may keep the channel open: the group is marked closed and
+        // woken with a job that does nothing, after which its loop ends and
+        // the state is dropped on its own thread.
+        self.alive.store(false, Ordering::SeqCst);
+        if let Some(jobs) = self.jobs.take() {
+            let _ = jobs.send(Box::new(|_| {}));
+        }
         if let Some(thread) = self.thread.take() {
             let _ = thread.join();
         }
@@ -145,6 +191,19 @@ mod tests {
         assert!(matches!(result, Err(EngineError::Panicked)));
         assert!(!group.is_alive());
         assert!(matches!(group.call(|s| *s), Err(EngineError::Panicked)));
+    }
+
+    #[test]
+    fn a_caller_works_from_another_thread_until_the_group_goes() {
+        let group = GroupHandle::spawn("test-group", || Ok(1u32)).unwrap();
+        let caller = group.caller().unwrap();
+        let other = caller.clone();
+        let seen = std::thread::spawn(move || other.call(|s| *s + 1).unwrap())
+            .join()
+            .unwrap();
+        assert_eq!(seen, 2);
+        drop(group);
+        assert!(caller.call(|s| *s).is_err());
     }
 
     #[test]

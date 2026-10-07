@@ -272,6 +272,8 @@ pub enum WaitFor {
     Url,
     Visible,
     Time,
+    /// The user gives back a tab handed over with `handoff`.
+    Handoff,
 }
 
 impl WaitFor {
@@ -283,6 +285,7 @@ impl WaitFor {
             WaitFor::Url => "url",
             WaitFor::Visible => "visible",
             WaitFor::Time => "time",
+            WaitFor::Handoff => "handoff",
         }
     }
 }
@@ -348,6 +351,13 @@ pub enum TabsOp {
     Close,
 }
 
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct Handoff {
+    /// What the user is asked to do.
+    pub reason: Option<String>,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct Session {
@@ -379,6 +389,7 @@ pub enum Call {
     Tabs(Tabs),
     Wait(Wait),
     Logs(Logs),
+    Handoff(Handoff),
     Session(Session),
 }
 
@@ -407,6 +418,7 @@ pub fn parse(name: &str, value: serde_json::Value) -> Result<Call, String> {
         "tabs" => Call::Tabs(args(value)?),
         "wait" => Call::Wait(args(value)?),
         "logs" => Call::Logs(args(value)?),
+        "handoff" => Call::Handoff(args(value)?),
         "session" => Call::Session(args(value)?),
         other => return Err(format!("no tool is called {other:?}")),
     })

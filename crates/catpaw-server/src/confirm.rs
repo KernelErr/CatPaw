@@ -8,11 +8,13 @@
 //! addresses). A browser that approved once keeps the key in a cookie.
 
 use std::collections::BTreeMap;
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::Write;
 use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+
+use crate::http::{escape, page, read_request, respond};
 
 /// How long a confirmation waits for the user.
 pub const LIFETIME: Duration = Duration::from_secs(600);
@@ -251,102 +253,6 @@ fn serve(listener: TcpListener, shared: &Shared) {
     }
 }
 
-struct Request {
-    method: String,
-    path: String,
-    headers: Vec<(String, String)>,
-    body: Vec<u8>,
-}
-
-impl Request {
-    fn header(&self, name: &str) -> Option<&str> {
-        self.headers
-            .iter()
-            .find(|(n, _)| n.eq_ignore_ascii_case(name))
-            .map(|(_, v)| v.as_str())
-    }
-
-    fn cookie(&self, name: &str) -> Option<&str> {
-        self.header("cookie")?.split(';').find_map(|pair| {
-            let (n, v) = pair.trim().split_once('=')?;
-            (n == name).then_some(v)
-        })
-    }
-}
-
-fn read_request(stream: &TcpStream) -> std::io::Result<Request> {
-    let mut reader = BufReader::new(stream);
-    let mut line = String::new();
-    reader.read_line(&mut line)?;
-    let mut words = line.split_whitespace();
-    let method = words.next().unwrap_or("").to_string();
-    let path = words.next().unwrap_or("/").to_string();
-    let mut headers = Vec::new();
-    loop {
-        let mut line = String::new();
-        if reader.read_line(&mut line)? == 0 {
-            break;
-        }
-        let line = line.trim_end();
-        if line.is_empty() {
-            break;
-        }
-        if let Some((name, value)) = line.split_once(':') {
-            headers.push((name.trim().to_string(), value.trim().to_string()));
-        }
-        if headers.len() > 100 {
-            break;
-        }
-    }
-    let length = headers
-        .iter()
-        .find(|(n, _)| n.eq_ignore_ascii_case("content-length"))
-        .and_then(|(_, v)| v.parse::<usize>().ok())
-        .unwrap_or(0)
-        .min(16 * 1024);
-    let mut body = vec![0; length];
-    reader.read_exact(&mut body)?;
-    Ok(Request {
-        method,
-        path,
-        headers,
-        body,
-    })
-}
-
-fn escape(text: &str) -> String {
-    text.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-}
-
-fn respond(
-    mut stream: TcpStream,
-    status: &str,
-    content_type: &str,
-    extra: &[String],
-    body: &str,
-) -> std::io::Result<()> {
-    let mut head = format!(
-        "HTTP/1.1 {status}\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nCache-Control: no-store\r\nX-Frame-Options: DENY\r\nReferrer-Policy: same-origin\r\nContent-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; form-action 'self'\r\nConnection: close\r\n",
-        body.len()
-    );
-    for line in extra {
-        head.push_str(line);
-        head.push_str("\r\n");
-    }
-    head.push_str("\r\n");
-    stream.write_all(head.as_bytes())?;
-    stream.write_all(body.as_bytes())
-}
-
-fn page(title: &str, body: &str) -> String {
-    format!(
-        "<!doctype html><html lang=en><meta charset=utf-8><meta name=viewport content=\"width=device-width,initial-scale=1\"><title>{title}</title><style>:root{{color-scheme:light dark}}body{{font:16px/1.5 system-ui,sans-serif;max-width:40rem;margin:3rem auto;padding:0 1rem}}pre{{white-space:pre-wrap;padding:1rem;border:1px solid #8884;border-radius:.5rem}}button{{font:inherit;padding:.5rem 1.2rem;margin:.25rem .5rem 0 0}}input{{font:inherit;width:100%;padding:.4rem}}small{{opacity:.75}}</style>{body}</html>"
-    )
-}
-
 fn handle(stream: TcpStream, shared: &Shared) -> std::io::Result<()> {
     let request = read_request(&stream)?;
     let ours = [
@@ -524,6 +430,8 @@ fn handle(stream: TcpStream, shared: &Shared) -> std::io::Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use std::io::Read;
+
     use super::*;
 
     fn post(port: u16, path: &str, headers: &str, body: &str) -> String {

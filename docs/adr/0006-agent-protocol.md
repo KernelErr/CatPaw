@@ -24,9 +24,8 @@ of the model on every turn.
 2. **Tools.** `navigate`, `snapshot`, `click`, `type`, `press`, `select`,
    `act` (hover, check, uncheck, focus, clear, scroll, upload), `wait`,
    `read` (markdown, text, links, forms, tables, find, html), `screenshot`,
-   `evaluate`, `tabs` and `logs`; `session` (checkpoints) is listed only
-   when the server is started with `--tools session`, and `handoff`
-   follows. Frequent actions are tools of
+   `evaluate`, `tabs`, `logs` and `handoff`; `session` (checkpoints) is
+   listed only when the server is started with `--tools session`. Frequent actions are tools of
    their own because their required fields differ: a schema that requires
    `text` catches the commonest small-model mistake (the right action with
    a field missing) before it reaches the page. Rare actions share `act`.
@@ -167,6 +166,23 @@ of the model on every turn.
     sessions, written after every call that acts. The `session` tool
     saves a checkpoint (cookies, storage, each tab's URL and scroll),
     restores it (tabs load again, refs start afresh) and lists them.
+15. **Hand-off.** `handoff({reason})` gives the user the current tab on a
+    page served at 127.0.0.1 (its address carries a one-time token): a
+    screenshot of the tab, kept current, that passes the user's clicks,
+    typing, keys and scrolling to it, and a Done button. What the user
+    does is theirs to decide, so what the policy would hold goes through
+    (what it refuses stays refused). The agent calls
+    `wait({for: "handoff"})`, which returns once the user is done, with
+    what happened meanwhile (`→ https://…/welcome (POST, 200)`) and the
+    whole page; it never learns what was typed, and the journal keeps no
+    hand-off input. For logins, checks meant for a person (ADR 0003), and
+    anything else the agent should not do or see.
+16. **Setting up a host.** `catpaw setup claude-code|codex|cursor` prints
+    the command or configuration that registers `catpaw mcp --stdio`
+    (with any `catpaw mcp` options after `--`); `--write` writes it:
+    `.mcp.json` in the current project for Claude Code,
+    `~/.codex/config.toml` for Codex, `~/.cursor/mcp.json` for Cursor,
+    keeping what those files already hold.
 
 ## Consequences
 

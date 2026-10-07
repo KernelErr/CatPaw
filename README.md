@@ -11,10 +11,11 @@ settled" signals, diffs instead of re-dumps, deterministic time, and cheap
 isolated contexts.
 
 > Status: **pre-alpha**. Milestones M0 ("fetch & read"), M1 ("scripts
-> run", JavaScript via Boa) and M2 ("interact") are complete; M3 (the
-> agent API) is under way: `catpaw mcp --stdio` serves the agent tools over
-> MCP, and a task set on practice sites replays from recorded traffic in CI
-> (see [From an agent](#from-an-agent-mcp)). See the roadmap below.
+> run", JavaScript via Boa), M2 ("interact") and M3 ("the agent API") are
+> complete: `catpaw mcp --stdio` serves the agent tools over MCP, with
+> confirmations, hand-off to the user and a flight journal, and a task set
+> on practice sites replays from recorded traffic in CI (see
+> [From an agent](#from-an-agent-mcp)). See the roadmap below.
 >
 > What M2 brought: layout. Block, flex and grid boxes are laid out by Taffy and
 > inline content shaped and line-broken by Parley over a bundled font set,
@@ -106,8 +107,8 @@ isolated contexts.
 - **Agent-native API.** `snapshot` returns a CatPaw Snapshot Text (CST) tree —
   a superset of Playwright's aria snapshot — with refs that never get reused;
   every action waits for the page to settle and can return a diff, so one
-  agent step is one round trip. JSON-RPC over WebSocket and a built-in MCP
-  server; a CDP subset comes later for Puppeteer compatibility.
+  agent step is one round trip. A built-in MCP server; JSON-RPC over
+  WebSocket and a CDP subset (for Puppeteer) come later.
 - **Exact settledness.** Because CatPaw owns the event loop it knows every
   pending fetch, timer (and its source line), animation frame and microtask.
   Timeouts name the culprit instead of failing silently.
@@ -144,18 +145,19 @@ catpaw fetch https://crawltest.com/cdn-cgi/web-bot-auth \
 ### From an agent (MCP)
 
 `catpaw mcp --stdio` serves the browser to an agent over the Model Context
-Protocol. From a checkout, build it and register it with your host, for
-example Claude Code:
+Protocol. From a checkout, build it and register it with your host:
 
 ```sh
 cargo build --release -p catpaw
-claude mcp add catpaw -- "$PWD/target/release/catpaw" mcp --stdio
+./target/release/catpaw setup claude-code   # prints the `claude mcp add` command
+./target/release/catpaw setup codex --write # adds it to ~/.codex/config.toml
+./target/release/catpaw setup cursor -- --policy strict
 ```
 
 The tools are `navigate`, `snapshot`, `click`, `type`, `press`, `select`,
 `act` (hover, check, uncheck, focus, clear, scroll, upload), `wait`, `read`
 (markdown, text, links, forms, tables, find, html), `screenshot`,
-`evaluate`, `tabs` and `logs`; windows a page opens become tabs. Elements
+`evaluate`, `tabs`, `logs` and `handoff`; windows a page opens become tabs. Elements
 are named by refs that stay valid until the element leaves the page. An
 action answers with what happened and what changed on the page, once the
 page has settled (analytics and polling are not waited for):
@@ -191,6 +193,10 @@ the agent never sees, and the agent repeats the call with
 clicked again. `--policy strict` also asks before scripts send data to
 other sites and before `evaluate`, `--policy open` asks for nothing, and
 `--trust <host>` and `--allowed-domain <domain>` adjust either.
+When a site needs a person (a login, a check meant for humans),
+`handoff` gives the user the tab on a local page in their own browser, and
+`wait({"for":"handoff"})` returns once they are done, with the page as it
+is then and nothing of what they typed.
 `--flight-log <dir>` keeps a journal of every call (`--flight-screens`
 adds a screenshot per action; typed passwords are kept as their length),
 `--profile <dir>` keeps cookies, localStorage, checkpoints and the journal
@@ -212,14 +218,14 @@ reads over each task, against Playwright MCP taking the same steps:
 | books-category | 3 | 14814 (~4233) | 6 | 64648 (~18471) |
 | books-pagination | 2 | 13445 (~3841) | 4 | 64942 (~18555) |
 | httpbin-form | 6 | 2248 (~642) | 9 | 7477 (~2136) |
-| internet-dropdown | 2 | 720 (~206) | 4 | 1937 (~553) |
-| internet-dynamic | 3 | 1030 (~294) | 6 | 2922 (~835) |
-| internet-entry-ad | 2 | 1174 (~335) | 4 | 2305 (~659) |
+| internet-dropdown | 2 | 601 (~172) | 4 | 1937 (~553) |
+| internet-dynamic | 3 | 911 (~260) | 6 | 2922 (~835) |
+| internet-entry-ad | 2 | 1055 (~301) | 4 | 2305 (~659) |
 | internet-frames | 2 | 859 (~245) | 3 | 980 (~280) |
-| internet-login | 5 | 2118 (~605) | 6 | 2940 (~840) |
-| internet-prompt | 2 | 980 (~280) | 5 | 1968 (~562) |
-| internet-upload | 5 | 1829 (~523) | 8 | 3239 (~925) |
-| internet-windows | 3 | 820 (~234) | 5 | 2217 (~633) |
+| internet-login | 5 | 1880 (~537) | 6 | 2940 (~840) |
+| internet-prompt | 2 | 861 (~246) | 5 | 1968 (~562) |
+| internet-upload | 5 | 1591 (~455) | 8 | 3239 (~925) |
+| internet-windows | 3 | 701 (~200) | 5 | 2217 (~633) |
 | quotes-js-pagination | 2 | 1452 (~415) | 4 | 9394 (~2684) |
 | quotes-login | 5 | 4409 (~1260) | 6 | 12497 (~3571) |
 | quotes-scroll | 3 | 906 (~259) | 5 | 11922 (~3406) |
@@ -227,7 +233,7 @@ reads over each task, against Playwright MCP taking the same steps:
 | saucedemo-checkout | 11 | 7397 (~2113) | 18 | 20992 (~5998) |
 | saucedemo-sort | 4 | 5651 (~1615) | 7 | 12814 (~3661) |
 | todomvc | 5 | 1833 (~524) | 10 | 9128 (~2608) |
-| all | 67 | 66864 (~19104) | 112 | 240980 (~68851) |
+| all | 67 | 65793 (~18798) | 112 | 240980 (~68851) |
 
 Bytes are all the tool results an agent receives over a task (tokens
 estimated at 3.5 bytes each). CatPaw's numbers come from the recordings;
@@ -239,7 +245,7 @@ counts too, as one more call. CatPaw answers an action with what changed,
 and caps a whole snapshot at 4000 tokens, folding the rest for the agent
 to open; its numbers include the calls that wait for the user's approval
 (logins, the form post, the upload), which Playwright MCP does not make.
-The tool list, a cost on every turn, is 10.0 KB for CatPaw and 20.3 KB for
+The tool list, a cost on every turn, is 10.6 KB for CatPaw and 20.3 KB for
 Playwright MCP.
 `cargo run -p xtask --features engine -- tasks report --baseline tools/baseline/playwright-mcp.json`
 regenerates the table, and
@@ -267,7 +273,7 @@ checked-in output, `--list <Interface>` shows what an interface offers).
 | M0 fetch & read (done) | HTTP/1.1+2, cookies, Web Bot Auth signing, HTML parsing into the arena DOM, UA + author stylesheets via Stylo, CST snapshot v0, markdown/text/forms views, CLI | `catpaw fetch … --snapshot` works on real pages; WPT tree-construction suite runs in CI with recorded expectations |
 | M1 scripts run (done) | Boa realms, generated bindings, event loop with virtual time, parser/script interleaving, fetch/XHR, script budget, in-process WPT runner (in place of the WebDriver subset first planned) | WPT `dom/`, `html/dom/`, `fetch/api/`, `xhr/` subsets pass against recorded expectations; React and Vue apps hydrate server-rendered markup (timed in the test suite) |
 | M2 interact (done) | Layout, hit-testing, input events, forms, navigation and history, iframes and popups, storage, observers, screenshots, Canvas 2D, Web Crypto, WebSocket, Workers | Log in to a real site; the Turnstile widget completes (done with the test site key: the widget's frame and worker run, the page's callback receives the token) |
-| M3 agent API (in progress) | MCP over stdio with compact snapshots, diffs and token budgets, settledness with pending reports, action consequences, read views, popups as tabs, HAR record/replay with virtual time, confirmation policies, flight recorder, checkpoints and profiles, human hand-off, `catpaw setup`; JSON-RPC/WS and SDKs later | A task set on practice sites completes over MCP and replays byte for byte from recorded HARs; confirmation and hand-off work from Claude Code |
+| M3 agent API (done) | MCP over stdio with compact snapshots, diffs and token budgets, settledness with pending reports, action consequences, read views, popups as tabs, HAR record/replay with virtual time, confirmation policies, flight recorder, checkpoints and profiles, human hand-off, `catpaw setup`; JSON-RPC/WS and SDKs later | A task set on practice sites completes over MCP and replays byte for byte from recorded HARs; confirmation and hand-off work from Claude Code |
 | M4 fidelity & challenges | Challenge detection, test zone with each Cloudflare challenge mode, Signed Agent registration | Measured pass rates |
 | M5 scale & compat | Multi-tenant limits, OpenTelemetry, Docker, CDP subset, V8 backend parity | 1000 contexts on one host; puppeteer-core smoke tests |
 

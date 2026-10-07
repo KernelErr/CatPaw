@@ -3,7 +3,10 @@
 //! `fetch` retrieves a page (optionally running its scripts with `--js`),
 //! resolves its styles, and prints a CST snapshot, markdown, text, HTML,
 //! links or forms. `keygen` creates a Web Bot Auth key pair and its key
-//! directory document.
+//! directory document. `mcp` serves the agent tools; `setup` registers
+//! them with an agent host.
+
+mod setup;
 
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
@@ -40,6 +43,9 @@ enum Cmd {
     Keygen(KeygenArgs),
     /// Serve the agent tools over MCP (Model Context Protocol).
     Mcp(McpArgs),
+    /// Register `catpaw mcp --stdio` with an agent host (claude-code,
+    /// codex, cursor): print the command or config, or write it.
+    Setup(setup::SetupArgs),
 }
 
 #[derive(Clone, Copy, ValueEnum, PartialEq, Eq)]
@@ -273,6 +279,7 @@ fn main() -> Result<()> {
         }
         Cmd::Keygen(args) => keygen(args),
         Cmd::Mcp(args) => mcp(args),
+        Cmd::Setup(args) => setup::run(args),
     }
 }
 

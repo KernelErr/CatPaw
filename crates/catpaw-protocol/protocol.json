@@ -507,7 +507,7 @@
       "title": "Tabs"
     },
     {
-      "description": "Let the page run until it settles, a text appears or goes, an element is visible, the URL contains a string, or ms milliseconds pass. Time the page spends only waiting on timers passes at once. Returns what changed.\nExample: {\"for\":\"text\",\"text\":\"Order placed\"}",
+      "description": "Let the page run until it settles, a text appears or goes, an element is visible, the URL contains a string, or ms milliseconds pass; or until the user gives back a tab handed over with handoff. Time the page spends only waiting on timers passes at once. Returns what changed.\nExample: {\"for\":\"text\",\"text\":\"Order placed\"}",
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
@@ -518,7 +518,8 @@
               "gone",
               "visible",
               "url",
-              "time"
+              "time",
+              "handoff"
             ],
             "type": "string"
           },
@@ -544,7 +545,7 @@
             "type": "string"
           },
           "timeoutMs": {
-            "description": "Default 10000",
+            "description": "Default 10000; for handoff 600000",
             "minimum": 1,
             "type": "integer"
           },
@@ -560,6 +561,21 @@
       },
       "name": "wait",
       "title": "Wait"
+    },
+    {
+      "description": "Hand the current tab to the user, on a page they open in their own browser: to log in, pass a check meant for a person, or do anything you should not do or see. Then wait({\"for\":\"handoff\"}) until they give it back; you see the page, not what they typed.\nExample: {\"reason\":\"Log in to your account\"}",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "description": "What to ask the user to do",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "name": "handoff",
+      "title": "Hand over to the user"
     },
     {
       "annotations": {
