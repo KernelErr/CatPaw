@@ -154,6 +154,7 @@ fetch/api/cors/data-url-iframe.html	fetching data url script should be allowed.
 fetch/api/cors/data-url-shared-worker.html	fetching "top.txt" with CORS allowing null origin should be allowed.
 fetch/api/cors/data-url-shared-worker.html	fetching "top.txt" without ACAO should be rejected.
 fetch/api/cors/data-url-shared-worker.html	fetching data url script should be allowed.
+fetch/api/cors/data-url-worker.html	-
 fetch/api/cors/data-url-worker.html	fetching "top.txt" with CORS allowing null origin should be allowed.
 fetch/api/cors/data-url-worker.html	fetching "top.txt" without ACAO should be rejected.
 fetch/api/cors/data-url-worker.html	fetching data url script should be allowed.

@@ -272,6 +272,19 @@ fn open(
         }
     }
 
+    // A synchronous request in a window cannot have a timeout or a
+    // response type (XHR: open() step 10).
+    if !is_async
+        && cx.page.workers.role().is_none()
+        && xhr(cx, this, |x| {
+            x.timeout_ms != 0 || x.response_type != ResponseType::Empty
+        })?
+    {
+        return Err(Exception::dom(
+            "InvalidAccessError",
+            "Synchronous requests from a document must not set a timeout or a response type",
+        ));
+    }
     terminate(cx, this);
     let changed = xhr(cx, this, |x| {
         x.sending = false;
@@ -348,6 +361,13 @@ impl web::XMLHttpRequestImpl for Web {
     }
 
     fn set_timeout(cx: &mut Cx<'_>, this: ObjectId, value: u32) -> Fallible<()> {
+        if cx.page.workers.role().is_none() && xhr(cx, this, |x| !x.is_async && x.state != UNSENT)?
+        {
+            return Err(Exception::dom(
+                "InvalidAccessError",
+                "Synchronous requests from a document must not set a timeout",
+            ));
+        }
         xhr(cx, this, |x| x.timeout_ms = value)
     }
 

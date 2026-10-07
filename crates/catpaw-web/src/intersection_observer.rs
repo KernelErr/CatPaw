@@ -175,11 +175,10 @@ impl Rect {
     }
 }
 
-impl IntersectionObserverObject {
-    /// The root's box (the viewport, or an element's padding box) in
-    /// viewport coordinates, grown by the root margin.
-    fn root_bounds(&self, page: &PageState) -> Rect {
-        let base = match self.root {
+/// The root intersection rectangle of `root` with `root_margin` applied.
+fn root_bounds_of(page: &PageState, root: Root, root_margin: [Margin; 4]) -> Rect {
+    {
+        let base = match root {
             Root::Element(root) => {
                 let border = layout::bounding_client_rect(page, root);
                 let client = layout::client_box(page, root);
@@ -197,7 +196,7 @@ impl IntersectionObserverObject {
                 height: f64::from(page.config.viewport_height),
             },
         };
-        let [top, right, bottom, left] = self.root_margin;
+        let [top, right, bottom, left] = root_margin;
         let (top, bottom) = (top.resolve(base.height), bottom.resolve(base.height));
         let (left, right) = (left.resolve(base.width), right.resolve(base.width));
         Rect {
@@ -303,50 +302,72 @@ pub(crate) fn update(cx: &mut Cx<'_>) {
         .set(Some(layout::geometry_version(page)));
     let time = page.clock.now();
     for observer in observers {
-        // The targets whose state changed, with their new state.
-        let changed = page.try_with::<IntersectionObserverObject, _>(observer, |o| {
-            let dom = page.dom.borrow();
-            // An observer whose root is out of the document is passed over.
-            let root_in_document = match o.root {
-                Root::Implicit => true,
-                Root::Document(root) | Root::Element(root) => {
-                    dom.contains(root) && dom.is_connected(root)
-                }
-            };
-            if !root_in_document {
-                return None;
-            }
-            let (root, thresholds) = (o.root, &o.thresholds);
-            let root_bounds = o.root_bounds(page);
-            let mut changed = Vec::new();
-            for target in &mut o.targets {
-                let observation = if intersects(&dom, root, target.node) {
-                    observe(page, &root_bounds, target.node)
-                } else {
-                    Observation {
-                        bounding: EMPTY,
-                        intersection: EMPTY,
-                        ratio: 0.0,
-                        is_intersecting: false,
-                    }
-                };
-                let index = thresholds
-                    .iter()
-                    .position(|&threshold| threshold > observation.ratio)
-                    .unwrap_or(thresholds.len()) as i32;
-                if index != target.previous_threshold_index
-                    || observation.is_intersecting != target.previous_is_intersecting
-                {
-                    changed.push((target.node, observation));
-                }
-                target.previous_threshold_index = index;
-                target.previous_is_intersecting = observation.is_intersecting;
-            }
-            Some((root_bounds, changed))
+        // Geometry is computed with the object arena free: a layout can
+        // touch other objects (adopted style sheets).
+        let snapshot = page.try_with::<IntersectionObserverObject, _>(observer, |o| {
+            let targets: Vec<(NodeId, i32, bool)> = o
+                .targets
+                .iter()
+                .map(|t| {
+                    (
+                        t.node,
+                        t.previous_threshold_index,
+                        t.previous_is_intersecting,
+                    )
+                })
+                .collect();
+            (o.root, o.root_margin, o.thresholds.clone(), targets)
         });
-        let Some(Some((root_bounds, changed))) = changed else {
+        let Some((root, root_margin, thresholds, targets)) = snapshot else {
             continue;
         };
+        let root_in_document = {
+            let dom = page.dom.borrow();
+            match root {
+                Root::Implicit => true,
+                Root::Document(r) | Root::Element(r) => dom.contains(r) && dom.is_connected(r),
+            }
+        };
+        // An observer whose root is out of the document is passed over.
+        if !root_in_document {
+            continue;
+        }
+        let root_bounds = root_bounds_of(page, root, root_margin);
+        let mut changed = Vec::new();
+        let mut states = Vec::with_capacity(targets.len());
+        for (node, previous_index, previous_intersecting) in targets {
+            let intersecting = {
+                let dom = page.dom.borrow();
+                intersects(&dom, root, node)
+            };
+            let observation = if intersecting {
+                observe(page, &root_bounds, node)
+            } else {
+                Observation {
+                    bounding: EMPTY,
+                    intersection: EMPTY,
+                    ratio: 0.0,
+                    is_intersecting: false,
+                }
+            };
+            let index = thresholds
+                .iter()
+                .position(|&threshold| threshold > observation.ratio)
+                .unwrap_or(thresholds.len()) as i32;
+            if index != previous_index || observation.is_intersecting != previous_intersecting {
+                changed.push((node, observation));
+            }
+            states.push((node, index, observation.is_intersecting));
+        }
+        let _ = page.try_with::<IntersectionObserverObject, _>(observer, |o| {
+            for (node, index, intersecting) in &states {
+                if let Some(target) = o.targets.iter_mut().find(|t| t.node == *node) {
+                    target.previous_threshold_index = *index;
+                    target.previous_is_intersecting = *intersecting;
+                }
+            }
+        });
+
         if changed.is_empty() {
             continue;
         }

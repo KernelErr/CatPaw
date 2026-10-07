@@ -64,6 +64,7 @@ xhr/blob-range.any.html	Blob range with no value
 xhr/blob-range.any.html	Blob range with whitespace after hyphen
 xhr/blob-range.any.html	Blob range with whitespace around equals sign
 xhr/blob-range.any.html	Blob range with whitespace before and after hyphen
+xhr/close-worker-with-xhr-in-progress.html	-
 xhr/close-worker-with-xhr-in-progress.html	Terminating a worker with a XHR in progress doesn't crash
 xhr/cookies.http.html	Basic non-cross-site cookie handling in XHR
 xhr/cors-expose-star.sub.any.html	* can be one of several values
@@ -137,11 +138,6 @@ xhr/open-during-abort-event.htm	-
 xhr/open-during-abort-event.htm	XMLHttpRequest: open() during abort event - abort() called from upload.onloadstart
 xhr/open-during-abort-processing.htm	-
 xhr/open-during-abort-processing.htm	XMLHttpRequest: open() during abort processing - abort() called from onloadstart
-xhr/open-method-responsetype-set-sync.htm	XMLHttpRequest: open() sync request not allowed if responseType is set (arraybuffer)
-xhr/open-method-responsetype-set-sync.htm	XMLHttpRequest: open() sync request not allowed if responseType is set (blob)
-xhr/open-method-responsetype-set-sync.htm	XMLHttpRequest: open() sync request not allowed if responseType is set (document)
-xhr/open-method-responsetype-set-sync.htm	XMLHttpRequest: open() sync request not allowed if responseType is set (json)
-xhr/open-method-responsetype-set-sync.htm	XMLHttpRequest: open() sync request not allowed if responseType is set (text)
 xhr/open-referer.htm	XMLHttpRequest: open() - value of Referer header
 xhr/open-send-during-abort.htm	-
 xhr/open-send-during-abort.htm	XMLHttpRequest: open() during abort()
@@ -261,6 +257,7 @@ xhr/responsexml-non-well-formed.htm	XMLHttpRequest: responseXML non well-formed 
 xhr/security-consideration.sub.html	ProgressEvent: security consideration
 xhr/send-accept-language.htm	Send "sensible" default value, whatever that means
 xhr/send-after-setting-document-domain.htm	-
+xhr/send-after-setting-document-domain.htm	All tests ran
 xhr/send-authentication-basic-repeat-no-args.htm	XMLHttpRequest: send() - "Basic" authenticated requests with user name and password passed to open() in first request, without in second
 xhr/send-authentication-basic-setrequestheader-and-arguments.htm	XMLHttpRequest: send() - "Basic" authenticated request using setRequestHeader() and open() arguments (asserts header wins)
 xhr/send-authentication-basic-setrequestheader-existing-session.htm	XMLHttpRequest: send() - "Basic" authenticated request using setRequestHeader() when there is an existing session
@@ -362,8 +359,6 @@ xhr/sync-xhr-supported-by-permissions-policy.tentative.html	document.permissions
 xhr/template-element.html	XMLHttpRequest: template element parsing
 xhr/template-element.html	XMLHttpRequest: template element parsing 1
 xhr/template-element.html	XMLHttpRequest: template element parsing 2
-xhr/timeout-sync.htm	open() with async false when timeout is set
-xhr/timeout-sync.htm	setting timeout attribute on sync request
 xhr/xhr-authorization-redirect.any.html	-
 xhr/xhr-authorization-redirect.any.html	getAuthorizationHeaderValue - cross origin redirection
 xhr/xhr-authorization-redirect.any.html	getAuthorizationHeaderValue - no redirection
@@ -379,11 +374,9 @@ xhr/xmlhttprequest-sync-not-hang-scriptloader-subframe.html	-
 xhr/xmlhttprequest-sync-not-hang-scriptloader.html	-
 xhr/xmlhttprequest-sync-not-hang-scriptloader.html	Ensure that an async script added during a defer script that then does a\n  sync XHR still runs
 xhr/xmlhttprequest-timeout-aborted.html	-
-xhr/xmlhttprequest-timeout-abortedonmain.html	-
 xhr/xmlhttprequest-timeout-overrides.html	-
 xhr/xmlhttprequest-timeout-overridesexpires.html	-
 xhr/xmlhttprequest-timeout-simple.html	-
-xhr/xmlhttprequest-timeout-synconmain.html	-
 xhr/xmlhttprequest-timeout-twice.html	-
 xhr/xmlhttprequest-timeout-worker-aborted.html	-
 xhr/xmlhttprequest-timeout-worker-overrides.html	-

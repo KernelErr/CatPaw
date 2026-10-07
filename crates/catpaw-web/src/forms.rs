@@ -12,7 +12,7 @@ use crate::collections::{self, ListSource};
 use crate::element::{self, child_text_content};
 use crate::events::{self, Event, EventData};
 use crate::generated::{self as web, InterfaceId};
-use crate::page::{Cx, NavigationRequest};
+use crate::page::{Cx, NavigationRequest, PageState};
 use crate::{Web, file_api, node};
 
 fn is_html(dom: &Dom, el: NodeId, local: &str) -> bool {
@@ -105,6 +105,42 @@ fn set_selectedness(cx: &Cx<'_>, option: NodeId, value: bool) {
         .entry(option)
         .or_default()
         .selected = Some(value);
+    // Script decided: the select shows what it was told, even nothing.
+    let select = {
+        let dom = cx.dom();
+        dom.ancestors(option).find(|&a| is_html(&dom, a, "select"))
+    };
+    if let Some(select) = select {
+        cx.page
+            .form_state
+            .borrow_mut()
+            .entry(select)
+            .or_default()
+            .no_fallback = true;
+    }
+}
+
+/// The selectedness setting algorithm runs again for `select`: with
+/// nothing selected, a single select shows its first option.
+pub(crate) fn selectedness_reset(page: &PageState, select: NodeId) {
+    if let Some(state) = page.form_state.borrow_mut().get_mut(&select) {
+        state.no_fallback = false;
+    }
+}
+
+/// Nodes were inserted or are being removed: the selects they sit in run
+/// the selectedness setting algorithm again.
+pub(crate) fn options_changed(page: &PageState, nodes: &[NodeId]) {
+    let selects: Vec<NodeId> = {
+        let dom = page.dom.borrow();
+        nodes
+            .iter()
+            .filter_map(|&n| dom.ancestors(n).find(|&a| is_html(&dom, a, "select")))
+            .collect()
+    };
+    for select in selects {
+        selectedness_reset(page, select);
+    }
 }
 
 /// Selects an option; in a single-select, the others become unselected.
@@ -146,7 +182,13 @@ pub(crate) fn selected_options(cx: &Cx<'_>, select: NodeId) -> Vec<NodeId> {
         .copied()
         .filter(|&o| is_selected(cx, o))
         .collect();
-    if selected.is_empty() && !multiple {
+    let no_fallback = cx
+        .page
+        .form_state
+        .borrow()
+        .get(&select)
+        .is_some_and(|s| s.no_fallback);
+    if selected.is_empty() && !multiple && !no_fallback {
         let dom = cx.dom();
         if let Some(first) = options.iter().copied().find(|&o| !is_disabled(&dom, o)) {
             selected.push(first);

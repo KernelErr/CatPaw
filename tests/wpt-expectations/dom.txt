@@ -60,28 +60,6 @@ dom/events/CustomEvent.html	initCustomEvent's default parameter values.
 dom/events/Event-constructors.any.html	Event constructors 3
 dom/events/Event-constructors.any.html	Event constructors 4
 dom/events/Event-dispatch-click.html	-
-dom/events/Event-dispatch-click.html	basic with click()
-dom/events/Event-dispatch-click.html	basic with dispatchEvent()
-dom/events/Event-dispatch-click.html	disabled checkbox should be checked from dispatchEvent(new MouseEvent("click"))
-dom/events/Event-dispatch-click.html	disabled checkbox should get legacy-canceled-activation behavior
-dom/events/Event-dispatch-click.html	disabled checkbox still has activation behavior, part 2
-dom/events/Event-dispatch-click.html	disabled radio should be checked from dispatchEvent(new MouseEvent("click"))
-dom/events/Event-dispatch-click.html	disabled radio should get legacy-canceled-activation behavior
-dom/events/Event-dispatch-click.html	disabled radio still has activation behavior
-dom/events/Event-dispatch-click.html	disabling checkbox in onclick listener shouldn't suppress onchange
-dom/events/Event-dispatch-click.html	disabling checkbox in onclick listener shouldn't suppress oninput
-dom/events/Event-dispatch-click.html	disabling radio in onclick listener shouldn't suppress onchange
-dom/events/Event-dispatch-click.html	disabling radio in onclick listener shouldn't suppress oninput
-dom/events/Event-dispatch-click.html	disconnected checkbox should be checked
-dom/events/Event-dispatch-click.html	disconnected checkbox should be checked from dispatchEvent(new MouseEvent('click'))
-dom/events/Event-dispatch-click.html	disconnected radio should be checked
-dom/events/Event-dispatch-click.html	disconnected radio should be checked from dispatchEvent(new MouseEvent('click'))
-dom/events/Event-dispatch-click.html	event state during post-click handling
-dom/events/Event-dispatch-click.html	look at parents when event bubbles
-dom/events/Event-dispatch-click.html	pick the first with activation behavior <a href>
-dom/events/Event-dispatch-click.html	pick the first with activation behavior <input type=checkbox>
-dom/events/Event-dispatch-click.html	pick the first with activation behavior <input type=radio>
-dom/events/Event-dispatch-click.html	redispatch during post-click handling
 dom/events/Event-dispatch-detached-input-and-change.html	attached checkbox should emit input and change events on click().
 dom/events/Event-dispatch-detached-input-and-change.html	attached checkbox should emit input and change events on dispatchEvent(new MouseEvent('click')).
 dom/events/Event-dispatch-detached-input-and-change.html	attached radio should emit input and change events on click().
@@ -245,7 +223,6 @@ dom/events/non-cancelable-when-passive/synthetic-events-cancelable.html	Syntheti
 dom/events/non-cancelable-when-passive/synthetic-events-cancelable.html	Synthetic touchmove event with interface TouchEvent is not cancelable
 dom/events/non-cancelable-when-passive/synthetic-events-cancelable.html	Synthetic touchstart event with interface TouchEvent is not cancelable
 dom/events/pointer-event-document-move.html	Moving a node to new document should move the registered event listeners together
-dom/events/preventDefault-during-activation-behavior.html	behavior of preventDefault during activation behavior
 dom/events/relatedTarget.window.html	Reset if target pointed to a shadow tree
 dom/events/relatedTarget.window.html	Reset if target pointed to a shadow tree pre-dispatch
 dom/events/relatedTarget.window.html	Reset targets before activation behavior
@@ -417,7 +394,6 @@ dom/nodes/CharacterData-surrogates.html	Text.replaceData() splitting and creatin
 dom/nodes/CharacterData-surrogates.html	Text.substringData() splitting surrogate pairs
 dom/nodes/Comment-constructor.html	-
 dom/nodes/Comment-constructor.html	new Comment() should get the correct ownerDocument across globals
-dom/nodes/DOMImplementation-createDocument-no-browsing-context.html	createHTMLDocument: iframe should not load in a document without a browsing context
 dom/nodes/DOMImplementation-createDocument-with-null-browsing-context-crash.html	-
 dom/nodes/DOMImplementation-createDocument.html	-
 dom/nodes/DOMImplementation-createHTMLDocument-with-null-browsing-context-crash.html	-
@@ -698,10 +674,6 @@ dom/nodes/crashtests/documentElement-remove-descendant-query.html	-
 dom/nodes/crashtests/multiple-append-mutated-in-unload-document.https.html	-
 dom/nodes/crashtests/multiple-append-mutated-in-unload.https.html	-
 dom/nodes/create-element-realm-after-adoption.html	-
-dom/nodes/getElementById-namespaced-id.html	append a namespaced ID preserves ID lookup and form association
-dom/nodes/getElementById-namespaced-id.html	change a namespaced ID preserves ID lookup and form association
-dom/nodes/getElementById-namespaced-id.html	remove a namespaced ID preserves ID lookup and form association
-dom/nodes/getElementById-namespaced-id.html	replace a namespaced ID preserves ID lookup and form association
 dom/nodes/getElementsByClassName-20.htm	get elements in document then add element to collection
 dom/nodes/getElementsByClassName-21.htm	delete element from collection
 dom/nodes/getElementsByClassName-22.htm	move item in collection order
@@ -710,9 +682,7 @@ dom/nodes/getElementsByClassName-31.htm	-
 dom/nodes/getElementsByClassName-31.htm	getElementsByClassName across documents
 dom/nodes/getElementsByClassNameFrame.htm	-
 dom/nodes/insertBefore-iframe-crash.html	-
-dom/nodes/insertion-removing-steps/Node-append-form-and-script-from-fragment.html	When adding a script+form in a fragment and the form matches an associated element, the script that checks whether the button is associated to the form should run after inserting the form
 dom/nodes/insertion-removing-steps/Node-append-meta-referrer-and-script-from-fragment.html	<meta name=referrer> gets processed and applied in the post-insertion steps
-dom/nodes/insertion-removing-steps/Node-appendChild-script-and-button-from-div.html	Script inserted before a form-associated button can observe the button's form, because by the time the script executes, the DOM insertion that associates the button with the form is already done
 dom/nodes/insertion-removing-steps/Node-appendChild-script-and-default-style-meta-from-fragment.html	Inserting <meta> that uses alternate stylesheets, applies the style during DOM post-insertion steps
 dom/nodes/insertion-removing-steps/Node-appendChild-script-and-iframe.html	Script inserted after an iframe in the same appendChild() call can observe the iframe's non-null contentWindow
 dom/nodes/insertion-removing-steps/Node-appendChild-script-and-source-from-fragment.html	Empty <source> immediately sets media.networkState during DOM insertion, so that an earlier-running script can observe networkState
@@ -889,7 +859,6 @@ dom/nodes/moveBefore/style-applies.html	Moving a style inside the document shoul
 dom/nodes/moveBefore/stylesheet-cascade-order.html	Moving loaded link stylesheets updates their cascade order
 dom/nodes/moveBefore/stylesheet-no-refetch.html	Moving a loaded link stylesheet preserves its resource
 dom/nodes/moveBefore/throws-exception.html	moveBefore() on a cross-document target node
-dom/nodes/namespaced-attribute-mutations.html	A namespaced selected attribute does not change an option's selectedness
 dom/nodes/namespaced-attribute-mutations.html	A namespaced type attribute does not change an input's state
 dom/nodes/namespaced-attribute-mutations.html	append a namespaced event handler attribute preserves an HTML event handler
 dom/nodes/namespaced-attribute-mutations.html	append a namespaced event handler attribute preserves an SVG event handler

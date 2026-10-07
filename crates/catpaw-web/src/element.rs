@@ -90,6 +90,12 @@ fn attribute_changed(
     if matches!(local, "width" | "height") && cx.dom().is_html_element(el, "canvas") {
         crate::canvas::size_changed(cx.page, el);
     }
+    if matches!(local, "multiple" | "size")
+        && namespace.unwrap_or_default().is_empty()
+        && cx.dom().is_html_element(el, "select")
+    {
+        crate::forms::selectedness_reset(cx.page, el);
+    }
 }
 
 /// Sets the null-namespace attribute `local`.

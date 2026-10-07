@@ -10,11 +10,11 @@ semantic snapshot with stable element references, precise "the page has
 settled" signals, diffs instead of re-dumps, deterministic time, and cheap
 isolated contexts.
 
-> Status: **pre-alpha**. Milestones M0 ("fetch & read") and M1 ("scripts
-> run", JavaScript via Boa) are complete; M2 ("interact") is in progress.
-> See the roadmap below.
+> Status: **pre-alpha**. Milestones M0 ("fetch & read"), M1 ("scripts
+> run", JavaScript via Boa) and M2 ("interact") are complete; M3 (the
+> agent API) is next. See the roadmap below.
 >
-> M2 so far: layout. Block, flex and grid boxes are laid out by Taffy and
+> What M2 brought: layout. Block, flex and grid boxes are laid out by Taffy and
 > inline content shaped and line-broken by Parley over a bundled font set,
 > only when something asks for geometry; the CSSOM View answers from it
 > (`getBoundingClientRect`, `getClientRects`, `offset*`/`client*`/`scroll*`,
@@ -79,12 +79,13 @@ isolated contexts.
 > React, Vue, Svelte, Lit, htmx and Alpine sites run; the Boa engine is
 > vendored with fixes described in `vendor/`. web-platform-tests run in CI
 > against recorded expectations, served by an in-process stand-in for WPT's
-> server and the Python handlers its fetch and XHR tests use: `dom` 2978 of
-> 4246 subtests pass, `html/dom` 582 of 1066, `fetch/api` 1908 of 2237,
-> `xhr` 859 of 1200, `css/cssom-view` 478 of 1198 (much of the rest needs iframes, layout, or server
+> server and the Python handlers its fetch and XHR tests use: `dom` 2976 of
+> 4213 subtests pass, `html/dom` 582 of 1066, `fetch/api` 1908 of 2237,
+> `xhr` 870 of 1205, `css/cssom-view` 478 of 1198 (much of the rest needs
+> frames or workers the test harness does not run, layout, or server
 > behaviour the stand-in does not emulate). Not there yet: images,
-> gradients and rounded corners in screenshots, tables as a grid, images' intrinsic sizes, canvas, media,
-> workers, WebAssembly, and the members of HTML elements that go beyond
+> gradients and rounded corners in screenshots, tables as a grid, images' intrinsic sizes, media,
+> WebAssembly, and the members of HTML elements that go beyond
 > their attributes.
 >
 > What works without JavaScript: HTTP/1.1 and HTTP/2 over rustls,
@@ -158,7 +159,7 @@ checked-in output, `--list <Interface>` shows what an interface offers).
 |---|---|---|
 | M0 fetch & read (done) | HTTP/1.1+2, cookies, Web Bot Auth signing, HTML parsing into the arena DOM, UA + author stylesheets via Stylo, CST snapshot v0, markdown/text/forms views, CLI | `catpaw fetch … --snapshot` works on real pages; WPT tree-construction suite runs in CI with recorded expectations |
 | M1 scripts run (done) | Boa realms, generated bindings, event loop with virtual time, parser/script interleaving, fetch/XHR, script budget, in-process WPT runner (in place of the WebDriver subset first planned) | WPT `dom/`, `html/dom/`, `fetch/api/`, `xhr/` subsets pass against recorded expectations; React and Vue apps hydrate server-rendered markup (timed in the test suite) |
-| M2 interact | Layout, hit-testing, input events, forms, navigation and history, iframes and popups, storage, observers, screenshots, Canvas 2D, Web Crypto, WebSocket, Workers | Log in to a real site; a Turnstile checkbox click completes |
+| M2 interact (done) | Layout, hit-testing, input events, forms, navigation and history, iframes and popups, storage, observers, screenshots, Canvas 2D, Web Crypto, WebSocket, Workers | Log in to a real site; the Turnstile widget completes (done with the test site key: the widget's frame and worker run, the page's callback receives the token) |
 | M3 agent API | JSON-RPC/WS, MCP, snapshot diffs, settledness, action consequences, checkpoints, HAR record/replay, SDKs | An agent completes WebArena tasks over MCP |
 | M4 fidelity & challenges | Challenge detection, human hand-off, test zone with each Cloudflare challenge mode, Signed Agent registration | Measured pass rates; hand-off end to end |
 | M5 scale & compat | Multi-tenant limits, OpenTelemetry, Docker, CDP subset, V8 backend parity | 1000 contexts on one host; puppeteer-core smoke tests |

@@ -683,6 +683,7 @@ pub(crate) fn nodes_inserted(cx: &mut Cx<'_>, parent: NodeId, inserted: &[NodeId
     }
     crate::custom_elements::nodes_inserted(cx.page, inserted);
     crate::frames::nodes_inserted(cx.page, inserted);
+    crate::forms::options_changed(cx.page, inserted);
     for link in links {
         stylesheets::link_changed(cx.page, link, false);
     }

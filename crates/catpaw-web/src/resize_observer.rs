@@ -113,23 +113,25 @@ pub(crate) fn update(cx: &mut Cx<'_>) {
     page.resize.seen.set(Some(layout::geometry_version(page)));
     for observer in observers {
         let (callback, entries) = {
-            let Some((callback, measured)) =
-                page.try_with::<ResizeObserverObject, _>(observer, |o| {
-                    let measured: Vec<(usize, Sizes)> = o
-                        .targets
-                        .iter()
-                        .enumerate()
-                        .map(|(i, t)| (i, measure(page, t.node)))
-                        .collect();
-                    (o.callback.clone(), measured)
-                })
-            else {
+            // Measured with the object arena free: a layout can touch
+            // other objects (adopted style sheets).
+            let Some((callback, nodes)) = page.try_with::<ResizeObserverObject, _>(observer, |o| {
+                let nodes: Vec<NodeId> = o.targets.iter().map(|t| t.node).collect();
+                (o.callback.clone(), nodes)
+            }) else {
                 continue;
             };
+            let measured: Vec<(usize, Sizes)> = nodes
+                .iter()
+                .enumerate()
+                .map(|(i, node)| (i, measure(page, *node)))
+                .collect();
             let mut changed = Vec::new();
             page.try_with::<ResizeObserverObject, _>(observer, |o| {
                 for (index, sizes) in measured {
-                    let target = &mut o.targets[index];
+                    let Some(target) = o.targets.get_mut(index) else {
+                        continue;
+                    };
                     let watched = match target.box_ {
                         web::ResizeObserverBoxOptions::BorderBox => sizes.border,
                         web::ResizeObserverBoxOptions::ContentBox => sizes.content,

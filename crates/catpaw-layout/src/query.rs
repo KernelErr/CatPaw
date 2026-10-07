@@ -134,6 +134,29 @@ impl LayoutTree {
         node == ancestor || dom.ancestors(node).any(|a| a == ancestor)
     }
 
+    /// The ascent and descent of an inline node's first font, in CSS
+    /// pixels: the height of its box on a line.
+    fn inline_content_area(&self, node: NodeId, owner: BoxId) -> (f32, f32) {
+        let style = self
+            .inline_style(node)
+            .cloned()
+            .unwrap_or_else(|| self.boxes[owner].style.clone());
+        let font = style.get_font();
+        let size = font.font_size.used_size.0.px();
+        let metrics = {
+            let mut fonts = self.fonts.lock().unwrap_or_else(|e| e.into_inner());
+            fonts.metrics(
+                catpaw_style::fonts::query_families(font).into_iter(),
+                catpaw_style::fonts::query_attributes(font),
+                size,
+            )
+        };
+        match metrics {
+            Some(m) => (m.ascent, m.descent),
+            None => (size * 0.8, size * 0.2),
+        }
+    }
+
     /// The line fragments of an inline node in the context `owner`.
     fn inline_fragments(&self, dom: &Dom, owner: BoxId, node: NodeId) -> Vec<Rect> {
         let b = &self.boxes[owner];
@@ -167,7 +190,18 @@ impl LayoutTree {
                             continue;
                         };
                         if child_node != node && Self::within(dom, child_node, node) {
-                            let rect = self.border_box(child);
+                            // An atomic child widens the inline's fragment
+                            // but does not heighten it: the inline's box is
+                            // its own font's content area on the baseline.
+                            let child_rect = self.border_box(child);
+                            let (ascent, descent) = self.inline_content_area(node, owner);
+                            let baseline = origin_y + line.metrics().baseline;
+                            let rect = Rect::new(
+                                child_rect.x,
+                                baseline - ascent,
+                                child_rect.width,
+                                ascent + descent,
+                            );
                             line_rect = Some(line_rect.map_or(rect, |r| r.union(&rect)));
                         }
                     }

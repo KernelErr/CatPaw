@@ -343,6 +343,10 @@ pub struct FormControlState {
     pub checked: Option<bool>,
     /// An option's selectedness, once script or the user set it.
     pub selected: Option<bool>,
+    /// A select whose selectedness script set: no option is shown
+    /// selected on its behalf until the selectedness setting algorithm
+    /// runs again (options change, `multiple`/`size` change).
+    pub no_fallback: bool,
 }
 
 #[derive(Default, Debug)]

@@ -203,6 +203,17 @@ impl web::WorkerImpl for Web {
         });
         cx.pin(object);
         cx.page.workers.objects.borrow_mut().insert(id, object);
+        if cx.page.frames.id().is_none() {
+            // No embedder runs workers for this page (a bare page state,
+            // as in the test harness): the worker fails to start.
+            worker_error(
+                cx.page,
+                id,
+                "Workers are not available for this page".to_string(),
+                true,
+            );
+            return Ok(object);
+        }
         cx.page.workers.push(WorkerCommand::Spawn {
             worker: id,
             url,
