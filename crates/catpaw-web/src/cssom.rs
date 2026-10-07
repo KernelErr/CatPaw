@@ -302,8 +302,11 @@ impl web::StyleSheetImpl for Web {
         sheet(cx, this, |s| s.href.clone())
     }
 
-    fn owner_node(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>> {
-        sheet(cx, this, |s| s.owner)
+    fn owner_node(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+    ) -> Fallible<Option<web::ElementOrProcessingInstruction>> {
+        Ok(sheet(cx, this, |s| s.owner)?.map(web::ElementOrProcessingInstruction::Element))
     }
 
     fn parent_style_sheet(_cx: &mut Cx<'_>, _this: ObjectId) -> Fallible<Option<ObjectId>> {

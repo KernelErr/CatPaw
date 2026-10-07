@@ -535,6 +535,17 @@ impl Dom {
         self.create(NodeKind::Comment(text.into()))
     }
 
+    pub fn create_processing_instruction(
+        &mut self,
+        target: impl Into<String>,
+        data: impl Into<String>,
+    ) -> NodeId {
+        self.create(NodeKind::ProcessingInstruction {
+            target: target.into(),
+            data: data.into(),
+        })
+    }
+
     pub fn create_fragment(&mut self, kind: FragmentKind) -> NodeId {
         self.create(NodeKind::DocumentFragment(kind))
     }

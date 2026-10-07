@@ -27,9 +27,12 @@ isolated contexts.
 > values and digests, the font-loading and selection APIs in their
 > no-layout forms, and console APIs, on an event loop with virtual time.
 > React, Vue, Svelte, Lit, htmx and Alpine sites run; the Boa engine is
-> vendored with fixes described in `vendor/`. Not there yet: layout, canvas,
-> media, workers, WebAssembly, `Range`, and the members of HTML elements
-> that go beyond their attributes.
+> vendored with fixes described in `vendor/`. web-platform-tests run in CI
+> against recorded expectations: `dom` 2732 of 4133 subtests pass, `html/dom`
+> 485 of 1056, `fetch/api` 761 of 1961, `xhr` 253 of 940 (much of the rest
+> needs iframes, layout or WPT's Python handlers). Not there yet: layout,
+> canvas, media, workers, WebAssembly, `Range`, and the members of HTML
+> elements that go beyond their attributes.
 >
 > What works without JavaScript: HTTP/1.1 and HTTP/2 over rustls,
 > redirects, cookies, gzip/brotli/zstd, encoding sniffing, Web Bot Auth
@@ -84,7 +87,11 @@ The library crates are published too: `catpaw-net`, `catpaw-fetch`, `catpaw-dom`
 
 Developer tasks: `cargo xtask tree-construction` runs the html5lib
 tree-construction suite from a pinned, sparse web-platform-tests checkout
-(`tests/wpt.lock`) against `tests/tree-construction-expectations.txt`.
+(`tests/wpt.lock`) against `tests/tree-construction-expectations.txt`;
+`cargo xtask wpt --include dom --include html/dom …` runs testharness.js
+tests from the same checkout in CatPaw pages, served by an in-process stand-in
+for WPT's server, against `tests/wpt-expectations/<dir>.txt` (the known
+failures; `--update-expectations` rewrites them).
 `cargo xtask bindgen` regenerates the JavaScript bindings from the Web IDL
 corpus and `crates/catpaw-webidl/bindings.toml` (`--check` verifies the
 checked-in output, `--list <Interface>` shows what an interface offers).

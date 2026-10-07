@@ -1022,6 +1022,22 @@ impl web::ElementImpl for Web {
         ))
     }
 
+    fn get_elements_by_tag_name_ns(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        namespace: Option<String>,
+        local_name: String,
+    ) -> Fallible<ObjectId> {
+        Ok(collections::html_collection(
+            cx.page,
+            ListSource::TagNameNS {
+                root: this,
+                namespace: namespace.unwrap_or_default(),
+                local: local_name,
+            },
+        ))
+    }
+
     fn get_elements_by_class_name(
         cx: &mut Cx<'_>,
         this: NodeId,
@@ -1726,7 +1742,7 @@ pub fn interface_for_node(dom: &Dom, id: NodeId) -> InterfaceId {
         NodeKind::Doctype(_) => InterfaceId::DocumentType,
         NodeKind::Text(_) => InterfaceId::Text,
         NodeKind::Comment(_) => InterfaceId::Comment,
-        NodeKind::ProcessingInstruction { .. } => InterfaceId::CharacterData,
+        NodeKind::ProcessingInstruction { .. } => InterfaceId::ProcessingInstruction,
         NodeKind::DocumentFragment(FragmentKind::ShadowRoot { .. }) => InterfaceId::ShadowRoot,
         NodeKind::DocumentFragment(_) => InterfaceId::DocumentFragment,
         NodeKind::Element(el) => {

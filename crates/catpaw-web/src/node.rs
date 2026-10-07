@@ -1234,6 +1234,16 @@ impl web::TextImpl for Web {
     }
 }
 
+impl web::ProcessingInstructionImpl for Web {
+    fn target(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {
+        check(cx, this)?;
+        Ok(match cx.dom().kind(this) {
+            NodeKind::ProcessingInstruction { target, .. } => target.clone(),
+            _ => String::new(),
+        })
+    }
+}
+
 impl web::CommentImpl for Web {
     fn constructor(cx: &mut Cx<'_>, data: String) -> Fallible<NodeId> {
         Ok(cx.dom_mut().create_comment(data))

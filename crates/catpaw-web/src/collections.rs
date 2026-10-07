@@ -18,6 +18,12 @@ pub enum ListSource {
     ChildElements(NodeId),
     /// `getElementsByTagName`: the qualified name as given.
     TagName { root: NodeId, name: String },
+    /// `getElementsByTagNameNS`: `*` matches any namespace or local name.
+    TagNameNS {
+        root: NodeId,
+        namespace: String,
+        local: String,
+    },
     /// `getElementsByClassName`: the class tokens.
     ClassNames { root: NodeId, classes: Vec<String> },
     /// `document.getElementsByName`.
@@ -65,6 +71,23 @@ fn compute(dom: &Dom, source: &ListSource) -> Vec<NodeId> {
                         } else {
                             qualified_name(el) == *name
                         }
+                    })
+                })
+                .collect()
+        }
+        ListSource::TagNameNS {
+            root,
+            namespace,
+            local,
+        } => {
+            if !dom.contains(*root) {
+                return Vec::new();
+            }
+            dom.descendants(*root)
+                .filter(|&n| {
+                    dom.element(n).is_some_and(|el| {
+                        (namespace == "*" || *el.name.ns == **namespace)
+                            && (local == "*" || *el.name.local == **local)
                     })
                 })
                 .collect()

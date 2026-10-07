@@ -217,3 +217,18 @@ impl web::DOMParserImpl for Web {
         Ok(document)
     }
 }
+
+pub struct XMLSerializerObject;
+platform_object!(XMLSerializerObject, XMLSerializer);
+
+impl web::XMLSerializerImpl for Web {
+    fn constructor(cx: &mut Cx<'_>) -> Fallible<ObjectId> {
+        Ok(cx.page.alloc(XMLSerializerObject))
+    }
+
+    fn serialize_to_string(cx: &mut Cx<'_>, this: ObjectId, root: NodeId) -> Fallible<String> {
+        cx.page.with::<XMLSerializerObject, _>(this, |_| ())?;
+        node::check(cx, root)?;
+        Ok(catpaw_dom::serialize::to_xml(&cx.dom(), root))
+    }
+}

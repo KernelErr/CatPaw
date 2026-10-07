@@ -3916,9 +3916,13 @@ name = "xtask"
 version = "0.0.1"
 dependencies = [
  "anyhow",
+ "catpaw-bindings-boa",
  "catpaw-dom",
+ "catpaw-web",
  "catpaw-webidl",
  "clap",
+ "serde_json",
+ "url",
 ]
 
 [[package]]

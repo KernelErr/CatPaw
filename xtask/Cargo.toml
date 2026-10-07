@@ -11,4 +11,8 @@ description = "CatPaw developer tasks: test runners, code generation, fixture fe
 anyhow.workspace = true
 clap.workspace = true
 catpaw-dom = { path = "../crates/catpaw-dom" }
+catpaw-bindings-boa = { path = "../crates/catpaw-bindings-boa" }
+catpaw-web = { path = "../crates/catpaw-web" }
+serde_json.workspace = true
+url.workspace = true
 catpaw-webidl = { path = "../crates/catpaw-webidl" }

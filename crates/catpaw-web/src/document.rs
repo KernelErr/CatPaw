@@ -161,6 +161,22 @@ impl web::DocumentImpl for Web {
         ))
     }
 
+    fn get_elements_by_tag_name_ns(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        namespace: Option<String>,
+        local_name: String,
+    ) -> Fallible<ObjectId> {
+        Ok(collections::html_collection(
+            cx.page,
+            ListSource::TagNameNS {
+                root: this,
+                namespace: namespace.unwrap_or_default(),
+                local: local_name,
+            },
+        ))
+    }
+
     fn get_elements_by_class_name(
         cx: &mut Cx<'_>,
         this: NodeId,
@@ -250,6 +266,27 @@ impl web::DocumentImpl for Web {
     fn create_comment(cx: &mut Cx<'_>, this: NodeId, data: String) -> Fallible<NodeId> {
         let comment = cx.dom_mut().create_comment(data);
         Ok(created(cx, this, comment))
+    }
+
+    /// <https://dom.spec.whatwg.org/#dom-document-createprocessinginstruction>
+    fn create_processing_instruction(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        target: String,
+        data: String,
+    ) -> Fallible<NodeId> {
+        if !is_valid_element_name(&target) {
+            return Err(Exception::invalid_character(format!(
+                "'{target}' is not a valid processing instruction target"
+            )));
+        }
+        if data.contains("?>") {
+            return Err(Exception::invalid_character(
+                "The data must not contain '?>'",
+            ));
+        }
+        let pi = cx.dom_mut().create_processing_instruction(target, data);
+        Ok(created(cx, this, pi))
     }
 
     fn import_node(

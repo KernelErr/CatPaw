@@ -1,6 +1,7 @@
 //! `cargo xtask`: developer tasks that need more than a shell one-liner.
 
 mod bindgen;
+mod harness;
 mod tree_construction;
 mod wpt;
 
@@ -21,6 +22,12 @@ enum Cmd {
     TreeConstruction(tree_construction::Args),
     /// Regenerate the Web IDL bindings (or verify them with --check).
     Bindgen(bindgen::Args),
+    /// Run testharness.js tests from web-platform-tests in CatPaw pages and
+    /// compare the results with tests/wpt-expectations.
+    Wpt(harness::Args),
+    /// One web-platform-test in this process (what `wpt` runs per test).
+    #[command(hide = true)]
+    WptOne(harness::OneArgs),
     /// Fetch the pinned web-platform-tests commit into tests/wpt-src as a sparse,
     /// blobless checkout containing the given directories.
     WptFetch {
@@ -34,6 +41,8 @@ fn main() -> Result<()> {
     match Cli::parse().cmd {
         Cmd::TreeConstruction(args) => tree_construction::run(args),
         Cmd::Bindgen(args) => bindgen::run(args),
+        Cmd::Wpt(args) => harness::run(args),
+        Cmd::WptOne(args) => harness::run_one(args),
         Cmd::WptFetch { dirs } => {
             let root = wpt::workspace_root();
             let dirs: Vec<&str> = dirs.iter().map(String::as_str).collect();

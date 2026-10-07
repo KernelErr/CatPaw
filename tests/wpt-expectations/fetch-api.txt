@@ -1,0 +1,1267 @@
+# Known failures in web-platform-tests fetch/api: `<test>\t<subtest>` per line,
+# `-` for the harness itself; `skip <test>` for tests not run at all
+# (those the engine cannot finish in time). Regenerate with
+# `cargo xtask wpt --include fetch/api --update-expectations`.
+fetch/api/abort/cache.https.any.html	Signals are not stored in the cache API
+fetch/api/abort/cache.https.any.html	Signals are not stored in the cache API, even if they're already aborted
+fetch/api/abort/destroyed-context.html	-
+fetch/api/abort/destroyed-context.html	aborting a fetch in a destroyed context should not crash
+fetch/api/abort/general.any.html	-
+fetch/api/abort/general.any.html	Already aborted signal does not make request
+fetch/api/abort/general.any.html	Call text() twice on aborted response
+fetch/api/abort/general.any.html	Fetch aborted & connection closed when aborted after calling response.arrayBuffer()
+fetch/api/abort/general.any.html	Fetch aborted & connection closed when aborted after calling response.blob()
+fetch/api/abort/general.any.html	Fetch aborted & connection closed when aborted after calling response.bytes()
+fetch/api/abort/general.any.html	Fetch aborted & connection closed when aborted after calling response.formData()
+fetch/api/abort/general.any.html	Fetch aborted & connection closed when aborted after calling response.json()
+fetch/api/abort/general.any.html	Fetch aborted & connection closed when aborted after calling response.text()
+fetch/api/abort/general.any.html	Readable stream synchronously cancels with AbortError if aborted before reading
+fetch/api/abort/general.any.html	Signal on request object
+fetch/api/abort/general.any.html	Signal on request object should also have abort reason
+fetch/api/abort/general.any.html	Signal removed by setting to null
+fetch/api/abort/general.any.html	Signal state is cloned
+fetch/api/abort/general.any.html	Stream errors once aborted with abort reason. Underlying connection closed.
+fetch/api/abort/general.any.html	Stream errors once aborted, after reading. Underlying connection closed.
+fetch/api/abort/general.any.html	Stream errors once aborted. Underlying connection closed.
+fetch/api/abort/general.any.html	TypeError from request constructor takes priority - Bad cache init parameter value
+fetch/api/abort/general.any.html	TypeError from request constructor takes priority - Bad credentials init parameter value
+fetch/api/abort/general.any.html	TypeError from request constructor takes priority - Bad mode init parameter value
+fetch/api/abort/general.any.html	TypeError from request constructor takes priority - Bad redirect init parameter value
+fetch/api/abort/general.any.html	TypeError from request constructor takes priority - Bad referrerPolicy init parameter value
+fetch/api/abort/general.any.html	Underlying connection is closed when aborting after receiving response
+fetch/api/abort/general.any.html	Underlying connection is closed when aborting after receiving response - no-cors
+fetch/api/abort/general.any.html	response.arrayBuffer() rejects if already aborted
+fetch/api/abort/general.any.html	response.arrayBuffer() rejects with abort reason if already aborted
+fetch/api/abort/general.any.html	response.blob() rejects if already aborted
+fetch/api/abort/general.any.html	response.blob() rejects with abort reason if already aborted
+fetch/api/abort/general.any.html	response.bytes() rejects if already aborted
+fetch/api/abort/general.any.html	response.bytes() rejects with abort reason if already aborted
+fetch/api/abort/general.any.html	response.formData() rejects if already aborted
+fetch/api/abort/general.any.html	response.formData() rejects with abort reason if already aborted
+fetch/api/abort/general.any.html	response.json() rejects if already aborted
+fetch/api/abort/general.any.html	response.json() rejects with abort reason if already aborted
+fetch/api/abort/general.any.html	response.text() rejects if already aborted
+fetch/api/abort/general.any.html	response.text() rejects with abort reason if already aborted
+fetch/api/abort/keepalive.html	aborting a detached keepalive fetch should not do anything
+fetch/api/abort/keepalive.html	aborting a keepalive fetch should work
+fetch/api/abort/request.any.html	-
+fetch/api/abort/serviceworker-intercepted.https.html	Abort reason serialization happens on abort
+fetch/api/abort/serviceworker-intercepted.https.html	Already aborted request does not land in service worker
+fetch/api/abort/serviceworker-intercepted.https.html	Service Worker can observe the fetch abort and associated abort reason
+fetch/api/abort/serviceworker-intercepted.https.html	Stream errors once aborted.
+fetch/api/abort/serviceworker-intercepted.https.html	fetch() rejects with abort reason
+fetch/api/abort/serviceworker-intercepted.https.html	fetch() response body has abort reason
+fetch/api/abort/serviceworker-intercepted.https.html	response.arrayBuffer() rejects if already aborted
+fetch/api/abort/serviceworker-intercepted.https.html	response.blob() rejects if already aborted
+fetch/api/abort/serviceworker-intercepted.https.html	response.bytes() rejects if already aborted
+fetch/api/abort/serviceworker-intercepted.https.html	response.formData() rejects if already aborted
+fetch/api/abort/serviceworker-intercepted.https.html	response.json() rejects if already aborted
+fetch/api/abort/serviceworker-intercepted.https.html	response.text() rejects if already aborted
+fetch/api/basic/accept-header.any.html	Request through fetch should have 'accept' header with value '*/*'
+fetch/api/basic/accept-header.any.html	Request through fetch should have 'accept' header with value 'custom/*'
+fetch/api/basic/accept-header.any.html	Request through fetch should have 'accept-language' header with value 'bzh'
+fetch/api/basic/accept-header.any.html	Request through fetch should have a 'accept-language' header
+fetch/api/basic/block-mime-as-script.html	-
+fetch/api/basic/block-mime-as-script.html	Should fail loading empty script with audio/aiff MIME type
+fetch/api/basic/block-mime-as-script.html	Should fail loading empty script with audio/midi MIME type
+fetch/api/basic/block-mime-as-script.html	Should fail loading empty script with audio/whatever MIME type
+fetch/api/basic/block-mime-as-script.html	Should fail loading empty script with image/gif MIME type
+fetch/api/basic/block-mime-as-script.html	Should fail loading empty script with image/jpeg MIME type
+fetch/api/basic/block-mime-as-script.html	Should fail loading empty script with image/whatever MIME type
+fetch/api/basic/block-mime-as-script.html	Should fail loading empty script with text/csv MIME type
+fetch/api/basic/block-mime-as-script.html	Should fail loading empty script with video/avi MIME type
+fetch/api/basic/block-mime-as-script.html	Should fail loading empty script with video/fli MIME type
+fetch/api/basic/block-mime-as-script.html	Should fail loading empty script with video/whatever MIME type
+fetch/api/basic/block-mime-as-script.html	Should fail loading non-empty script with audio/aiff MIME type
+fetch/api/basic/block-mime-as-script.html	Should fail loading non-empty script with audio/midi MIME type
+fetch/api/basic/block-mime-as-script.html	Should fail loading non-empty script with audio/whatever MIME type
+fetch/api/basic/block-mime-as-script.html	Should fail loading non-empty script with image/gif MIME type
+fetch/api/basic/block-mime-as-script.html	Should fail loading non-empty script with image/jpeg MIME type
+fetch/api/basic/block-mime-as-script.html	Should fail loading non-empty script with image/whatever MIME type
+fetch/api/basic/block-mime-as-script.html	Should fail loading non-empty script with text/csv MIME type
+fetch/api/basic/block-mime-as-script.html	Should fail loading non-empty script with video/avi MIME type
+fetch/api/basic/block-mime-as-script.html	Should fail loading non-empty script with video/fli MIME type
+fetch/api/basic/block-mime-as-script.html	Should fail loading non-empty script with video/whatever MIME type
+fetch/api/basic/conditional-get.any.html	Testing conditional GET with ETags
+fetch/api/basic/error-after-response.any.html	Response reader closed promise should reject after a network error happening after resolving fetch promise
+fetch/api/basic/error-after-response.any.html	Response reader read() promise should reject after a network error happening after resolving fetch promise
+fetch/api/basic/fetch-in-popup-from-iframe.html	Fetch from initial empty document in popup opened from iframe
+fetch/api/basic/gc.any.html	GC/CC should not abruptly close the stream while being consumed by Response
+fetch/api/basic/gc.any.html	GC/CC should not discard a FormData body's Blob before its stream is read
+fetch/api/basic/gc.any.html	GC/CC should not discard a Request's FormData body Blob before it is read
+fetch/api/basic/gc.any.html	GC/CC should not discard a Response's FormData body Blob before it is read
+fetch/api/basic/gc.any.html	GC/CC should not discard a cloned FormData body's Blob before it is read
+fetch/api/basic/gc.any.html	GC/CC should not discard a moved FormData body's Blob before it is read
+fetch/api/basic/header-value-combining.any.html	response.headers.get('content-length') expects 0
+fetch/api/basic/header-value-combining.any.html	response.headers.get('content-length') expects 0, 0
+fetch/api/basic/header-value-combining.any.html	response.headers.get('double-trouble') expects , 
+fetch/api/basic/header-value-combining.any.html	response.headers.get('foo-test') expects 1, 2, 3
+fetch/api/basic/header-value-combining.any.html	response.headers.get('heya') expects , , 1, , , 2
+fetch/api/basic/header-value-combining.any.html	response.headers.get('www-authenticate') expects 1, 2, 3, 4
+fetch/api/basic/header-value-null-byte.any.html	Ensure fetch() rejects null bytes in headers
+fetch/api/basic/http-response-code.any.html	Fetch on 425 response should not be retried for non TLS early data.
+fetch/api/basic/integrity.sub.any.html	CORS invalid integrity
+fetch/api/basic/integrity.sub.any.html	Invalid integrity
+fetch/api/basic/integrity.sub.any.html	Multiple integrities: both are invalid
+fetch/api/basic/integrity.sub.any.html	Multiple integrities: invalid stronger than valid
+fetch/api/basic/integrity.sub.any.html	SHA-* integrity for opaque response
+fetch/api/basic/keepalive.any.html	-
+fetch/api/basic/mediasource.window.html	Cannot fetch blob: URL from a MediaSource
+fetch/api/basic/mode-no-cors.sub.any.html	Fetch ../resources/top.txt with no-cors mode
+fetch/api/basic/mode-no-cors.sub.any.html	Fetch http://web-platform.test:8000/fetch/api/resources/top.txt with no-cors mode
+fetch/api/basic/mode-same-origin.any.html	Fetch /fetch/api/basic/../resources/redirect.py?location=http://www1.web-platform.test:8000/fetch/api/resources/top.txt with same-origin mode
+fetch/api/basic/mode-same-origin.any.html	Fetch /fetch/api/basic/../resources/redirect.py?location=https://web-platform.test:8443/fetch/api/resources/top.txt with same-origin mode
+fetch/api/basic/referrer.any.html	Referrer with credentials should be stripped
+fetch/api/basic/referrer.any.html	Referrer with fragment ID should be stripped
+fetch/api/basic/referrer.any.html	origin-when-cross-origin policy on a cross-origin URL
+fetch/api/basic/referrer.any.html	origin-when-cross-origin policy on a cross-origin URL after same-origin redirection
+fetch/api/basic/referrer.any.html	origin-when-cross-origin policy on a same-origin URL
+fetch/api/basic/referrer.any.html	origin-when-cross-origin policy on a same-origin URL after cross-origin redirection
+fetch/api/basic/request-forbidden-headers.any.html	header X-HTTP-METHOD is allowed to use value ",TRACE",
+fetch/api/basic/request-forbidden-headers.any.html	header X-HTTP-METHOD is allowed to use value GET
+fetch/api/basic/request-forbidden-headers.any.html	header X-HTTP-METHOD is allowed to use value GETTRACE
+fetch/api/basic/request-forbidden-headers.any.html	header X-HTTP-METHOD-OVERRIDE is allowed to use value ",TRACE",
+fetch/api/basic/request-forbidden-headers.any.html	header X-HTTP-METHOD-OVERRIDE is allowed to use value GET
+fetch/api/basic/request-forbidden-headers.any.html	header X-HTTP-METHOD-OVERRIDE is allowed to use value GETTRACE
+fetch/api/basic/request-forbidden-headers.any.html	header X-METHOD-OVERRIDE is allowed to use value ",TRACE",
+fetch/api/basic/request-forbidden-headers.any.html	header X-METHOD-OVERRIDE is allowed to use value GET
+fetch/api/basic/request-forbidden-headers.any.html	header X-METHOD-OVERRIDE is allowed to use value GETTRACE
+fetch/api/basic/request-forbidden-headers.any.html	header x-http-method is allowed to use value ",TRACE",
+fetch/api/basic/request-forbidden-headers.any.html	header x-http-method is allowed to use value GET
+fetch/api/basic/request-forbidden-headers.any.html	header x-http-method is allowed to use value GETTRACE
+fetch/api/basic/request-forbidden-headers.any.html	header x-http-method-override is allowed to use value ",TRACE",
+fetch/api/basic/request-forbidden-headers.any.html	header x-http-method-override is allowed to use value GET
+fetch/api/basic/request-forbidden-headers.any.html	header x-http-method-override is allowed to use value GETTRACE
+fetch/api/basic/request-forbidden-headers.any.html	header x-method-override is allowed to use value ",TRACE",
+fetch/api/basic/request-forbidden-headers.any.html	header x-method-override is allowed to use value GET
+fetch/api/basic/request-forbidden-headers.any.html	header x-method-override is allowed to use value GETTRACE
+fetch/api/basic/request-headers-case.any.html	Multiple headers with the same name, different case (THIS-IS-A-TEST first)
+fetch/api/basic/request-headers-case.any.html	Multiple headers with the same name, different case (THIS-is-A-test first)
+fetch/api/basic/request-headers-nonascii.any.html	Non-ascii bytes in request headers
+fetch/api/basic/request-headers.any.html	-
+fetch/api/basic/request-headers.any.html	Fetch with GET
+fetch/api/basic/request-headers.any.html	Fetch with HEAD
+fetch/api/basic/request-headers.any.html	Fetch with POST with FormData body
+fetch/api/basic/request-headers.any.html	Fetch with POST with URLSearchParams body
+fetch/api/basic/request-headers.any.html	Fetch with POST with text body
+fetch/api/basic/request-headers.any.html	Fetch with POST without body
+fetch/api/basic/request-headers.any.html	Fetch with PUT with body
+fetch/api/basic/request-headers.any.html	Fetch with PUT without body
+fetch/api/basic/request-referrer-redirected-worker.html	-
+fetch/api/basic/request-referrer.any.html	about:client referrer
+fetch/api/basic/request-referrer.any.html	url referrer
+fetch/api/basic/request-upload-421.any.html	Fetch with POST with text body on 421 response should be retried once on new connection.
+fetch/api/basic/request-upload.any.html	Fetch with POST with ArrayBuffer body
+fetch/api/basic/request-upload.any.html	Fetch with POST with Blob body
+fetch/api/basic/request-upload.any.html	Fetch with POST with Blob body with mime type
+fetch/api/basic/request-upload.any.html	Fetch with POST with DataView body
+fetch/api/basic/request-upload.any.html	Fetch with POST with Float16Array body
+fetch/api/basic/request-upload.any.html	Fetch with POST with Float32Array body
+fetch/api/basic/request-upload.any.html	Fetch with POST with Float64Array body
+fetch/api/basic/request-upload.any.html	Fetch with POST with Int8Array body
+fetch/api/basic/request-upload.any.html	Fetch with POST with URLSearchParams body
+fetch/api/basic/request-upload.any.html	Fetch with POST with Uint8Array body
+fetch/api/basic/request-upload.any.html	Fetch with POST with text body
+fetch/api/basic/request-upload.any.html	Fetch with PUT with body
+fetch/api/basic/request-upload.h2.any.html	-
+fetch/api/basic/request-upload.h2.any.html	Feature detect for POST with ReadableStream
+fetch/api/basic/request-upload.h2.any.html	Feature detect for POST with ReadableStream, using request object
+fetch/api/basic/request-upload.h2.any.html	Fetch with POST with ReadableStream
+fetch/api/basic/request-upload.h2.any.html	Fetch with POST with ReadableStream on 421 response should return the response and not retry.
+fetch/api/basic/request-upload.h2.any.html	Fetch with POST with empty ReadableStream
+fetch/api/basic/request-upload.h2.any.html	ReadbleStream should be closed on signal.abort
+fetch/api/basic/request-upload.h2.any.html	Synchronous feature detect
+fetch/api/basic/request-upload.h2.any.html	Synchronous feature detect fails if feature unsupported
+fetch/api/basic/response-null-body.any.html	Response.body is null for responses with method=HEAD
+fetch/api/basic/response-null-body.any.html	Response.body is null for responses with status=204 (method=GET)
+fetch/api/basic/response-null-body.any.html	Response.body is null for responses with status=204 (method=OPTIONS)
+fetch/api/basic/response-null-body.any.html	Response.body is null for responses with status=204 (method=POST)
+fetch/api/basic/response-null-body.any.html	Response.body is null for responses with status=205 (method=GET)
+fetch/api/basic/response-null-body.any.html	Response.body is null for responses with status=205 (method=OPTIONS)
+fetch/api/basic/response-null-body.any.html	Response.body is null for responses with status=205 (method=POST)
+fetch/api/basic/response-null-body.any.html	Response.body is null for responses with status=304 (method=GET)
+fetch/api/basic/response-null-body.any.html	Response.body is null for responses with status=304 (method=OPTIONS)
+fetch/api/basic/response-null-body.any.html	Response.body is null for responses with status=304 (method=POST)
+fetch/api/basic/scheme-blob.sub.any.html	-
+fetch/api/basic/scheme-data.any.html	Fetching [HEAD] data:,response%27s%20body is OK
+fetch/api/basic/status.h2.any.html	statusText over H2 for status 200 should be the empty string
+fetch/api/basic/status.h2.any.html	statusText over H2 for status 210 should be the empty string
+fetch/api/basic/status.h2.any.html	statusText over H2 for status 400 should be the empty string
+fetch/api/basic/status.h2.any.html	statusText over H2 for status 404 should be the empty string
+fetch/api/basic/status.h2.any.html	statusText over H2 for status 410 should be the empty string
+fetch/api/basic/status.h2.any.html	statusText over H2 for status 500 should be the empty string
+fetch/api/basic/status.h2.any.html	statusText over H2 for status 502 should be the empty string
+fetch/api/basic/stream-response.any.html	Stream response's body when content-type is not present
+fetch/api/basic/stream-response.any.html	Stream response's body when content-type is present
+fetch/api/basic/text-utf8.any.html	UTF-16 without BOM decoded as UTF-8 with fetched data (UTF-16 charset)
+fetch/api/basic/text-utf8.any.html	UTF-16 without BOM decoded as UTF-8 with fetched data (UTF-8 charset)
+fetch/api/basic/text-utf8.any.html	UTF-16BE with BOM decoded as UTF-8 with fetched data (UTF-16 charset)
+fetch/api/basic/text-utf8.any.html	UTF-16BE with BOM decoded as UTF-8 with fetched data (UTF-8 charset)
+fetch/api/basic/text-utf8.any.html	UTF-16LE with BOM decoded as UTF-8 with fetched data (UTF-16 charset)
+fetch/api/basic/text-utf8.any.html	UTF-16LE with BOM decoded as UTF-8 with fetched data (UTF-8 charset)
+fetch/api/basic/text-utf8.any.html	UTF-8 with BOM with fetched data (UTF-16 charset)
+fetch/api/basic/text-utf8.any.html	UTF-8 with BOM with fetched data (UTF-8 charset)
+fetch/api/basic/text-utf8.any.html	UTF-8 without BOM with fetched data (UTF-16 charset)
+fetch/api/basic/text-utf8.any.html	UTF-8 without BOM with fetched data (UTF-8 charset)
+fetch/api/basic/url-parsing.sub.html	Request's referrer uses the UTF-8 URL parser
+fetch/api/body/formdata.any.html	Consume empty request.formData() as FormData
+fetch/api/body/formdata.any.html	Consume empty response.formData() as FormData
+fetch/api/body/formdata.any.html	Consume multipart/form-data headers case-insensitively
+fetch/api/body/mime-type.any.html	-
+fetch/api/body/mime-type.any.html	Request: MIME type for Blob from empty body
+fetch/api/body/mime-type.any.html	Request: MIME type for Blob from empty body with Content-Type
+fetch/api/body/mime-type.any.html	Request: overriding explicit Content-Type
+fetch/api/body/mime-type.any.html	Request: removing implicit Content-Type
+fetch/api/body/mime-type.any.html	Request: setting missing Content-Type
+fetch/api/body/mime-type.any.html	Response: MIME type for Blob from empty body
+fetch/api/body/mime-type.any.html	Response: MIME type for Blob from empty body with Content-Type
+fetch/api/body/mime-type.any.html	Response: overriding explicit Content-Type
+fetch/api/body/mime-type.any.html	Response: removing implicit Content-Type
+fetch/api/body/mime-type.any.html	Response: setting missing Content-Type
+fetch/api/body/textstream.any.html	Request.textStream() basic functionality
+fetch/api/body/textstream.any.html	Request.textStream() ignores Content-Type charset (UTF-16LE)
+fetch/api/body/textstream.any.html	Request.textStream() with null body
+fetch/api/body/textstream.any.html	Response.textStream() basic functionality
+fetch/api/body/textstream.any.html	Response.textStream() ignores Content-Type charset (UTF-16LE)
+fetch/api/body/textstream.any.html	Response.textStream() ignores invalid Content-Type charset (invalid-charset)
+fetch/api/body/textstream.any.html	Response.textStream() with empty body
+fetch/api/body/textstream.any.html	Response.textStream() with null body
+fetch/api/body/textstream.any.html	textStream method existence
+fetch/api/body/textstream.any.html	textStream() handles chunked byte stream input
+fetch/api/cors/cors-basic.any.html	Cross domain basic usage [server forbid CORS]
+fetch/api/cors/cors-basic.any.html	Cross domain different port [server forbid CORS]
+fetch/api/cors/cors-basic.any.html	Cross domain different protocol [server forbid CORS]
+fetch/api/cors/cors-basic.any.html	Same domain different port [server forbid CORS]
+fetch/api/cors/cors-basic.any.html	Same domain different protocol different port [server forbid CORS]
+fetch/api/cors/cors-cookies-redirect.any.html	Clean cookies
+fetch/api/cors/cors-cookies-redirect.any.html	Set cookies
+fetch/api/cors/cors-cookies-redirect.any.html	Testing credentials after cross-origin redirection with CORS and no preflight
+fetch/api/cors/cors-cookies-redirect.any.html	Testing credentials after cross-origin redirection with CORS and preflight
+fetch/api/cors/cors-cookies.any.html	Include mode: 1 cookie
+fetch/api/cors/cors-cookies.any.html	Include mode: local cookies are not sent with remote request
+fetch/api/cors/cors-cookies.any.html	Include mode: remote cookies are not sent with local request
+fetch/api/cors/cors-cookies.any.html	Include mode: remote cookies are not sent with other remote request
+fetch/api/cors/cors-cookies.any.html	Same-origin mode: cookies are discarded in cors request
+fetch/api/cors/cors-expose-star.sub.any.html	* can be one of several values
+fetch/api/cors/cors-expose-star.sub.any.html	* for credentialed fetches only matches literally
+fetch/api/cors/cors-expose-star.sub.any.html	Basic Access-Control-Expose-Headers: * support
+fetch/api/cors/cors-filtering.sub.any.html	CORS filter on Age header, header is exposed
+fetch/api/cors/cors-filtering.sub.any.html	CORS filter on Cache-Control header
+fetch/api/cors/cors-filtering.sub.any.html	CORS filter on Content-Language header
+fetch/api/cors/cors-filtering.sub.any.html	CORS filter on Content-Length header
+fetch/api/cors/cors-filtering.sub.any.html	CORS filter on Content-Type header
+fetch/api/cors/cors-filtering.sub.any.html	CORS filter on Expires header
+fetch/api/cors/cors-filtering.sub.any.html	CORS filter on Last-Modified header
+fetch/api/cors/cors-filtering.sub.any.html	CORS filter on Pragma header
+fetch/api/cors/cors-filtering.sub.any.html	CORS filter on Server header, header is exposed
+fetch/api/cors/cors-filtering.sub.any.html	CORS filter on Set-Cookie header, header is forbidden(credentials = include)
+fetch/api/cors/cors-filtering.sub.any.html	CORS filter on Set-Cookie2 header, header is forbidden(credentials = include)
+fetch/api/cors/cors-filtering.sub.any.html	CORS filter on Warning header, header is exposed
+fetch/api/cors/cors-keepalive.any.html	-
+fetch/api/cors/cors-multiple-origins.sub.any.html	Listing multiple origins is illegal: "",http://example.com,*
+fetch/api/cors/cors-multiple-origins.sub.any.html	Listing multiple origins is illegal: "",http://example.com,http://web-platform.test:8000
+fetch/api/cors/cors-multiple-origins.sub.any.html	Listing multiple origins is illegal: "",http://web-platform.test:8000,http://web-platform.test:8000
+fetch/api/cors/cors-multiple-origins.sub.any.html	Listing multiple origins is illegal: *,http://example.com,*
+fetch/api/cors/cors-multiple-origins.sub.any.html	Listing multiple origins is illegal: *,http://example.com,http://web-platform.test:8000
+fetch/api/cors/cors-multiple-origins.sub.any.html	Listing multiple origins is illegal: ,http://example.com,https://example2.com
+fetch/api/cors/cors-no-preflight.any.html	Cross domain [GET] [Accept-Language: fr]
+fetch/api/cors/cors-no-preflight.any.html	Cross domain [GET] [Accept: */*]
+fetch/api/cors/cors-no-preflight.any.html	Cross domain [GET] [Content-Language: fr]
+fetch/api/cors/cors-no-preflight.any.html	Cross domain [GET] [Content-Type: Text/Plain;charset=utf-8]
+fetch/api/cors/cors-no-preflight.any.html	Cross domain [GET] [Content-Type: application/x-www-form-urlencoded]
+fetch/api/cors/cors-no-preflight.any.html	Cross domain [GET] [Content-Type: multipart/form-data]
+fetch/api/cors/cors-no-preflight.any.html	Cross domain [GET] [Content-Type: text/plain;charset=utf-8]
+fetch/api/cors/cors-no-preflight.any.html	Cross domain [GET] [Content-Type: text/plain]
+fetch/api/cors/cors-no-preflight.any.html	Cross domain [HEAD]
+fetch/api/cors/cors-no-preflight.any.html	Cross domain [POST]
+fetch/api/cors/cors-no-preflight.any.html	Cross domain basic usage [GET]
+fetch/api/cors/cors-no-preflight.any.html	Cross domain different port [GET]
+fetch/api/cors/cors-no-preflight.any.html	Cross domain different protocol [GET]
+fetch/api/cors/cors-no-preflight.any.html	Same domain different port [GET]
+fetch/api/cors/cors-no-preflight.any.html	Same domain different protocol different port [GET]
+fetch/api/cors/cors-origin.any.html	Allowed origin: "" [origin KO]
+fetch/api/cors/cors-origin.any.html	CORS preflight [PUT] [origin OK]
+fetch/api/cors/cors-origin.any.html	Cross domain [HEAD] [origin KO]
+fetch/api/cors/cors-origin.any.html	Cross domain [POST] [origin KO]
+fetch/api/cors/cors-origin.any.html	Cross domain different port [origin KO]
+fetch/api/cors/cors-origin.any.html	Cross domain different protocol [origin KO]
+fetch/api/cors/cors-origin.any.html	Cross domain different subdomain [origin KO]
+fetch/api/cors/cors-origin.any.html	Same domain different port [origin KO]
+fetch/api/cors/cors-origin.any.html	Same domain different protocol different port [origin KO]
+fetch/api/cors/cors-preflight-cache-tainted.any.html	Tainted CORS preflight cache entry is not reused for untainted requests
+fetch/api/cors/cors-preflight-cache-tainted.any.html	Untainted CORS preflight cache entry is not reused for tainted requests
+fetch/api/cors/cors-preflight-cache.any.html	CORS preflight cache does not reuse wildcard header entries for Authorization
+fetch/api/cors/cors-preflight-cache.any.html	CORS preflight cache reuses explicit header entries
+fetch/api/cors/cors-preflight-not-cors-safelisted.any.html	Need CORS-preflight for accept-language/ header
+fetch/api/cors/cors-preflight-not-cors-safelisted.any.html	Need CORS-preflight for accept-language/@ header
+fetch/api/cors/cors-preflight-not-cors-safelisted.any.html	Need CORS-preflight for accept/" header
+fetch/api/cors/cors-preflight-not-cors-safelisted.any.html	Need CORS-preflight for accept/012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678 header
+fetch/api/cors/cors-preflight-not-cors-safelisted.any.html	Need CORS-preflight for authorization/basics header
+fetch/api/cors/cors-preflight-not-cors-safelisted.any.html	Need CORS-preflight for content-language/ header
+fetch/api/cors/cors-preflight-not-cors-safelisted.any.html	Need CORS-preflight for content-language/@ header
+fetch/api/cors/cors-preflight-not-cors-safelisted.any.html	Need CORS-preflight for content-type/text/html header
+fetch/api/cors/cors-preflight-not-cors-safelisted.any.html	Need CORS-preflight for content-type/text/plain; long=0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901 header
+fetch/api/cors/cors-preflight-not-cors-safelisted.any.html	Need CORS-preflight for range/bytes 0- header
+fetch/api/cors/cors-preflight-not-cors-safelisted.any.html	Need CORS-preflight for test/hi header
+fetch/api/cors/cors-preflight-redirect.any.html	Redirection 301 after preflight succeeded
+fetch/api/cors/cors-preflight-redirect.any.html	Redirection 302 after preflight succeeded
+fetch/api/cors/cors-preflight-redirect.any.html	Redirection 303 after preflight succeeded
+fetch/api/cors/cors-preflight-redirect.any.html	Redirection 307 after preflight succeeded
+fetch/api/cors/cors-preflight-redirect.any.html	Redirection 308 after preflight succeeded
+fetch/api/cors/cors-preflight-referrer.any.html	Referrer policy: "" and referrer: 'myreferrer'
+fetch/api/cors/cors-preflight-referrer.any.html	Referrer policy: "" and referrer: default
+fetch/api/cors/cors-preflight-referrer.any.html	Referrer policy: no-referrer and referrer: 'myreferrer'
+fetch/api/cors/cors-preflight-referrer.any.html	Referrer policy: no-referrer and referrer: default
+fetch/api/cors/cors-preflight-referrer.any.html	Referrer policy: no-referrer-when-downgrade and referrer: 'myreferrer'
+fetch/api/cors/cors-preflight-referrer.any.html	Referrer policy: no-referrer-when-downgrade and referrer: default
+fetch/api/cors/cors-preflight-referrer.any.html	Referrer policy: origin and referrer: 'myreferrer'
+fetch/api/cors/cors-preflight-referrer.any.html	Referrer policy: origin and referrer: default
+fetch/api/cors/cors-preflight-referrer.any.html	Referrer policy: origin-when-cross-origin and referrer: 'myreferrer'
+fetch/api/cors/cors-preflight-referrer.any.html	Referrer policy: origin-when-cross-origin and referrer: default
+fetch/api/cors/cors-preflight-referrer.any.html	Referrer policy: unsafe-url and referrer: 'myreferrer'
+fetch/api/cors/cors-preflight-referrer.any.html	Referrer policy: unsafe-url and referrer: default
+fetch/api/cors/cors-preflight-response-validation.any.html	Preflight response with a bad Access-Control-Allow-Headers
+fetch/api/cors/cors-preflight-response-validation.any.html	Preflight response with a bad Access-Control-Allow-Methods
+fetch/api/cors/cors-preflight-star.any.html	CORS that succeeds with credentials: false; method: GET (allowed: get); header: X-Test,1 (allowed: x-test)
+fetch/api/cors/cors-preflight-star.any.html	CORS that succeeds with credentials: false; method: OK (allowed: *); header: X-Test,1 (allowed: *)
+fetch/api/cors/cors-preflight-star.any.html	CORS that succeeds with credentials: false; method: POST (allowed: *); header: Authorization,123 (allowed: *, Authorization)
+fetch/api/cors/cors-preflight-star.any.html	CORS that succeeds with credentials: false; method: SUPER (allowed: *); header: X-Test,1 (allowed: x-test)
+fetch/api/cors/cors-preflight-star.any.html	CORS that succeeds with credentials: true; method: * (allowed: *); header: *,1 (allowed: *)
+fetch/api/cors/cors-preflight-star.any.html	CORS that succeeds with credentials: true; method: DELETE (allowed: DELETE); header:  (allowed: *)
+fetch/api/cors/cors-preflight-star.any.html	CORS that succeeds with credentials: true; method: GET (allowed: GET); header:  (allowed: *)
+fetch/api/cors/cors-preflight-star.any.html	CORS that succeeds with credentials: true; method: GET (allowed: get); header:  (allowed: *)
+fetch/api/cors/cors-preflight-star.any.html	CORS that succeeds with credentials: true; method: HEAD (allowed: HEAD); header:  (allowed: *)
+fetch/api/cors/cors-preflight-star.any.html	CORS that succeeds with credentials: true; method: HEAD (allowed: head); header:  (allowed: *)
+fetch/api/cors/cors-preflight-star.any.html	CORS that succeeds with credentials: true; method: PATCH (allowed: PATCH); header:  (allowed: *)
+fetch/api/cors/cors-preflight-star.any.html	CORS that succeeds with credentials: true; method: POST (allowed: POST); header:  (allowed: *)
+fetch/api/cors/cors-preflight-star.any.html	CORS that succeeds with credentials: true; method: POST (allowed: post); header:  (allowed: *)
+fetch/api/cors/cors-preflight-star.any.html	CORS that succeeds with credentials: true; method: PUT (allowed: PUT); header:  (allowed: *)
+fetch/api/cors/cors-preflight-star.any.html	CORS that succeeds with credentials: true; method: delete (allowed: DELETE); header:  (allowed: *)
+fetch/api/cors/cors-preflight-star.any.html	CORS that succeeds with credentials: true; method: get (allowed: GET); header:  (allowed: *)
+fetch/api/cors/cors-preflight-star.any.html	CORS that succeeds with credentials: true; method: get (allowed: get); header:  (allowed: *)
+fetch/api/cors/cors-preflight-star.any.html	CORS that succeeds with credentials: true; method: head (allowed: HEAD); header:  (allowed: *)
+fetch/api/cors/cors-preflight-star.any.html	CORS that succeeds with credentials: true; method: head (allowed: head); header:  (allowed: *)
+fetch/api/cors/cors-preflight-star.any.html	CORS that succeeds with credentials: true; method: patch (allowed: patch); header:  (allowed: *)
+fetch/api/cors/cors-preflight-star.any.html	CORS that succeeds with credentials: true; method: post (allowed: POST); header:  (allowed: *)
+fetch/api/cors/cors-preflight-star.any.html	CORS that succeeds with credentials: true; method: post (allowed: post); header:  (allowed: *)
+fetch/api/cors/cors-preflight-star.any.html	CORS that succeeds with credentials: true; method: put (allowed: PUT); header:  (allowed: *)
+fetch/api/cors/cors-preflight-status.any.html	Preflight answered with status 200
+fetch/api/cors/cors-preflight-status.any.html	Preflight answered with status 201
+fetch/api/cors/cors-preflight-status.any.html	Preflight answered with status 202
+fetch/api/cors/cors-preflight-status.any.html	Preflight answered with status 203
+fetch/api/cors/cors-preflight-status.any.html	Preflight answered with status 204
+fetch/api/cors/cors-preflight-status.any.html	Preflight answered with status 205
+fetch/api/cors/cors-preflight-status.any.html	Preflight answered with status 206
+fetch/api/cors/cors-preflight-unterminated-body.any.html	CORS preflight response with a body that never terminates does not stall the fetch
+fetch/api/cors/cors-preflight.any.html	"authorization" should be covered by "authorization"
+fetch/api/cors/cors-preflight.any.html	CORS [DELETE], server allows
+fetch/api/cors/cors-preflight.any.html	CORS [GET] [several headers], server allows
+fetch/api/cors/cors-preflight.any.html	CORS [GET] [x-test-header: allowed], server allows
+fetch/api/cors/cors-preflight.any.html	CORS [NEW], server allows
+fetch/api/cors/cors-preflight.any.html	CORS [PATCH], server allows
+fetch/api/cors/cors-preflight.any.html	CORS [PUT] [only safe headers], server allows
+fetch/api/cors/cors-preflight.any.html	CORS [PUT] [several headers], server allows
+fetch/api/cors/cors-preflight.any.html	CORS [PUT], server allows
+fetch/api/cors/cors-preflight.any.html	CORS [PUT], server allows, check preflight has user agent
+fetch/api/cors/cors-preflight.any.html	CORS [chicken], server allows
+fetch/api/cors/cors-preflight.any.html	CORS [patcH], server allows
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 301 from remote to another remote with password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 301 from remote to another remote with user
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 301 from remote to another remote with user and password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 301 from remote to same origin with password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 301 from remote to same origin with user
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 301 from remote to same origin with user and password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 301 from remote to same remote with password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 301 from remote to same remote with user
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 301 from remote to same remote with user and password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 301 from same origin to remote with password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 301 from same origin to remote with user
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 301 from same origin to remote with user and password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 302 from remote to another remote with password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 302 from remote to another remote with user
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 302 from remote to another remote with user and password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 302 from remote to same origin with password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 302 from remote to same origin with user
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 302 from remote to same origin with user and password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 302 from remote to same remote with password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 302 from remote to same remote with user
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 302 from remote to same remote with user and password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 302 from same origin to remote with password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 302 from same origin to remote with user
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 302 from same origin to remote with user and password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 303 from remote to another remote with password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 303 from remote to another remote with user
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 303 from remote to another remote with user and password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 303 from remote to same origin with password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 303 from remote to same origin with user
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 303 from remote to same origin with user and password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 303 from remote to same remote with password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 303 from remote to same remote with user
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 303 from remote to same remote with user and password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 303 from same origin to remote with password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 303 from same origin to remote with user
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 303 from same origin to remote with user and password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 307 from remote to another remote with password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 307 from remote to another remote with user
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 307 from remote to another remote with user and password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 307 from remote to same origin with password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 307 from remote to same origin with user
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 307 from remote to same origin with user and password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 307 from remote to same remote with password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 307 from remote to same remote with user
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 307 from remote to same remote with user and password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 307 from same origin to remote with password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 307 from same origin to remote with user
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 307 from same origin to remote with user and password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 308 from remote to another remote with password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 308 from remote to another remote with user
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 308 from remote to another remote with user and password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 308 from remote to same origin with password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 308 from remote to same origin with user
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 308 from remote to same origin with user and password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 308 from remote to same remote with password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 308 from remote to same remote with user
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 308 from remote to same remote with user and password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 308 from same origin to remote with password
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 308 from same origin to remote with user
+fetch/api/cors/cors-redirect-credentials.any.html	Redirect 308 from same origin to remote with user and password
+fetch/api/cors/cors-redirect-preflight.any.html	Redirect 301: cors to another cors (preflight after redirection success case)
+fetch/api/cors/cors-redirect-preflight.any.html	Redirect 301: cors to same origin (preflight after redirection success case)
+fetch/api/cors/cors-redirect-preflight.any.html	Redirect 301: same origin to cors (preflight after redirection failure case)
+fetch/api/cors/cors-redirect-preflight.any.html	Redirect 301: same origin to cors (preflight after redirection success case)
+fetch/api/cors/cors-redirect-preflight.any.html	Redirect 302: cors to another cors (preflight after redirection success case)
+fetch/api/cors/cors-redirect-preflight.any.html	Redirect 302: cors to same origin (preflight after redirection success case)
+fetch/api/cors/cors-redirect-preflight.any.html	Redirect 302: same origin to cors (preflight after redirection failure case)
+fetch/api/cors/cors-redirect-preflight.any.html	Redirect 302: same origin to cors (preflight after redirection success case)
+fetch/api/cors/cors-redirect-preflight.any.html	Redirect 303: cors to another cors (preflight after redirection success case)
+fetch/api/cors/cors-redirect-preflight.any.html	Redirect 303: cors to same origin (preflight after redirection success case)
+fetch/api/cors/cors-redirect-preflight.any.html	Redirect 303: same origin to cors (preflight after redirection failure case)
+fetch/api/cors/cors-redirect-preflight.any.html	Redirect 303: same origin to cors (preflight after redirection success case)
+fetch/api/cors/cors-redirect-preflight.any.html	Redirect 307: cors to another cors (preflight after redirection success case)
+fetch/api/cors/cors-redirect-preflight.any.html	Redirect 307: cors to same origin (preflight after redirection success case)
+fetch/api/cors/cors-redirect-preflight.any.html	Redirect 307: same origin to cors (preflight after redirection failure case)
+fetch/api/cors/cors-redirect-preflight.any.html	Redirect 307: same origin to cors (preflight after redirection success case)
+fetch/api/cors/cors-redirect-preflight.any.html	Redirect 308: cors to another cors (preflight after redirection success case)
+fetch/api/cors/cors-redirect-preflight.any.html	Redirect 308: cors to same origin (preflight after redirection success case)
+fetch/api/cors/cors-redirect-preflight.any.html	Redirect 308: same origin to cors (preflight after redirection failure case)
+fetch/api/cors/cors-redirect-preflight.any.html	Redirect 308: same origin to cors (preflight after redirection success case)
+fetch/api/cors/cors-redirect.any.html	Redirect 301: cors to another cors
+fetch/api/cors/cors-redirect.any.html	Redirect 301: cors to same cors
+fetch/api/cors/cors-redirect.any.html	Redirect 301: cors to same origin
+fetch/api/cors/cors-redirect.any.html	Redirect 301: same origin to cors
+fetch/api/cors/cors-redirect.any.html	Redirect 302: cors to another cors
+fetch/api/cors/cors-redirect.any.html	Redirect 302: cors to same cors
+fetch/api/cors/cors-redirect.any.html	Redirect 302: cors to same origin
+fetch/api/cors/cors-redirect.any.html	Redirect 302: same origin to cors
+fetch/api/cors/cors-redirect.any.html	Redirect 303: cors to another cors
+fetch/api/cors/cors-redirect.any.html	Redirect 303: cors to same cors
+fetch/api/cors/cors-redirect.any.html	Redirect 303: cors to same origin
+fetch/api/cors/cors-redirect.any.html	Redirect 303: same origin to cors
+fetch/api/cors/cors-redirect.any.html	Redirect 307: cors to another cors
+fetch/api/cors/cors-redirect.any.html	Redirect 307: cors to same cors
+fetch/api/cors/cors-redirect.any.html	Redirect 307: cors to same origin
+fetch/api/cors/cors-redirect.any.html	Redirect 307: same origin to cors
+fetch/api/cors/cors-redirect.any.html	Redirect 308: cors to another cors
+fetch/api/cors/cors-redirect.any.html	Redirect 308: cors to same cors
+fetch/api/cors/cors-redirect.any.html	Redirect 308: cors to same origin
+fetch/api/cors/cors-redirect.any.html	Redirect 308: same origin to cors
+fetch/api/cors/data-url-iframe.html	-
+fetch/api/cors/data-url-iframe.html	fetching "top.txt" with CORS allowing null origin should be allowed.
+fetch/api/cors/data-url-iframe.html	fetching "top.txt" without ACAO should be rejected.
+fetch/api/cors/data-url-iframe.html	fetching data url script should be allowed.
+fetch/api/cors/data-url-shared-worker.html	fetching "top.txt" with CORS allowing null origin should be allowed.
+fetch/api/cors/data-url-shared-worker.html	fetching "top.txt" without ACAO should be rejected.
+fetch/api/cors/data-url-shared-worker.html	fetching data url script should be allowed.
+fetch/api/cors/data-url-worker.html	fetching "top.txt" with CORS allowing null origin should be allowed.
+fetch/api/cors/data-url-worker.html	fetching "top.txt" without ACAO should be rejected.
+fetch/api/cors/data-url-worker.html	fetching data url script should be allowed.
+fetch/api/cors/sandboxed-iframe.html	-
+fetch/api/cors/sandboxed-iframe.html	CORS with sandboxed iframe
+fetch/api/crashtests/aborted-fetch-response.https.html	-
+fetch/api/crashtests/body-window-destroy.html	-
+fetch/api/crashtests/request.html	-
+fetch/api/credentials/authentication-basic.any.html	User-added bogus Authorization header with omit mode
+fetch/api/credentials/authentication-redirection.any.html	getAuthorizationHeaderValue - cross origin redirection
+fetch/api/credentials/authentication-redirection.any.html	getAuthorizationHeaderValue - no redirection
+fetch/api/credentials/authentication-redirection.any.html	getAuthorizationHeaderValue - same origin redirection
+fetch/api/credentials/cookies.any.html	Include mode: 1 cookie
+fetch/api/credentials/cookies.any.html	Include mode: 2 cookies
+fetch/api/credentials/cookies.any.html	Same-origin mode: 1 cookie
+fetch/api/credentials/cookies.any.html	Same-origin mode: 2 cookies
+fetch/api/headers/header-setcookie.any.html	Adding Set-Cookie headers normalizes their value
+fetch/api/headers/header-setcookie.any.html	Headers iterator does not combine set-cookie & set-cookie2 headers
+fetch/api/headers/header-setcookie.any.html	Headers iterator does not combine set-cookie headers
+fetch/api/headers/header-setcookie.any.html	Headers iterator is correctly updated with set-cookie changes
+fetch/api/headers/header-setcookie.any.html	Headers iterator is correctly updated with set-cookie changes #2
+fetch/api/headers/header-setcookie.any.html	Headers iterator preserves per header ordering, but sorts keys alphabetically
+fetch/api/headers/header-setcookie.any.html	Headers iterator preserves per header ordering, but sorts keys alphabetically (and ignores value ordering)
+fetch/api/headers/header-setcookie.any.html	Headers iterator preserves set-cookie ordering
+fetch/api/headers/header-setcookie.any.html	Headers.prototype.append works for set-cookie
+fetch/api/headers/header-setcookie.any.html	Set-Cookie is a forbidden response header
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %01
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %02
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %03
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %04
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %05
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %06
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %07
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %08
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %09
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %0A
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %0D
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %0E
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %0F
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %10
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %11
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %12
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %13
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %14
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %15
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %16
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %17
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %18
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %19
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %1A
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %1B
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %1C
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %1D
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %1E
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %1F
+fetch/api/headers/header-values-normalize.any.html	XMLHttpRequest with value %20
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %01
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %02
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %03
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %04
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %05
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %06
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %07
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %08
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %09
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %0A
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %0D
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %0E
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %0F
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %10
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %11
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %12
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %13
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %14
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %15
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %16
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %17
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %18
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %19
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %1A
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %1B
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %1C
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %1D
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %1E
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %1F
+fetch/api/headers/header-values-normalize.any.html	fetch() with value %20
+fetch/api/headers/header-values.any.html	XMLHttpRequest with all valid values
+fetch/api/headers/header-values.any.html	fetch() with all valid values
+fetch/api/headers/headers-basic.any.html	Appending a value pair during iteration causes it to be reached during iteration
+fetch/api/headers/headers-basic.any.html	Check entries method
+fetch/api/headers/headers-basic.any.html	Check keys method
+fetch/api/headers/headers-basic.any.html	Check values method
+fetch/api/headers/headers-basic.any.html	Iteration skips elements removed while iterating
+fetch/api/headers/headers-basic.any.html	Prepending a value pair before the current element position causes it to be skipped during iteration and adds the current element a second time
+fetch/api/headers/headers-basic.any.html	Removing elements already iterated over causes an element to be skipped during iteration
+fetch/api/headers/headers-errors.any.html	Check headers append with an invalid value invalidĀ
+fetch/api/headers/headers-errors.any.html	Check headers set with an invalid value invalidĀ
+fetch/api/headers/headers-errors.any.html	Create headers giving bad header value as init argument
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value 	track
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value 
+connect
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value trace
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value  connect
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value CONNECT
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value GET,track 
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value TRACE
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value TRACK
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value connect
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value trace
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value trace,
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value track
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value 	track
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value 
+connect
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value trace
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value  connect
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value CONNECT
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value GET,track 
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value TRACE
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value TRACK
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value connect
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value trace
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value trace,
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value track
+fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value 	track
+fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value 
+connect
+fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value trace
+fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value  connect
+fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value CONNECT
+fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value GET,track 
+fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value TRACE
+fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value TRACK
+fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value connect
+fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value trace
+fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value trace,
+fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value track
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value 	track
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value 
+connect
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value trace
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value  connect
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value CONNECT
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value GET,track 
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value TRACE
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value TRACK
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value connect
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value trace
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value trace,
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value track
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value 	track
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value 
+connect
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value trace
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value  connect
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value CONNECT
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value GET,track 
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value TRACE
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value TRACK
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value connect
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value trace
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value trace,
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value track
+fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value 	track
+fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value 
+connect
+fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value trace
+fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value  connect
+fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value CONNECT
+fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value GET,track 
+fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value TRACE
+fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value TRACK
+fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value connect
+fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value trace
+fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value trace,
+fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value track
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have accept set to , sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have accept set to sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss, , sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have accept-language set to , sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have accept-language set to sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss, , sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have accept-language/ as header
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have accept-language/@ as header
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have accept/" as header
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have accept/012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678 as header
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have authorization/basics as header
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have content-language set to , sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have content-language set to sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss, , sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have content-language/ as header
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have content-language/@ as header
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have content-type set to text/plain;ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss, text/plain
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have content-type/text/html as header
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have content-type/text/plain; long=0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901 as header
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have downlink/-1.0 as header
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have dpr/2 as header
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have ect/6g as header
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have range/bytes 0- as header
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have rtt/1.0 as header
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have save-data/on as header
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have test/hi as header
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have unknown/doesitmatter as header
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have viewport-width/100 as header
+fetch/api/headers/headers-no-cors.any.html	"no-cors" Headers object cannot have width/100 as header
+fetch/api/headers/headers-record.any.html	Basic operation with Symbol keys
+fetch/api/headers/headers-record.any.html	Correct operation ordering with two properties one of which has an invalid name
+fetch/api/headers/headers-record.any.html	Correct operation ordering with two properties one of which has an invalid value
+fetch/api/headers/headers-record.any.html	Operation with non-enumerable Symbol keys
+fetch/api/idlharness.https.any.html	idl_test setup
+fetch/api/policies/csp-blocked-worker.html	-
+fetch/api/policies/csp-blocked.html	Fetch is blocked by CSP, got a TypeError
+fetch/api/policies/referrer-no-referrer-service-worker.https.html	-
+fetch/api/policies/referrer-no-referrer-worker.html	-
+fetch/api/policies/referrer-origin-service-worker.https.html	-
+fetch/api/policies/referrer-origin-when-cross-origin-service-worker.https.html	-
+fetch/api/policies/referrer-origin-when-cross-origin-worker.html	-
+fetch/api/policies/referrer-origin-when-cross-origin.html	Request's referrer is origin
+fetch/api/policies/referrer-origin-worker.html	-
+fetch/api/policies/referrer-origin.html	Cross-origin referrer is overridden by client origin
+fetch/api/policies/referrer-origin.html	Request's referrer is origin
+fetch/api/policies/referrer-unsafe-url-service-worker.https.html	-
+fetch/api/policies/referrer-unsafe-url-worker.html	-
+fetch/api/policies/referrer-unsafe-url.html	Request's referrer is the full url of current document/worker
+fetch/api/redirect/redirect-count.any.html	Redirect 301 20 times
+fetch/api/redirect/redirect-count.any.html	Redirect 301 21 times
+fetch/api/redirect/redirect-count.any.html	Redirect 302 20 times
+fetch/api/redirect/redirect-count.any.html	Redirect 302 21 times
+fetch/api/redirect/redirect-count.any.html	Redirect 303 20 times
+fetch/api/redirect/redirect-count.any.html	Redirect 303 21 times
+fetch/api/redirect/redirect-count.any.html	Redirect 307 20 times
+fetch/api/redirect/redirect-count.any.html	Redirect 307 21 times
+fetch/api/redirect/redirect-count.any.html	Redirect 308 20 times
+fetch/api/redirect/redirect-count.any.html	Redirect 308 21 times
+fetch/api/redirect/redirect-empty-location.any.html	redirect response with empty Location, follow mode
+fetch/api/redirect/redirect-empty-location.any.html	redirect response with empty Location, manual mode
+fetch/api/redirect/redirect-keepalive.any.html	[keepalive][new window][unload] cross-origin redirect + preflight; setting up
+fetch/api/redirect/redirect-keepalive.any.html	[keepalive][new window][unload] cross-origin redirect; setting up
+fetch/api/redirect/redirect-keepalive.any.html	[keepalive][new window][unload] redirect to data URL; setting up
+fetch/api/redirect/redirect-keepalive.any.html	[keepalive][new window][unload] redirect to file URL; setting up
+fetch/api/redirect/redirect-keepalive.any.html	[keepalive][new window][unload] same-origin redirect + preflight; setting up
+fetch/api/redirect/redirect-keepalive.any.html	[keepalive][new window][unload] same-origin redirect; setting up
+fetch/api/redirect/redirect-keepalive.https.any.html	-
+fetch/api/redirect/redirect-keepalive.https.any.html	[keepalive][iframe][load] mixed content redirect; setting up
+fetch/api/redirect/redirect-location-escape.tentative.any.html	Escaping produces double-percent
+fetch/api/redirect/redirect-location-escape.tentative.any.html	Redirect to escaped UTF-8
+fetch/api/redirect/redirect-location-escape.tentative.any.html	Redirect to escaped and unescaped UTF-8
+fetch/api/redirect/redirect-location-escape.tentative.any.html	Redirect to invalid UTF-8
+fetch/api/redirect/redirect-location-escape.tentative.any.html	Redirect to unescaped UTF-8
+fetch/api/redirect/redirect-location.any.html	Redirect 301 in "error" mode with data location
+fetch/api/redirect/redirect-location.any.html	Redirect 301 in "error" mode with invalid location
+fetch/api/redirect/redirect-location.any.html	Redirect 301 in "error" mode with valid location
+fetch/api/redirect/redirect-location.any.html	Redirect 301 in "follow" mode with data location
+fetch/api/redirect/redirect-location.any.html	Redirect 301 in "follow" mode with invalid location
+fetch/api/redirect/redirect-location.any.html	Redirect 301 in "follow" mode without location
+fetch/api/redirect/redirect-location.any.html	Redirect 301 in "manual" mode with data location
+fetch/api/redirect/redirect-location.any.html	Redirect 301 in "manual" mode with invalid location
+fetch/api/redirect/redirect-location.any.html	Redirect 301 in "manual" mode with valid location
+fetch/api/redirect/redirect-location.any.html	Redirect 301 in "manual" mode without location
+fetch/api/redirect/redirect-location.any.html	Redirect 302 in "error" mode with data location
+fetch/api/redirect/redirect-location.any.html	Redirect 302 in "error" mode with invalid location
+fetch/api/redirect/redirect-location.any.html	Redirect 302 in "error" mode with valid location
+fetch/api/redirect/redirect-location.any.html	Redirect 302 in "follow" mode with data location
+fetch/api/redirect/redirect-location.any.html	Redirect 302 in "follow" mode with invalid location
+fetch/api/redirect/redirect-location.any.html	Redirect 302 in "follow" mode without location
+fetch/api/redirect/redirect-location.any.html	Redirect 302 in "manual" mode with data location
+fetch/api/redirect/redirect-location.any.html	Redirect 302 in "manual" mode with invalid location
+fetch/api/redirect/redirect-location.any.html	Redirect 302 in "manual" mode with valid location
+fetch/api/redirect/redirect-location.any.html	Redirect 302 in "manual" mode without location
+fetch/api/redirect/redirect-location.any.html	Redirect 303 in "error" mode with data location
+fetch/api/redirect/redirect-location.any.html	Redirect 303 in "error" mode with invalid location
+fetch/api/redirect/redirect-location.any.html	Redirect 303 in "error" mode with valid location
+fetch/api/redirect/redirect-location.any.html	Redirect 303 in "follow" mode with data location
+fetch/api/redirect/redirect-location.any.html	Redirect 303 in "follow" mode with invalid location
+fetch/api/redirect/redirect-location.any.html	Redirect 303 in "follow" mode without location
+fetch/api/redirect/redirect-location.any.html	Redirect 303 in "manual" mode with data location
+fetch/api/redirect/redirect-location.any.html	Redirect 303 in "manual" mode with invalid location
+fetch/api/redirect/redirect-location.any.html	Redirect 303 in "manual" mode with valid location
+fetch/api/redirect/redirect-location.any.html	Redirect 303 in "manual" mode without location
+fetch/api/redirect/redirect-location.any.html	Redirect 307 in "error" mode with data location
+fetch/api/redirect/redirect-location.any.html	Redirect 307 in "error" mode with invalid location
+fetch/api/redirect/redirect-location.any.html	Redirect 307 in "error" mode with valid location
+fetch/api/redirect/redirect-location.any.html	Redirect 307 in "follow" mode with data location
+fetch/api/redirect/redirect-location.any.html	Redirect 307 in "follow" mode with invalid location
+fetch/api/redirect/redirect-location.any.html	Redirect 307 in "follow" mode without location
+fetch/api/redirect/redirect-location.any.html	Redirect 307 in "manual" mode with data location
+fetch/api/redirect/redirect-location.any.html	Redirect 307 in "manual" mode with invalid location
+fetch/api/redirect/redirect-location.any.html	Redirect 307 in "manual" mode with valid location
+fetch/api/redirect/redirect-location.any.html	Redirect 307 in "manual" mode without location
+fetch/api/redirect/redirect-location.any.html	Redirect 308 in "error" mode with data location
+fetch/api/redirect/redirect-location.any.html	Redirect 308 in "error" mode with invalid location
+fetch/api/redirect/redirect-location.any.html	Redirect 308 in "error" mode with valid location
+fetch/api/redirect/redirect-location.any.html	Redirect 308 in "follow" mode with data location
+fetch/api/redirect/redirect-location.any.html	Redirect 308 in "follow" mode with invalid location
+fetch/api/redirect/redirect-location.any.html	Redirect 308 in "follow" mode without location
+fetch/api/redirect/redirect-location.any.html	Redirect 308 in "manual" mode with data location
+fetch/api/redirect/redirect-location.any.html	Redirect 308 in "manual" mode with invalid location
+fetch/api/redirect/redirect-location.any.html	Redirect 308 in "manual" mode with valid location
+fetch/api/redirect/redirect-location.any.html	Redirect 308 in "manual" mode without location
+fetch/api/redirect/redirect-method.any.html	-
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 301 in error redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 301 in error redirect and no-cors mode
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 301 in follow redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 301 in manual redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 301 in manual redirect and no-cors mode
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 302 in error redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 302 in error redirect and no-cors mode
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 302 in follow redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 302 in manual redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 302 in manual redirect and no-cors mode
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 303 in error redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 303 in error redirect and no-cors mode
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 303 in follow redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 303 in manual redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 303 in manual redirect and no-cors mode
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 307 in error redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 307 in error redirect and no-cors mode
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 307 in follow redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 307 in manual redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 307 in manual redirect and no-cors mode
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 308 in error redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 308 in error redirect and no-cors mode
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 308 in follow redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 308 in manual redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 308 in manual redirect and no-cors mode
+fetch/api/redirect/redirect-mode.any.html	manual redirect with a CORS error should be rejected
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 301 in error redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 301 in error redirect and no-cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 301 in follow redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 301 in follow redirect and no-cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 301 in manual redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 301 in manual redirect and no-cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 302 in error redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 302 in error redirect and no-cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 302 in follow redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 302 in follow redirect and no-cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 302 in manual redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 302 in manual redirect and no-cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 303 in error redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 303 in error redirect and no-cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 303 in follow redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 303 in follow redirect and no-cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 303 in manual redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 303 in manual redirect and no-cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 307 in error redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 307 in error redirect and no-cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 307 in follow redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 307 in follow redirect and no-cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 307 in manual redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 307 in manual redirect and no-cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 308 in error redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 308 in error redirect and no-cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 308 in follow redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 308 in follow redirect and no-cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 308 in manual redirect and cors mode
+fetch/api/redirect/redirect-mode.any.html	same-origin redirect 308 in manual redirect and no-cors mode
+fetch/api/redirect/redirect-origin.any.html	[GET] Redirect 301 Other origin to other origin
+fetch/api/redirect/redirect-origin.any.html	[GET] Redirect 301 Other origin to same origin
+fetch/api/redirect/redirect-origin.any.html	[GET] Redirect 301 Same origin to other origin
+fetch/api/redirect/redirect-origin.any.html	[GET] Redirect 302 Other origin to other origin
+fetch/api/redirect/redirect-origin.any.html	[GET] Redirect 302 Other origin to same origin
+fetch/api/redirect/redirect-origin.any.html	[GET] Redirect 302 Same origin to other origin
+fetch/api/redirect/redirect-origin.any.html	[GET] Redirect 303 Other origin to other origin
+fetch/api/redirect/redirect-origin.any.html	[GET] Redirect 303 Other origin to same origin
+fetch/api/redirect/redirect-origin.any.html	[GET] Redirect 303 Same origin to other origin
+fetch/api/redirect/redirect-origin.any.html	[GET] Redirect 307 Other origin to other origin
+fetch/api/redirect/redirect-origin.any.html	[GET] Redirect 307 Other origin to same origin
+fetch/api/redirect/redirect-origin.any.html	[GET] Redirect 307 Same origin to other origin
+fetch/api/redirect/redirect-origin.any.html	[GET] Redirect 308 Other origin to other origin
+fetch/api/redirect/redirect-origin.any.html	[GET] Redirect 308 Other origin to same origin
+fetch/api/redirect/redirect-origin.any.html	[GET] Redirect 308 Same origin to other origin
+fetch/api/redirect/redirect-origin.any.html	[POST] Redirect 301 Other origin to other origin
+fetch/api/redirect/redirect-origin.any.html	[POST] Redirect 301 Other origin to same origin
+fetch/api/redirect/redirect-origin.any.html	[POST] Redirect 301 Same origin to other origin
+fetch/api/redirect/redirect-origin.any.html	[POST] Redirect 302 Other origin to other origin
+fetch/api/redirect/redirect-origin.any.html	[POST] Redirect 302 Other origin to same origin
+fetch/api/redirect/redirect-origin.any.html	[POST] Redirect 302 Same origin to other origin
+fetch/api/redirect/redirect-origin.any.html	[POST] Redirect 303 Other origin to other origin
+fetch/api/redirect/redirect-origin.any.html	[POST] Redirect 303 Other origin to same origin
+fetch/api/redirect/redirect-origin.any.html	[POST] Redirect 303 Same origin to other origin
+fetch/api/redirect/redirect-origin.any.html	[POST] Redirect 307 Other origin to other origin
+fetch/api/redirect/redirect-origin.any.html	[POST] Redirect 307 Other origin to same origin
+fetch/api/redirect/redirect-origin.any.html	[POST] Redirect 307 Same origin to other origin
+fetch/api/redirect/redirect-origin.any.html	[POST] Redirect 308 Other origin to other origin
+fetch/api/redirect/redirect-origin.any.html	[POST] Redirect 308 Other origin to same origin
+fetch/api/redirect/redirect-origin.any.html	[POST] Redirect 308 Same origin to other origin
+fetch/api/redirect/redirect-referrer-override.any.html	-
+fetch/api/redirect/redirect-referrer.any.html	Cross origin redirection, empty init, no-referrer-when-downgrade redirect header 
+fetch/api/redirect/redirect-referrer.any.html	Cross origin redirection, empty init, origin redirect header 
+fetch/api/redirect/redirect-referrer.any.html	Cross origin redirection, empty init, origin-when-cross-origin redirect header 
+fetch/api/redirect/redirect-referrer.any.html	Cross origin redirection, empty init, strict-origin redirect header 
+fetch/api/redirect/redirect-referrer.any.html	Cross origin redirection, empty init, strict-origin-when-cross-origin redirect header 
+fetch/api/redirect/redirect-referrer.any.html	Cross origin redirection, empty init, unsafe-url redirect header 
+fetch/api/redirect/redirect-referrer.any.html	Cross origin redirection, empty redirect header, no-referrer-when-downgrade init 
+fetch/api/redirect/redirect-referrer.any.html	Cross origin redirection, empty redirect header, origin init 
+fetch/api/redirect/redirect-referrer.any.html	Cross origin redirection, empty redirect header, origin-when-cross-origin init 
+fetch/api/redirect/redirect-referrer.any.html	Cross origin redirection, empty redirect header, strict-origin init 
+fetch/api/redirect/redirect-referrer.any.html	Cross origin redirection, empty redirect header, strict-origin-when-cross-origin init 
+fetch/api/redirect/redirect-referrer.any.html	Cross origin redirection, empty redirect header, unsafe-url init 
+fetch/api/redirect/redirect-referrer.any.html	Same origin redirection, empty init, no-referrer-when-downgrade redirect header 
+fetch/api/redirect/redirect-referrer.any.html	Same origin redirection, empty init, origin redirect header 
+fetch/api/redirect/redirect-referrer.any.html	Same origin redirection, empty init, origin-when-cross-origin redirect header 
+fetch/api/redirect/redirect-referrer.any.html	Same origin redirection, empty init, same-origin redirect header 
+fetch/api/redirect/redirect-referrer.any.html	Same origin redirection, empty init, strict-origin redirect header 
+fetch/api/redirect/redirect-referrer.any.html	Same origin redirection, empty init, strict-origin-when-cross-origin redirect header 
+fetch/api/redirect/redirect-referrer.any.html	Same origin redirection, empty init, unsafe-url redirect header 
+fetch/api/redirect/redirect-referrer.any.html	Same origin redirection, empty redirect header, no-referrer-when-downgrade init 
+fetch/api/redirect/redirect-referrer.any.html	Same origin redirection, empty redirect header, origin init 
+fetch/api/redirect/redirect-referrer.any.html	Same origin redirection, empty redirect header, origin-when-cross-origin init 
+fetch/api/redirect/redirect-referrer.any.html	Same origin redirection, empty redirect header, same-origin init 
+fetch/api/redirect/redirect-referrer.any.html	Same origin redirection, empty redirect header, strict-origin init 
+fetch/api/redirect/redirect-referrer.any.html	Same origin redirection, empty redirect header, strict-origin-when-cross-origin init 
+fetch/api/redirect/redirect-referrer.any.html	Same origin redirection, empty redirect header, unsafe-url init 
+fetch/api/redirect/redirect-schemes.any.html	Fetch: handling different schemes in redirects
+fetch/api/redirect/redirect-schemes.any.html	Fetch: handling different schemes in redirects 1
+fetch/api/redirect/redirect-schemes.any.html	Fetch: handling different schemes in redirects 2
+fetch/api/redirect/redirect-schemes.any.html	Fetch: handling different schemes in redirects 3
+fetch/api/redirect/redirect-schemes.any.html	Fetch: handling different schemes in redirects 4
+fetch/api/redirect/redirect-schemes.any.html	Fetch: handling different schemes in redirects 5
+fetch/api/redirect/redirect-to-dataurl.any.html	Testing data URL loading after cross-origin redirection (cors mode)
+fetch/api/redirect/redirect-to-dataurl.any.html	Testing data URL loading after cross-origin redirection (no-cors mode)
+fetch/api/redirect/redirect-to-dataurl.any.html	Testing data URL loading after same-origin redirection (cors mode)
+fetch/api/redirect/redirect-to-dataurl.any.html	Testing data URL loading after same-origin redirection (no-cors mode)
+fetch/api/redirect/redirect-to-dataurl.any.html	Testing data URL loading after same-origin redirection (same-origin mode)
+fetch/api/redirect/redirect-upload.h2.any.html	Fetch upload streaming should be accepted on 303
+fetch/api/request/destination/fetch-destination-frame.https.html	Initialize global state
+fetch/api/request/destination/fetch-destination-frame.https.html	frame fetches with a "frame" Request.destination
+fetch/api/request/destination/fetch-destination-iframe.https.html	Initialize global state
+fetch/api/request/destination/fetch-destination-iframe.https.html	iframe fetches with a "iframe" Request.destination
+fetch/api/request/destination/fetch-destination-no-load-event.https.html	@import fetches with a "style" Request.destination
+fetch/api/request/destination/fetch-destination-no-load-event.https.html	Background image fetches with an "image" Request.destination
+fetch/api/request/destination/fetch-destination-no-load-event.https.html	CSS font fetches with an "font" Request.destination
+fetch/api/request/destination/fetch-destination-no-load-event.https.html	Cache.add() fetches with an empty string Request.destination
+fetch/api/request/destination/fetch-destination-no-load-event.https.html	Font loading API fetches with an "font" Request.destination
+fetch/api/request/destination/fetch-destination-no-load-event.https.html	Initialize global state
+fetch/api/request/destination/fetch-destination-no-load-event.https.html	SVG use element fetches with an "image" Request.destination
+fetch/api/request/destination/fetch-destination-no-load-event.https.html	importScripts() fetches with a "script" Request.destination
+fetch/api/request/destination/fetch-destination-no-load-event.https.html	sendBeacon() fetches with an empty string Request.destination
+fetch/api/request/destination/fetch-destination-prefetch.https.html	HTMLLinkElement with rel=prefetch fetches with an empty string Request.destination
+fetch/api/request/destination/fetch-destination-prefetch.https.html	Initialize global state
+fetch/api/request/destination/fetch-destination-worker.https.html	DedicatedWorker fetches with a "worker" Request.destination
+fetch/api/request/destination/fetch-destination-worker.https.html	Initialize global state
+fetch/api/request/destination/fetch-destination-worker.https.html	SharedWorker fetches with a "sharedworker" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	AudioWorklet module fetches with a "audioworklet" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	EventSource() fetches with an empty string Request.destination
+fetch/api/request/destination/fetch-destination.https.html	HTMLAudioElement fetches with an "audio" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	HTMLImageElement fetches with an "image" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	HTMLImageElement with a HTMLPictureElement parent attribute fetches with an "image" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	HTMLImageElement with srcset attribute fetches with an "image" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	HTMLLinkElement with rel=preload and as=audio fetches with a "audio" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	HTMLLinkElement with rel=preload and as=document fetches with a "document" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	HTMLLinkElement with rel=preload and as=fetch fetches with an empty string Request.destination
+fetch/api/request/destination/fetch-destination.https.html	HTMLLinkElement with rel=preload and as=font fetches with a "font" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	HTMLLinkElement with rel=preload and as=image fetches with a "image" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	HTMLLinkElement with rel=preload and as=json fetches with a "json" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	HTMLLinkElement with rel=preload and as=manifest fetches with a "manifest" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	HTMLLinkElement with rel=preload and as=script fetches with a "script" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	HTMLLinkElement with rel=preload and as=sharedworker fetches with a "sharedworker" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	HTMLLinkElement with rel=preload and as=style fetches with a "style" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	HTMLLinkElement with rel=preload and as=track fetches with a "track" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	HTMLLinkElement with rel=preload and as=video fetches with a "video" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	HTMLLinkElement with rel=preload and as=worker fetches with a "worker" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	HTMLLinkElement with rel=preload and as=xslt fetches with a "xslt" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	HTMLLinkElement with rel=stylesheet fetches with a "style" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	HTMLScriptElement fetches with a "script" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	HTMLVideoElement fetches with a "video" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	Import declaration with `type: "css"` fetches with a "style" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	Import declaration with `type: "json"` fetches with a "json" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	Import declaration with `type: "text"` fetches with a "text" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	Initialize global state
+fetch/api/request/destination/fetch-destination.https.html	SVGImageElement fetches with an "image" Request.destination
+fetch/api/request/destination/fetch-destination.https.html	XMLHttpRequest() fetches with an empty string Request.destination
+fetch/api/request/destination/fetch-destination.https.html	fetch() fetches with an empty string Request.destination
+fetch/api/request/multi-globals/construct-in-detached-frame.window.html	creating a request from another request in a detached realm should work
+fetch/api/request/multi-globals/current/current.html	-
+fetch/api/request/multi-globals/incumbent/incumbent.html	-
+fetch/api/request/multi-globals/url-parsing.html	should parse the URL relative to the current settings object
+fetch/api/request/request-bad-port.any.html	Request on bad port 0 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 1 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 10080 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 101 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 102 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 103 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 104 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 109 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 11 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 110 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 111 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 113 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 115 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 117 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 119 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 123 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 13 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 135 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 137 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 139 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 143 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 15 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 161 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 17 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 1719 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 1720 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 1723 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 179 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 19 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 20 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 2049 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 21 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 22 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 23 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 25 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 3659 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 37 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 389 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 4045 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 4190 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 42 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 427 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 43 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 465 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 5060 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 5061 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 512 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 513 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 514 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 515 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 526 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 53 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 530 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 531 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 532 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 540 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 548 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 554 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 556 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 563 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 587 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 6000 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 601 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 636 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 6566 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 6665 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 6666 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 6667 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 6668 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 6669 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 6679 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 6697 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 69 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 7 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 77 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 79 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 87 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 9 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 95 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 989 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 990 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 993 should throw TypeError.
+fetch/api/request/request-bad-port.any.html	Request on bad port 995 should throw TypeError.
+fetch/api/request/request-cache-default-conditional.any.html	-
+fetch/api/request/request-cache-default.any.html	-
+fetch/api/request/request-cache-force-cache.any.html	-
+fetch/api/request/request-cache-no-cache.any.html	RequestCache "no-cache" mode revalidates fresh responses found in the cache with Etag and fresh response
+fetch/api/request/request-cache-no-cache.any.html	RequestCache "no-cache" mode revalidates fresh responses found in the cache with Last-Modified and fresh response
+fetch/api/request/request-cache-no-cache.any.html	RequestCache "no-cache" mode revalidates stale responses found in the cache with Etag and stale response
+fetch/api/request/request-cache-no-cache.any.html	RequestCache "no-cache" mode revalidates stale responses found in the cache with Last-Modified and stale response
+fetch/api/request/request-cache-no-store.any.html	-
+fetch/api/request/request-cache-only-if-cached.any.html	-
+fetch/api/request/request-cache-reload.any.html	-
+fetch/api/request/request-clone-readable-stream-body.any.html	new Request(clone) preserves a ReadableStream body that came from clone()
+fetch/api/request/request-constructor-init-body-override.any.html	Check that the body of a new request can be duplicated from an existing Request object
+fetch/api/request/request-constructor-init-body-override.any.html	Check that the body of a new request can be overridden when created from an existing Request object
+fetch/api/request/request-consume-empty.any.html	-
+fetch/api/request/request-consume-empty.any.html	Consume request's body as blob
+fetch/api/request/request-consume-empty.any.html	Consume request's body as formData with correct multipart type (error case)
+fetch/api/request/request-consume-empty.any.html	Consume request's body as formData with correct urlencoded type
+fetch/api/request/request-consume-empty.any.html	Consume request's body as formData without correct type (error case)
+fetch/api/request/request-consume.any.html	-
+fetch/api/request/request-disturbed.any.html	-
+fetch/api/request/request-error.any.html	Request with cache mode: only-if-cached and fetch mode cors
+fetch/api/request/request-error.any.html	Request with cache mode: only-if-cached and fetch mode no-cors
+fetch/api/request/request-error.any.html	RequestInit's cache mode is only-if-cached and mode is not same-origin
+fetch/api/request/request-error.any.html	RequestInit's mode is no-cors and method is not simple
+fetch/api/request/request-error.any.html	RequestInit's referrer is invalid
+fetch/api/request/request-error.any.html	RequestInit's window is not null
+fetch/api/request/request-headers.any.html	Adding invalid no-cors request header "Content-Type: KO"
+fetch/api/request/request-headers.any.html	Adding invalid no-cors request header "Empty-Value: "
+fetch/api/request/request-headers.any.html	Adding invalid no-cors request header "Potato: KO"
+fetch/api/request/request-headers.any.html	Adding invalid no-cors request header "proxy: KO"
+fetch/api/request/request-headers.any.html	Adding invalid no-cors request header "proxya: KO"
+fetch/api/request/request-headers.any.html	Adding invalid no-cors request header "sec: KO"
+fetch/api/request/request-headers.any.html	Adding invalid no-cors request header "secb: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "ACCEPT-ENCODING: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "Accept-Charset: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "Accept-Encoding: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "Access-Control-Request-Headers: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "Access-Control-Request-Method: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "Connection: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "Content-Length: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "Cookie2: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "Cookie: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "DNT: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "Date: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "Expect: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "Host: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "Keep-Alive: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "Origin: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "Proxy-: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "Referer: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "Sec-: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "Set-Cookie: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "TE: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "Trailer: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "Transfer-Encoding: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "Upgrade: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "Via: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "accept-charset: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "proxy-a: KO"
+fetch/api/request/request-headers.any.html	Adding invalid request header "sec-b: KO"
+fetch/api/request/request-headers.any.html	Check that no-cors request constructor is filtering headers provided as init parameter
+fetch/api/request/request-headers.any.html	Check that no-cors request constructor is filtering headers provided as part of request parameter
+fetch/api/request/request-headers.any.html	Testing empty Request Content-Type header
+fetch/api/request/request-init-001.sub.html	Check referrer init value of /relative/ressource and associated getter
+fetch/api/request/request-init-001.sub.html	Check referrer init value of http://test.url and associated getter
+fetch/api/request/request-init-002.any.html	-
+fetch/api/request/request-init-contenttype.any.html	Can override Content-Type for Request with Blob body (empty type)
+fetch/api/request/request-init-contenttype.any.html	Can override Content-Type for Request with Blob body (no type set)
+fetch/api/request/request-init-contenttype.any.html	Can override Content-Type for Request with Blob body (set type)
+fetch/api/request/request-init-contenttype.any.html	Can override Content-Type for Request with FormData body
+fetch/api/request/request-init-contenttype.any.html	Can override Content-Type for Request with ReadableStream body
+fetch/api/request/request-init-contenttype.any.html	Default Content-Type for Request with Blob body (empty type)
+fetch/api/request/request-init-contenttype.any.html	Default Content-Type for Request with Blob body (no type set)
+fetch/api/request/request-init-contenttype.any.html	Default Content-Type for Request with Blob body (set type)
+fetch/api/request/request-init-contenttype.any.html	Default Content-Type for Request with FormData body
+fetch/api/request/request-init-contenttype.any.html	Default Content-Type for Request with ReadableStream body
+fetch/api/request/request-init-priority.any.html	fetch() with an invalid priority returns a rejected promise with a TypeError
+fetch/api/request/request-init-stream.any.html	-
+fetch/api/request/request-init-stream.any.html	Constructing a Request with a Request on which body.getReader() is called
+fetch/api/request/request-init-stream.any.html	Constructing a Request with a Request on which body.getReader().read() is called
+fetch/api/request/request-init-stream.any.html	Constructing a Request with a Request on which read() and releaseLock() are called
+fetch/api/request/request-init-stream.any.html	Constructing a Request with a stream holds the original object.
+fetch/api/request/request-init-stream.any.html	It is OK to omit .duplex when the body is a Blob.
+fetch/api/request/request-init-stream.any.html	It is OK to omit duplex when init.body is not given and input.body is given.
+fetch/api/request/request-init-stream.any.html	It is OK to set .duplex = 'half' when the body is a Blob.
+fetch/api/request/request-init-stream.any.html	It is OK to set .duplex = 'half' when the body is a ReadableStream.
+fetch/api/request/request-init-stream.any.html	It is error to set .duplex = 'full' when the body is a Blob.
+fetch/api/request/request-keepalive-quota.html	A Keep-Alive fetch() should not be allowed if the Quota is used up.
+fetch/api/request/request-keepalive-quota.html	A Keep-Alive fetch() should return only its allocated Quota upon promise resolution.
+fetch/api/request/request-keepalive-quota.html	A Keep-Alive fetch() with a body over the Quota Limit should reject.
+fetch/api/request/request-reset-attributes.https.html	Request.isHistoryNavigation is reset with non-empty RequestInit
+fetch/api/request/request-reset-attributes.https.html	Request.isReloadNavigation is reset with non-empty RequestInit
+fetch/api/request/request-reset-attributes.https.html	Request.mode is reset with non-empty RequestInit when it's "navigate"
+fetch/api/request/request-structure.any.html	Check duplex attribute
+fetch/api/request/request-structure.any.html	Check isHistoryNavigation attribute
+fetch/api/request/request-structure.any.html	Check isReloadNavigation attribute
+fetch/api/request/request-structure.any.html	Request has blob method
+fetch/api/request/request-structure.any.html	Request has formData method
+fetch/api/response/many-empty-chunks-crash.html	-
+fetch/api/response/multi-globals/current/current.html	-
+fetch/api/response/multi-globals/incumbent/incumbent.html	-
+fetch/api/response/multi-globals/relevant/relevant.html	-
+fetch/api/response/multi-globals/url-parsing.html	should parse the redirect Location URL relative to the current settings object
+fetch/api/response/response-arraybuffer-realm.window.html	-
+fetch/api/response/response-arraybuffer-realm.window.html	realm of the ArrayBuffer from Response arrayBuffer()
+fetch/api/response/response-blob-realm.any.html	-
+fetch/api/response/response-blob-realm.any.html	realm of the Uint8Array from Response bytes()
+fetch/api/response/response-body-read-task-handling.html	-
+fetch/api/response/response-body-stashed-chunk.html	Response body: chunks stashed while the source is not pulling are delivered on the next pull
+fetch/api/response/response-cancel-stream.any.html	Cancelling a closed blob Response stream
+fetch/api/response/response-cancel-stream.any.html	Cancelling a loading blob Response stream
+fetch/api/response/response-cancel-stream.any.html	Cancelling a starting blob Response stream
+fetch/api/response/response-clone-iframe.window.html	-
+fetch/api/response/response-clone-iframe.window.html	clone within removed iframe should not crash
+fetch/api/response/response-clone.any.html	Cancelling stream should not affect cloned one
+fetch/api/response/response-clone.any.html	Check response clone use structureClone for teed ReadableStreams (ArrayBufferchunk)
+fetch/api/response/response-clone.any.html	Check response clone use structureClone for teed ReadableStreams (BigInt64Arraychunk)
+fetch/api/response/response-clone.any.html	Check response clone use structureClone for teed ReadableStreams (BigUint64Arraychunk)
+fetch/api/response/response-clone.any.html	Check response clone use structureClone for teed ReadableStreams (DataViewchunk)
+fetch/api/response/response-clone.any.html	Check response clone use structureClone for teed ReadableStreams (Float16Arraychunk)
+fetch/api/response/response-clone.any.html	Check response clone use structureClone for teed ReadableStreams (Float32Arraychunk)
+fetch/api/response/response-clone.any.html	Check response clone use structureClone for teed ReadableStreams (Float64Arraychunk)
+fetch/api/response/response-clone.any.html	Check response clone use structureClone for teed ReadableStreams (Int16Arraychunk)
+fetch/api/response/response-clone.any.html	Check response clone use structureClone for teed ReadableStreams (Int32Arraychunk)
+fetch/api/response/response-clone.any.html	Check response clone use structureClone for teed ReadableStreams (Int8Arraychunk)
+fetch/api/response/response-clone.any.html	Check response clone use structureClone for teed ReadableStreams (Uint16Arraychunk)
+fetch/api/response/response-clone.any.html	Check response clone use structureClone for teed ReadableStreams (Uint32Arraychunk)
+fetch/api/response/response-clone.any.html	Check response clone use structureClone for teed ReadableStreams (Uint8Arraychunk)
+fetch/api/response/response-clone.any.html	Check response clone use structureClone for teed ReadableStreams (Uint8ClampedArraychunk)
+fetch/api/response/response-clone.any.html	Cloned responses should provide the same data
+fetch/api/response/response-consume-empty.any.html	-
+fetch/api/response/response-consume-empty.any.html	Consume response's body as blob
+fetch/api/response/response-consume-empty.any.html	Consume response's body as formData with correct multipart type (error case)
+fetch/api/response/response-consume-empty.any.html	Consume response's body as formData with correct urlencoded type
+fetch/api/response/response-consume-empty.any.html	Consume response's body as formData without correct type (error case)
+fetch/api/response/response-consume-stream.any.html	-
+fetch/api/response/response-consume-stream.any.html	Read empty blob response's body as readableStream
+fetch/api/response/response-consume.html	-
+fetch/api/response/response-error-from-stream.any.html	-
+fetch/api/response/response-error-from-stream.any.html	ReadableStream pull() Error propagates to Response.arrayBuffer() Promise
+fetch/api/response/response-error-from-stream.any.html	ReadableStream pull() Error propagates to Response.blob() Promise
+fetch/api/response/response-error-from-stream.any.html	ReadableStream pull() Error propagates to Response.bytes() Promise
+fetch/api/response/response-error-from-stream.any.html	ReadableStream pull() Error propagates to Response.formData() Promise
+fetch/api/response/response-error-from-stream.any.html	ReadableStream pull() Error propagates to Response.json() Promise
+fetch/api/response/response-error-from-stream.any.html	ReadableStream pull() Error propagates to Response.text() Promise
+fetch/api/response/response-error-from-stream.any.html	ReadableStream start() Error propagates to Response.arrayBuffer() Promise
+fetch/api/response/response-error-from-stream.any.html	ReadableStream start() Error propagates to Response.blob() Promise
+fetch/api/response/response-error-from-stream.any.html	ReadableStream start() Error propagates to Response.bytes() Promise
+fetch/api/response/response-error-from-stream.any.html	ReadableStream start() Error propagates to Response.formData() Promise
+fetch/api/response/response-error-from-stream.any.html	ReadableStream start() Error propagates to Response.json() Promise
+fetch/api/response/response-error-from-stream.any.html	ReadableStream start() Error propagates to Response.text() Promise
+fetch/api/response/response-error.any.html	Throws TypeError when responseInit's statusText is Ā
+fetch/api/response/response-form-data.html	Empty form data
+fetch/api/response/response-form-data.html	Validate buggy form data - boundary
+fetch/api/response/response-form-data.html	Validate buggy form data - cr1
+fetch/api/response/response-form-data.html	Validate buggy form data - cr2
+fetch/api/response/response-form-data.html	Validate buggy form data - cr3
+fetch/api/response/response-form-data.html	Validate buggy form data - cr_
+fetch/api/response/response-form-data.html	Validate buggy form data - dashes
+fetch/api/response/response-form-data.html	Validate buggy form data - empty
+fetch/api/response/response-form-data.html	Validate form data - onePartWithEpilogue
+fetch/api/response/response-form-data.html	Validate form data - onePartWithTransportPadding
+fetch/api/response/response-form-data.html	Validate form data - onePartWithoutEpilogue
+fetch/api/response/response-form-data.html	Validate form data - twoPartsWithEpilogue
+fetch/api/response/response-form-data.html	Validate form data - twoPartsWithTransportPadding
+fetch/api/response/response-form-data.html	Validate form data - twoPartsWithoutEpilogue
+fetch/api/response/response-from-stream.any.html	-
+fetch/api/response/response-init-002.any.html	-
+fetch/api/response/response-init-contenttype.any.html	Can override Content-Type for Response with Blob body (empty type)
+fetch/api/response/response-init-contenttype.any.html	Can override Content-Type for Response with Blob body (no type set)
+fetch/api/response/response-init-contenttype.any.html	Can override Content-Type for Response with Blob body (set type)
+fetch/api/response/response-init-contenttype.any.html	Can override Content-Type for Response with FormData body
+fetch/api/response/response-init-contenttype.any.html	Can override Content-Type for Response with ReadableStream body
+fetch/api/response/response-init-contenttype.any.html	Default Content-Type for Response with Blob body (empty type)
+fetch/api/response/response-init-contenttype.any.html	Default Content-Type for Response with Blob body (no type set)
+fetch/api/response/response-init-contenttype.any.html	Default Content-Type for Response with Blob body (set type)
+fetch/api/response/response-init-contenttype.any.html	Default Content-Type for Response with FormData body
+fetch/api/response/response-init-contenttype.any.html	Default Content-Type for Response with ReadableStream body
+fetch/api/response/response-static-json.any.html	Check response returned by static json() with input U+dead
+fetch/api/response/response-static-json.any.html	Check response returned by static json() with input U+df06U+d834
+fetch/api/response/response-stream-bad-chunk.any.html	ReadableStream with non-Uint8Array chunk passed to Response.arrayBuffer() causes TypeError
+fetch/api/response/response-stream-bad-chunk.any.html	ReadableStream with non-Uint8Array chunk passed to Response.blob() causes TypeError
+fetch/api/response/response-stream-bad-chunk.any.html	ReadableStream with non-Uint8Array chunk passed to Response.bytes() causes TypeError
+fetch/api/response/response-stream-bad-chunk.any.html	ReadableStream with non-Uint8Array chunk passed to Response.formData() causes TypeError
+fetch/api/response/response-stream-bad-chunk.any.html	ReadableStream with non-Uint8Array chunk passed to Response.json() causes TypeError
+fetch/api/response/response-stream-bad-chunk.any.html	ReadableStream with non-Uint8Array chunk passed to Response.text() causes TypeError
+fetch/api/response/response-stream-disturbed-1.any.html	-
+fetch/api/response/response-stream-disturbed-1.any.html	Getting arrayBuffer after getting the Response body - not disturbed, not locked (body source: stream)
+fetch/api/response/response-stream-disturbed-1.any.html	Getting blob after getting the Response body - not disturbed, not locked (body source: fetch)
+fetch/api/response/response-stream-disturbed-1.any.html	Getting blob after getting the Response body - not disturbed, not locked (body source: stream)
+fetch/api/response/response-stream-disturbed-1.any.html	Getting blob after getting the Response body - not disturbed, not locked (body source: string)
+fetch/api/response/response-stream-disturbed-1.any.html	Getting json after getting the Response body - not disturbed, not locked (body source: stream)
+fetch/api/response/response-stream-disturbed-1.any.html	Getting text after getting the Response body - not disturbed, not locked (body source: stream)
+fetch/api/response/response-stream-disturbed-2.any.html	Getting arrayBuffer after getting a locked Response body (body source: stream)
+fetch/api/response/response-stream-disturbed-2.any.html	Getting blob after getting a locked Response body (body source: fetch)
+fetch/api/response/response-stream-disturbed-2.any.html	Getting blob after getting a locked Response body (body source: stream)
+fetch/api/response/response-stream-disturbed-2.any.html	Getting blob after getting a locked Response body (body source: string)
+fetch/api/response/response-stream-disturbed-2.any.html	Getting json after getting a locked Response body (body source: stream)
+fetch/api/response/response-stream-disturbed-2.any.html	Getting text after getting a locked Response body (body source: stream)
+fetch/api/response/response-stream-disturbed-3.any.html	Getting arrayBuffer after reading the Response body (body source: stream)
+fetch/api/response/response-stream-disturbed-3.any.html	Getting blob after reading the Response body (body source: fetch)
+fetch/api/response/response-stream-disturbed-3.any.html	Getting blob after reading the Response body (body source: stream)
+fetch/api/response/response-stream-disturbed-3.any.html	Getting blob after reading the Response body (body source: string)
+fetch/api/response/response-stream-disturbed-3.any.html	Getting json after reading the Response body (body source: stream)
+fetch/api/response/response-stream-disturbed-3.any.html	Getting text after reading the Response body (body source: stream)
+fetch/api/response/response-stream-disturbed-4.any.html	Getting arrayBuffer after cancelling the Response body (body source: stream)
+fetch/api/response/response-stream-disturbed-4.any.html	Getting blob after cancelling the Response body (body source: fetch)
+fetch/api/response/response-stream-disturbed-4.any.html	Getting blob after cancelling the Response body (body source: stream)
+fetch/api/response/response-stream-disturbed-4.any.html	Getting blob after cancelling the Response body (body source: string)
+fetch/api/response/response-stream-disturbed-4.any.html	Getting json after cancelling the Response body (body source: stream)
+fetch/api/response/response-stream-disturbed-4.any.html	Getting text after cancelling the Response body (body source: stream)
+fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as arrayBuffer (body source: fetch)
+fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as arrayBuffer (body source: stream)
+fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as arrayBuffer (body source: string)
+fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as blob (body source: fetch)
+fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as blob (body source: stream)
+fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as blob (body source: string)
+fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as json (body source: fetch)
+fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as json (body source: stream)
+fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as json (body source: string)
+fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as text (body source: fetch)
+fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as text (body source: stream)
+fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as text (body source: string)
+fetch/api/response/response-stream-disturbed-6.any.html	A closed stream on which read() has been called
+fetch/api/response/response-stream-disturbed-6.any.html	A non-closed stream on which cancel() has been called
+fetch/api/response/response-stream-disturbed-6.any.html	A non-closed stream on which read() has been called
+fetch/api/response/response-stream-disturbed-6.any.html	An errored stream on which cancel() has been called
+fetch/api/response/response-stream-disturbed-6.any.html	An errored stream on which read() has been called
+fetch/api/response/response-stream-disturbed-by-pipe.any.html	using pipeThrough on Response body should disturb it synchronously
+fetch/api/response/response-stream-disturbed-by-pipe.any.html	using pipeTo on Response body should disturb it synchronously
+fetch/api/response/response-stream-with-broken-then.any.html	-
+fetch/api/response/response-stream-with-broken-then.any.html	Attempt to inject 8.2 via Object.prototype.then.
+fetch/api/response/response-stream-with-broken-then.any.html	Attempt to inject undefined via Object.prototype.then.
+fetch/api/response/response-stream-with-broken-then.any.html	Attempt to inject value: undefined via Object.prototype.then.
+fetch/api/response/response-stream-with-broken-then.any.html	Attempt to inject {done: false, value: bye} via Object.prototype.then.
+fetch/api/response/response-stream-with-broken-then.any.html	intercepting arraybuffer to body readable stream conversion via Object.prototype.then should not be possible

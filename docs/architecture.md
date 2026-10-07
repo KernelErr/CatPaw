@@ -132,7 +132,9 @@ challenges → M5 scale & compat. Exit criteria live in the README.
 - `cargo test --workspace`
 - `cargo xtask tree-construction` — html5lib tree-construction tests (from WPT html/syntax/parsing) through our
   `TreeSink`
-- `cargo xtask wpt --include <dirs>` (from M1) — web-platform-tests subsets
-  with expectations in `tests/wpt/meta`
+- `cargo xtask wpt --include <dir> …` — testharness.js tests from web-platform-tests
+  run in CatPaw pages (the checkout served by an in-process stand-in for WPT's
+  server; `.any.js` wrappers, `// META:` lines and `.sub.` substitutions as it
+  makes them), with the known failures in `tests/wpt-expectations/<dir>.txt`
 - Leak census after integration tests: force a GC, then assert the arena is
   empty.

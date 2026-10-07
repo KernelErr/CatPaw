@@ -2791,6 +2791,33 @@ impl IntoJs for web::ElementOrDocument {
     }
 }
 
+impl FromJs for web::ElementOrProcessingInstruction {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if rt::is_instance(v, I::Element, ctx) {
+            return Ok(web::ElementOrProcessingInstruction::Element(
+                rt::node_from_js(v, I::Element, ctx)?,
+            ));
+        }
+        if rt::is_instance(v, I::ProcessingInstruction, ctx) {
+            return Ok(web::ElementOrProcessingInstruction::ProcessingInstruction(
+                rt::node_from_js(v, I::ProcessingInstruction, ctx)?,
+            ));
+        }
+        Err(rt::type_error(
+            "value is not convertible to ElementOrProcessingInstruction",
+        ))
+    }
+}
+
+impl IntoJs for web::ElementOrProcessingInstruction {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+            web::ElementOrProcessingInstruction::Element(v) => v.into_js(ctx),
+            web::ElementOrProcessingInstruction::ProcessingInstruction(v) => v.into_js(ctx),
+        }
+    }
+}
+
 impl FromJs for web::EventListenerOptionsOrBoolean {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         if v.is_object() || v.is_null_or_undefined() {
@@ -17434,6 +17461,52 @@ pub mod xml_http_request_upload {
     };
 }
 
+pub mod xml_serializer {
+    use super::*;
+
+    fn op_serialize_to_string(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::XMLSerializer, ctx)?;
+        rt::require_args(args, 1, "XMLSerializer.serializeToString")?;
+        let a0 = rt::node_from_js(rt::arg(args, 0), I::Node, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::XMLSerializerImpl>::serialize_to_string(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "XMLSerializer")?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::XMLSerializerImpl>::constructor(cx));
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::XMLSerializer, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::XMLSerializer,
+        name: "XMLSerializer",
+        parent: None,
+        global: false,
+        constructor: Some(ctor),
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[rt::OpDef {
+            name: "serializeToString",
+            func: op_serialize_to_string,
+            length: 1,
+        }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod x_path_evaluator {
     use super::*;
 
@@ -21488,6 +21561,26 @@ pub mod document {
         rt::ret(r, ctx)
     }
 
+    fn op_get_elements_by_tag_name_ns(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        rt::require_args(args, 2, "Document.getElementsByTagNameNS")?;
+        let a0 = if rt::arg(args, 0).is_null_or_undefined() {
+            None
+        } else {
+            Some(rt::string_from_js(rt::arg(args, 0), ctx)?)
+        };
+        let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DocumentImpl>::get_elements_by_tag_name_ns(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn op_get_elements_by_class_name(
         this_js: &JsValue,
         args: &[JsValue],
@@ -21607,6 +21700,22 @@ pub mod document {
         let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
         let r = rt::with_cx(ctx, |cx| {
             <Web as web::DocumentImpl>::create_comment(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_create_processing_instruction(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        rt::require_args(args, 2, "Document.createProcessingInstruction")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DocumentImpl>::create_processing_instruction(cx, this, a0, a1)
         });
         rt::ret(r, ctx)
     }
@@ -22705,6 +22814,11 @@ pub mod document {
                 length: 1,
             },
             rt::OpDef {
+                name: "getElementsByTagNameNS",
+                func: op_get_elements_by_tag_name_ns,
+                length: 2,
+            },
+            rt::OpDef {
                 name: "getElementsByClassName",
                 func: op_get_elements_by_class_name,
                 length: 1,
@@ -22733,6 +22847,11 @@ pub mod document {
                 name: "createComment",
                 func: op_create_comment,
                 length: 1,
+            },
+            rt::OpDef {
+                name: "createProcessingInstruction",
+                func: op_create_processing_instruction,
+                length: 2,
             },
             rt::OpDef {
                 name: "importNode",
@@ -24124,6 +24243,26 @@ pub mod element {
         rt::ret(r, ctx)
     }
 
+    fn op_get_elements_by_tag_name_ns(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::Element, ctx)?;
+        rt::require_args(args, 2, "Element.getElementsByTagNameNS")?;
+        let a0 = if rt::arg(args, 0).is_null_or_undefined() {
+            None
+        } else {
+            Some(rt::string_from_js(rt::arg(args, 0), ctx)?)
+        };
+        let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ElementImpl>::get_elements_by_tag_name_ns(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn op_get_elements_by_class_name(
         this_js: &JsValue,
         args: &[JsValue],
@@ -24642,6 +24781,11 @@ pub mod element {
                 name: "getElementsByTagName",
                 func: op_get_elements_by_tag_name,
                 length: 1,
+            },
+            rt::OpDef {
+                name: "getElementsByTagNameNS",
+                func: op_get_elements_by_tag_name_ns,
+                length: 2,
             },
             rt::OpDef {
                 name: "getElementsByClassName",
@@ -38843,6 +38987,51 @@ pub mod pointer_event {
     };
 }
 
+pub mod processing_instruction {
+    use super::*;
+
+    fn get_target(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::ProcessingInstruction, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ProcessingInstructionImpl>::target(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_sheet(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::ProcessingInstruction, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::LinkStyleImpl>::sheet(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::ProcessingInstruction,
+        name: "ProcessingInstruction",
+        parent: Some(I::CharacterData),
+        global: false,
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "target",
+                getter: get_target,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "sheet",
+                getter: get_sheet,
+                setter: None,
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod svg_element {
     use super::*;
 
@@ -47697,6 +47886,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &writable_stream_default_writer::DEF,
     &xml_http_request_event_target::DEF,
     &xml_http_request_upload::DEF,
+    &xml_serializer::DEF,
     &x_path_evaluator::DEF,
     &x_path_expression::DEF,
     &x_path_result::DEF,
@@ -47776,6 +47966,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &mouse_event::DEF,
     &performance_navigation_timing::DEF,
     &pointer_event::DEF,
+    &processing_instruction::DEF,
     &svg_element::DEF,
     &svg_gradient_element::DEF,
     &svg_graphics_element::DEF,

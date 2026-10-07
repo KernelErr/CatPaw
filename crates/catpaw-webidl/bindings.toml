@@ -145,8 +145,9 @@ members = [
 members = [
   "URL", "documentURI", "compatMode", "characterSet", "charset", "inputEncoding",
   "contentType", "doctype", "documentElement", "getElementsByTagName",
-  "getElementsByClassName", "createElement", "createElementNS", "createDocumentFragment",
-  "createTextNode", "createComment", "importNode", "adoptNode", "createEvent",
+  "getElementsByTagNameNS", "getElementsByClassName", "createElement", "createElementNS", "createDocumentFragment",
+  "createTextNode", "createComment", "createProcessingInstruction", "importNode", "adoptNode",
+  "createEvent",
   "location", "referrer", "cookie", "readyState", "title", "body", "head",
   "getElementsByName", "currentScript", "defaultView", "hasFocus", "hidden",
   "visibilityState", "write", "writeln", "open", "close", "implementation",
@@ -180,6 +181,10 @@ members = ["createDocumentType", "createDocument", "createHTMLDocument", "hasFea
 [interfaces.DOMParser]
 constructor = true
 members = ["parseFromString"]
+
+[interfaces.XMLSerializer]
+constructor = true
+members = ["serializeToString"]
 
 [interfaces.DocumentType]
 members = ["name", "publicId", "systemId"]
@@ -224,7 +229,8 @@ members = [
   "hasAttributes", "getAttributeNames", "getAttribute", "getAttributeNS", "setAttribute",
   "setAttributeNS", "removeAttribute", "removeAttributeNS", "toggleAttribute",
   "hasAttribute", "hasAttributeNS", "closest", "matches", "webkitMatchesSelector",
-  "getElementsByTagName", "getElementsByClassName", "insertAdjacentElement",
+  "getElementsByTagName", "getElementsByTagNameNS", "getElementsByClassName",
+  "insertAdjacentElement",
   "insertAdjacentText", "innerHTML", "outerHTML", "insertAdjacentHTML",
   "getBoundingClientRect", "scrollIntoView", "scroll", "scrollTo", "scrollBy", "scrollTop", "scrollLeft", "scrollWidth",
   "scrollHeight", "clientTop", "clientLeft", "clientWidth", "clientHeight", "attributes",
@@ -243,6 +249,9 @@ members = ["splitText", "wholeText"]
 
 [interfaces.Comment]
 constructor = true
+
+[interfaces.ProcessingInstruction]
+members = ["target"]
 
 [mixins.NonElementParentNode]
 members = ["getElementById"]

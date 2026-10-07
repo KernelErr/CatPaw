@@ -93,6 +93,7 @@ pub enum InterfaceId {
     WritableStreamDefaultWriter,
     XMLHttpRequestEventTarget,
     XMLHttpRequestUpload,
+    XMLSerializer,
     XPathEvaluator,
     XPathExpression,
     XPathResult,
@@ -172,6 +173,7 @@ pub enum InterfaceId {
     MouseEvent,
     PerformanceNavigationTiming,
     PointerEvent,
+    ProcessingInstruction,
     SVGElement,
     SVGGradientElement,
     SVGGraphicsElement,
@@ -231,8 +233,8 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 206;
-    pub const ALL: [InterfaceId; 206] = [
+    pub const COUNT: usize = 208;
+    pub const ALL: [InterfaceId; 208] = [
         InterfaceId::AbortController,
         InterfaceId::CSSRule,
         InterfaceId::CSSRuleList,
@@ -304,6 +306,7 @@ impl InterfaceId {
         InterfaceId::WritableStreamDefaultWriter,
         InterfaceId::XMLHttpRequestEventTarget,
         InterfaceId::XMLHttpRequestUpload,
+        InterfaceId::XMLSerializer,
         InterfaceId::XPathEvaluator,
         InterfaceId::XPathExpression,
         InterfaceId::XPathResult,
@@ -383,6 +386,7 @@ impl InterfaceId {
         InterfaceId::MouseEvent,
         InterfaceId::PerformanceNavigationTiming,
         InterfaceId::PointerEvent,
+        InterfaceId::ProcessingInstruction,
         InterfaceId::SVGElement,
         InterfaceId::SVGGradientElement,
         InterfaceId::SVGGraphicsElement,
@@ -514,6 +518,7 @@ impl InterfaceId {
             InterfaceId::WritableStreamDefaultWriter => "WritableStreamDefaultWriter",
             InterfaceId::XMLHttpRequestEventTarget => "XMLHttpRequestEventTarget",
             InterfaceId::XMLHttpRequestUpload => "XMLHttpRequestUpload",
+            InterfaceId::XMLSerializer => "XMLSerializer",
             InterfaceId::XPathEvaluator => "XPathEvaluator",
             InterfaceId::XPathExpression => "XPathExpression",
             InterfaceId::XPathResult => "XPathResult",
@@ -593,6 +598,7 @@ impl InterfaceId {
             InterfaceId::MouseEvent => "MouseEvent",
             InterfaceId::PerformanceNavigationTiming => "PerformanceNavigationTiming",
             InterfaceId::PointerEvent => "PointerEvent",
+            InterfaceId::ProcessingInstruction => "ProcessingInstruction",
             InterfaceId::SVGElement => "SVGElement",
             InterfaceId::SVGGradientElement => "SVGGradientElement",
             InterfaceId::SVGGraphicsElement => "SVGGraphicsElement",
@@ -725,6 +731,7 @@ impl InterfaceId {
             "WritableStreamDefaultWriter" => InterfaceId::WritableStreamDefaultWriter,
             "XMLHttpRequestEventTarget" => InterfaceId::XMLHttpRequestEventTarget,
             "XMLHttpRequestUpload" => InterfaceId::XMLHttpRequestUpload,
+            "XMLSerializer" => InterfaceId::XMLSerializer,
             "XPathEvaluator" => InterfaceId::XPathEvaluator,
             "XPathExpression" => InterfaceId::XPathExpression,
             "XPathResult" => InterfaceId::XPathResult,
@@ -804,6 +811,7 @@ impl InterfaceId {
             "MouseEvent" => InterfaceId::MouseEvent,
             "PerformanceNavigationTiming" => InterfaceId::PerformanceNavigationTiming,
             "PointerEvent" => InterfaceId::PointerEvent,
+            "ProcessingInstruction" => InterfaceId::ProcessingInstruction,
             "SVGElement" => InterfaceId::SVGElement,
             "SVGGradientElement" => InterfaceId::SVGGradientElement,
             "SVGGraphicsElement" => InterfaceId::SVGGraphicsElement,
@@ -937,6 +945,7 @@ impl InterfaceId {
             InterfaceId::WritableStreamDefaultWriter => None,
             InterfaceId::XMLHttpRequestEventTarget => Some(InterfaceId::EventTarget),
             InterfaceId::XMLHttpRequestUpload => Some(InterfaceId::XMLHttpRequestEventTarget),
+            InterfaceId::XMLSerializer => None,
             InterfaceId::XPathEvaluator => None,
             InterfaceId::XPathExpression => None,
             InterfaceId::XPathResult => None,
@@ -1018,6 +1027,7 @@ impl InterfaceId {
                 Some(InterfaceId::PerformanceResourceTiming)
             }
             InterfaceId::PointerEvent => Some(InterfaceId::MouseEvent),
+            InterfaceId::ProcessingInstruction => Some(InterfaceId::CharacterData),
             InterfaceId::SVGElement => Some(InterfaceId::Element),
             InterfaceId::SVGGradientElement => Some(InterfaceId::SVGElement),
             InterfaceId::SVGGraphicsElement => Some(InterfaceId::SVGElement),
@@ -2426,6 +2436,12 @@ pub enum ElementOrDocument {
 }
 
 #[derive(Clone, Debug)]
+pub enum ElementOrProcessingInstruction {
+    Element(NodeId),
+    ProcessingInstruction(NodeId),
+}
+
+#[derive(Clone, Debug)]
 pub enum EventListenerOptionsOrBoolean {
     EventListenerOptions(EventListenerOptions),
     Boolean(bool),
@@ -3588,7 +3604,10 @@ pub trait StorageImpl {
 pub trait StyleSheetImpl {
     fn type_(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
     fn href(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<String>>;
-    fn owner_node(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<NodeId>>;
+    fn owner_node(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+    ) -> Fallible<Option<ElementOrProcessingInstruction>>;
     fn parent_style_sheet(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<ObjectId>>;
     fn title(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<String>>;
     fn media(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
@@ -3796,6 +3815,11 @@ pub trait WritableStreamDefaultWriterImpl {
     fn constructor(cx: &mut Cx<'_>, stream: ObjectId) -> Fallible<ObjectId>;
 }
 
+pub trait XMLSerializerImpl {
+    fn serialize_to_string(cx: &mut Cx<'_>, this: ObjectId, root: NodeId) -> Fallible<String>;
+    fn constructor(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
+}
+
 pub trait XPathEvaluatorImpl {
     fn constructor(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
 }
@@ -3942,6 +3966,12 @@ pub trait DocumentImpl {
         this: NodeId,
         qualified_name: String,
     ) -> Fallible<ObjectId>;
+    fn get_elements_by_tag_name_ns(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        namespace: Option<String>,
+        local_name: String,
+    ) -> Fallible<ObjectId>;
     fn get_elements_by_class_name(
         cx: &mut Cx<'_>,
         this: NodeId,
@@ -3963,6 +3993,12 @@ pub trait DocumentImpl {
     fn create_document_fragment(cx: &mut Cx<'_>, this: NodeId) -> Fallible<NodeId>;
     fn create_text_node(cx: &mut Cx<'_>, this: NodeId, data: String) -> Fallible<NodeId>;
     fn create_comment(cx: &mut Cx<'_>, this: NodeId, data: String) -> Fallible<NodeId>;
+    fn create_processing_instruction(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        target: String,
+        data: String,
+    ) -> Fallible<NodeId>;
     fn import_node(
         cx: &mut Cx<'_>,
         this: NodeId,
@@ -4155,6 +4191,12 @@ pub trait ElementImpl {
         cx: &mut Cx<'_>,
         this: NodeId,
         qualified_name: String,
+    ) -> Fallible<ObjectId>;
+    fn get_elements_by_tag_name_ns(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        namespace: Option<String>,
+        local_name: String,
     ) -> Fallible<ObjectId>;
     fn get_elements_by_class_name(
         cx: &mut Cx<'_>,
@@ -4352,6 +4394,10 @@ pub trait PointerEventImpl {
         type_: String,
         event_init_dict: PointerEventInit,
     ) -> Fallible<ObjectId>;
+}
+
+pub trait ProcessingInstructionImpl {
+    fn target(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
 }
 
 pub trait SVGElementImpl {

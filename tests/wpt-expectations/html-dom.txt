@@ -1,0 +1,759 @@
+# Known failures in web-platform-tests html/dom: `<test>\t<subtest>` per line,
+# `-` for the harness itself; `skip <test>` for tests not run at all
+# (those the engine cannot finish in time). Regenerate with
+# `cargo xtask wpt --include html/dom --update-expectations`.
+skip html/dom/reflection-embedded.html
+skip html/dom/reflection-forms.html
+skip html/dom/reflection-grouping.html
+skip html/dom/reflection-misc.html
+skip html/dom/reflection-sections.html
+skip html/dom/reflection-tabular.html
+skip html/dom/reflection-text.html
+html/dom/access-key-label.html	Returns empty string when accesskey is invalid
+html/dom/aria-attribute-reflection-enumerated.tentative.html	-
+html/dom/aria-attribute-reflection.html	aria-atomic attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-autocomplete attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-braillelabel attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-brailleroledescription attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-busy attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-checked attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-colcount attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-colindex attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-colspan attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-current attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-disabled attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-expanded attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-haspopup attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-hidden attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-invalid attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-keyshortcuts attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-label attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-level attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-live attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-modal attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-multiline attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-multiselectable attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-orientation attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-placeholder attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-posinset attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-pressed attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-readonly attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-relevant attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-required attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-roledescription attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-rowcount attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-rowindex attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-rowspan attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-selected attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-setsize attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-sort attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-valuemax attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-valuemin attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-valuenow attribute reflects.
+html/dom/aria-attribute-reflection.html	aria-valuetext attribute reflects.
+html/dom/aria-attribute-reflection.html	role attribute reflects.
+html/dom/aria-attribute-reflection.tentative.html	aria-colindextext attribute reflects.
+html/dom/aria-attribute-reflection.tentative.html	aria-description attribute reflects.
+html/dom/aria-attribute-reflection.tentative.html	aria-rowindextext attribute reflects.
+html/dom/aria-element-reflection-disconnected.html	Element references should stay valid when content is disconnected (element array)
+html/dom/aria-element-reflection-disconnected.html	Element references should stay valid when content is disconnected (single element)
+html/dom/aria-element-reflection-labelledby.html	Moving the label from shadow DOM to light DOM causes the reference to become valid
+html/dom/aria-element-reflection-labelledby.html	Setting ariaLabelledByElements before inserting the elements referred to in the document should cause the label to be updated once elements are inserted
+html/dom/aria-element-reflection-labelledby.html	Setting ariaLabelledByElements on an element before inserting it in the document should cause the label to be updated once the element is inserted
+html/dom/aria-element-reflection-labelledby.html	Setting ariaLabelledByElements should determine the computed label for the labelled element
+html/dom/aria-element-reflection.html	Attaching element reference before it's inserted into the DOM.
+html/dom/aria-element-reflection.html	Caching invariant different attributes.
+html/dom/aria-element-reflection.html	Caching invariant different elements.
+html/dom/aria-element-reflection.html	Changing the ID of an element doesn't lose the reference.
+html/dom/aria-element-reflection.html	Cross-document references and moves.
+html/dom/aria-element-reflection.html	Deleting a reflected element should return null for the IDL attribute and the content attribute will be empty.
+html/dom/aria-element-reflection.html	Element reference set in invalid scope remains intact throughout move to valid scope.
+html/dom/aria-element-reflection.html	If the content attribute is set directly, the IDL attribute getter always returns the first element whose ID matches the content attribute.
+html/dom/aria-element-reflection.html	Moving explicitly set elements across shadow DOM boundaries.
+html/dom/aria-element-reflection.html	Moving explicitly set elements around within the same scope, and removing from the DOM.
+html/dom/aria-element-reflection.html	Passing values of the wrong type should throw a TypeError
+html/dom/aria-element-reflection.html	Reparenting an element into a descendant shadow scope hides the element reference.
+html/dom/aria-element-reflection.html	Reparenting referenced element cannot cause retargeting of reference.
+html/dom/aria-element-reflection.html	Reparenting.
+html/dom/aria-element-reflection.html	Setting an element reference that crosses into a shadow tree is disallowed, but setting one that is in a shadow inclusive ancestor is allowed.
+html/dom/aria-element-reflection.html	Setting the IDL attribute to an element which is not the first element in DOM order with its ID causes the content attribute to be an empty string
+html/dom/aria-element-reflection.html	aria-activedescendant element reflection
+html/dom/aria-element-reflection.html	aria-controls.
+html/dom/aria-element-reflection.html	aria-describedby.
+html/dom/aria-element-reflection.html	aria-details
+html/dom/aria-element-reflection.html	aria-errormessage
+html/dom/aria-element-reflection.html	aria-flowto.
+html/dom/aria-element-reflection.html	aria-labelledby.
+html/dom/aria-element-reflection.html	aria-owns.
+html/dom/aria-element-reflection.html	ariaErrorMessageElement is not defined
+html/dom/aria-element-reflection.html	shadow DOM behaviour for FrozenArray element reflection.
+html/dom/directionality/bdi-element-invalid-dir.html	-
+html/dom/documents/dom-tree-accessors/Document.currentScript.html	-
+html/dom/documents/dom-tree-accessors/Document.currentScript.html	Script iframe-src
+html/dom/documents/dom-tree-accessors/Document.currentScript.html	Script script-svg
+html/dom/documents/dom-tree-accessors/Document.currentScript.html	Script script-window-error
+html/dom/documents/dom-tree-accessors/Document.currentScript.html	Script xhr-test
+html/dom/documents/dom-tree-accessors/document.embeds-document.plugins-01.html	Document.embeds should be a live collection
+html/dom/documents/dom-tree-accessors/document.embeds-document.plugins-01.html	Document.plugins should be a live collection
+html/dom/documents/dom-tree-accessors/document.embeds-document.plugins-01.html	No plugins
+html/dom/documents/dom-tree-accessors/document.embeds-document.plugins-01.html	One plugin
+html/dom/documents/dom-tree-accessors/document.embeds-document.plugins-01.html	Two plugins
+html/dom/documents/dom-tree-accessors/document.forms.html	Document.forms should be a live collection
+html/dom/documents/dom-tree-accessors/document.forms.html	document.forms
+html/dom/documents/dom-tree-accessors/document.forms.html	document.forms getOwnPropertyNames
+html/dom/documents/dom-tree-accessors/document.forms.html	document.forms iteration
+html/dom/documents/dom-tree-accessors/document.forms.html	document.forms with empty string
+html/dom/documents/dom-tree-accessors/document.forms.html	document.forms.item with string arg
+html/dom/documents/dom-tree-accessors/document.images.html	Document.images should be a live collection
+html/dom/documents/dom-tree-accessors/document.images.html	Foreign element should not be in the collection
+html/dom/documents/dom-tree-accessors/document.images.html	Input elements should not be in the collection
+html/dom/documents/dom-tree-accessors/document.images.html	The empty string should not be in the collections
+html/dom/documents/dom-tree-accessors/document.images.html	Two img elements with the same id
+html/dom/documents/dom-tree-accessors/document.images.html	Two img elements with the same name
+html/dom/documents/dom-tree-accessors/document.images.html	Unknown name should not be in the collection
+html/dom/documents/dom-tree-accessors/document.images.html	document.images should contain all HTML img elements
+html/dom/documents/dom-tree-accessors/document.images.html	img with id
+html/dom/documents/dom-tree-accessors/document.images.html	img with id and name
+html/dom/documents/dom-tree-accessors/document.images.html	img with name
+html/dom/documents/dom-tree-accessors/document.links.html	Document.links should be a live collection
+html/dom/documents/dom-tree-accessors/document.scripts.html	Document.scripts should be a live collection
+html/dom/documents/dom-tree-accessors/document.title-09.html	No title element in SVG document
+html/dom/documents/dom-tree-accessors/document.title-09.html	Title element in SVG document
+html/dom/documents/dom-tree-accessors/document.title-09.html	Title element not child of SVG root
+html/dom/documents/dom-tree-accessors/document.title-09.html	Title element not in SVG namespace
+html/dom/documents/dom-tree-accessors/document.title-not-in-html-svg.html	Should not be able to set document title in XML document with html:title element
+html/dom/documents/dom-tree-accessors/nameditem-01.html	Dynamically removing the id attribute from img elements, should still be accessible by name value.
+html/dom/documents/dom-tree-accessors/nameditem-01.html	Dynamically removing the name attribute from img elements, should not be accessible.
+html/dom/documents/dom-tree-accessors/nameditem-01.html	Dynamically updating the id attribute from img elements, should be accessible by values.
+html/dom/documents/dom-tree-accessors/nameditem-01.html	Dynamically updating the name attribute from img elements, should be accessible by values.
+html/dom/documents/dom-tree-accessors/nameditem-01.html	img elements that have a name and id attribute with same value.
+html/dom/documents/dom-tree-accessors/nameditem-01.html	img elements that have a name and id attribute, should be accessible by both values.
+html/dom/documents/dom-tree-accessors/nameditem-01.html	img elements that is removed, should not be accessible.
+html/dom/documents/dom-tree-accessors/nameditem-02.html	An iframe whose name looks like an array index should work.
+html/dom/documents/dom-tree-accessors/nameditem-02.html	Dynamically removing the name attribute from iframe elements, should not be accessible.
+html/dom/documents/dom-tree-accessors/nameditem-02.html	Dynamically updating the id attribute from iframe elements, should be accessible only by its name.
+html/dom/documents/dom-tree-accessors/nameditem-02.html	Dynamically updating the name attribute from iframe elements, should be accessible by its name.
+html/dom/documents/dom-tree-accessors/nameditem-02.html	If an iframe has a name and a different id, it should be returned by its name.
+html/dom/documents/dom-tree-accessors/nameditem-02.html	If the only named item is an iframe, the contentWindow should be returned.
+html/dom/documents/dom-tree-accessors/nameditem-02.html	If there are an iframe and another element (iframe first), a collection should be returned.
+html/dom/documents/dom-tree-accessors/nameditem-02.html	If there are an iframe and another element (iframe last), a collection should be returned.
+html/dom/documents/dom-tree-accessors/nameditem-02.html	If there are two iframes, a collection should be returned.
+html/dom/documents/dom-tree-accessors/nameditem-02.html	iframe elements that is removed, should not be accessible.
+html/dom/documents/dom-tree-accessors/nameditem-04.html	An id shouldn't affect getting an form by name
+html/dom/documents/dom-tree-accessors/nameditem-04.html	Dynamically removing the name attribute from form elements, should not be accessible.
+html/dom/documents/dom-tree-accessors/nameditem-04.html	Dynamically updating the id attribute from form elements, should be accessible only by its name.
+html/dom/documents/dom-tree-accessors/nameditem-04.html	Dynamically updating the name attribute from form elements, should be accessible by its name.
+html/dom/documents/dom-tree-accessors/nameditem-04.html	If there are two forms, a collection should be returned. (id and name)
+html/dom/documents/dom-tree-accessors/nameditem-04.html	If there are two forms, a collection should be returned. (name and id)
+html/dom/documents/dom-tree-accessors/nameditem-04.html	If there are two forms, a collection should be returned. (name)
+html/dom/documents/dom-tree-accessors/nameditem-04.html	If there is one form, it should be returned (name)
+html/dom/documents/dom-tree-accessors/nameditem-04.html	form elements that is removed, should not be accessible.
+html/dom/documents/dom-tree-accessors/nameditem-05.html	An id shouldn't affect getting an embed by name
+html/dom/documents/dom-tree-accessors/nameditem-05.html	Dynamically removing the name attribute from embed elements, should not be accessible.
+html/dom/documents/dom-tree-accessors/nameditem-05.html	Dynamically updating the id attribute from embed elements, should be accessible only by its name.
+html/dom/documents/dom-tree-accessors/nameditem-05.html	Dynamically updating the name attribute from embed elements, should be accessible by its name.
+html/dom/documents/dom-tree-accessors/nameditem-05.html	If there are two embeds, a collection should be returned. (id and name)
+html/dom/documents/dom-tree-accessors/nameditem-05.html	If there are two embeds, a collection should be returned. (name and id)
+html/dom/documents/dom-tree-accessors/nameditem-05.html	If there are two embeds, a collection should be returned. (name)
+html/dom/documents/dom-tree-accessors/nameditem-05.html	If there is one embed, it should be returned (name)
+html/dom/documents/dom-tree-accessors/nameditem-05.html	embed elements that is removed, should not be accessible.
+html/dom/documents/dom-tree-accessors/nameditem-06.html	Dynamically removing the name attribute from img elements, should not be accessible.
+html/dom/documents/dom-tree-accessors/nameditem-06.html	Dynamically updating the name attribute from img elements, should be accessible by its name.
+html/dom/documents/dom-tree-accessors/nameditem-06.html	If there are two imgs, a collection should be returned. (name)
+html/dom/documents/dom-tree-accessors/nameditem-06.html	If there are two imgs, the one with a name should be returned. (id and name)
+html/dom/documents/dom-tree-accessors/nameditem-06.html	If there are two imgs, the one with a name should be returned. (name and id)
+html/dom/documents/dom-tree-accessors/nameditem-06.html	If there is one img, it should be returned (name)
+html/dom/documents/dom-tree-accessors/nameditem-06.html	img elements that is removed, should not be accessible.
+html/dom/documents/dom-tree-accessors/nameditem-07.html	Dynamically removing the id attribute from object elements, should not be accessible.
+html/dom/documents/dom-tree-accessors/nameditem-07.html	Dynamically removing the name attribute from object elements, should not be accessible.
+html/dom/documents/dom-tree-accessors/nameditem-07.html	Dynamically updating the id attribute from object elements, should be accessible by its name and id.
+html/dom/documents/dom-tree-accessors/nameditem-07.html	Dynamically updating the name attribute from object elements, should be accessible by its name and id.
+html/dom/documents/dom-tree-accessors/nameditem-07.html	If an embed is nested inside an object with the same name, a collection should be returned. (name)
+html/dom/documents/dom-tree-accessors/nameditem-07.html	If an object is nested inside an object with the same id, a collection should be returned. (id)
+html/dom/documents/dom-tree-accessors/nameditem-07.html	If an object is nested inside an object with the same name, a collection should be returned. (name)
+html/dom/documents/dom-tree-accessors/nameditem-07.html	If there are two objects, a collection should be returned. (id and name)
+html/dom/documents/dom-tree-accessors/nameditem-07.html	If there are two objects, a collection should be returned. (id)
+html/dom/documents/dom-tree-accessors/nameditem-07.html	If there are two objects, a collection should be returned. (name and id)
+html/dom/documents/dom-tree-accessors/nameditem-07.html	If there are two objects, a collection should be returned. (name)
+html/dom/documents/dom-tree-accessors/nameditem-07.html	If there is one object, it should be returned (id)
+html/dom/documents/dom-tree-accessors/nameditem-07.html	If there is one object, it should be returned (name)
+html/dom/documents/dom-tree-accessors/nameditem-07.html	object elements that is removed, should not be accessible.
+html/dom/documents/dom-tree-accessors/nameditem-08.html	If there is a div and img with same id, the img should be returned
+html/dom/documents/dom-tree-accessors/nameditem-08.html	If there is a div and object with same id, the object should be returned
+html/dom/documents/dom-tree-accessors/nameditem-adoption.html	Named properties follow adoption between documents.
+html/dom/documents/dom-tree-accessors/nameditem-empty-name-dynamic-crash.html	-
+html/dom/documents/dom-tree-accessors/nameditem-img-name-added-cached-list.html	An img with an id gets exposed by its id, invalidating an already-cached named item collection, once a name attribute is added.
+html/dom/documents/dom-tree-accessors/nameditem-img-name-added.html	An img with an id but no name becomes exposed by its id once a name attribute is added.
+html/dom/documents/dom-tree-accessors/nameditem-img-name-dynamic.html	Two imgs sharing an id are both exposed by that id, whether the name is set before or after insertion.
+html/dom/documents/dom-tree-accessors/nameditem-img-name-removed.html	An img exposed by its id (id + name) is no longer exposed by id after its name attribute is removed.
+html/dom/documents/dom-tree-accessors/nameditem-names.html	A document's property names appear in tree order.
+html/dom/documents/dom-tree-accessors/nameditem-names.html	A document's property names can include integer strings.
+html/dom/documents/dom-tree-accessors/nameditem-names.html	A form name appears in a document's property names.
+html/dom/documents/dom-tree-accessors/nameditem-names.html	An embed inside an object that is not showing its fallback content is returned by the named getter.
+html/dom/documents/dom-tree-accessors/nameditem-names.html	An embed name appears in a document's property names when the embed is inside an object that is not showing its fallback content.
+html/dom/documents/dom-tree-accessors/nameditem-names.html	An embed name appears in a document's property names.
+html/dom/documents/dom-tree-accessors/nameditem-names.html	An iframe name appears in a document's property names.
+html/dom/documents/dom-tree-accessors/nameditem-names.html	An img id appears in a document's property names when the img has a name.
+html/dom/documents/dom-tree-accessors/nameditem-names.html	An img name appears in a document's property names when the img has an id.
+html/dom/documents/dom-tree-accessors/nameditem-names.html	An img name appears in a document's property names when the img has no id.
+html/dom/documents/dom-tree-accessors/nameditem-names.html	An object id appears in a document's property names when the object is inside an object that is not showing its fallback content.
+html/dom/documents/dom-tree-accessors/nameditem-names.html	An object id appears in a document's property names.
+html/dom/documents/dom-tree-accessors/nameditem-names.html	An object inside an object that is not showing its fallback content is returned by the named getter (id).
+html/dom/documents/dom-tree-accessors/nameditem-names.html	An object inside an object that is not showing its fallback content is returned by the named getter (name).
+html/dom/documents/dom-tree-accessors/nameditem-names.html	An object name appears in a document's property names when the object is inside an object that is not showing its fallback content.
+html/dom/documents/dom-tree-accessors/nameditem-names.html	An object name appears in a document's property names.
+html/dom/documents/dom-tree-accessors/nameditem-names.html	An object with an object descendant is returned by the named getter (id).
+html/dom/documents/dom-tree-accessors/nameditem-names.html	An object with object and embed descendants is returned by the named getter (name).
+html/dom/documents/dom-tree-accessors/nameditem-no-shadowing.tentative.html	document.__proto__ is not shadowed
+html/dom/documents/dom-tree-accessors/nameditem-no-shadowing.tentative.html	document.constructor is not shadowed
+html/dom/documents/dom-tree-accessors/nameditem-no-shadowing.tentative.html	document.foobar works (sanity check)
+html/dom/documents/dom-tree-accessors/nameditem-no-shadowing.tentative.html	document.forms is not shadowed
+html/dom/documents/dom-tree-accessors/nameditem-supported-property-names-order.html	Values from id attributes precede values from name attributes when the same element contributes both
+html/dom/documents/dom-tree-accessors/nameditem-tree-order.html	A named item collection is in tree order even after an element's name is mutated.
+html/dom/documents/dom-tree-accessors/nameditem-tree-transitions.html	A named-property collection follows same-document moves.
+html/dom/documents/dom-tree-accessors/nameditem-tree-transitions.html	Named properties follow moves into and out of a shadow tree.
+html/dom/documents/resource-metadata-management/document-cookie.html	A simple cookie
+html/dom/documents/resource-metadata-management/document-lastModified-01.html	Date returned by lastModified is current after timeout.
+html/dom/documents/resource-metadata-management/document-lastModified-01.html	Date returned by lastModified is current at page load
+html/dom/documents/resource-metadata-management/document-lastModified-01.html	Date returned by lastModified is in the form "MM/DD/YYYY hh:mm:ss".
+html/dom/documents/resource-metadata-management/document-lastModified.html	lastModified should return the last modified date and time
+html/dom/documents/resource-metadata-management/load-event-after-readystatechange-starts-load.html	-
+html/dom/elements/elements-in-the-dom/click-in-progress-flag.html	elements respect 'click in progress' flag
+html/dom/elements/global-attributes/cdata-dir_auto.html	-
+html/dom/elements/global-attributes/cdata-dir_auto.html	Content of CDATA is ignored for dir=auto in html document
+html/dom/elements/global-attributes/cdata-dir_auto.html	Directionality is updated when changing text of CDATASection
+html/dom/elements/global-attributes/cdata-dir_auto.html	Directionality is updated when removing CDATASection
+html/dom/elements/global-attributes/cdata-dir_auto.html	Text in CDATASection is considered when determining auto directionality
+html/dom/elements/global-attributes/dataset-delete.html	Deleting element.dataset['-foo'] should not remove an attribute with name 'data--foo' should it exist.
+html/dom/elements/global-attributes/dataset.html	MathML elements should have a .dataset
+html/dom/elements/global-attributes/dir-assorted.window.html	Element outside the document tree has a direction
+html/dom/elements/global-attributes/dir-assorted.window.html	Element without direction has parent element direction
+html/dom/elements/global-attributes/dir-assorted.window.html	Non-HTML element outside the document tree has a direction
+html/dom/elements/global-attributes/dir-assorted.window.html	Non-HTML element text contents influence dir=auto
+html/dom/elements/global-attributes/dir-assorted.window.html	Non-HTML element without direction has parent element direction
+html/dom/elements/global-attributes/dir-assorted.window.html	Root element has a direction
+html/dom/elements/global-attributes/dir-assorted.window.html	dir inheritance is correct after insertion and removal from document
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: dir=auto empty in ltr parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: dir=auto empty in rtl parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: dir=auto numbers in ltr parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: dir=auto numbers in rtl parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: dir=auto with LTR contents in ltr parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: dir=auto with LTR contents in rtl parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: dir=auto with RTL contents in ltr parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: dir=auto with RTL contents in rtl parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: dir=ltr empty in ltr parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: dir=ltr empty in rtl parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: dir=ltr with LTR contents in ltr parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: dir=ltr with LTR contents in rtl parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: dir=ltr with RTL contents in ltr parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: dir=ltr with RTL contents in rtl parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: dir=rtl empty in ltr parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: dir=rtl empty in rtl parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: dir=rtl with LTR contents in ltr parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: dir=rtl with LTR contents in rtl parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: dir=rtl with RTL contents in ltr parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: dir=rtl with RTL contents in rtl parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: no dir attribute empty in ltr parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: no dir attribute empty in rtl parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: no dir attribute with LTR contents in ltr parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: no dir attribute with LTR contents in rtl parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: no dir attribute with RTL contents in ltr parent
+html/dom/elements/global-attributes/dir-assorted.window.html	directionality of bdi elements: no dir attribute with RTL contents in rtl parent
+html/dom/elements/global-attributes/dir-assorted.window.html	non-html input element text contents influence dir=auto
+html/dom/elements/global-attributes/dir-assorted.window.html	non-html script element text contents influence dir=auto
+html/dom/elements/global-attributes/dir-assorted.window.html	non-html style element text contents influence dir=auto
+html/dom/elements/global-attributes/dir-assorted.window.html	non-html textarea element text contents influence dir=auto
+html/dom/elements/global-attributes/dir-assorted.window.html	script element text contents do not influence dir=auto
+html/dom/elements/global-attributes/dir-assorted.window.html	style element text contents do not influence dir=auto
+html/dom/elements/global-attributes/dir-assorted.window.html	text changes apply to dir=auto on further ancestor after removing dir=auto from closer ancestor
+html/dom/elements/global-attributes/dir-assorted.window.html	text changes apply to dir=auto on further ancestor after removing dir=ltr from closer ancestor
+html/dom/elements/global-attributes/dir-auto-div-append-child.html	dir auto: updates on appendChild
+html/dom/elements/global-attributes/dir-auto-dynamic-changes.window.html	Child directionality gets updated when dir=auto is set on parent
+html/dom/elements/global-attributes/dir-auto-dynamic-changes.window.html	Input that becomes auto directionality associated but is dir=ltr stays LTR
+html/dom/elements/global-attributes/dir-auto-dynamic-changes.window.html	Removing child of slotted content changes direction on dir=auto slot
+html/dom/elements/global-attributes/dir-auto-dynamic-changes.window.html	Removing slotted content resets direction on dir=auto slot
+html/dom/elements/global-attributes/dir-auto-dynamic-changes.window.html	Slotted content affects multiple dir=auto slots
+html/dom/elements/global-attributes/dir-auto-dynamic-changes.window.html	dir=auto ancestor considers text in subtree after removing dir=ltr from it
+html/dom/elements/global-attributes/dir-auto-dynamic-changes.window.html	dir=auto changes for content insertion and removal, in and out of document
+html/dom/elements/global-attributes/dir-auto-dynamic-changes.window.html	dir=auto changes for slot reassignment
+html/dom/elements/global-attributes/dir-auto-dynamic-changes.window.html	dir=auto slot is not affected by text in value of input element children
+html/dom/elements/global-attributes/dir-auto-dynamic-changes.window.html	dynamic changes inside of non-HTML elements
+html/dom/elements/global-attributes/dir-auto-dynamic-changes.window.html	dynamic changes to subtrees excluded as a result of the dir attribute
+html/dom/elements/global-attributes/dir-auto-dynamic-changes.window.html	dynamic insertion of RTL text in a child element
+html/dom/elements/global-attributes/dir-auto-dynamic-changes.window.html	input direction changes if it stops being auto-directionality form-associated
+html/dom/elements/global-attributes/dir-auto-dynamic-changes.window.html	slot insertion makes parent dependent on host directionality
+html/dom/elements/global-attributes/dir-auto-dynamic-changes.window.html	slot provides updated directionality from host to a dir=auto container
+html/dom/elements/global-attributes/dir-auto-dynamic-changes.window.html	slot removal can impact multiple dir=auto nodes
+html/dom/elements/global-attributes/dir-auto-dynamic-changes.window.html	slot removal resets parent's dependency on host directionality
+html/dom/elements/global-attributes/dir-auto-dynamic-changes.window.html	slotted non-HTML elements
+html/dom/elements/global-attributes/dir-auto-dynamic-changes.window.html	slotted non-HTML elements after dynamically assigning dir=auto, and dir attribute ignored on non-HTML elements
+html/dom/elements/global-attributes/dir-auto-dynamic-changes.window.html	text changes affecting both slot and ancestor with dir=auto
+html/dom/elements/global-attributes/dir-auto-dynamic-changes.window.html	text input and textarea value changes should only be reflected in :dir() when dir=auto (value changes)
+html/dom/elements/global-attributes/dir-auto-dynamic-simple-dataChange.html	-
+html/dom/elements/global-attributes/dir-auto-dynamic-simple-replace.html	-
+html/dom/elements/global-attributes/dir-auto-dynamic-simple-textContent.html	-
+html/dom/elements/global-attributes/dir-auto-form-associated.window.html	<input dir=auto type=button> directionality
+html/dom/elements/global-attributes/dir-auto-form-associated.window.html	<input dir=auto type=checkbox> directionality
+html/dom/elements/global-attributes/dir-auto-form-associated.window.html	<input dir=auto type=color> directionality
+html/dom/elements/global-attributes/dir-auto-form-associated.window.html	<input dir=auto type=date> directionality
+html/dom/elements/global-attributes/dir-auto-form-associated.window.html	<input dir=auto type=datetime-local> directionality
+html/dom/elements/global-attributes/dir-auto-form-associated.window.html	<input dir=auto type=email> directionality
+html/dom/elements/global-attributes/dir-auto-form-associated.window.html	<input dir=auto type=hidden> directionality
+html/dom/elements/global-attributes/dir-auto-form-associated.window.html	<input dir=auto type=image> directionality
+html/dom/elements/global-attributes/dir-auto-form-associated.window.html	<input dir=auto type=month> directionality
+html/dom/elements/global-attributes/dir-auto-form-associated.window.html	<input dir=auto type=number> directionality
+html/dom/elements/global-attributes/dir-auto-form-associated.window.html	<input dir=auto type=password> directionality
+html/dom/elements/global-attributes/dir-auto-form-associated.window.html	<input dir=auto type=radio> directionality
+html/dom/elements/global-attributes/dir-auto-form-associated.window.html	<input dir=auto type=range> directionality
+html/dom/elements/global-attributes/dir-auto-form-associated.window.html	<input dir=auto type=reset> directionality
+html/dom/elements/global-attributes/dir-auto-form-associated.window.html	<input dir=auto type=search> directionality
+html/dom/elements/global-attributes/dir-auto-form-associated.window.html	<input dir=auto type=submit> directionality
+html/dom/elements/global-attributes/dir-auto-form-associated.window.html	<input dir=auto type=tel> directionality
+html/dom/elements/global-attributes/dir-auto-form-associated.window.html	<input dir=auto type=text> directionality
+html/dom/elements/global-attributes/dir-auto-form-associated.window.html	<input dir=auto type=time> directionality
+html/dom/elements/global-attributes/dir-auto-form-associated.window.html	<input dir=auto type=url> directionality
+html/dom/elements/global-attributes/dir-auto-form-associated.window.html	<input dir=auto type=week> directionality
+html/dom/elements/global-attributes/dir-auto-form-associated.window.html	<textarea dir=auto> directionality
+html/dom/elements/global-attributes/dir-bdi-script.html	BDI test: Directionality
+html/dom/elements/global-attributes/dir-not-changed-text-input-typing.html	entering LTR text doesn't change directionality of a text input without dir=auto
+html/dom/elements/global-attributes/dir-shadow-01.html	-
+html/dom/elements/global-attributes/dir-shadow-02.html	-
+html/dom/elements/global-attributes/dir-shadow-03.html	-
+html/dom/elements/global-attributes/dir-shadow-04.html	-
+html/dom/elements/global-attributes/dir-shadow-05.html	-
+html/dom/elements/global-attributes/dir-shadow-06.html	-
+html/dom/elements/global-attributes/dir-shadow-07.html	-
+html/dom/elements/global-attributes/dir-shadow-08.html	-
+html/dom/elements/global-attributes/dir-shadow-09.html	-
+html/dom/elements/global-attributes/dir-shadow-10.html	-
+html/dom/elements/global-attributes/dir-shadow-11.html	-
+html/dom/elements/global-attributes/dir-shadow-12.html	-
+html/dom/elements/global-attributes/dir-shadow-13.html	-
+html/dom/elements/global-attributes/dir-shadow-14.html	-
+html/dom/elements/global-attributes/dir-shadow-15.html	-
+html/dom/elements/global-attributes/dir-shadow-16.html	-
+html/dom/elements/global-attributes/dir-shadow-17.html	-
+html/dom/elements/global-attributes/dir-shadow-18.html	-
+html/dom/elements/global-attributes/dir-shadow-19.html	-
+html/dom/elements/global-attributes/dir-shadow-20.html	-
+html/dom/elements/global-attributes/dir-shadow-21.html	-
+html/dom/elements/global-attributes/dir-shadow-22.html	-
+html/dom/elements/global-attributes/dir-shadow-23.html	-
+html/dom/elements/global-attributes/dir-shadow-24.html	-
+html/dom/elements/global-attributes/dir-shadow-25.html	-
+html/dom/elements/global-attributes/dir-shadow-26.html	-
+html/dom/elements/global-attributes/dir-shadow-27.html	-
+html/dom/elements/global-attributes/dir-shadow-28.html	-
+html/dom/elements/global-attributes/dir-shadow-29.html	-
+html/dom/elements/global-attributes/dir-shadow-30.html	-
+html/dom/elements/global-attributes/dir-shadow-31.html	-
+html/dom/elements/global-attributes/dir-shadow-32.html	-
+html/dom/elements/global-attributes/dir-shadow-33.html	-
+html/dom/elements/global-attributes/dir-shadow-34.html	-
+html/dom/elements/global-attributes/dir-shadow-35.html	-
+html/dom/elements/global-attributes/dir-shadow-36.html	-
+html/dom/elements/global-attributes/dir-shadow-37.html	-
+html/dom/elements/global-attributes/dir-shadow-38.html	-
+html/dom/elements/global-attributes/dir-shadow-39.html	-
+html/dom/elements/global-attributes/dir-shadow-40.html	-
+html/dom/elements/global-attributes/dir-shadow-41.html	-
+html/dom/elements/global-attributes/dir-shadow-42.html	-
+html/dom/elements/global-attributes/dir-slots-directionality.html	Slot assigned node manual removal
+html/dom/elements/global-attributes/dir-slots-directionality.html	Slots: Directionality: dir=auto in shadow tree with Arabic light tree content
+html/dom/elements/global-attributes/dir-slots-directionality.html	Slots: Directionality: dir=auto in shadow tree with Arabic shadow tree content
+html/dom/elements/global-attributes/dir-slots-directionality.html	Slots: Directionality: dir=auto on host with Arabic shadow tree content
+html/dom/elements/global-attributes/dir-slots-directionality.html	Slots: Directionality: dir=auto on slot with Arabic light tree content
+html/dom/elements/global-attributes/dir-slots-directionality.html	Slots: Directionality: dir=rtl on host
+html/dom/elements/global-attributes/dir-slots-directionality.html	Slots: Directionality: dir=rtl on slot
+html/dom/elements/global-attributes/dir-slots-directionality.html	children with dir attribute are skipped by dir=auto
+html/dom/elements/global-attributes/dir-slots-directionality.html	dir=auto slot ignores assigned nodes with dir attribute
+html/dom/elements/global-attributes/dir-slots-directionality.html	dir=auto slot ignores text in bdi assigned nodes
+html/dom/elements/global-attributes/dir-slots-directionality.html	dir=auto slot ignores text in value of input element children
+html/dom/elements/global-attributes/dir-slots-directionality.html	dir=auto slot is not affected by content inside inner slot (version 1)
+html/dom/elements/global-attributes/dir-slots-directionality.html	dir=auto slot is not affected by content inside inner slot (version 2)
+html/dom/elements/global-attributes/dir-slots-directionality.html	dir=auto slot is not affected by value of auto-directionality form associated elements
+html/dom/elements/global-attributes/dir-slots-directionality.html	inner slot is given directionality from slotted content
+html/dom/elements/global-attributes/dir-slots-directionality.html	slot provides its directionality (from host) to a dir=auto container
+html/dom/elements/global-attributes/dir-slots-directionality.html	slot with dir attribute is skipped by dir=auto
+html/dom/elements/global-attributes/dir_auto-EN-L.html	-
+html/dom/elements/global-attributes/dir_auto-EN-R.html	-
+html/dom/elements/global-attributes/dir_auto-L.html	-
+html/dom/elements/global-attributes/dir_auto-N-EN-L.html	-
+html/dom/elements/global-attributes/dir_auto-N-EN-R.html	-
+html/dom/elements/global-attributes/dir_auto-N-EN.html	-
+html/dom/elements/global-attributes/dir_auto-N-L.html	-
+html/dom/elements/global-attributes/dir_auto-N-R.html	-
+html/dom/elements/global-attributes/dir_auto-R.html	-
+html/dom/elements/global-attributes/dir_auto-contained-L.html	-
+html/dom/elements/global-attributes/dir_auto-contained-R.html	-
+html/dom/elements/global-attributes/dir_auto-contained-bdi-L.html	-
+html/dom/elements/global-attributes/dir_auto-contained-bdi-R.html	-
+html/dom/elements/global-attributes/dir_auto-contained-dir-L.html	-
+html/dom/elements/global-attributes/dir_auto-contained-dir-R.html	-
+html/dom/elements/global-attributes/dir_auto-contained-dir_auto-L.html	-
+html/dom/elements/global-attributes/dir_auto-contained-dir_auto-R.html	-
+html/dom/elements/global-attributes/dir_auto-contained-script-L.html	-
+html/dom/elements/global-attributes/dir_auto-contained-script-R.html	-
+html/dom/elements/global-attributes/dir_auto-contained-style-L.html	-
+html/dom/elements/global-attributes/dir_auto-contained-style-R.html	-
+html/dom/elements/global-attributes/dir_auto-contained-textarea-L.html	-
+html/dom/elements/global-attributes/dir_auto-contained-textarea-R.html	-
+html/dom/elements/global-attributes/dir_auto-input-EN-L.html	-
+html/dom/elements/global-attributes/dir_auto-input-EN-R.html	-
+html/dom/elements/global-attributes/dir_auto-input-L.html	-
+html/dom/elements/global-attributes/dir_auto-input-N-EN-L.html	-
+html/dom/elements/global-attributes/dir_auto-input-N-EN-R.html	-
+html/dom/elements/global-attributes/dir_auto-input-N-EN.html	-
+html/dom/elements/global-attributes/dir_auto-input-N-L.html	-
+html/dom/elements/global-attributes/dir_auto-input-N-R.html	-
+html/dom/elements/global-attributes/dir_auto-input-R.html	-
+html/dom/elements/global-attributes/dir_auto-input-script-EN-L.html	-
+html/dom/elements/global-attributes/dir_auto-input-script-EN-R.html	-
+html/dom/elements/global-attributes/dir_auto-input-script-L.html	-
+html/dom/elements/global-attributes/dir_auto-input-script-N-EN-L.html	-
+html/dom/elements/global-attributes/dir_auto-input-script-N-EN-R.html	-
+html/dom/elements/global-attributes/dir_auto-input-script-N-EN.html	-
+html/dom/elements/global-attributes/dir_auto-input-script-N-L.html	-
+html/dom/elements/global-attributes/dir_auto-input-script-N-R.html	-
+html/dom/elements/global-attributes/dir_auto-input-script-R.html	-
+html/dom/elements/global-attributes/dir_auto-isolate.html	-
+html/dom/elements/global-attributes/dir_auto-pre-N-EN.html	-
+html/dom/elements/global-attributes/dir_auto-pre-N-between-Rs.html	-
+html/dom/elements/global-attributes/dir_auto-pre-mixed.html	-
+html/dom/elements/global-attributes/dir_auto-textarea-N-EN.html	-
+html/dom/elements/global-attributes/dir_auto-textarea-N-between-Rs.html	-
+html/dom/elements/global-attributes/dir_auto-textarea-mixed.html	-
+html/dom/elements/global-attributes/dir_auto-textarea-script-N-EN.html	-
+html/dom/elements/global-attributes/dir_auto-textarea-script-N-between-Rs.html	-
+html/dom/elements/global-attributes/dir_auto-textarea-script-mixed.html	-
+html/dom/elements/global-attributes/document-dir.html	Markup attribute
+html/dom/elements/global-attributes/document-dir.html	Setting the idl attribute to a garbage value
+html/dom/elements/global-attributes/document-dir.html	Setting the idl attribute to the empty string
+html/dom/elements/global-attributes/lang-attribute-document-element-replacement.html	Disconnected descendants of a replaced document element should resolve lang from their actual ancestor
+html/dom/elements/global-attributes/lang-attribute-shadow.window.html	lang on host and slot
+html/dom/elements/global-attributes/lang-attribute-shadow.window.html	lang on host and slot and slotted element
+html/dom/elements/global-attributes/lang-attribute-shadow.window.html	lang on host and slotted element
+html/dom/elements/global-attributes/lang-attribute-shadow.window.html	lang on slot inherits from parent
+html/dom/elements/global-attributes/lang-attribute-shadow.window.html	lang only on host
+html/dom/elements/global-attributes/lang-attribute-shadow.window.html	lang only on slot
+html/dom/elements/global-attributes/lang-attribute.window.html	unnamespaced lang attribute only works on elements in the HTML namespace
+html/dom/elements/global-attributes/lang-xmllang-01.html	-
+html/dom/elements/global-attributes/lang-xyzzy.html	-
+html/dom/elements/global-attributes/style-01.html	-
+html/dom/elements/global-attributes/the-lang-attribute-001.html	The browser will recognize a language declared in a lang attribute on the html tag.
+html/dom/elements/global-attributes/the-lang-attribute-002.html	The browser will NOT recognize a language declared in an xml:lang attribute on the html tag.
+html/dom/elements/global-attributes/the-lang-attribute-003.html	The browser will recognize a language declared in the HTTP header, when there is no internal language declaration.
+html/dom/elements/global-attributes/the-lang-attribute-004.html	The browser will recognize a language declared in a meta element in the head using http-equiv='Content-Language' content='..' (with a single language tag value), when there is no other language declaration inside the document.
+html/dom/elements/global-attributes/the-lang-attribute-005.html	If there is a conflict between the language declarations in the HTTP header and the html element using lang, the browser will recognize the language declared in the html element.
+html/dom/elements/global-attributes/the-lang-attribute-006.html	If there is a conflict between the language declarations in the HTTP header and the Content-Language meta element, the UA will recognize the language declared in the meta element.
+html/dom/elements/global-attributes/the-lang-attribute-007.html	If there is a conflict between the language declared using lang in the html element and that in the meta element, the UA will recognize the language declared in the html element.
+html/dom/elements/global-attributes/the-lang-attribute-008.html	If an element contains a lang attribute with an empty value, the value of a lang attribute higher up the document tree will no longer be applied to the content of that element.
+html/dom/elements/global-attributes/the-lang-attribute-009.html	If the HTTP header contains a language declaration but the html element uses an empty lang value, the UA will not recognize the language declared in the HTTP header.
+html/dom/elements/global-attributes/the-lang-attribute-010.html	If the meta Content-Language element contains a language declaration but the html element uses an empty lang value, the UA will not recognize the language declared in the meta Content-Language element.
+html/dom/elements/global-attributes/the-lang-attribute-011.html	If there are multiple Content-Language HTTP headers, the UA will recognize the language declared in the first header.
+html/dom/elements/global-attributes/the-translate-attribute-007.html	In the default case, ie. with no translate attribute in the page, javascript will detect the translation mode of text as translate-enabled.
+html/dom/elements/global-attributes/the-translate-attribute-008.html	If the translate attribute is set to yes, javascript will detect the translation mode of text as translate-enabled.
+html/dom/elements/global-attributes/the-translate-attribute-009.html	If the translate attribute is set to no, javascript will detect the translation mode of text as no-translate.
+html/dom/elements/global-attributes/the-translate-attribute-010.html	If the translate attribute is set to no, javascript will detect the translation mode of elements inside that element with no translate flag as no-translate.
+html/dom/elements/global-attributes/the-translate-attribute-011.html	If the translate attribute is set to yes on an element inside an element with the translate attribute set to no, javascript will detect the translation mode of text in the inner element as translate-enabled.
+html/dom/elements/global-attributes/the-translate-attribute-012.html	If the translate attribute is set to a null string, javascript will detect the translation mode of text as translate-enabled.
+html/dom/elements/global-attributes/translate-enumerated-ascii-case-insensitive.html	keyword yes
+html/dom/elements/global-attributes/translate-inherit-no-parent-element.html	Document parent node
+html/dom/elements/global-attributes/translate-inherit-no-parent-element.html	DocumentFragment parent node
+html/dom/elements/global-attributes/translate-inherit-no-parent-element.html	No parent node
+html/dom/elements/global-attributes/translate-inherit-no-parent-element.html	ShadowRoot parent node whose shadow host has translate=no
+html/dom/elements/global-attributes/translate-inherit-no-parent-element.html	ShadowRoot parent node whose shadow host has translate=yes
+html/dom/elements/global-attributes/translate-non-html-translation-mode.html	Non-HTML elements default to translate-enabled
+html/dom/elements/global-attributes/translate-non-html-translation-mode.html	Non-HTML elements inherit their parent's no-translation state
+html/dom/elements/global-attributes/translate-non-html-translation-mode.html	Non-HTML elements inherit their parent's translation-enabled state
+html/dom/elements/images/bypass-cache-revalidation.html	Images can bypass no-cache
+html/dom/elements/name-content-attribute-and-property.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-001a.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-001b.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-001c.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-002a.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-002b.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-002c.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-003a.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-003b.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-003c.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-004a.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-004b.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-004c.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-005a.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-005b.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-005c.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-006a.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-006b.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-006c.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-007a.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-007b.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-007c.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-008a.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-008b.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-008c.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-009a.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-009b.html	-
+html/dom/elements/requirements-relating-to-bidirectional-algorithm-formatting-characters/dir-isolation-009c.html	-
+html/dom/elements/the-innertext-and-outertext-properties/dynamic-getter.html	display: none applied to child element ("<div id='target'>abc<div id='child'>def")
+html/dom/elements/the-innertext-and-outertext-properties/dynamic-getter.html	text-transform applied to child element ("<div id='target'><div id='child'>abc")
+html/dom/elements/the-innertext-and-outertext-properties/dynamic-getter.html	text-transform applied to parent element ("<div id='parent'><div id='target'>abc")
+html/dom/elements/the-innertext-and-outertext-properties/getter-first-letter-marker-multicol.html	Test innerText/outerText for a combination of a list item with ::first-letter in multicol
+html/dom/elements/the-innertext-and-outertext-properties/getter.html	-
+html/dom/elements/the-innertext-and-outertext-properties/innertext-domnoderemoved-crash.html	-
+html/dom/elements/the-innertext-and-outertext-properties/innertext-whitespace-pre-line.html	innerText has collapsed whitespace but preserved newlines with pre-line
+html/dom/elements/the-innertext-and-outertext-properties/innertext-whitespace-pre-line.html	innerText should be the same for the pre-line and pre examples
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	CR after <br> should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	CR after <div> should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	CR after <hr> should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	CR before <br> should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	CR before <div> should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	CR before <hr> should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	CR between <br>s should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	CR between <div>s should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	CR between <hr>s should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Leading CR should be normalized to LF and should not appear if linefeeds are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Leading CRs should be normalized to LFs and should not appear if linefeeds are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Leading linefeed should not appear if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Leading linefeeds should not appear if they are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Leading mixed white-spaces should not appear if they are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Leading tab should not appear if white-spaces are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Leading tabs should not appear if white-spaces are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Leading white-space should not appear if white-spaces are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Leading white-spaces should not appear if white-spaces are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Multiple mixed white-spaces between words may be invisible if they are collapsible #1
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Multiple mixed white-spaces between words may be invisible if they are collapsible #2
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Multiple mixed white-spaces between words may be invisible if they are collapsible #3
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Multiple mixed white-spaces between words may be invisible if they are collapsible #4
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Multiple white-spaces between words may be invisible if they are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Only multiple collapsible CRs should be invisible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Only multiple collapsible linefeeds should be invisible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Only multiple collapsible spaces should be invisible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Only multiple collapsible tabs should be invisible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Only single collapsible CR should be invisible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Only single collapsible linefeed should be invisible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Only single collapsible space should be invisible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Only single collapsible tab should be invisible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Single collapsible CR should be converted to an ASCII space, or otherwise, a linefeed
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Single collapsible linefeed should be converted to an ASCII space
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Single collapsible tab should be converted to an ASCII space
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Trailing CR should be normalized to LF and should not appear if linefeeds are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Trailing CRs should be normalized to LFs and should not appear if linefeeds are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Trailing linefeed should not appear if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Trailing linefeeds should not appear if they are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Trailing mixed white-spaces should not appear if they are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Trailing tab should not appear if white-spaces are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Trailing tabs should not appear if white-spaces are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Trailing white-space should not appear if white-spaces are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	Trailing white-spaces should not appear if white-spaces are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	linefeed after <br> should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	linefeed after <div> should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	linefeed after <hr> should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	linefeed before <br> should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	linefeed before <div> should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	linefeed before <hr> should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	linefeed between <br>s should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	linefeed between <div>s should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	linefeed between <hr>s should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	tab after <br> should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	tab after <div> should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	tab after <hr> should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	tab before <br> should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	tab before <div> should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	tab before <hr> should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	tab between <br>s should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	tab between <div>s should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	tab between <hr>s should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	white-space after <br> should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	white-space after <div> should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	white-space after <hr> should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	white-space before <div> should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	white-space before <hr> should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	white-space between <br>s should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	white-space between <div>s should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	white-space between <hr>s should be invisible if it's collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	white-spaces after <br> should be invisible if they are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	white-spaces after <div> should be invisible if they are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	white-spaces after <hr> should be invisible if they are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	white-spaces before <br> should be invisible if they are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	white-spaces before <div> should be invisible if they are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	white-spaces before <hr> should be invisible if they are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	white-spaces between <br>s should be invisible if they are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	white-spaces between <div>s should be invisible if they are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/innertext-with-white-spaces.html	white-spaces between <hr>s should be invisible if they are collapsible
+html/dom/elements/the-innertext-and-outertext-properties/outertext-setter.html	Empty string with surrounding text nodes
+html/dom/elements/the-innertext-and-outertext-properties/outertext-setter.html	Only merges with the previous and following text nodes, does not completely normalize
+html/dom/elements/the-innertext-and-outertext-properties/outertext-setter.html	Replacing a node and merging with the following text node
+html/dom/elements/the-innertext-and-outertext-properties/outertext-setter.html	Replacing a node and merging with the previous and following text node
+html/dom/elements/the-innertext-and-outertext-properties/outertext-setter.html	Replacing a node and merging with the previous text node
+html/dom/historical.html	document.all cannot find applet
+html/dom/historical.html	document.applets is always empty
+html/dom/idlharness.any.html	idl_test setup
+html/dom/idlharness.https.html	idl_test setup
+html/dom/partial-updates/tentative/chained-streaming-templates-with-custom-element.html	Chained streaming templates and OwnerDocument
+html/dom/partial-updates/tentative/fragment/buffer-immutability.html	Modifying 'for' or 'buffer' attributes dynamically after start tag has no effect on the inclusion behavior
+html/dom/partial-updates/tentative/fragment/buffer-in-place.html	In-place template with buffer attribute buffers children and inserts them atomically at finalization
+html/dom/partial-updates/tentative/fragment/buffer-mutation-observer.html	Targeted template with buffer attribute triggers atomic MutationObserver records
+html/dom/partial-updates/tentative/fragment/buffer-reflection.html	HTMLTemplateElement.buffer IDL attribute reflects the buffer content attribute
+html/dom/partial-updates/tentative/fragment/buffer-streaming-reflection.html	-
+html/dom/partial-updates/tentative/fragment/buffer-streaming-reflection.html	template.content reflects the buffered content progressively while streaming
+html/dom/partial-updates/tentative/fragment/buffer-targeted.html	Targeted template with buffer attribute buffers children and replaces target content atomically at finalization
+html/dom/partial-updates/tentative/fragment/empty-for-streaming.html	In-place template moving and removal during streaming
+html/dom/partial-updates/tentative/fragment/empty-for-streaming.html	In-place template with empty for attribute is removed and its children are inserted before it
+html/dom/partial-updates/tentative/fragment/sanitize-boolean.html	The sanitize attribute behaves like a boolean attribute
+html/dom/partial-updates/tentative/fragment/sanitize-default.html	Template with empty sanitize attribute applies default safe sanitization and discards script tags
+html/dom/partial-updates/tentative/fragment/sanitize-nested.html	Declarative Fragment: nested sanitization combinations
+html/dom/partial-updates/tentative/fragment/sanitize-nested.html	Safe template inside setHTML
+html/dom/partial-updates/tentative/fragment/sanitize-nested.html	Safe template nested inside unsafe template under bespoke main sanitizer
+html/dom/partial-updates/tentative/fragment/sanitize-nested.html	Unsafe template inside setHTML
+html/dom/partial-updates/tentative/fragment/sanitize-template-element.html	Template with sanitize attribute should not strip itself when nested
+html/dom/partial-updates/tentative/fragment/sanitize-unsafe.html	Template with non-empty sanitize attribute values (unsafe or invalid) bypasses safe sanitization and allows script tags
+html/dom/partial-updates/tentative/fragment/src-buffered.sub.html	-
+html/dom/partial-updates/tentative/fragment/src-buffered.sub.html	Buffered template src updates target atomically after fetch completes
+html/dom/partial-updates/tentative/fragment/src-csp-cors.sub.html	-
+html/dom/partial-updates/tentative/fragment/src-csp-cors.sub.html	Cross-origin template src load fails when CORS Access-Control-Allow-Origin is missing
+html/dom/partial-updates/tentative/fragment/src-csp-cors.sub.html	Cross-origin template src load succeeds when CORS Access-Control-Allow-Origin is present
+html/dom/partial-updates/tentative/fragment/src-nonce.sub.html	-
+html/dom/partial-updates/tentative/fragment/src-nonce.sub.html	Template src load fails when nonce mismatches CSP policy
+html/dom/partial-updates/tentative/fragment/src-nonce.sub.html	Template src load succeeds when nonce matches CSP policy
+html/dom/partial-updates/tentative/fragment/src-parser-blocking.html	-
+html/dom/partial-updates/tentative/fragment/src-parser-blocking.html	template src fetches and executes scripts asynchronously without blocking the parser
+html/dom/partial-updates/tentative/fragment/src-referrerpolicy.sub.html	Template src referrerpolicy=no-referrer blocks Referer header
+html/dom/partial-updates/tentative/fragment/src-referrerpolicy.sub.html	Template src referrerpolicy=origin sends only origin in Referer header
+html/dom/partial-updates/tentative/fragment/src-sri.sub.html	-
+html/dom/partial-updates/tentative/fragment/src-sri.sub.html	Template src load fails when Subresource Integrity hash mismatches
+html/dom/partial-updates/tentative/fragment/src-sri.sub.html	Template src load succeeds when Subresource Integrity hash matches
+html/dom/partial-updates/tentative/fragment/src-streaming.html	-
+html/dom/partial-updates/tentative/fragment/src-streaming.html	External template src streams progressively into target
+html/dom/partial-updates/tentative/fragment/streaming-target-marker-removed.html	Streaming target end marker can be removed mid-stream safely, falling back to appending
+html/dom/partial-updates/tentative/stream-append-has-invalidation.html	HTML partial updates - :has invalidation with streaming
+html/dom/partial-updates/tentative/stream-append-positional-pseudo-class-invalidation.html	
+  HTML partial updates - positional pseudo class invalidation with streaming
+
+html/dom/partial-updates/tentative/stream-append-with-template-for.html	streamHTML methods can apply template with for
+html/dom/partial-updates/tentative/template-for-case-sensitive-dom-inserted.html	marker/end/start PI targets are parsed as lower case, but attributes are case-sensitive
+html/dom/partial-updates/tentative/template-for-case-sensitive.html	marker/end/start PI targets, attributes and their values are case-sensitive
+html/dom/reflection-forms-weekmonth.html	-
+html/dom/reflection-metadata.html	-
+html/dom/reflection-obsolete.html	-
+html/dom/reflection-original.html	-
+html/dom/render-blocking/blocking-idl-attr.html	Supported tokens of the 'blocking' IDL attribute of the link element
+html/dom/render-blocking/blocking-idl-attr.html	Supported tokens of the 'blocking' IDL attribute of the script element
+html/dom/render-blocking/blocking-idl-attr.html	Supported tokens of the 'blocking' IDL attribute of the style element
+html/dom/render-blocking/element-render-blocking-002.html	blocking defers until needed element is parsed
+html/dom/render-blocking/element-render-blocking-004.html	-
+html/dom/render-blocking/element-render-blocking-005.html	-
+html/dom/render-blocking/element-render-blocking-006.html	-
+html/dom/render-blocking/element-render-blocking-007.html	link with non-matching media has no effect
+html/dom/render-blocking/element-render-blocking-008.html	-
+html/dom/render-blocking/element-render-blocking-009.html	-
+html/dom/render-blocking/element-render-blocking-010.html	-
+html/dom/render-blocking/element-render-blocking-011.html	-
+html/dom/render-blocking/element-render-blocking-012.html	-
+html/dom/render-blocking/element-render-blocking-013.html	-
+html/dom/render-blocking/element-render-blocking-014.html	link in the body has no effect
+html/dom/render-blocking/element-render-blocking-015.html	-
+html/dom/render-blocking/element-render-blocking-015.html	removing link the body makes it non blocking
+html/dom/render-blocking/element-render-blocking-016.html	-
+html/dom/render-blocking/element-render-blocking-016.html	removing 'blocking' in the body makes it non blocking
+html/dom/render-blocking/element-render-blocking-017.html	-
+html/dom/render-blocking/element-render-blocking-017.html	adding 'blocking=render' in the body has no effect
+html/dom/render-blocking/element-render-blocking-018.html	-
+html/dom/render-blocking/element-render-blocking-018.html	changing media to matching in the body has no effect
+html/dom/render-blocking/element-render-blocking-019.html	-
+html/dom/render-blocking/element-render-blocking-019.html	changing media to non-matching in the body makes it non blocking
+html/dom/render-blocking/element-render-blocking-020.html	-
+html/dom/render-blocking/element-render-blocking-020.html	changing rel to non-expect in the body makes it non blocking
+html/dom/render-blocking/element-render-blocking-021.html	-
+html/dom/render-blocking/element-render-blocking-021.html	changing rel to expect in the body has no effect
+html/dom/render-blocking/element-render-blocking-022.html	-
+html/dom/render-blocking/element-render-blocking-022.html	adding href in the body has no effect
+html/dom/render-blocking/element-render-blocking-023.html	-
+html/dom/render-blocking/element-render-blocking-023.html	removing href in the body makes it non blocking
+html/dom/render-blocking/element-render-blocking-025.html	-
+html/dom/render-blocking/element-render-blocking-025.html	adding an id in the body satisfies render block
+html/dom/render-blocking/element-render-blocking-026.html	-
+html/dom/render-blocking/element-render-blocking-026.html	removing id after it was renderer keeps render block satisfied
+html/dom/render-blocking/element-render-blocking-027.html	-
+html/dom/render-blocking/element-render-blocking-028.html	-
+html/dom/render-blocking/element-render-blocking-028.html	removing some links but not all keeps at least the matching link blocking
+html/dom/render-blocking/element-render-blocking-029.html	blocking defers frames until full parsing
+html/dom/render-blocking/element-render-blocking-030.html	blocking defers frames until full parsing
+html/dom/render-blocking/element-render-blocking-031.html	blocking defers frames until full parsing
+html/dom/render-blocking/element-render-blocking-032.html	blocking defers frames until full parsing
+html/dom/render-blocking/element-render-blocking-033.html	blocking defers frames until full parsing
+html/dom/render-blocking/element-render-blocking-034.html	relative URLs that match this document are OK
+html/dom/render-blocking/element-render-blocking-035.html	relative URLs that match this document are OK, regarless of <base>
+html/dom/render-blocking/element-render-blocking-036.html	link URLs are relative to base URL, not to document URL
+html/dom/render-blocking/element-render-blocking-037.html	relative URLs that match this document are OK, regarless of <base>
+html/dom/render-blocking/element-render-blocking-038.html	link rel=expect: only connected elements are eligible
+html/dom/render-blocking/element-render-blocking-040.html	blocking defers frames until full parsing
+html/dom/render-blocking/element-render-blocking-041.html	blocking defers frames until full parsing
+html/dom/render-blocking/non-render-blocking-scripts.optional.html	parser-inserted async module script is not implicitly render-blocking
+html/dom/render-blocking/non-render-blocking-scripts.optional.html	parser-inserted async script is not implicitly render-blocking
+html/dom/render-blocking/non-render-blocking-scripts.optional.html	parser-inserted defer script is not implicitly render-blocking
+html/dom/render-blocking/non-render-blocking-scripts.optional.html	parser-inserted module script is not implicitly render-blocking
+html/dom/render-blocking/non-render-blocking-scripts.optional.html	script-inserted module script is not implicitly render-blocking
+html/dom/render-blocking/non-render-blocking-scripts.optional.html	script-inserted script is not implicitly render-blocking
+html/dom/render-blocking/non-render-blocking-scripts.optional.html	script-inserted sync script is not implicitly render-blocking
+html/dom/render-blocking/parser-blocking-script.html	Rendering is blocked before render-blocking resources are loaded
+html/dom/render-blocking/parser-inserted-async-inline-module-with-import.html	-
+html/dom/render-blocking/parser-inserted-async-inline-module-with-import.html	Parser-inserted async inline module script elements with "blocking=render" are render-blocking
+html/dom/render-blocking/parser-inserted-async-script.html	Rendering is blocked before render-blocking resources are loaded
+html/dom/render-blocking/parser-inserted-defer-script.html	Rendering is blocked before render-blocking resources are loaded
+html/dom/render-blocking/parser-inserted-inline-module-with-import.html	-
+html/dom/render-blocking/parser-inserted-inline-module-with-import.html	Parser-inserted module script elements with "blocking=render" are render-blocking
+html/dom/render-blocking/parser-inserted-module-script.html	Rendering is blocked before render-blocking resources are loaded
+html/dom/render-blocking/parser-inserted-style-element.html	Render-blocking stylesheet is applied
+html/dom/render-blocking/parser-inserted-style-element.html	Rendering is blocked before render-blocking resources are loaded
+html/dom/render-blocking/parser-inserted-stylesheet-link.html	Rendering is blocked before render-blocking resources are loaded
+html/dom/render-blocking/remove-attr-script-keeps-blocking.html	Rendering is blocked before render-blocking resources are loaded
+html/dom/render-blocking/remove-attr-style-keeps-blocking.html	Render-blocking stylesheet is applied
+html/dom/render-blocking/remove-attr-style-keeps-blocking.html	Rendering is blocked before render-blocking resources are loaded
+html/dom/render-blocking/remove-attr-stylesheet-link-keeps-blocking.html	Rendering is blocked before render-blocking resources are loaded
+html/dom/render-blocking/remove-attr-unblocks-rendering.optional.html	-
+html/dom/render-blocking/remove-attr-unblocks-rendering.optional.html	Loading of script-inserted inline style should eventually succeed
+html/dom/render-blocking/remove-attr-unblocks-rendering.optional.html	Render-blocking on parser-inserted async module script is cancellable
+html/dom/render-blocking/remove-attr-unblocks-rendering.optional.html	Render-blocking on parser-inserted async script is cancellable
+html/dom/render-blocking/remove-attr-unblocks-rendering.optional.html	Render-blocking on parser-inserted defer script is cancellable
+html/dom/render-blocking/remove-attr-unblocks-rendering.optional.html	Render-blocking on parser-inserted module script is cancellable
+html/dom/render-blocking/remove-attr-unblocks-rendering.optional.html	Render-blocking on script-inserted module script is cancellable
+html/dom/render-blocking/remove-attr-unblocks-rendering.optional.html	Render-blocking on script-inserted script is cancellable
+html/dom/render-blocking/remove-attr-unblocks-rendering.optional.html	Render-blocking on script-inserted stylesheet link is cancellable
+html/dom/render-blocking/remove-element-unblocks-rendering.optional.html	Render-blocking on parser-inserted async module script is cancellable
+html/dom/render-blocking/remove-element-unblocks-rendering.optional.html	Render-blocking on parser-inserted async script is cancellable
+html/dom/render-blocking/remove-element-unblocks-rendering.optional.html	Render-blocking on parser-inserted defer script is cancellable
+html/dom/render-blocking/remove-element-unblocks-rendering.optional.html	Render-blocking on parser-inserted module script is cancellable
+html/dom/render-blocking/remove-element-unblocks-rendering.optional.html	Render-blocking on script-inserted module script is cancellable
+html/dom/render-blocking/remove-element-unblocks-rendering.optional.html	Render-blocking on script-inserted script is cancellable
+html/dom/render-blocking/remove-pending-async-render-blocking-script.html	Removed render-blocking script should not indefinitely block rendering
+html/dom/render-blocking/render-blocking-during-update-the-rendering-crash.html	-
+html/dom/render-blocking/script-inserted-inline-module-with-import.html	-
+html/dom/render-blocking/script-inserted-inline-module-with-import.html	Script-inserted module script elements with "blocking=render" are render-blocking
+html/dom/render-blocking/script-inserted-module-script.html	Rendering is blocked before render-blocking resources are loaded
+html/dom/render-blocking/script-inserted-script.html	Rendering is blocked before render-blocking resources are loaded
+html/dom/render-blocking/script-inserted-style-element.html	-
+html/dom/render-blocking/script-inserted-style-element.html	Render-blocking stylesheet is applied
+html/dom/render-blocking/script-inserted-style-element.html	Rendering is blocked before render-blocking resources are loaded
+html/dom/render-blocking/script-inserted-stylesheet-link.html	Rendering is blocked before render-blocking resources are loaded
+html/dom/self-origin.sub.html	-
+html/dom/self-origin.sub.html	Assigning blob url
+html/dom/self-origin.sub.html	Should have the right origin for IDN subframe
+html/dom/self-origin.sub.html	Should have the right origin for IDN subframe after setting document.domain
+html/dom/self-origin.sub.html	Should have the right origin for cross-origin subframe
+html/dom/self-origin.sub.html	Should have the right origin for cross-origin subframe after setting document.domain
+html/dom/self-origin.sub.html	Should have the right origin for sandboxed iframe
+html/dom/self-origin.sub.html	about:blank subframe origins
+html/dom/self-origin.sub.html	blob: subframe origins
+html/dom/self-origin.sub.html	javascript: subframe origins
+html/dom/self-origin.sub.html	srcdoc subframe origins
+html/dom/usvstring-reflection.https.html	Document URLs: unpaired surrogate codepoint should be replaced with U+FFFD
+html/dom/usvstring-reflection.https.html	EventSource : unpaired surrogate codepoint should be replaced with U+FFFD
+html/dom/usvstring-reflection.https.html	RTCDataChannel.send: unpaired surrogate codepoint should be replaced with U+FFFD.
+html/dom/usvstring-reflection.https.html	RegisterProtocolHandler URL: unpaired surrogate codepoint should not make any exceptions.
+html/dom/usvstring-reflection.https.html	UnregisterProtocolHandler URL: unpaired surrogate codepoint should not make any exceptions.
+html/dom/usvstring-reflection.https.html	document.open : unpaired surrogate codepoint should be replaced with U+FFFD
+html/dom/usvstring-reflection.https.html	location.href : unpaired surrogate codepoint should be replaced with U+FFFD
+html/dom/usvstring-reflection.https.html	storage event : unpaired surrogate codepoint should be replaced with U+FFFD
+html/dom/usvstring-reflection.https.html	websocket url : unpaired surrogate codepoint should be replaced with U+FFFD
+html/dom/usvstring-reflection.https.html	window.open : unpaired surrogate codepoint should be replaced with U+FFFD

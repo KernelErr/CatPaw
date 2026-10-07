@@ -1377,3 +1377,34 @@ fn ui_events_carry_their_state() {
         assert_eq!(eval(&mut page, source), expected, "{source}");
     }
 }
+
+#[test]
+fn processing_instructions_and_namespaced_tag_names() {
+    let mut page = load(
+        "<div id=d><p>a</p><svg xmlns='http://www.w3.org/2000/svg'><text>b</text><rect/></svg></div><script>function attempt(f) { try { return String(f()); } catch (e) { return e.name; } }</script>",
+    );
+    for (source, expected) in [
+        (
+            "var pi = document.createProcessingInstruction('xml-stylesheet', 'href=\"a.css\"'); [String(pi), pi.target, pi.data, pi.nodeType, pi.nodeName, pi.nodeValue, pi.textContent, pi instanceof CharacterData, pi.ownerDocument === document].join('|')",
+            "[object ProcessingInstruction]|xml-stylesheet|href=\"a.css\"|7|xml-stylesheet|href=\"a.css\"|href=\"a.css\"|true|true",
+        ),
+        (
+            "attempt(function () { return document.createProcessingInstruction('1bad', ''); })",
+            "InvalidCharacterError",
+        ),
+        (
+            "attempt(function () { return document.createProcessingInstruction('ok', 'a?>b'); })",
+            "InvalidCharacterError",
+        ),
+        (
+            "document.body.appendChild(pi); pi.data = 'x'; new XMLSerializer().serializeToString(pi) + ' ' + document.body.lastChild.target",
+            "<?xml-stylesheet x?> xml-stylesheet",
+        ),
+        (
+            "var svg = 'http://www.w3.org/2000/svg', html = 'http://www.w3.org/1999/xhtml'; [document.getElementsByTagNameNS(svg, 'text').length, document.getElementsByTagNameNS(html, 'p').length, document.getElementsByTagNameNS('*', 'p').length, document.getElementsByTagNameNS(svg, '*').length, document.getElementsByTagNameNS(null, 'p').length, document.getElementById('d').getElementsByTagNameNS('*', '*').length, document.getElementsByTagNameNS(svg, 'TEXT').length].join(' ')",
+            "1 1 1 3 0 4 0",
+        ),
+    ] {
+        assert_eq!(eval(&mut page, source), expected, "{source}");
+    }
+}

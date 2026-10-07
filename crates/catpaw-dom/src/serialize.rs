@@ -182,3 +182,155 @@ fn dump_node(dom: &Dom, id: NodeId, depth: usize, out: &mut String) {
         }
     }
 }
+
+// ------------------------------------------------------------------ XML
+
+/// The HTML void elements, which the XML serialization writes as `<br />`.
+const VOID_ELEMENTS: [&str; 16] = [
+    "area", "base", "basefont", "bgsound", "br", "col", "embed", "frame", "hr", "img", "input",
+    "keygen", "link", "meta", "param", "source",
+];
+
+fn escape_xml(text: &str, attribute: bool) -> String {
+    let mut out = String::with_capacity(text.len());
+    for c in text.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' if attribute => out.push_str("&quot;"),
+            '\t' if attribute => out.push_str("&#9;"),
+            '\n' if attribute => out.push_str("&#xA;"),
+            '\r' if attribute => out.push_str("&#xD;"),
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
+/// The XML serialization of a node, as `XMLSerializer.serializeToString()`
+/// and `outerHTML` on XML documents give it
+/// (<https://w3c.github.io/DOM-Parsing/#xml-serialization>), without the
+/// well-formedness checks: HTML elements come out as XHTML, with the
+/// namespace declared where it changes from the parent's.
+pub fn to_xml(dom: &Dom, id: NodeId) -> String {
+    let mut out = String::new();
+    write_xml(dom, id, None, &mut out);
+    out
+}
+
+fn write_xml(dom: &Dom, id: NodeId, parent_ns: Option<&Namespace>, out: &mut String) {
+    match dom.kind(id) {
+        NodeKind::Document(_) | NodeKind::DocumentFragment(_) => {
+            for child in dom.children(id) {
+                write_xml(dom, child, parent_ns, out);
+            }
+        }
+        NodeKind::Doctype(d) => {
+            out.push_str("<!DOCTYPE ");
+            out.push_str(&d.name);
+            if !d.public_id.is_empty() {
+                let _ = write!(out, " PUBLIC \"{}\"", d.public_id);
+                if !d.system_id.is_empty() {
+                    let _ = write!(out, " \"{}\"", d.system_id);
+                }
+            } else if !d.system_id.is_empty() {
+                let _ = write!(out, " SYSTEM \"{}\"", d.system_id);
+            }
+            out.push('>');
+        }
+        NodeKind::Text(t) => out.push_str(&escape_xml(t, false)),
+        NodeKind::Comment(t) => {
+            let _ = write!(out, "<!--{t}-->");
+        }
+        NodeKind::ProcessingInstruction { target, data } => {
+            let _ = write!(out, "<?{target} {data}?>");
+        }
+        NodeKind::Element(el) => {
+            let name = match &el.name.prefix {
+                Some(p) => format!("{p}:{}", el.name.local),
+                None => el.name.local.to_string(),
+            };
+            out.push('<');
+            out.push_str(&name);
+            let declares = parent_ns != Some(&el.name.ns)
+                && el.name.prefix.is_none()
+                && !el
+                    .attrs
+                    .iter()
+                    .any(|a| a.name.ns == ns!(xmlns) && &*a.name.local == "xmlns");
+            if declares {
+                let _ = write!(out, " xmlns=\"{}\"", escape_xml(&el.name.ns, true));
+            }
+            for attr in &el.attrs {
+                let attr_name = if attr.name.ns == ns!(xml) {
+                    format!("xml:{}", attr.name.local)
+                } else if attr.name.ns == ns!(xmlns) {
+                    if &*attr.name.local == "xmlns" {
+                        "xmlns".to_string()
+                    } else {
+                        format!("xmlns:{}", attr.name.local)
+                    }
+                } else if attr.name.ns == ns!(xlink) {
+                    format!("xlink:{}", attr.name.local)
+                } else {
+                    match &attr.name.prefix {
+                        Some(p) => format!("{p}:{}", attr.name.local),
+                        None => attr.name.local.to_string(),
+                    }
+                };
+                let _ = write!(out, " {attr_name}=\"{}\"", escape_xml(&attr.value, true));
+            }
+            let is_html = el.name.ns == ns!(html);
+            let children: Vec<NodeId> = dom.children(id).collect();
+            let template = el.template_contents;
+            if children.is_empty() && template.is_none() {
+                if is_html && VOID_ELEMENTS.contains(&&*el.name.local) {
+                    out.push_str(" />");
+                } else if is_html {
+                    let _ = write!(out, "></{name}>");
+                } else {
+                    out.push_str("/>");
+                }
+                return;
+            }
+            out.push('>');
+            match template {
+                Some(contents) => write_xml(dom, contents, Some(&el.name.ns), out),
+                None => {
+                    for child in children {
+                        write_xml(dom, child, Some(&el.name.ns), out);
+                    }
+                }
+            }
+            let _ = write!(out, "</{name}>");
+        }
+    }
+}
+
+#[cfg(test)]
+mod xml_tests {
+    use super::*;
+    use crate::html::{HtmlParseOptions, parse_html};
+
+    #[test]
+    fn serialises_html_as_xhtml() {
+        let dom = parse_html(
+            "<!DOCTYPE html><p class=\"a&b\">x<br>&lt;y<svg><rect/></svg><!--c--><template><i></i></template></p>",
+            &HtmlParseOptions::default(),
+        )
+        .dom;
+        let body = dom
+            .descendants(dom.document())
+            .find(|&n| dom.element(n).is_some_and(|el| &*el.name.local == "body"))
+            .unwrap();
+        let p = dom.children(body).next().unwrap();
+        assert_eq!(
+            to_xml(&dom, p),
+            "<p xmlns=\"http://www.w3.org/1999/xhtml\" class=\"a&amp;b\">x<br />&lt;y<svg xmlns=\"http://www.w3.org/2000/svg\"><rect/></svg><!--c--><template><i></i></template></p>"
+        );
+        assert!(to_xml(&dom, dom.document()).starts_with(
+            "<!DOCTYPE html><html xmlns=\"http://www.w3.org/1999/xhtml\"><head></head><body>"
+        ));
+    }
+}
