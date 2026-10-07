@@ -20901,6 +20901,72 @@ pub mod document {
         rt::ret(r, ctx)
     }
 
+    fn get_images(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "images", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::DocumentImpl>::images(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "images", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_embeds(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "embeds", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::DocumentImpl>::embeds(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "embeds", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_plugins(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "plugins", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::DocumentImpl>::plugins(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "plugins", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_links(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "links", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::DocumentImpl>::links(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "links", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_forms(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "forms", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::DocumentImpl>::forms(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "forms", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_scripts(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "scripts", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::DocumentImpl>::scripts(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "scripts", &v, ctx);
+        Ok(v)
+    }
+
     fn get_current_script(
         this_js: &JsValue,
         _args: &[JsValue],
@@ -21001,6 +21067,28 @@ pub mod document {
         });
         rt::ret(r, ctx)?;
         Ok(JsValue::undefined())
+    }
+
+    fn get_anchors(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "anchors", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::DocumentImpl>::anchors(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "anchors", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_applets(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "applets", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::Document, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::DocumentImpl>::applets(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "applets", &v, ctx);
+        Ok(v)
     }
 
     fn get_fonts(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
@@ -23854,6 +23942,22 @@ pub mod document {
         return rt::wrap_constructed_node(id, new_target, I::Document, ctx);
     }
 
+    fn exotic_named_get(h: rt::Handle, name: &str, ctx: &mut Context) -> JsResult<Option<JsValue>> {
+        let this = h.node();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DocumentImpl>::named_get(cx, this, name)
+        });
+        rt::ret_opt(r, ctx)
+    }
+
+    fn exotic_named_properties(h: rt::Handle, ctx: &mut Context) -> JsResult<Vec<String>> {
+        let this = h.node();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DocumentImpl>::named_properties(cx, this)
+        });
+        r.map_err(|e| rt::exception_to_js(e, ctx))
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::Document,
         name: "Document",
@@ -23958,6 +24062,36 @@ pub mod document {
                 setter: None,
             },
             rt::AttrDef {
+                name: "images",
+                getter: get_images,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "embeds",
+                getter: get_embeds,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "plugins",
+                getter: get_plugins,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "links",
+                getter: get_links,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "forms",
+                getter: get_forms,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "scripts",
+                getter: get_scripts,
+                setter: None,
+            },
+            rt::AttrDef {
                 name: "currentScript",
                 getter: get_current_script,
                 setter: None,
@@ -23986,6 +24120,16 @@ pub mod document {
                 name: "onvisibilitychange",
                 getter: get_onvisibilitychange,
                 setter: Some(set_onvisibilitychange),
+            },
+            rt::AttrDef {
+                name: "anchors",
+                getter: get_anchors,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "applets",
+                getter: get_applets,
+                setter: None,
             },
             rt::AttrDef {
                 name: "fonts",
@@ -24644,7 +24788,17 @@ pub mod document {
         static_ops: &[],
         consts: &[],
         iterable: rt::Iterable::None,
-        exotic: None,
+        exotic: Some(rt::ExoticDef {
+            length: None,
+            indexed_get: None,
+            named_get: Some(exotic_named_get),
+            named_properties: Some(exotic_named_properties),
+            named_set: None,
+            named_delete: None,
+            override_builtins: true,
+            attribute_like: false,
+            unenumerable_names: false,
+        }),
     };
 }
 

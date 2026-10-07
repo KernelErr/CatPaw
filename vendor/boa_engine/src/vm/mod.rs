@@ -774,6 +774,10 @@ impl Context {
         f(self, opcode)
     }
 
+    /// CatPaw: how many instructions run between two looks at the clock
+    /// while a deadline is set.
+    const DEADLINE_CHECK_INTERVAL: u32 = 4096;
+
     fn execute_one<F>(&mut self, f: F, opcode: Opcode) -> ControlFlow<CompletionRecord>
     where
         F: FnOnce(&mut Context, Opcode) -> ControlFlow<CompletionRecord>,
@@ -787,6 +791,20 @@ impl Context {
                 ));
             }
             self.instructions_remaining -= 1;
+        }
+
+        // CatPaw: a wall-clock deadline, looked at every few thousand
+        // instructions so that a runaway script cannot keep the thread.
+        if let Some(deadline) = self.deadline {
+            if self.deadline_countdown == 0 {
+                self.deadline_countdown = Self::DEADLINE_CHECK_INTERVAL;
+                if std::time::Instant::now() >= deadline {
+                    return ControlFlow::Break(CompletionRecord::Throw(
+                        crate::error::EngineError::DeadlinePassed.into(),
+                    ));
+                }
+            }
+            self.deadline_countdown -= 1;
         }
 
         #[cfg(feature = "trace")]

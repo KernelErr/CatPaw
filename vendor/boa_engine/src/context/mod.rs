@@ -103,6 +103,13 @@ pub struct Context {
     #[cfg(feature = "fuzz")]
     pub(crate) instructions_remaining: usize,
 
+    /// CatPaw: when set, running bytecode stops with an uncatchable error
+    /// once this moment has passed.
+    pub(crate) deadline: Option<std::time::Instant>,
+
+    /// CatPaw: instructions to go before the deadline is next looked at.
+    pub(crate) deadline_countdown: u32,
+
     pub(crate) vm: Vm,
 
     pub(crate) kept_alive: Vec<JsObject>,
@@ -454,6 +461,23 @@ impl Context {
     #[must_use]
     pub fn instructions_remaining(&self) -> usize {
         self.instructions_remaining
+    }
+
+    /// CatPaw: sets the moment after which running bytecode fails with an
+    /// uncatchable [`EngineError::DeadlinePassed`] error, or lifts the
+    /// limit with `None`. The clock is checked every few thousand
+    /// instructions, so the overrun is small.
+    ///
+    /// [`EngineError::DeadlinePassed`]: crate::error::EngineError::DeadlinePassed
+    pub fn set_deadline(&mut self, deadline: Option<std::time::Instant>) {
+        self.deadline = deadline;
+        self.deadline_countdown = 0;
+    }
+
+    /// CatPaw: the deadline set with [`Context::set_deadline`], if any.
+    #[must_use]
+    pub fn deadline(&self) -> Option<std::time::Instant> {
+        self.deadline
     }
 
     /// Returns the currently active realm.
@@ -1251,6 +1275,8 @@ impl ContextBuilder {
             },
             #[cfg(feature = "fuzz")]
             instructions_remaining: self.instructions_remaining,
+            deadline: None,
+            deadline_countdown: 0,
             kept_alive: Vec::new(),
             host_hooks,
             clock,

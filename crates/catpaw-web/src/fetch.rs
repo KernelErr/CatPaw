@@ -10,7 +10,7 @@ use catpaw_js::{Exception, Fallible, ObjectId, PromiseRef, Value};
 use url::Url;
 
 use crate::abort::{self, AbortAlgorithm};
-use crate::cors::{self, Credentials, Exposure, Mode, Outgoing, Readable};
+use crate::cors::{self, Credentials, Exposure, Mode, Outgoing, Readable, Redirect};
 use crate::generated::{
     self as web, ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString as BodyInit,
     ReferrerPolicy, RequestCache, RequestCredentials, RequestDestination, RequestInit, RequestMode,
@@ -77,7 +77,7 @@ fn header_list_from_init(init: Option<HeadersInit>) -> Fallible<HeaderList> {
 }
 
 /// The combined value of `name` in a list.
-fn header_get(list: &HeaderList, name: &str) -> Option<String> {
+fn header_get(list: &[(String, String)], name: &str) -> Option<String> {
     let name = name.to_ascii_lowercase();
     let values: Vec<&str> = list
         .iter()
@@ -87,24 +87,44 @@ fn header_get(list: &HeaderList, name: &str) -> Option<String> {
     (!values.is_empty()).then(|| values.join(", "))
 }
 
-/// Runs `f` on the list behind a `Headers` object. `mutable` says whether
-/// the list may be changed through this object.
+/// What script may change through a `Headers` object
+/// (<https://fetch.spec.whatwg.org/#concept-headers-guard>).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Guard {
+    None,
+    Request,
+    RequestNoCors,
+    Response,
+    Immutable,
+}
+
+/// Runs `f` on the list behind a `Headers` object, with the guard that
+/// applies to changes made through it.
 fn with_headers<R>(
     cx: &Cx<'_>,
     this: ObjectId,
-    f: impl FnOnce(&mut HeaderList, bool) -> R,
+    f: impl FnOnce(&mut HeaderList, Guard) -> R,
 ) -> Fallible<R> {
     let store = cx.page.with::<HeadersObject, _>(this, |h| h.store)?;
     match store {
         HeaderStore::Own => cx
             .page
-            .with::<HeadersObject, _>(this, |h| f(&mut h.list, true)),
-        HeaderStore::Request(owner) => cx
-            .page
-            .with::<RequestObject, _>(owner, |r| f(&mut r.headers, true)),
+            .with::<HeadersObject, _>(this, |h| f(&mut h.list, Guard::None)),
+        HeaderStore::Request(owner) => cx.page.with::<RequestObject, _>(owner, |r| {
+            let guard = if r.mode == RequestMode::NoCors {
+                Guard::RequestNoCors
+            } else {
+                Guard::Request
+            };
+            f(&mut r.headers, guard)
+        }),
         HeaderStore::Response(owner) => cx.page.with::<ResponseObject, _>(owner, |r| {
-            let mutable = !r.from_network;
-            f(&mut r.headers, mutable)
+            let guard = if r.from_network {
+                Guard::Immutable
+            } else {
+                Guard::Response
+            };
+            f(&mut r.headers, guard)
         }),
     }
 }
@@ -113,14 +133,34 @@ fn immutable() -> Exception {
     Exception::type_error("These headers are immutable")
 }
 
+/// Whether the guard lets `header` into `list`. Headers it keeps out are
+/// dropped silently, as the specification has it.
+fn guard_allows(list: &[(String, String)], guard: Guard, header: &(String, String)) -> bool {
+    let (name, value) = header;
+    match guard {
+        Guard::None | Guard::Immutable => true,
+        Guard::Request => !cors::is_forbidden_request_header(name, value),
+        Guard::RequestNoCors => {
+            let combined = match header_get(list, name) {
+                Some(existing) => format!("{existing}, {value}"),
+                None => value.clone(),
+            };
+            cors::is_no_cors_safelisted_request_header(name, &combined)
+        }
+        Guard::Response => !cors::is_forbidden_response_header(name),
+    }
+}
+
 impl web::HeadersImpl for Web {
     fn append(cx: &mut Cx<'_>, this: ObjectId, name: String, value: String) -> Fallible<()> {
         let header = checked_header(&name, &value)?;
-        with_headers(cx, this, |list, mutable| {
-            if !mutable {
+        with_headers(cx, this, |list, guard| {
+            if guard == Guard::Immutable {
                 return Err(immutable());
             }
-            list.push(header);
+            if guard_allows(list, guard, &header) {
+                list.push(header);
+            }
             Ok(())
         })?
     }
@@ -130,9 +170,23 @@ impl web::HeadersImpl for Web {
             return Err(invalid_header("name", &name));
         }
         let name = name.to_ascii_lowercase();
-        with_headers(cx, this, |list, mutable| {
-            if !mutable {
-                return Err(immutable());
+        with_headers(cx, this, |list, guard| {
+            match guard {
+                Guard::Immutable => return Err(immutable()),
+                Guard::Request if cors::is_forbidden_request_header(&name, "") => return Ok(()),
+                Guard::RequestNoCors
+                    if !matches!(
+                        name.as_str(),
+                        "accept"
+                            | "accept-language"
+                            | "content-language"
+                            | "content-type"
+                            | "range"
+                    ) =>
+                {
+                    return Ok(());
+                }
+                _ => {}
             }
             list.retain(|(n, _)| *n != name);
             Ok(())
@@ -165,9 +219,12 @@ impl web::HeadersImpl for Web {
 
     fn set(cx: &mut Cx<'_>, this: ObjectId, name: String, value: String) -> Fallible<()> {
         let (name, value) = checked_header(&name, &value)?;
-        with_headers(cx, this, |list, mutable| {
-            if !mutable {
+        with_headers(cx, this, |list, guard| {
+            if guard == Guard::Immutable {
                 return Err(immutable());
+            }
+            if !guard_allows(&[], guard, &(name.clone(), value.clone())) {
+                return Ok(());
             }
             match list.iter().position(|(n, _)| *n == name) {
                 Some(first) => {
@@ -549,7 +606,21 @@ fn build_request(
         request.redirect = redirect;
     }
     if let Some(referrer) = init.referrer {
-        request.referrer = referrer;
+        // "" means no referrer; a same-origin URL is one; anything else
+        // (including "about:client") means the page itself.
+        request.referrer = if referrer.is_empty() {
+            "no-referrer".to_string()
+        } else {
+            let parsed = cx.page.resolve_url(&referrer).ok_or_else(|| {
+                Exception::type_error(format!("Referrer {referrer:?} is not a valid URL."))
+            })?;
+            let client = parsed.scheme() == "about" && parsed.path() == "client";
+            if client || parsed.origin() != cx.page.url.borrow().origin() {
+                "about:client".to_string()
+            } else {
+                parsed.to_string()
+            }
+        };
     }
     if let Some(policy) = init.referrer_policy {
         request.referrer_policy = policy;
@@ -568,7 +639,18 @@ fn build_request(
     }
     request
         .headers
-        .retain(|(name, _)| !cors::is_forbidden_request_header(name));
+        .retain(|(name, value)| !cors::is_forbidden_request_header(name, value));
+    if request.mode == RequestMode::NoCors {
+        if !cors::is_safelisted_method(&request.method) {
+            return Err(Exception::type_error(format!(
+                "'{}' is unsupported in no-cors mode",
+                request.method
+            )));
+        }
+        request
+            .headers
+            .retain(|(name, value)| cors::is_no_cors_safelisted_request_header(name, value));
+    }
 
     if let Some(body) = init.body {
         if matches!(request.method.as_str(), "GET" | "HEAD") {
@@ -639,7 +721,10 @@ impl web::RequestImpl for Web {
     }
 
     fn referrer(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String> {
-        request(cx, this, |r| r.referrer.clone())
+        request(cx, this, |r| match r.referrer.as_str() {
+            "no-referrer" => String::new(),
+            other => other.to_string(),
+        })
     }
 
     fn referrer_policy(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ReferrerPolicy> {
@@ -755,6 +840,7 @@ fn synthetic_response(
         return Err(Exception::type_error("Invalid statusText"));
     }
     let mut headers = header_list_from_init(init.headers)?;
+    headers.retain(|(name, _)| !cors::is_forbidden_response_header(name));
     let body = match body {
         Some(_) if is_null_body_status(init.status) => {
             return Err(Exception::type_error(
@@ -939,7 +1025,12 @@ impl web::ResponseImpl for Web {
 // ---- fetch() ---------------------------------------------------------------
 
 fn response_from_network(readable: Readable) -> ResponseObject {
-    let Readable { response, exposure } = readable;
+    let Readable {
+        response,
+        exposure,
+        redirected,
+    } = readable;
+    let hidden = matches!(exposure, Exposure::Opaque | Exposure::OpaqueRedirect);
     let headers = response
         .headers
         .into_iter()
@@ -950,14 +1041,14 @@ fn response_from_network(readable: Readable) -> ResponseObject {
             Exposure::Basic => ResponseType::Basic,
             Exposure::Cors => ResponseType::Cors,
             Exposure::Opaque => ResponseType::Opaque,
+            Exposure::OpaqueRedirect => ResponseType::Opaqueredirect,
         },
         url: (exposure != Exposure::Opaque).then_some(response.url),
-        redirected: exposure != Exposure::Opaque && response.redirected,
+        redirected: !hidden && redirected,
         status: response.status,
         status_text: response.status_text,
         headers,
-        body: (!is_null_body_status(response.status) && exposure != Exposure::Opaque)
-            .then_some(response.body),
+        body: (!is_null_body_status(response.status) && !hidden).then_some(response.body),
         body_used: false,
         body_stream: None,
         from_network: true,
@@ -1031,32 +1122,32 @@ impl Web {
                 RequestCredentials::SameOrigin => Credentials::SameOrigin,
                 RequestCredentials::Include => Credentials::Include,
             },
+            redirect: match request.redirect {
+                RequestRedirect::Follow => Redirect::Follow,
+                RequestRedirect::Error => Redirect::Error,
+                RequestRedirect::Manual => Redirect::Manual,
+            },
+            referrer: match request.referrer.as_str() {
+                "no-referrer" => None,
+                "about:client" => Some(cx.page.url.borrow().clone()),
+                other => Url::parse(other)
+                    .ok()
+                    .or_else(|| Some(cx.page.url.borrow().clone())),
+            },
+            referrer_policy: request.referrer_policy,
             kind: RequestKind::Fetch,
         };
-        let fail_on_redirect = request.redirect == RequestRedirect::Error;
 
         let settled = promise.clone();
-        let pending = cors::send(cx.page, out, move |cx, result| {
-            let result = result.and_then(|readable| {
-                if fail_on_redirect && readable.response.redirected {
-                    Err(
-                        "the request was redirected, and its redirect mode is \"error\""
-                            .to_string(),
-                    )
-                } else {
-                    Ok(readable)
-                }
-            });
-            match result {
-                Ok(readable) => {
-                    let response = cx.page.alloc(response_from_network(readable));
-                    cx.script.resolve_promise(&settled, Value::Object(response));
-                }
-                Err(reason) => {
-                    log_failure(cx.page, &url, &reason);
-                    cx.script
-                        .reject_promise(&settled, Exception::type_error("Failed to fetch"));
-                }
+        let pending = cors::send(cx.page, out, move |cx, result| match result {
+            Ok(readable) => {
+                let response = cx.page.alloc(response_from_network(readable));
+                cx.script.resolve_promise(&settled, Value::Object(response));
+            }
+            Err(reason) => {
+                log_failure(cx.page, &url, &reason);
+                cx.script
+                    .reject_promise(&settled, Exception::type_error("Failed to fetch"));
             }
         });
 

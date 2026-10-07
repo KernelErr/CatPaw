@@ -366,6 +366,10 @@ pub enum EngineError {
     #[error("NoInstructionsRemainError: instruction budget was exhausted")]
     NoInstructionsRemain,
 
+    /// CatPaw: the deadline set on the context passed while bytecode ran.
+    #[error("DeadlineError: the script ran past its time budget")]
+    DeadlinePassed,
+
     /// Error thrown when a runtime limit is exceeded.
     #[error("RuntimeLimitError: {0}")]
     RuntimeLimit(#[from] RuntimeLimitError),
@@ -385,6 +389,7 @@ impl EngineError {
         match self {
             #[cfg(feature = "fuzz")]
             EngineError::NoInstructionsRemain => ErasedEngineError::NoInstructionsRemain,
+            EngineError::DeadlinePassed => ErasedEngineError::DeadlinePassed,
             EngineError::RuntimeLimit(err) => ErasedEngineError::RuntimeLimit(err),
             EngineError::Panic(err) => ErasedEngineError::Panic(ErasedPanicError {
                 message: err.message,
@@ -1582,6 +1587,10 @@ pub enum ErasedEngineError {
     #[cfg(feature = "fuzz")]
     #[error("NoInstructionsRemainError: instruction budget was exhausted")]
     NoInstructionsRemain,
+
+    /// CatPaw: the deadline set on the context passed while bytecode ran.
+    #[error("DeadlineError: the script ran past its time budget")]
+    DeadlinePassed,
 
     /// Error thrown when a runtime limit is exceeded.
     #[error("RuntimeLimitError: {0}")]

@@ -153,7 +153,7 @@ pub(crate) fn link_changed(page: &PageState, el: NodeId, parser_inserted: bool) 
 
     let blocks_scripts = parser_inserted && media_applies(page, media.as_deref());
     let mut request = NetRequest::get(url.clone(), RequestKind::Style);
-    request.referrer = Some(page.url.borrow().clone());
+    request.referrer = crate::referrer::for_document(page, &url);
     request
         .headers
         .push(("Accept".to_string(), "text/css,*/*;q=0.1".to_string()));

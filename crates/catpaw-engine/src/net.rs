@@ -45,26 +45,6 @@ pub struct EngineNet {
     log: RefCell<Vec<RequestRecord>>,
 }
 
-/// The `Referer` value for a request from `referrer` to `target`, under the
-/// default policy (`strict-origin-when-cross-origin`).
-fn referer_for(referrer: &Url, target: &Url) -> Option<String> {
-    if !matches!(referrer.scheme(), "http" | "https") {
-        return None;
-    }
-    if referrer.scheme() == "https" && target.scheme() != "https" {
-        return None;
-    }
-    if referrer.origin() == target.origin() {
-        let mut full = referrer.clone();
-        full.set_fragment(None);
-        let _ = full.set_username("");
-        let _ = full.set_password(None);
-        Some(full.to_string())
-    } else {
-        Some(format!("{}/", referrer.origin().ascii_serialization()))
-    }
-}
-
 async fn perform(client: &NetClient, request: NetRequest) -> NetResult {
     let method = Method::from_bytes(request.method.as_bytes())
         .map_err(|_| format!("invalid method `{}`", request.method))?;
@@ -73,11 +53,9 @@ async fn perform(client: &NetClient, request: NetRequest) -> NetResult {
     options
         .headers
         .insert(ACCEPT, HeaderValue::from_static("*/*"));
-    if let Some(referer) = request
-        .referrer
-        .as_ref()
-        .and_then(|r| referer_for(r, &request.url))
-        && let Ok(value) = HeaderValue::from_str(&referer)
+    // The page decided the referrer (its policy applied): it goes as is.
+    if let Some(referrer) = &request.referrer
+        && let Ok(value) = HeaderValue::from_str(referrer.as_str())
     {
         options.headers.insert(REFERER, value);
     }
@@ -91,6 +69,7 @@ async fn perform(client: &NetClient, request: NetRequest) -> NetResult {
     }
     options.body = request.body.map(Bytes::from);
     options.credentials = request.credentials;
+    options.follow_redirects = request.follow_redirects;
 
     let response = client
         .request(method, &request.url, options)
@@ -245,32 +224,5 @@ impl NetHost for EngineNet {
 
     fn set_cookie(&self, url: &Url, cookie: &str) {
         self.client.cookies().store_from_script(url, cookie);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn url(s: &str) -> Url {
-        Url::parse(s).unwrap()
-    }
-
-    #[test]
-    fn referer_follows_the_default_policy() {
-        let page = url("https://user:pw@example.com/a/b?q=1#frag");
-        assert_eq!(
-            referer_for(&page, &url("https://example.com/x")).as_deref(),
-            Some("https://example.com/a/b?q=1")
-        );
-        assert_eq!(
-            referer_for(&page, &url("https://other.example/x")).as_deref(),
-            Some("https://example.com/")
-        );
-        assert_eq!(referer_for(&page, &url("http://example.com/x")), None);
-        assert_eq!(
-            referer_for(&url("about:blank"), &url("https://example.com/")),
-            None
-        );
     }
 }

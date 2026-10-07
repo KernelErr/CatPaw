@@ -6,6 +6,15 @@ until a release carries the fix below. It goes with the vendored `boa_ast`.
 
 ## Changes from the published crate
 
+`src/context/mod.rs`, `src/vm/mod.rs`, `src/error/mod.rs`: a wall-clock
+deadline. `Context::set_deadline(Some(instant))` makes the interpreter
+check the clock every 4096 instructions and stop with an uncatchable
+`EngineError::DeadlinePassed` (a `try`/`catch` cannot swallow it) once the
+moment has passed; `set_deadline(None)` lifts it. The published crate can
+only count instructions, and only with the `fuzz` feature; a browser needs
+to end a runaway task without knowing how fast the machine is. The cost
+is one decrement and compare per instruction while a deadline is set.
+
 `src/bytecompiler/declarations.rs`, function declaration instantiation,
 step 28: in a function whose parameter list has a default value, a body
 `var` sharing a parameter's name must start out with the parameter's value.

@@ -89,109 +89,25 @@ html/dom/documents/dom-tree-accessors/Document.currentScript.html	Script iframe-
 html/dom/documents/dom-tree-accessors/Document.currentScript.html	Script script-svg
 html/dom/documents/dom-tree-accessors/Document.currentScript.html	Script script-window-error
 html/dom/documents/dom-tree-accessors/Document.currentScript.html	Script xhr-test
-html/dom/documents/dom-tree-accessors/document.embeds-document.plugins-01.html	Document.embeds should be a live collection
-html/dom/documents/dom-tree-accessors/document.embeds-document.plugins-01.html	Document.plugins should be a live collection
-html/dom/documents/dom-tree-accessors/document.embeds-document.plugins-01.html	No plugins
-html/dom/documents/dom-tree-accessors/document.embeds-document.plugins-01.html	One plugin
-html/dom/documents/dom-tree-accessors/document.embeds-document.plugins-01.html	Two plugins
-html/dom/documents/dom-tree-accessors/document.forms.html	Document.forms should be a live collection
-html/dom/documents/dom-tree-accessors/document.forms.html	document.forms
-html/dom/documents/dom-tree-accessors/document.forms.html	document.forms getOwnPropertyNames
 html/dom/documents/dom-tree-accessors/document.forms.html	document.forms iteration
-html/dom/documents/dom-tree-accessors/document.forms.html	document.forms with empty string
-html/dom/documents/dom-tree-accessors/document.forms.html	document.forms.item with string arg
-html/dom/documents/dom-tree-accessors/document.images.html	Document.images should be a live collection
-html/dom/documents/dom-tree-accessors/document.images.html	Foreign element should not be in the collection
-html/dom/documents/dom-tree-accessors/document.images.html	Input elements should not be in the collection
-html/dom/documents/dom-tree-accessors/document.images.html	The empty string should not be in the collections
-html/dom/documents/dom-tree-accessors/document.images.html	Two img elements with the same id
-html/dom/documents/dom-tree-accessors/document.images.html	Two img elements with the same name
-html/dom/documents/dom-tree-accessors/document.images.html	Unknown name should not be in the collection
-html/dom/documents/dom-tree-accessors/document.images.html	document.images should contain all HTML img elements
-html/dom/documents/dom-tree-accessors/document.images.html	img with id
-html/dom/documents/dom-tree-accessors/document.images.html	img with id and name
-html/dom/documents/dom-tree-accessors/document.images.html	img with name
-html/dom/documents/dom-tree-accessors/document.links.html	Document.links should be a live collection
-html/dom/documents/dom-tree-accessors/document.scripts.html	Document.scripts should be a live collection
 html/dom/documents/dom-tree-accessors/document.title-09.html	No title element in SVG document
 html/dom/documents/dom-tree-accessors/document.title-09.html	Title element in SVG document
 html/dom/documents/dom-tree-accessors/document.title-09.html	Title element not child of SVG root
 html/dom/documents/dom-tree-accessors/document.title-09.html	Title element not in SVG namespace
 html/dom/documents/dom-tree-accessors/document.title-not-in-html-svg.html	Should not be able to set document title in XML document with html:title element
-html/dom/documents/dom-tree-accessors/nameditem-01.html	Dynamically removing the id attribute from img elements, should still be accessible by name value.
-html/dom/documents/dom-tree-accessors/nameditem-01.html	Dynamically removing the name attribute from img elements, should not be accessible.
-html/dom/documents/dom-tree-accessors/nameditem-01.html	Dynamically updating the id attribute from img elements, should be accessible by values.
-html/dom/documents/dom-tree-accessors/nameditem-01.html	Dynamically updating the name attribute from img elements, should be accessible by values.
-html/dom/documents/dom-tree-accessors/nameditem-01.html	img elements that have a name and id attribute with same value.
-html/dom/documents/dom-tree-accessors/nameditem-01.html	img elements that have a name and id attribute, should be accessible by both values.
-html/dom/documents/dom-tree-accessors/nameditem-01.html	img elements that is removed, should not be accessible.
 html/dom/documents/dom-tree-accessors/nameditem-02.html	An iframe whose name looks like an array index should work.
 html/dom/documents/dom-tree-accessors/nameditem-02.html	Dynamically removing the name attribute from iframe elements, should not be accessible.
 html/dom/documents/dom-tree-accessors/nameditem-02.html	Dynamically updating the id attribute from iframe elements, should be accessible only by its name.
 html/dom/documents/dom-tree-accessors/nameditem-02.html	Dynamically updating the name attribute from iframe elements, should be accessible by its name.
 html/dom/documents/dom-tree-accessors/nameditem-02.html	If an iframe has a name and a different id, it should be returned by its name.
 html/dom/documents/dom-tree-accessors/nameditem-02.html	If the only named item is an iframe, the contentWindow should be returned.
-html/dom/documents/dom-tree-accessors/nameditem-02.html	If there are an iframe and another element (iframe first), a collection should be returned.
-html/dom/documents/dom-tree-accessors/nameditem-02.html	If there are an iframe and another element (iframe last), a collection should be returned.
-html/dom/documents/dom-tree-accessors/nameditem-02.html	If there are two iframes, a collection should be returned.
 html/dom/documents/dom-tree-accessors/nameditem-02.html	iframe elements that is removed, should not be accessible.
-html/dom/documents/dom-tree-accessors/nameditem-04.html	An id shouldn't affect getting an form by name
-html/dom/documents/dom-tree-accessors/nameditem-04.html	Dynamically removing the name attribute from form elements, should not be accessible.
-html/dom/documents/dom-tree-accessors/nameditem-04.html	Dynamically updating the id attribute from form elements, should be accessible only by its name.
-html/dom/documents/dom-tree-accessors/nameditem-04.html	Dynamically updating the name attribute from form elements, should be accessible by its name.
-html/dom/documents/dom-tree-accessors/nameditem-04.html	If there are two forms, a collection should be returned. (id and name)
-html/dom/documents/dom-tree-accessors/nameditem-04.html	If there are two forms, a collection should be returned. (name and id)
-html/dom/documents/dom-tree-accessors/nameditem-04.html	If there are two forms, a collection should be returned. (name)
-html/dom/documents/dom-tree-accessors/nameditem-04.html	If there is one form, it should be returned (name)
-html/dom/documents/dom-tree-accessors/nameditem-04.html	form elements that is removed, should not be accessible.
-html/dom/documents/dom-tree-accessors/nameditem-05.html	An id shouldn't affect getting an embed by name
-html/dom/documents/dom-tree-accessors/nameditem-05.html	Dynamically removing the name attribute from embed elements, should not be accessible.
-html/dom/documents/dom-tree-accessors/nameditem-05.html	Dynamically updating the id attribute from embed elements, should be accessible only by its name.
-html/dom/documents/dom-tree-accessors/nameditem-05.html	Dynamically updating the name attribute from embed elements, should be accessible by its name.
-html/dom/documents/dom-tree-accessors/nameditem-05.html	If there are two embeds, a collection should be returned. (id and name)
-html/dom/documents/dom-tree-accessors/nameditem-05.html	If there are two embeds, a collection should be returned. (name and id)
-html/dom/documents/dom-tree-accessors/nameditem-05.html	If there are two embeds, a collection should be returned. (name)
-html/dom/documents/dom-tree-accessors/nameditem-05.html	If there is one embed, it should be returned (name)
-html/dom/documents/dom-tree-accessors/nameditem-05.html	embed elements that is removed, should not be accessible.
-html/dom/documents/dom-tree-accessors/nameditem-06.html	Dynamically removing the name attribute from img elements, should not be accessible.
-html/dom/documents/dom-tree-accessors/nameditem-06.html	Dynamically updating the name attribute from img elements, should be accessible by its name.
-html/dom/documents/dom-tree-accessors/nameditem-06.html	If there are two imgs, a collection should be returned. (name)
-html/dom/documents/dom-tree-accessors/nameditem-06.html	If there are two imgs, the one with a name should be returned. (id and name)
-html/dom/documents/dom-tree-accessors/nameditem-06.html	If there are two imgs, the one with a name should be returned. (name and id)
-html/dom/documents/dom-tree-accessors/nameditem-06.html	If there is one img, it should be returned (name)
-html/dom/documents/dom-tree-accessors/nameditem-06.html	img elements that is removed, should not be accessible.
-html/dom/documents/dom-tree-accessors/nameditem-07.html	Dynamically removing the id attribute from object elements, should not be accessible.
-html/dom/documents/dom-tree-accessors/nameditem-07.html	Dynamically removing the name attribute from object elements, should not be accessible.
-html/dom/documents/dom-tree-accessors/nameditem-07.html	Dynamically updating the id attribute from object elements, should be accessible by its name and id.
-html/dom/documents/dom-tree-accessors/nameditem-07.html	Dynamically updating the name attribute from object elements, should be accessible by its name and id.
 html/dom/documents/dom-tree-accessors/nameditem-07.html	If an embed is nested inside an object with the same name, a collection should be returned. (name)
 html/dom/documents/dom-tree-accessors/nameditem-07.html	If an object is nested inside an object with the same id, a collection should be returned. (id)
 html/dom/documents/dom-tree-accessors/nameditem-07.html	If an object is nested inside an object with the same name, a collection should be returned. (name)
-html/dom/documents/dom-tree-accessors/nameditem-07.html	If there are two objects, a collection should be returned. (id and name)
-html/dom/documents/dom-tree-accessors/nameditem-07.html	If there are two objects, a collection should be returned. (id)
-html/dom/documents/dom-tree-accessors/nameditem-07.html	If there are two objects, a collection should be returned. (name and id)
-html/dom/documents/dom-tree-accessors/nameditem-07.html	If there are two objects, a collection should be returned. (name)
-html/dom/documents/dom-tree-accessors/nameditem-07.html	If there is one object, it should be returned (id)
-html/dom/documents/dom-tree-accessors/nameditem-07.html	If there is one object, it should be returned (name)
-html/dom/documents/dom-tree-accessors/nameditem-07.html	object elements that is removed, should not be accessible.
-html/dom/documents/dom-tree-accessors/nameditem-08.html	If there is a div and img with same id, the img should be returned
-html/dom/documents/dom-tree-accessors/nameditem-08.html	If there is a div and object with same id, the object should be returned
-html/dom/documents/dom-tree-accessors/nameditem-adoption.html	Named properties follow adoption between documents.
 html/dom/documents/dom-tree-accessors/nameditem-empty-name-dynamic-crash.html	-
-html/dom/documents/dom-tree-accessors/nameditem-img-name-added-cached-list.html	An img with an id gets exposed by its id, invalidating an already-cached named item collection, once a name attribute is added.
-html/dom/documents/dom-tree-accessors/nameditem-img-name-added.html	An img with an id but no name becomes exposed by its id once a name attribute is added.
-html/dom/documents/dom-tree-accessors/nameditem-img-name-dynamic.html	Two imgs sharing an id are both exposed by that id, whether the name is set before or after insertion.
-html/dom/documents/dom-tree-accessors/nameditem-img-name-removed.html	An img exposed by its id (id + name) is no longer exposed by id after its name attribute is removed.
-html/dom/documents/dom-tree-accessors/nameditem-names.html	A document's property names appear in tree order.
-html/dom/documents/dom-tree-accessors/nameditem-names.html	A document's property names can include integer strings.
-html/dom/documents/dom-tree-accessors/nameditem-names.html	A form name appears in a document's property names.
 html/dom/documents/dom-tree-accessors/nameditem-names.html	An embed inside an object that is not showing its fallback content is returned by the named getter.
 html/dom/documents/dom-tree-accessors/nameditem-names.html	An embed name appears in a document's property names when the embed is inside an object that is not showing its fallback content.
-html/dom/documents/dom-tree-accessors/nameditem-names.html	An embed name appears in a document's property names.
-html/dom/documents/dom-tree-accessors/nameditem-names.html	An iframe name appears in a document's property names.
-html/dom/documents/dom-tree-accessors/nameditem-names.html	An img id appears in a document's property names when the img has a name.
-html/dom/documents/dom-tree-accessors/nameditem-names.html	An img name appears in a document's property names when the img has an id.
-html/dom/documents/dom-tree-accessors/nameditem-names.html	An img name appears in a document's property names when the img has no id.
 html/dom/documents/dom-tree-accessors/nameditem-names.html	An object id appears in a document's property names when the object is inside an object that is not showing its fallback content.
 html/dom/documents/dom-tree-accessors/nameditem-names.html	An object id appears in a document's property names.
 html/dom/documents/dom-tree-accessors/nameditem-names.html	An object inside an object that is not showing its fallback content is returned by the named getter (id).
@@ -202,12 +118,13 @@ html/dom/documents/dom-tree-accessors/nameditem-names.html	An object with an obj
 html/dom/documents/dom-tree-accessors/nameditem-names.html	An object with object and embed descendants is returned by the named getter (name).
 html/dom/documents/dom-tree-accessors/nameditem-no-shadowing.tentative.html	document.__proto__ is not shadowed
 html/dom/documents/dom-tree-accessors/nameditem-no-shadowing.tentative.html	document.constructor is not shadowed
-html/dom/documents/dom-tree-accessors/nameditem-no-shadowing.tentative.html	document.foobar works (sanity check)
+html/dom/documents/dom-tree-accessors/nameditem-no-shadowing.tentative.html	document.currentScript is not shadowed
+html/dom/documents/dom-tree-accessors/nameditem-no-shadowing.tentative.html	document.firstChild is not shadowed
 html/dom/documents/dom-tree-accessors/nameditem-no-shadowing.tentative.html	document.forms is not shadowed
-html/dom/documents/dom-tree-accessors/nameditem-supported-property-names-order.html	Values from id attributes precede values from name attributes when the same element contributes both
+html/dom/documents/dom-tree-accessors/nameditem-no-shadowing.tentative.html	document.isSameNode() is not shadowed
+html/dom/documents/dom-tree-accessors/nameditem-no-shadowing.tentative.html	document.onreadystatechange is not shadowed
 html/dom/documents/dom-tree-accessors/nameditem-tree-order.html	A named item collection is in tree order even after an element's name is mutated.
 html/dom/documents/dom-tree-accessors/nameditem-tree-transitions.html	A named-property collection follows same-document moves.
-html/dom/documents/dom-tree-accessors/nameditem-tree-transitions.html	Named properties follow moves into and out of a shadow tree.
 html/dom/documents/resource-metadata-management/document-cookie.html	A simple cookie
 html/dom/documents/resource-metadata-management/document-lastModified-01.html	Date returned by lastModified is current after timeout.
 html/dom/documents/resource-metadata-management/document-lastModified-01.html	Date returned by lastModified is current at page load
@@ -580,7 +497,6 @@ html/dom/elements/the-innertext-and-outertext-properties/outertext-setter.html	R
 html/dom/elements/the-innertext-and-outertext-properties/outertext-setter.html	Replacing a node and merging with the previous and following text node
 html/dom/elements/the-innertext-and-outertext-properties/outertext-setter.html	Replacing a node and merging with the previous text node
 html/dom/historical.html	document.all cannot find applet
-html/dom/historical.html	document.applets is always empty
 html/dom/idlharness.any.html	idl_test setup
 html/dom/idlharness.https.html	idl_test setup
 html/dom/partial-updates/tentative/chained-streaming-templates-with-custom-element.html	Chained streaming templates and OwnerDocument

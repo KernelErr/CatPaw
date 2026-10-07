@@ -5,6 +5,8 @@ mod bindgen;
 mod harness;
 mod tree_construction;
 mod wpt;
+#[cfg(feature = "wpt")]
+mod wpt_handlers;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};

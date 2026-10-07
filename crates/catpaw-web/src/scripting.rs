@@ -392,7 +392,7 @@ fn prepare(cx: &mut Cx<'_>, el: NodeId, parser_inserted: bool) {
         return;
     };
     let mut request = NetRequest::get(url.clone(), RequestKind::Script);
-    request.referrer = Some(cx.page.url.borrow().clone());
+    request.referrer = crate::referrer::for_document(cx.page, &url);
 
     if parser_inserted && !module && !is_async && !is_defer {
         // Parser-blocking: nothing else happens until it has run.
@@ -449,6 +449,15 @@ fn parse<R>(page: &PageState, run: impl FnOnce() -> R) -> R {
         if let TreeChange::Inserted { node, .. } = *change {
             stylesheets::link_changed(page, node, true);
             inserted.push(node);
+        }
+    }
+    {
+        let dom = page.dom.borrow();
+        if inserted
+            .iter()
+            .any(|&n| crate::document::is_nameable(&dom, n))
+        {
+            page.document_names.changed();
         }
     }
     crate::custom_elements::parser_inserted(page, &inserted);
@@ -643,13 +652,14 @@ pub(crate) fn document_write(cx: &mut Cx<'_>, text: &str) {
 
 /// Called after script inserted `inserted` under `parent`.
 pub(crate) fn nodes_inserted(cx: &mut Cx<'_>, parent: NodeId, inserted: &[NodeId]) {
-    let (scripts, links): (Vec<NodeId>, Vec<NodeId>) = {
+    let (scripts, links, named): (Vec<NodeId>, Vec<NodeId>, bool) = {
         let dom = cx.dom();
         if !dom.is_connected(parent) {
             return;
         }
         let mut scripts = Vec::new();
         let mut links = Vec::new();
+        let mut named = false;
         // Content added to a script element that has not run yet.
         if dom.is_html_element(parent, "script") {
             scripts.push(parent);
@@ -660,11 +670,16 @@ pub(crate) fn nodes_inserted(cx: &mut Cx<'_>, parent: NodeId, inserted: &[NodeId
                     scripts.push(n);
                 } else if dom.is_html_element(n, "link") {
                     links.push(n);
+                } else if crate::document::is_nameable(&dom, n) {
+                    named = true;
                 }
             }
         }
-        (scripts, links)
+        (scripts, links, named)
     };
+    if named {
+        cx.page.document_names.changed();
+    }
     crate::custom_elements::nodes_inserted(cx.page, inserted);
     for link in links {
         stylesheets::link_changed(cx.page, link, false);

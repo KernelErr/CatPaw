@@ -4282,6 +4282,12 @@ pub trait DocumentImpl {
     fn body(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
     fn set_body(cx: &mut Cx<'_>, this: NodeId, value: Option<NodeId>) -> Fallible<()>;
     fn head(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
+    fn images(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
+    fn embeds(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
+    fn plugins(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
+    fn links(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
+    fn forms(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
+    fn scripts(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
     fn get_elements_by_name(
         cx: &mut Cx<'_>,
         this: NodeId,
@@ -4308,8 +4314,12 @@ pub trait DocumentImpl {
     fn has_focus(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool>;
     fn hidden(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool>;
     fn visibility_state(cx: &mut Cx<'_>, this: NodeId) -> Fallible<DocumentVisibilityState>;
+    fn anchors(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
+    fn applets(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
     fn get_selection(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<ObjectId>>;
     fn constructor(cx: &mut Cx<'_>) -> Fallible<NodeId>;
+    fn named_get(cx: &mut Cx<'_>, this: NodeId, name: &str) -> Fallible<Option<Value>>;
+    fn named_properties(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Vec<String>>;
 }
 
 pub trait DocumentFragmentImpl {

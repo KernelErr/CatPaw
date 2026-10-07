@@ -30,11 +30,15 @@ pub struct NetRequest {
     pub headers: Vec<(String, String)>,
     pub body: Option<Vec<u8>>,
     pub kind: RequestKind,
-    /// The URL of the document making the request.
+    /// The referrer to send, the referrer policy already applied (`None`
+    /// for no `Referer` header).
     pub referrer: Option<Url>,
     /// Whether cookies are sent with the request and stored from the
     /// response.
     pub credentials: bool,
+    /// Whether the host follows redirects itself. Script-initiated
+    /// requests follow them in the page, which checks each hop.
+    pub follow_redirects: bool,
 }
 
 impl NetRequest {
@@ -47,6 +51,7 @@ impl NetRequest {
             kind,
             referrer: None,
             credentials: true,
+            follow_redirects: true,
         }
     }
 }

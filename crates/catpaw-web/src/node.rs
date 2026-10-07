@@ -394,6 +394,9 @@ pub(crate) fn remove(cx: &mut Cx<'_>, node: NodeId, suppress_observers: bool) {
         crate::traversal::before_removal(cx.page, node);
         if cx.dom().is_connected(node) {
             crate::custom_elements::subtree_removed(cx.page, node);
+            if crate::document::has_nameable(&cx.dom(), node) {
+                cx.page.document_names.changed();
+            }
         }
     }
     let (parent, previous, next) = {

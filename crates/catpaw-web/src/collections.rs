@@ -28,8 +28,45 @@ pub enum ListSource {
     ClassNames { root: NodeId, classes: Vec<String> },
     /// `document.getElementsByName`.
     Name { root: NodeId, name: String },
+    /// `document.images` and the other collections of a document.
+    DocumentKind { root: NodeId, kind: DocumentKind },
+    /// `document[name]` when several elements share the name.
+    DocumentNamed { root: NodeId, name: String },
     /// A snapshot (`querySelectorAll`).
     Static,
+}
+
+/// The element collections a document exposes.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum DocumentKind {
+    /// `img` elements.
+    Images,
+    /// `embed` elements (`embeds` and `plugins`).
+    Embeds,
+    /// `a` and `area` elements with an `href`.
+    Links,
+    Forms,
+    Scripts,
+    /// `a` elements with a `name`.
+    Anchors,
+    /// Always empty: `applet` is no element any more.
+    Applets,
+}
+
+impl DocumentKind {
+    fn matches(self, el: &catpaw_dom::ElementData) -> bool {
+        let local = &*el.name.local;
+        el.is_html()
+            && match self {
+                DocumentKind::Images => local == "img",
+                DocumentKind::Embeds => local == "embed",
+                DocumentKind::Links => matches!(local, "a" | "area") && el.attr("href").is_some(),
+                DocumentKind::Forms => local == "form",
+                DocumentKind::Scripts => local == "script",
+                DocumentKind::Anchors => local == "a" && el.attr("name").is_some(),
+                DocumentKind::Applets => false,
+            }
+    }
 }
 
 fn qualified_name(el: &catpaw_dom::ElementData) -> String {
@@ -123,6 +160,17 @@ fn compute(dom: &Dom, source: &ListSource) -> Vec<NodeId> {
                         .is_some_and(|el| el.is_html() && el.attr("name") == Some(name.as_str()))
                 })
                 .collect()
+        }
+        ListSource::DocumentKind { root, kind } => {
+            if !dom.contains(*root) {
+                return Vec::new();
+            }
+            dom.descendants(*root)
+                .filter(|&n| dom.element(n).is_some_and(|el| kind.matches(el)))
+                .collect()
+        }
+        ListSource::DocumentNamed { root, name } => {
+            crate::document::named_elements(dom, *root, name)
         }
     }
 }

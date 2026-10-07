@@ -36,6 +36,8 @@ use catpaw_web::{PageConfig, PageState, scripting};
 use clap::Args as ClapArgs;
 use url::Url;
 
+use crate::wpt_handlers::{self, Stash};
+
 use crate::wpt;
 
 #[derive(ClapArgs)]
@@ -134,6 +136,14 @@ fn substitute(text: &str) -> String {
         .replace("{{domains[www]}}", "www.web-platform.test")
         .replace("{{domains[www1]}}", "www1.web-platform.test")
         .replace("{{domains[www2]}}", "www2.web-platform.test")
+        .replace("{{hosts[][www1]}}", "www1.web-platform.test")
+        .replace("{{hosts[][www2]}}", "www2.web-platform.test")
+        .replace("{{hosts[alt][]}}", "not-web-platform.test")
+        .replace("{{hosts[alt][www]}}", "www.not-web-platform.test")
+        .replace("{{hosts[alt][www1]}}", "www1.not-web-platform.test")
+        .replace("{{hosts[alt][www2]}}", "www2.not-web-platform.test")
+        .replace("{{ports[https][1]}}", "8444")
+        .replace("{{location[port]}}", "8000")
         .replace("{{ports[http][0]}}", "8000")
         .replace("{{ports[http][1]}}", "8001")
         .replace("{{ports[https][0]}}", "8443")
@@ -179,11 +189,18 @@ fn wrapper(script_url: &str, source: &str) -> String {
     )
 }
 
-/// Serves the checkout, with the runner's own harness glue.
+/// Serves the checkout, with the runner's own harness glue and stand-ins
+/// for the Python handlers the tests call.
 struct FileNet {
     root: PathBuf,
-    completed: RefCell<Vec<(u64, NetResult)>>,
+    /// Finished requests, each with the moment its response is "received".
+    completed: RefCell<Vec<(u64, Instant, NetResult)>>,
     next_token: Cell<u64>,
+    stash: Stash,
+}
+
+fn is_redirect(status: u16) -> bool {
+    matches!(status, 301 | 302 | 303 | 307 | 308)
 }
 
 impl FileNet {
@@ -221,8 +238,57 @@ impl FileNet {
         Some((bytes, content_type(&file)))
     }
 
-    fn respond(&self, request: &NetRequest) -> NetResult {
+    /// Answers one request, following redirects when the request has the
+    /// host do that (the page follows its own).
+    fn respond(&self, request: &NetRequest) -> (NetResult, Duration) {
+        let mut request = request.clone();
+        let mut hops = 0;
+        loop {
+            let (mut result, delay) = self.respond_once(&request);
+            if request.follow_redirects
+                && let Ok(response) = &result
+                && is_redirect(response.status)
+                && let Some(location) = response
+                    .header("location")
+                    .and_then(|l| response.url.join(l).ok())
+                && hops < 20
+            {
+                hops += 1;
+                if response.status == 303
+                    || (matches!(response.status, 301 | 302) && request.method == "POST")
+                {
+                    request.method = "GET".to_string();
+                    request.body = None;
+                }
+                request.url = location;
+                continue;
+            }
+            if let Ok(response) = &mut result {
+                response.redirected = hops > 0;
+            }
+            return (result, delay);
+        }
+    }
+
+    fn respond_once(&self, request: &NetRequest) -> (NetResult, Duration) {
         let url = &request.url;
+        if let Some(served) = wpt_handlers::handle(request, &self.stash) {
+            let mut headers = served.headers;
+            if !headers.iter().any(|(n, _)| n == "content-length") {
+                headers.push(("content-length".to_string(), served.body.len().to_string()));
+            }
+            return (
+                Ok(NetResponse {
+                    url: url.clone(),
+                    status: served.status,
+                    status_text: served.status_text,
+                    headers,
+                    body: served.body,
+                    redirected: false,
+                }),
+                served.delay,
+            );
+        }
         let mut headers = vec![("access-control-allow-origin".to_string(), "*".to_string())];
         // Headers files next to a resource, as WPT's server honours them.
         let headers_file = self
@@ -235,11 +301,12 @@ impl FileNet {
                 }
             }
         }
-        match self.body_for(url) {
+        let result = match self.body_for(url) {
             Some((body, content_type)) => {
                 if !headers.iter().any(|(n, _)| n == "content-type") {
                     headers.push(("content-type".to_string(), content_type.to_string()));
                 }
+                headers.push(("content-length".to_string(), body.len().to_string()));
                 Ok(NetResponse {
                     url: url.clone(),
                     status: 200,
@@ -257,29 +324,64 @@ impl FileNet {
                 body: Vec::new(),
                 redirected: false,
             }),
+        };
+        (result, Duration::ZERO)
+    }
+
+    /// Hands out the responses whose time has come.
+    fn ready(&self) -> Vec<(u64, NetResult)> {
+        let now = Instant::now();
+        let mut completed = self.completed.borrow_mut();
+        let mut ready = Vec::new();
+        let mut i = 0;
+        while i < completed.len() {
+            if completed[i].1 <= now {
+                let (token, _, result) = completed.remove(i);
+                ready.push((token, result));
+            } else {
+                i += 1;
+            }
         }
+        ready
     }
 }
 
 impl NetHost for FileNet {
     fn fetch_blocking(&self, request: NetRequest) -> NetResult {
-        self.respond(&request)
+        let (result, delay) = self.respond(&request);
+        std::thread::sleep(delay.min(Duration::from_secs(1)));
+        result
     }
 
     fn start(&self, request: NetRequest) -> u64 {
         let token = self.next_token.get() + 1;
         self.next_token.set(token);
-        let result = self.respond(&request);
-        self.completed.borrow_mut().push((token, result));
+        let (result, delay) = self.respond(&request);
+        self.completed
+            .borrow_mut()
+            .push((token, Instant::now() + delay, result));
         token
     }
 
-    fn poll(&self, _wait: Option<Duration>) -> Vec<(u64, NetResult)> {
-        std::mem::take(&mut *self.completed.borrow_mut())
+    fn poll(&self, wait: Option<Duration>) -> Vec<(u64, NetResult)> {
+        let ready = self.ready();
+        if !ready.is_empty() {
+            return ready;
+        }
+        let Some(wait) = wait else {
+            return ready;
+        };
+        // Sleep until the next response is due, or as long as asked.
+        let next_due = self.completed.borrow().iter().map(|(_, at, _)| *at).min();
+        if let Some(at) = next_due {
+            std::thread::sleep(at.saturating_duration_since(Instant::now()).min(wait));
+            return self.ready();
+        }
+        ready
     }
 
     fn abort(&self, token: u64) {
-        self.completed.borrow_mut().retain(|(t, _)| *t != token);
+        self.completed.borrow_mut().retain(|(t, _, _)| *t != token);
     }
 
     fn inflight(&self) -> usize {
@@ -338,6 +440,7 @@ fn run_test(root: &Path, test_path: &str, budget_ms: u64) -> Outcome {
         root: root.to_path_buf(),
         completed: RefCell::new(Vec::new()),
         next_token: Cell::new(0),
+        stash: Stash::default(),
     });
     let url = Url::parse(&format!("{ORIGIN}/{test_path}")).expect("test URL");
     let state = Rc::new(PageState::new(url.clone(), PageConfig::default()));

@@ -100,6 +100,13 @@ fn anchor_and_focus(cx: &Cx<'_>, this: ObjectId) -> Fallible<Option<(Boundary, B
 
 /// Selects from `anchor` to `focus`, whichever comes first in the tree.
 fn select(cx: &mut Cx<'_>, this: ObjectId, anchor: Boundary, focus: Boundary) -> Fallible<()> {
+    // Points in different trees (one inside a shadow tree) cannot bound
+    // one range: the selection collapses at the focus.
+    let anchor = if cx.dom().root_of(anchor.node) == cx.dom().root_of(focus.node) {
+        anchor
+    } else {
+        focus
+    };
     let backwards = range::compare_points(&cx.dom(), focus, anchor) == Ordering::Less;
     let (start, end) = if backwards {
         (focus, anchor)

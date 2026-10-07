@@ -525,3 +525,35 @@ fn xml_http_request_goes_through_its_states() {
     );
     assert_eq!(f.run("var x = new XMLHttpRequest(); try { x.send(); } catch (e) { var a = e.name; } try { x.open('TRACE', '/'); } catch (e) { return a + ' ' + e.name; }"), "InvalidStateError SecurityError");
 }
+
+#[test]
+fn header_guards_keep_forbidden_headers_out() {
+    let mut f = Fixture::new(&[]);
+    let out = f.run(
+        r#"
+        var r = new Request('https://app.test/x');
+        r.headers.append('X-HTTP-Method-Override', 'TRACE');
+        r.headers.append('x-method-override', '",TRACE",');
+        r.headers.append('X-HTTP-Method', 'GET,track ');
+        r.headers.set('Cookie', 'a=b');
+        r.headers.append('X-Fine', 'yes');
+        var n = new Request('https://app.test/y', { mode: 'no-cors', headers: { 'X-Custom': '1', 'Accept': 'text/html', 'Content-Type': 'text/plain' } });
+        n.headers.append('X-Other', '2');
+        n.headers.set('Content-Type', 'application/json');
+        n.headers.delete('Accept');
+        var resp = new Response('', { headers: { 'Set-Cookie': 'a=1', 'X-Ok': 'yes' } });
+        resp.headers.append('Set-Cookie2', 'b=2');
+        var badPort = await fetch('https://app.test:6667/').then(function () { return 'resolved'; }, function (e) { return e.name; });
+        var badMethod = (function () { try { new Request('https://app.test/z', { mode: 'no-cors', method: 'PUT' }); return 'ok'; } catch (e) { return e.name; } })();
+        return [r.headers.has('x-http-method-override'), r.headers.get('x-method-override'), r.headers.has('x-http-method'), r.headers.has('cookie'), r.headers.get('x-fine'), [...n.headers.keys()].join(','), n.headers.get('content-type'), resp.headers.has('set-cookie'), resp.headers.has('set-cookie2'), resp.headers.get('x-ok'), badPort, badMethod].join(' | ');
+    "#,
+    );
+    assert_eq!(
+        out,
+        r#"false | ",TRACE", | false | false | yes | content-type | text/plain | false | false | yes | TypeError | TypeError"#
+    );
+    assert!(
+        f.seen().is_empty(),
+        "a bad port is refused before the network"
+    );
+}

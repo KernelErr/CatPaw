@@ -76,6 +76,10 @@ pub struct PageConfig {
     pub virtual_time: bool,
     /// A fixed time origin (Unix milliseconds) for repeatable runs.
     pub time_origin_unix_ms: Option<f64>,
+    /// How long one run of script (a task with its microtasks, or a script
+    /// element) may take before it is stopped with an uncatchable error;
+    /// `None` lets it run forever.
+    pub script_budget: Option<std::time::Duration>,
 }
 
 impl Default for PageConfig {
@@ -97,6 +101,7 @@ impl Default for PageConfig {
             hardware_concurrency: 4,
             virtual_time: true,
             time_origin_unix_ms: None,
+            script_budget: Some(std::time::Duration::from_secs(10)),
         }
     }
 }
@@ -193,6 +198,8 @@ pub struct Singletons {
     pub subtle: Option<ObjectId>,
     pub local_storage: Option<ObjectId>,
     pub session_storage: Option<ObjectId>,
+    /// `document.embeds`, which `document.plugins` is too.
+    pub embeds: Option<ObjectId>,
 }
 
 /// Receives console messages as they are logged.
@@ -265,6 +272,8 @@ pub struct PageState {
     pub(crate) ranges: crate::range::Ranges,
     /// The elements the window's named properties refer to.
     pub(crate) named_elements: crate::window::NamedElements,
+    /// The document's named properties (`document.myForm`).
+    pub(crate) document_names: crate::document::DocumentNames,
     /// The `blob:` URLs the page made.
     pub blob_urls: RefCell<crate::file_api::BlobUrls>,
     pub(crate) reactions: crate::promises::Reactions,
@@ -337,6 +346,7 @@ impl PageState {
             fonts: Default::default(),
             ranges: Default::default(),
             named_elements: Default::default(),
+            document_names: Default::default(),
             blob_urls: Default::default(),
             reactions: Default::default(),
             timing: Default::default(),

@@ -71,6 +71,13 @@ fn attribute_changed(
     if local.starts_with("on") {
         events::content_handler_changed(cx.page, el, local);
     }
+    if matches!(local, "id" | "name")
+        && namespace.unwrap_or_default().is_empty()
+        && crate::document::is_nameable(&cx.dom(), el)
+        && cx.dom().is_connected(el)
+    {
+        cx.page.document_names.changed();
+    }
     if local == "src" && cx.dom().is_html_element(el, "script") {
         crate::scripting::src_attribute_set(cx, el);
     }

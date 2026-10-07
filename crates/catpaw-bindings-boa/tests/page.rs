@@ -1467,3 +1467,33 @@ fn the_selection_holds_one_range() {
         assert_eq!(eval(&mut page, source), expected, "{source}");
     }
 }
+
+#[test]
+fn runaway_scripts_are_stopped() {
+    let state = Rc::new(PageState::new(
+        Url::parse(URL).unwrap(),
+        PageConfig {
+            script_budget: Some(std::time::Duration::from_millis(200)),
+            ..PageConfig::default()
+        },
+    ));
+    let mut page = BoaPage::new(state).expect("page setup");
+    page.with_cx(|cx| {
+        scripting::load_document(
+            cx,
+            "<script>window.before = 1; try { while (true) {} } catch (e) { window.caught = true; } window.unreached = 1;</script><script>window.after = 1</script>",
+        );
+    });
+    assert_eq!(
+        page.eval_to_string(
+            "[window.before, window.caught, window.unreached, window.after].map(String).join(' ')"
+        )
+        .unwrap(),
+        "1 undefined undefined 1"
+    );
+    let errors = page.page().errors.borrow().clone();
+    assert!(
+        errors.iter().any(|e| e.contains("time budget")),
+        "{errors:?}"
+    );
+}

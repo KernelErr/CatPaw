@@ -10,7 +10,6 @@
 
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use base64::Engine as _;
 use catpaw_dom::{Dom, NodeId};
@@ -81,11 +80,9 @@ fn new_file(cx: &Cx<'_>, bytes: Vec<u8>, type_: &str, name: &str, last_modified:
     })
 }
 
-fn now_ms() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_millis() as i64)
-        .unwrap_or(0)
+/// The current time as the page sees it (`Date.now()` agrees).
+fn now_ms(cx: &Cx<'_>) -> i64 {
+    cx.page.clock.unix_ms().floor() as i64
 }
 
 /// The bytes of blob parts, with line endings converted when asked.
@@ -204,7 +201,7 @@ impl web::FileImpl for Web {
         options: FilePropertyBag,
     ) -> Fallible<ObjectId> {
         let bytes = concat_parts(cx, file_bits, options.endings)?;
-        let last_modified = options.last_modified.unwrap_or_else(now_ms);
+        let last_modified = options.last_modified.unwrap_or_else(|| now_ms(cx));
         Ok(new_file(
             cx,
             bytes,
@@ -446,7 +443,7 @@ fn file_entry(cx: &mut Cx<'_>, blob_id: ObjectId, filename: Option<String>) -> F
                 bytes.to_vec(),
                 &type_,
                 &filename.or(name).unwrap_or_else(|| "blob".to_string()),
-                last_modified.unwrap_or_else(now_ms),
+                last_modified.unwrap_or_else(|| now_ms(cx)),
             )
         }
     };
@@ -877,7 +874,7 @@ fn parse_multipart(
         };
         let entry = match filename {
             Some(filename) => {
-                let id = new_file(cx, body.to_vec(), &type_, &filename, now_ms());
+                let id = new_file(cx, body.to_vec(), &type_, &filename, now_ms(cx));
                 cx.pin(id);
                 Entry::File(id)
             }

@@ -4,12 +4,15 @@
 //! others (`DOMParser`, `document.implementation`); they have a tree and
 //! nothing else, and answer accordingly.
 
+use std::cell::{Cell, RefCell};
+use std::collections::HashMap;
+
 use catpaw_dom::{
     DocumentData, Dom, FragmentKind, LocalName, Namespace, NodeId, NodeKind, QualName, QuirksMode,
 };
-use catpaw_js::{Callback, Exception, Fallible, ObjectId, WindowRef};
+use catpaw_js::{Callback, Exception, Fallible, ObjectId, Value, WindowRef};
 
-use crate::collections::{self, ListSource};
+use crate::collections::{self, DocumentKind, ListSource};
 use crate::element::{child_text_content, is_valid_element_name, validate_and_extract};
 use crate::generated::{self as web, DocumentReadyState, DocumentVisibilityState, InterfaceId};
 use crate::page::Cx;
@@ -54,6 +57,162 @@ fn has_window(cx: &Cx<'_>, document: NodeId) -> bool {
 fn created(cx: &Cx<'_>, document: NodeId, node: NodeId) -> NodeId {
     cx.dom_mut().adopt_subtree(node, document);
     node
+}
+
+// ---- named properties and collections -------------------------------------
+
+/// Whether `node` is an element that can give the document a named
+/// property: `embed`, `form`, `iframe`, `img` or `object`.
+pub(crate) fn is_nameable(dom: &Dom, node: NodeId) -> bool {
+    dom.element(node).is_some_and(|el| {
+        el.is_html()
+            && matches!(
+                &*el.name.local,
+                "embed" | "form" | "iframe" | "img" | "object"
+            )
+    })
+}
+
+/// Whether the subtree at `node` holds a nameable element.
+pub(crate) fn has_nameable(dom: &Dom, node: NodeId) -> bool {
+    dom.traverse(node).any(|n| is_nameable(dom, n))
+}
+
+/// An `embed` or `object` is exposed unless an `object` contains it; an
+/// `object` must also contain neither. (Fallback content is never shown
+/// here, so that is the whole rule.)
+fn exposed(dom: &Dom, node: NodeId) -> bool {
+    if dom
+        .ancestors(node)
+        .any(|a| dom.is_html_element(a, "object"))
+    {
+        return false;
+    }
+    !dom.is_html_element(node, "object")
+        || !dom
+            .descendants(node)
+            .any(|d| dom.is_html_element(d, "object") || dom.is_html_element(d, "embed"))
+}
+
+/// The names `node` gives the document, an id before a name
+/// (<https://html.spec.whatwg.org/multipage/dom.html#dom-document-nameditem>).
+fn contributed_names(dom: &Dom, node: NodeId) -> Vec<String> {
+    let Some(el) = dom.element(node).filter(|el| el.is_html()) else {
+        return Vec::new();
+    };
+    let name = el.attr("name").filter(|n| !n.is_empty());
+    let id = el.attr("id").filter(|i| !i.is_empty());
+    let mut names: Vec<&str> = Vec::new();
+    match &*el.name.local {
+        "form" | "iframe" => names.extend(name),
+        "img" => {
+            if name.is_some() {
+                names.extend(id);
+            }
+            names.extend(name);
+        }
+        "embed" if exposed(dom, node) => names.extend(name),
+        "object" if exposed(dom, node) => {
+            names.extend(id);
+            names.extend(name);
+        }
+        _ => {}
+    }
+    names.dedup();
+    names.into_iter().map(str::to_string).collect()
+}
+
+/// The elements `name` refers to, in tree order.
+pub(crate) fn named_elements(dom: &Dom, document: NodeId, name: &str) -> Vec<NodeId> {
+    if name.is_empty() || !dom.contains(document) {
+        return Vec::new();
+    }
+    dom.descendants(document)
+        .filter(|&n| is_nameable(dom, n) && contributed_names(dom, n).iter().any(|c| c == name))
+        .collect()
+}
+
+/// The document's supported property names, in tree order.
+fn supported_names(dom: &Dom, document: NodeId) -> Vec<String> {
+    let mut names = Vec::new();
+    if !dom.contains(document) {
+        return names;
+    }
+    for node in dom.descendants(document) {
+        if is_nameable(dom, node) {
+            for name in contributed_names(dom, node) {
+                if !names.contains(&name) {
+                    names.push(name);
+                }
+            }
+        }
+    }
+    names
+}
+
+/// The page document's named properties, by name. `document.x` is looked
+/// up before the prototype chain on every property access, so the map is
+/// rebuilt only when a nameable element came, went or was renamed (the
+/// tree hooks call [`DocumentNames::changed`]), not on every tree change.
+#[derive(Default)]
+pub(crate) struct DocumentNames {
+    version: Cell<u64>,
+    built_for: Cell<Option<u64>>,
+    names: RefCell<HashMap<String, Vec<NodeId>>>,
+}
+
+impl DocumentNames {
+    /// Notes that the names may have changed.
+    pub(crate) fn changed(&self) {
+        self.version.set(self.version.get() + 1);
+    }
+
+    fn lookup(&self, dom: &Dom, document: NodeId, name: &str) -> Vec<NodeId> {
+        if self.built_for.get() != Some(self.version.get()) {
+            let mut names: HashMap<String, Vec<NodeId>> = HashMap::new();
+            for node in dom.descendants(document) {
+                if is_nameable(dom, node) {
+                    for n in contributed_names(dom, node) {
+                        names.entry(n).or_default().push(node);
+                    }
+                }
+            }
+            *self.names.borrow_mut() = names;
+            self.built_for.set(Some(self.version.get()));
+        }
+        self.names.borrow().get(name).cloned().unwrap_or_default()
+    }
+}
+
+/// `document.embeds`: one object for the page's document, so that
+/// `plugins` can be the same one.
+fn embeds(cx: &mut Cx<'_>, document: NodeId) -> ObjectId {
+    if !has_window(cx, document) {
+        return kind_collection(cx, document, DocumentKind::Embeds);
+    }
+    window::singleton(
+        cx,
+        |s| &mut s.embeds,
+        |page| {
+            collections::html_collection(
+                page,
+                ListSource::DocumentKind {
+                    root: document,
+                    kind: DocumentKind::Embeds,
+                },
+            )
+        },
+    )
+}
+
+fn kind_collection(cx: &Cx<'_>, document: NodeId, kind: DocumentKind) -> ObjectId {
+    collections::html_collection(
+        cx.page,
+        ListSource::DocumentKind {
+            root: document,
+            kind,
+        },
+    )
 }
 
 fn url(cx: &Cx<'_>, document: NodeId) -> String {
@@ -147,6 +306,64 @@ impl web::DocumentImpl for Web {
 
     fn create_range(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId> {
         Ok(crate::range::create_range(cx, this))
+    }
+
+    fn images(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId> {
+        Ok(kind_collection(cx, this, DocumentKind::Images))
+    }
+
+    fn embeds(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId> {
+        Ok(embeds(cx, this))
+    }
+
+    /// The same collection as `embeds`.
+    fn plugins(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId> {
+        Ok(embeds(cx, this))
+    }
+
+    fn links(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId> {
+        Ok(kind_collection(cx, this, DocumentKind::Links))
+    }
+
+    fn forms(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId> {
+        Ok(kind_collection(cx, this, DocumentKind::Forms))
+    }
+
+    fn scripts(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId> {
+        Ok(kind_collection(cx, this, DocumentKind::Scripts))
+    }
+
+    fn anchors(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId> {
+        Ok(kind_collection(cx, this, DocumentKind::Anchors))
+    }
+
+    fn applets(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId> {
+        Ok(kind_collection(cx, this, DocumentKind::Applets))
+    }
+
+    /// <https://html.spec.whatwg.org/multipage/dom.html#dom-document-nameditem>
+    fn named_get(cx: &mut Cx<'_>, this: NodeId, name: &str) -> Fallible<Option<Value>> {
+        let nodes = if has_window(cx, this) {
+            cx.page.document_names.lookup(&cx.dom(), this, name)
+        } else {
+            named_elements(&cx.dom(), this, name)
+        };
+        Ok(match nodes.as_slice() {
+            [] => None,
+            // An iframe would be its window; there are no frames yet.
+            [one] => Some(Value::Node(*one)),
+            _ => Some(Value::Object(collections::html_collection(
+                cx.page,
+                ListSource::DocumentNamed {
+                    root: this,
+                    name: name.to_string(),
+                },
+            ))),
+        })
+    }
+
+    fn named_properties(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Vec<String>> {
+        Ok(supported_names(&cx.dom(), this))
     }
 
     /// <https://drafts.csswg.org/cssom-view/#dom-document-scrollingelement>

@@ -13,7 +13,7 @@ use catpaw_agent::{
     AttributeOracle, Filter, ReadOptions, RefTable, SnapshotOptions, Snapshotter, StyleOracle,
 };
 use catpaw_dom::{Dom, HtmlParseOptions, NodeId, parse_html, to_html};
-use catpaw_engine::{LoopLimits, PageOptions, StopReason};
+use catpaw_engine::{LoopLimits, PageConfig, PageOptions, StopReason};
 use catpaw_fetch::fetch_document;
 use catpaw_net::{BotAuthConfig, KeyPair, NetClient, NetConfig, Url};
 use catpaw_style::{StyleEngine, StyleOptions};
@@ -102,6 +102,10 @@ struct FetchArgs {
     /// while waiting for the page to settle.
     #[arg(long, default_value_t = 10_000, requires = "js")]
     time_budget: u64,
+    /// With --js: how long (in milliseconds) one run of script may take
+    /// before it is stopped; 0 lets scripts run as long as they like.
+    #[arg(long, default_value_t = 10_000, requires = "js")]
+    script_budget: u64,
     /// With --js: print the page's console output to stderr.
     #[arg(long, requires = "js")]
     console: bool,
@@ -430,6 +434,11 @@ fn fetch_with_scripts(args: FetchArgs) -> Result<()> {
     let url = parse_url(&args.url)?;
     let options = PageOptions {
         net: net_config(&args)?,
+        page: PageConfig {
+            script_budget: (args.script_budget > 0)
+                .then(|| Duration::from_millis(args.script_budget)),
+            ..PageConfig::default()
+        },
         limits: LoopLimits {
             virtual_ms: args.time_budget as f64,
             ..LoopLimits::default()

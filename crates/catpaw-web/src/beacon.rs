@@ -6,7 +6,8 @@
 
 use catpaw_js::{Exception, Fallible, ObjectId};
 
-use crate::cors::{self, Credentials, Mode, Outgoing};
+use crate::cors::{self, Credentials, Mode, Outgoing, Redirect};
+use crate::generated::ReferrerPolicy;
 use crate::generated::{
     self as web, ReadableStreamOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString,
 };
@@ -42,6 +43,9 @@ impl web::NavigatorImpl for Web {
             body,
             mode: Mode::NoCors,
             credentials: Credentials::Include,
+            redirect: Redirect::Follow,
+            referrer: Some(cx.page.url.borrow().clone()),
+            referrer_policy: ReferrerPolicy::Empty,
             kind: RequestKind::Beacon,
         };
         let page = cx.page;

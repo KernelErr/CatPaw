@@ -338,6 +338,9 @@ impl Runtime {
         // whose `get` trap hands out the real wrapper for our symbol.
         if JsProxy::from_object(obj.clone()).is_ok() {
             let target = obj.get(self.target_symbol.clone(), ctx).ok()?.as_object()?;
+            if let Some(w) = target.downcast_ref::<NodeWrapper>() {
+                return Some(Native::Node(w.id, w.iface));
+            }
             let w = target.downcast_ref::<ObjectWrapper>()?;
             return Some(Native::Object(w.id, w.iface));
         }
@@ -356,8 +359,14 @@ impl Runtime {
             }
             catpaw_web::interface_for_node(&dom, id)
         };
-        let _ = ctx;
-        let wrapper = JsObject::from_proto_and_data(self.proto(iface), NodeWrapper { id, iface });
+        let target = JsObject::from_proto_and_data(self.proto(iface), NodeWrapper { id, iface });
+        // A document is a legacy platform object: its named elements are
+        // its properties (`document.forms`, `document.myForm`).
+        let wrapper = if self.exotic(iface).is_some() {
+            self.proxy_around(target.clone(), ctx).unwrap_or(target)
+        } else {
+            target
+        };
         self.nodes.borrow_mut().insert(
             id,
             NodeSlot {
@@ -385,6 +394,12 @@ impl Runtime {
         if self.exotic(iface).is_none() {
             return Ok(target);
         }
+        self.proxy_around(target, ctx)
+    }
+
+    /// The proxy that gives a legacy platform object its indexed and named
+    /// properties; `target` is the wrapper it stands in front of.
+    fn proxy_around(&self, target: JsObject, ctx: &mut Context) -> JsResult<JsObject> {
         let proxy = JsProxy::builder(target)
             .get(trap_get)
             .set(trap_set)
@@ -575,7 +590,9 @@ pub fn exception_to_js(exception: Exception, ctx: &mut Context) -> JsError {
 pub fn exception_from_js(error: JsError, ctx: &mut Context) -> Exception {
     match error.into_opaque(ctx) {
         Ok(value) => Exception::Thrown(root(value)),
-        Err(_) => Exception::type_error("An error could not be converted"),
+        // An engine error (a passed deadline, say) has no script value; it
+        // is reported by its message and cannot be caught.
+        Err(e) => Exception::type_error(e.to_string()),
     }
 }
 

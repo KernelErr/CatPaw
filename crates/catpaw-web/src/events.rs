@@ -305,6 +305,27 @@ pub fn set_event_handler(
     Ok(())
 }
 
+/// Whether a listener for `type_` on `target` is passive when its options
+/// do not say: scrolling-related events on the window, the document, its
+/// document element and its body are
+/// (<https://dom.spec.whatwg.org/#default-passive-value>).
+fn default_passive(cx: &Cx<'_>, target: EventTargetRef, type_: &str) -> bool {
+    if !matches!(type_, "touchstart" | "touchmove" | "wheel" | "mousewheel") {
+        return false;
+    }
+    match target {
+        EventTargetRef::Window => true,
+        EventTargetRef::Node(node) => {
+            let dom = cx.dom();
+            let document = dom.owner_document(node);
+            node == document
+                || dom.child_elements(document).next() == Some(node)
+                || crate::document::body(&dom, document) == Some(node)
+        }
+        EventTargetRef::Object(_) => false,
+    }
+}
+
 /// `addEventListener`. Returns the flag that marks the new listener as
 /// removed, or `None` if an identical listener was already registered.
 pub fn add_listener(
@@ -655,7 +676,10 @@ impl web::EventTargetImpl for Web {
                 (capture, false, false, None)
             }
             web::AddEventListenerOptionsOrBoolean::AddEventListenerOptions(o) => {
-                (o.capture, o.once, o.passive.unwrap_or(false), o.signal)
+                let passive = o
+                    .passive
+                    .unwrap_or_else(|| default_passive(cx, this, &type_));
+                (o.capture, o.once, passive, o.signal)
             }
         };
         // A listener tied to an aborted signal is never added.

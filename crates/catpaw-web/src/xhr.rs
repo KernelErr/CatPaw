@@ -7,8 +7,9 @@ use catpaw_js::{EventTargetRef, Exception, Fallible, ObjectId, Value};
 use encoding_rs::Encoding;
 use url::Url;
 
-use crate::cors::{self, Credentials, Mode, Outgoing, Pending, Readable};
+use crate::cors::{self, Credentials, Mode, Outgoing, Pending, Readable, Redirect};
 use crate::event_loop::{self, TimerAction};
+use crate::generated::ReferrerPolicy;
 use crate::generated::{
     self as web, DocumentOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString as XhrBody,
     XMLHttpRequestResponseType as ResponseType,
@@ -196,8 +197,33 @@ fn response_text(x: &XhrObject) -> String {
         .override_mime
         .as_deref()
         .or_else(|| response.header("content-type"));
-    let encoding = charset_of(declared).unwrap_or(encoding_rs::UTF_8);
+    let encoding = charset_of(declared)
+        .or_else(|| xml_declared_encoding(declared, &response.body))
+        .unwrap_or(encoding_rs::UTF_8);
     encoding.decode(&response.body).0.into_owned()
+}
+
+/// The encoding an XML body declares in `<?xml ... encoding=...?>`, for
+/// when the MIME type names none.
+fn xml_declared_encoding(content_type: Option<&str>, body: &[u8]) -> Option<&'static Encoding> {
+    let essence = content_type?.split(';').next()?.trim().to_ascii_lowercase();
+    if !(essence == "text/xml" || essence == "application/xml" || essence.ends_with("+xml")) {
+        return None;
+    }
+    let head = String::from_utf8_lossy(&body[..body.len().min(1024)]).into_owned();
+    let declaration = head.strip_prefix("<?xml")?;
+    let declaration = &declaration[..declaration.find("?>")?];
+    let at = declaration.find("encoding")?;
+    let rest = declaration[at + "encoding".len()..]
+        .trim_start()
+        .strip_prefix('=')?
+        .trim_start();
+    let quote = rest.chars().next()?;
+    if quote != '"' && quote != '\'' {
+        return None;
+    }
+    let value = rest[1..].split(quote).next()?;
+    Encoding::for_label(value.as_bytes())
 }
 
 fn open(
@@ -292,11 +318,15 @@ impl web::XMLHttpRequestImpl for Web {
             if x.state != OPENED || x.sending {
                 return Err(invalid_state("The object's state must be OPENED"));
             }
-            if cors::is_forbidden_request_header(&name) {
+            if cors::is_forbidden_request_header(&name, &value) {
                 return Ok(());
             }
-            let name = name.to_ascii_lowercase();
-            match x.request_headers.iter_mut().find(|(n, _)| *n == name) {
+            // The name keeps the case it was given; later values combine.
+            match x
+                .request_headers
+                .iter_mut()
+                .find(|(n, _)| n.eq_ignore_ascii_case(&name))
+            {
                 Some((_, existing)) => {
                     existing.push_str(", ");
                     existing.push_str(&value);
@@ -361,6 +391,10 @@ impl web::XMLHttpRequestImpl for Web {
         let body = match body.filter(|_| !matches!(method.as_str(), "GET" | "HEAD")) {
             None => None,
             Some(body) => {
+                let utf8_body = matches!(
+                    body,
+                    XhrBody::String(_) | XhrBody::Document(_) | XhrBody::URLSearchParams(_)
+                );
                 let (bytes, content_type) = match body {
                     XhrBody::BufferSource(bytes) => (bytes, None),
                     XhrBody::String(text) => (
@@ -371,10 +405,20 @@ impl web::XMLHttpRequestImpl for Web {
                         crate::url_api::serialized_params(cx, id)?.into_bytes(),
                         Some("application/x-www-form-urlencoded;charset=UTF-8".to_string()),
                     ),
-                    XhrBody::Document(node) => (
-                        to_html(&cx.dom(), node, true).into_bytes(),
-                        Some("text/html;charset=UTF-8".to_string()),
-                    ),
+                    XhrBody::Document(node) => {
+                        let dom = cx.dom();
+                        if crate::document::is_html_document(&dom, node) {
+                            (
+                                to_html(&dom, node, true).into_bytes(),
+                                Some("text/html;charset=UTF-8".to_string()),
+                            )
+                        } else {
+                            (
+                                catpaw_dom::serialize::to_xml(&dom, node).into_bytes(),
+                                Some("application/xml;charset=UTF-8".to_string()),
+                            )
+                        }
+                    }
                     XhrBody::Blob(id) => {
                         let (bytes, type_) = crate::file_api::blob_contents(cx, id)?;
                         (bytes.to_vec(), (!type_.is_empty()).then_some(type_))
@@ -384,10 +428,28 @@ impl web::XMLHttpRequestImpl for Web {
                         (bytes, Some(content_type))
                     }
                 };
-                if let Some(content_type) = content_type
-                    && !headers.iter().any(|(n, _)| n == "content-type")
+                match headers
+                    .iter_mut()
+                    .find(|(n, _)| n.eq_ignore_ascii_case("content-type"))
                 {
-                    headers.push(("content-type".to_string(), content_type));
+                    // A body that is always UTF-8 here corrects an author
+                    // charset that says otherwise.
+                    Some((_, author)) if utf8_body => {
+                        if let Some(mut mime) = crate::mime::parse(author)
+                            && mime
+                                .parameter("charset")
+                                .is_some_and(|c| !c.eq_ignore_ascii_case("utf-8"))
+                        {
+                            mime.set_parameter("charset", "UTF-8");
+                            *author = mime.serialize();
+                        }
+                    }
+                    Some(_) => {}
+                    None => {
+                        if let Some(content_type) = content_type {
+                            headers.push(("Content-Type".to_string(), content_type));
+                        }
+                    }
                 }
                 Some(bytes)
             }
@@ -403,6 +465,9 @@ impl web::XMLHttpRequestImpl for Web {
             } else {
                 Credentials::SameOrigin
             },
+            redirect: Redirect::Follow,
+            referrer: Some(cx.page.url.borrow().clone()),
+            referrer_policy: ReferrerPolicy::Empty,
             kind: RequestKind::Xhr,
         };
 

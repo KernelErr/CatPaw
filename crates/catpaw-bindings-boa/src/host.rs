@@ -3,6 +3,7 @@
 
 use std::path::Path;
 use std::rc::Rc;
+use std::time::Instant;
 
 use boa_engine::builtins::promise::PromiseState;
 use boa_engine::job::PromiseJob;
@@ -81,14 +82,25 @@ impl<'a> BoaHost<'a> {
         Self { ctx, rt }
     }
 
-    fn enter(&self) {
-        self.rt.depth.set(self.rt.depth.get() + 1);
+    /// Enters script. The outermost entry starts the script budget, which
+    /// the microtasks run on leaving spend from as well.
+    fn enter(&mut self) {
+        let depth = self.rt.depth.get();
+        if depth == 0
+            && let Some(budget) = self.rt.page.config.script_budget
+        {
+            self.ctx.set_deadline(Some(Instant::now() + budget));
+        }
+        self.rt.depth.set(depth + 1);
     }
 
     /// Leaves script; when the outermost call returns, microtasks run.
     fn leave(&mut self) {
         self.rt.depth.set(self.rt.depth.get().saturating_sub(1));
         checkpoint(self.ctx, &self.rt);
+        if self.rt.depth.get() == 0 {
+            self.ctx.set_deadline(None);
+        }
     }
 
     fn js_value(&mut self, value: &Value) -> JsValue {

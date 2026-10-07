@@ -242,38 +242,6 @@ dom/events/non-cancelable-when-passive/synthetic-events-cancelable.html	Syntheti
 dom/events/non-cancelable-when-passive/synthetic-events-cancelable.html	Synthetic touchend event with interface TouchEvent is not cancelable
 dom/events/non-cancelable-when-passive/synthetic-events-cancelable.html	Synthetic touchmove event with interface TouchEvent is not cancelable
 dom/events/non-cancelable-when-passive/synthetic-events-cancelable.html	Synthetic touchstart event with interface TouchEvent is not cancelable
-dom/events/passive-by-default.html	mousewheel listener is passive by default for Document
-dom/events/passive-by-default.html	mousewheel listener is passive by default for HTMLBodyElement
-dom/events/passive-by-default.html	mousewheel listener is passive by default for HTMLHtmlElement
-dom/events/passive-by-default.html	mousewheel listener is passive by default for Window
-dom/events/passive-by-default.html	mousewheel listener is passive with {passive:undefined} for Document
-dom/events/passive-by-default.html	mousewheel listener is passive with {passive:undefined} for HTMLBodyElement
-dom/events/passive-by-default.html	mousewheel listener is passive with {passive:undefined} for HTMLHtmlElement
-dom/events/passive-by-default.html	mousewheel listener is passive with {passive:undefined} for Window
-dom/events/passive-by-default.html	touchmove listener is passive by default for Document
-dom/events/passive-by-default.html	touchmove listener is passive by default for HTMLBodyElement
-dom/events/passive-by-default.html	touchmove listener is passive by default for HTMLHtmlElement
-dom/events/passive-by-default.html	touchmove listener is passive by default for Window
-dom/events/passive-by-default.html	touchmove listener is passive with {passive:undefined} for Document
-dom/events/passive-by-default.html	touchmove listener is passive with {passive:undefined} for HTMLBodyElement
-dom/events/passive-by-default.html	touchmove listener is passive with {passive:undefined} for HTMLHtmlElement
-dom/events/passive-by-default.html	touchmove listener is passive with {passive:undefined} for Window
-dom/events/passive-by-default.html	touchstart listener is passive by default for Document
-dom/events/passive-by-default.html	touchstart listener is passive by default for HTMLBodyElement
-dom/events/passive-by-default.html	touchstart listener is passive by default for HTMLHtmlElement
-dom/events/passive-by-default.html	touchstart listener is passive by default for Window
-dom/events/passive-by-default.html	touchstart listener is passive with {passive:undefined} for Document
-dom/events/passive-by-default.html	touchstart listener is passive with {passive:undefined} for HTMLBodyElement
-dom/events/passive-by-default.html	touchstart listener is passive with {passive:undefined} for HTMLHtmlElement
-dom/events/passive-by-default.html	touchstart listener is passive with {passive:undefined} for Window
-dom/events/passive-by-default.html	wheel listener is passive by default for Document
-dom/events/passive-by-default.html	wheel listener is passive by default for HTMLBodyElement
-dom/events/passive-by-default.html	wheel listener is passive by default for HTMLHtmlElement
-dom/events/passive-by-default.html	wheel listener is passive by default for Window
-dom/events/passive-by-default.html	wheel listener is passive with {passive:undefined} for Document
-dom/events/passive-by-default.html	wheel listener is passive with {passive:undefined} for HTMLBodyElement
-dom/events/passive-by-default.html	wheel listener is passive with {passive:undefined} for HTMLHtmlElement
-dom/events/passive-by-default.html	wheel listener is passive with {passive:undefined} for Window
 dom/events/pointer-event-document-move.html	Moving a node to new document should move the registered event listeners together
 dom/events/preventDefault-during-activation-behavior.html	behavior of preventDefault during activation behavior
 dom/events/relatedTarget.window.html	Reset if target pointed to a shadow tree
@@ -766,7 +734,6 @@ dom/nodes/insertion-removing-steps/insertion-removing-steps-iframe.window.html	I
 dom/nodes/insertion-removing-steps/insertion-removing-steps-iframe.window.html	Removing steps (innerHTML): script does not run synchronously during iframe destruction
 dom/nodes/insertion-removing-steps/insertion-removing-steps-iframe.window.html	Removing steps (remove): script does not run synchronously during iframe destruction
 dom/nodes/insertion-removing-steps/insertion-removing-steps-iframe.window.html	Removing steps (replaceChildren): script does not run synchronously during iframe destruction
-dom/nodes/insertion-removing-steps/insertion-removing-steps-script.window.html	Script execution happens after all batched DOM insertions complete through post-connection steps
 dom/nodes/moveBefore/Node-moveBefore.html	If node is a DocumentFragment with an element and parent is a document with another element, then throw a HierarchyRequestError DOMException.
 dom/nodes/moveBefore/Node-moveBefore.html	If node is a DocumentFragment with multiple elements and parent is a document, then throw a HierarchyRequestError DOMException.
 dom/nodes/moveBefore/Node-moveBefore.html	If node is a Text node and parent is a document, then throw a HierarchyRequestError DOMException.
@@ -1262,9 +1229,7 @@ dom/ranges/Range-attribute-nodes.html	setStartAfter() with an Attr node throws I
 dom/ranges/Range-attribute-nodes.html	setStartBefore() with an Attr node throws InvalidNodeTypeError (null parent)
 dom/ranges/Range-attribute-nodes.html	stringifying an Attr-rooted range returns the empty string
 dom/ranges/Range-attribute-nodes.html	surroundContents() on an Attr-rooted range throws HierarchyRequestError
-dom/ranges/Range-cloneContents-around-shadow.tentative.html	Range.cloneContents() when "<div><shadow-root><span>Inner[Text</span></shadow-root><span>UnassignedText</span></div><p>abc]def</p>"
 dom/ranges/Range-cloneContents-around-shadow.tentative.html	Range.cloneContents() when "<p>abc[def</p><div><shadow-root><span>InnerText</span></shadow-root><span>UnassignedText</span>}</div>" (the shadow is clonable): range.cloneContents() should clone the host with the shadow
-dom/ranges/Range-cloneContents-around-shadow.tentative.html	Range.cloneContents() when "<p>abc[def</p><div><shadow-root><span>Inner]Text</span></shadow-root><span>UnassignedText</span></div>"
 dom/ranges/Range-cloneContents.html	-
 dom/ranges/Range-cloneRange.html	-
 dom/ranges/Range-collapse.html	-
@@ -1272,12 +1237,8 @@ dom/ranges/Range-commonAncestorContainer.html	-
 dom/ranges/Range-compareBoundaryPoints-crash.html	-
 dom/ranges/Range-compareBoundaryPoints.html	-
 dom/ranges/Range-comparePoint.html	-
-dom/ranges/Range-deleteContents-around-shadow.tentative.html	Range.deleteContents() when "<div><shadow-root><span>Inner[Text</span></shadow-root><span>UnassignedText</span></div><p>abc]def</p>"
-dom/ranges/Range-deleteContents-around-shadow.tentative.html	Range.deleteContents() when "<p>abc[def</p><div><shadow-root><span>Inner]Text</span></shadow-root><span>UnassignedText</span></div>"
 dom/ranges/Range-deleteContents.html	-
-dom/ranges/Range-extractContents-around-shadow.tentative.html	Range.extractContents() when "<div><shadow-root><span>Inner[Text</span></shadow-root><span>UnassignedText</span></div><p>abc]def</p>"
 dom/ranges/Range-extractContents-around-shadow.tentative.html	Range.extractContents() when "<p>abc[def</p><div><shadow-root><span>InnerText</span></shadow-root><span>UnassignedText</span>}</div>" (the shadow is clonable): range.extractContents() should clone the host with the shadow
-dom/ranges/Range-extractContents-around-shadow.tentative.html	Range.extractContents() when "<p>abc[def</p><div><shadow-root><span>Inner]Text</span></shadow-root><span>UnassignedText</span></div>"
 dom/ranges/Range-extractContents-dynamic-end.html	Range.extractContents should not extract out-of-bounds nodes if end container is removed during iframe unload
 dom/ranges/Range-extractContents.html	-
 dom/ranges/Range-in-shadow-after-the-shadow-removed.html	Range in shadow should stay in the shadow after the host is removed
