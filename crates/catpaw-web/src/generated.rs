@@ -29,6 +29,9 @@ pub enum InterfaceId {
     CSSRuleList,
     CSSStyleDeclaration,
     CSSStyleProperties,
+    CanvasGradient,
+    CanvasPattern,
+    CanvasRenderingContext2D,
     CatPawRemoteWindow,
     Crypto,
     CustomElementRegistry,
@@ -52,6 +55,7 @@ pub enum InterfaceId {
     HashChangeEvent,
     Headers,
     History,
+    ImageData,
     IntersectionObserver,
     IntersectionObserverEntry,
     Location,
@@ -67,6 +71,7 @@ pub enum InterfaceId {
     Node,
     NodeIterator,
     NodeList,
+    Path2D,
     Performance,
     PerformanceEntry,
     PerformanceMark,
@@ -100,6 +105,7 @@ pub enum InterfaceId {
     SubtleCrypto,
     TextDecoder,
     TextEncoder,
+    TextMetrics,
     TransformStream,
     TransformStreamDefaultController,
     TreeWalker,
@@ -260,8 +266,8 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 235;
-    pub const ALL: [InterfaceId; 235] = [
+    pub const COUNT: usize = 241;
+    pub const ALL: [InterfaceId; 241] = [
         InterfaceId::AbortController,
         InterfaceId::AbstractRange,
         InterfaceId::Blob,
@@ -269,6 +275,9 @@ impl InterfaceId {
         InterfaceId::CSSRuleList,
         InterfaceId::CSSStyleDeclaration,
         InterfaceId::CSSStyleProperties,
+        InterfaceId::CanvasGradient,
+        InterfaceId::CanvasPattern,
+        InterfaceId::CanvasRenderingContext2D,
         InterfaceId::CatPawRemoteWindow,
         InterfaceId::Crypto,
         InterfaceId::CustomElementRegistry,
@@ -292,6 +301,7 @@ impl InterfaceId {
         InterfaceId::HashChangeEvent,
         InterfaceId::Headers,
         InterfaceId::History,
+        InterfaceId::ImageData,
         InterfaceId::IntersectionObserver,
         InterfaceId::IntersectionObserverEntry,
         InterfaceId::Location,
@@ -307,6 +317,7 @@ impl InterfaceId {
         InterfaceId::Node,
         InterfaceId::NodeIterator,
         InterfaceId::NodeList,
+        InterfaceId::Path2D,
         InterfaceId::Performance,
         InterfaceId::PerformanceEntry,
         InterfaceId::PerformanceMark,
@@ -340,6 +351,7 @@ impl InterfaceId {
         InterfaceId::SubtleCrypto,
         InterfaceId::TextDecoder,
         InterfaceId::TextEncoder,
+        InterfaceId::TextMetrics,
         InterfaceId::TransformStream,
         InterfaceId::TransformStreamDefaultController,
         InterfaceId::TreeWalker,
@@ -508,6 +520,9 @@ impl InterfaceId {
             InterfaceId::CSSRuleList => "CSSRuleList",
             InterfaceId::CSSStyleDeclaration => "CSSStyleDeclaration",
             InterfaceId::CSSStyleProperties => "CSSStyleProperties",
+            InterfaceId::CanvasGradient => "CanvasGradient",
+            InterfaceId::CanvasPattern => "CanvasPattern",
+            InterfaceId::CanvasRenderingContext2D => "CanvasRenderingContext2D",
             InterfaceId::CatPawRemoteWindow => "CatPawRemoteWindow",
             InterfaceId::Crypto => "Crypto",
             InterfaceId::CustomElementRegistry => "CustomElementRegistry",
@@ -531,6 +546,7 @@ impl InterfaceId {
             InterfaceId::HashChangeEvent => "HashChangeEvent",
             InterfaceId::Headers => "Headers",
             InterfaceId::History => "History",
+            InterfaceId::ImageData => "ImageData",
             InterfaceId::IntersectionObserver => "IntersectionObserver",
             InterfaceId::IntersectionObserverEntry => "IntersectionObserverEntry",
             InterfaceId::Location => "Location",
@@ -546,6 +562,7 @@ impl InterfaceId {
             InterfaceId::Node => "Node",
             InterfaceId::NodeIterator => "NodeIterator",
             InterfaceId::NodeList => "NodeList",
+            InterfaceId::Path2D => "Path2D",
             InterfaceId::Performance => "Performance",
             InterfaceId::PerformanceEntry => "PerformanceEntry",
             InterfaceId::PerformanceMark => "PerformanceMark",
@@ -579,6 +596,7 @@ impl InterfaceId {
             InterfaceId::SubtleCrypto => "SubtleCrypto",
             InterfaceId::TextDecoder => "TextDecoder",
             InterfaceId::TextEncoder => "TextEncoder",
+            InterfaceId::TextMetrics => "TextMetrics",
             InterfaceId::TransformStream => "TransformStream",
             InterfaceId::TransformStreamDefaultController => "TransformStreamDefaultController",
             InterfaceId::TreeWalker => "TreeWalker",
@@ -748,6 +766,9 @@ impl InterfaceId {
             "CSSRuleList" => InterfaceId::CSSRuleList,
             "CSSStyleDeclaration" => InterfaceId::CSSStyleDeclaration,
             "CSSStyleProperties" => InterfaceId::CSSStyleProperties,
+            "CanvasGradient" => InterfaceId::CanvasGradient,
+            "CanvasPattern" => InterfaceId::CanvasPattern,
+            "CanvasRenderingContext2D" => InterfaceId::CanvasRenderingContext2D,
             "CatPawRemoteWindow" => InterfaceId::CatPawRemoteWindow,
             "Crypto" => InterfaceId::Crypto,
             "CustomElementRegistry" => InterfaceId::CustomElementRegistry,
@@ -771,6 +792,7 @@ impl InterfaceId {
             "HashChangeEvent" => InterfaceId::HashChangeEvent,
             "Headers" => InterfaceId::Headers,
             "History" => InterfaceId::History,
+            "ImageData" => InterfaceId::ImageData,
             "IntersectionObserver" => InterfaceId::IntersectionObserver,
             "IntersectionObserverEntry" => InterfaceId::IntersectionObserverEntry,
             "Location" => InterfaceId::Location,
@@ -786,6 +808,7 @@ impl InterfaceId {
             "Node" => InterfaceId::Node,
             "NodeIterator" => InterfaceId::NodeIterator,
             "NodeList" => InterfaceId::NodeList,
+            "Path2D" => InterfaceId::Path2D,
             "Performance" => InterfaceId::Performance,
             "PerformanceEntry" => InterfaceId::PerformanceEntry,
             "PerformanceMark" => InterfaceId::PerformanceMark,
@@ -819,6 +842,7 @@ impl InterfaceId {
             "SubtleCrypto" => InterfaceId::SubtleCrypto,
             "TextDecoder" => InterfaceId::TextDecoder,
             "TextEncoder" => InterfaceId::TextEncoder,
+            "TextMetrics" => InterfaceId::TextMetrics,
             "TransformStream" => InterfaceId::TransformStream,
             "TransformStreamDefaultController" => InterfaceId::TransformStreamDefaultController,
             "TreeWalker" => InterfaceId::TreeWalker,
@@ -989,6 +1013,9 @@ impl InterfaceId {
             InterfaceId::CSSRuleList => None,
             InterfaceId::CSSStyleDeclaration => None,
             InterfaceId::CSSStyleProperties => Some(InterfaceId::CSSStyleDeclaration),
+            InterfaceId::CanvasGradient => None,
+            InterfaceId::CanvasPattern => None,
+            InterfaceId::CanvasRenderingContext2D => None,
             InterfaceId::CatPawRemoteWindow => None,
             InterfaceId::Crypto => None,
             InterfaceId::CustomElementRegistry => None,
@@ -1012,6 +1039,7 @@ impl InterfaceId {
             InterfaceId::HashChangeEvent => Some(InterfaceId::Event),
             InterfaceId::Headers => None,
             InterfaceId::History => None,
+            InterfaceId::ImageData => None,
             InterfaceId::IntersectionObserver => None,
             InterfaceId::IntersectionObserverEntry => None,
             InterfaceId::Location => None,
@@ -1027,6 +1055,7 @@ impl InterfaceId {
             InterfaceId::Node => Some(InterfaceId::EventTarget),
             InterfaceId::NodeIterator => None,
             InterfaceId::NodeList => None,
+            InterfaceId::Path2D => None,
             InterfaceId::Performance => Some(InterfaceId::EventTarget),
             InterfaceId::PerformanceEntry => None,
             InterfaceId::PerformanceMark => Some(InterfaceId::PerformanceEntry),
@@ -1060,6 +1089,7 @@ impl InterfaceId {
             InterfaceId::SubtleCrypto => None,
             InterfaceId::TextDecoder => None,
             InterfaceId::TextEncoder => None,
+            InterfaceId::TextMetrics => None,
             InterfaceId::TransformStream => None,
             InterfaceId::TransformStreamDefaultController => None,
             InterfaceId::TreeWalker => None,
@@ -1384,6 +1414,174 @@ impl BinaryType {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum CanvasDirection {
+    Ltr,
+    Rtl,
+    Inherit,
+}
+
+impl CanvasDirection {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            CanvasDirection::Ltr => "ltr",
+            CanvasDirection::Rtl => "rtl",
+            CanvasDirection::Inherit => "inherit",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "ltr" => CanvasDirection::Ltr,
+            "rtl" => CanvasDirection::Rtl,
+            "inherit" => CanvasDirection::Inherit,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum CanvasFillRule {
+    Nonzero,
+    Evenodd,
+}
+
+impl CanvasFillRule {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            CanvasFillRule::Nonzero => "nonzero",
+            CanvasFillRule::Evenodd => "evenodd",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "nonzero" => CanvasFillRule::Nonzero,
+            "evenodd" => CanvasFillRule::Evenodd,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum CanvasLineCap {
+    Butt,
+    Round,
+    Square,
+}
+
+impl CanvasLineCap {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            CanvasLineCap::Butt => "butt",
+            CanvasLineCap::Round => "round",
+            CanvasLineCap::Square => "square",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "butt" => CanvasLineCap::Butt,
+            "round" => CanvasLineCap::Round,
+            "square" => CanvasLineCap::Square,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum CanvasLineJoin {
+    Round,
+    Bevel,
+    Miter,
+}
+
+impl CanvasLineJoin {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            CanvasLineJoin::Round => "round",
+            CanvasLineJoin::Bevel => "bevel",
+            CanvasLineJoin::Miter => "miter",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "round" => CanvasLineJoin::Round,
+            "bevel" => CanvasLineJoin::Bevel,
+            "miter" => CanvasLineJoin::Miter,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum CanvasTextAlign {
+    Start,
+    End,
+    Left,
+    Right,
+    Center,
+}
+
+impl CanvasTextAlign {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            CanvasTextAlign::Start => "start",
+            CanvasTextAlign::End => "end",
+            CanvasTextAlign::Left => "left",
+            CanvasTextAlign::Right => "right",
+            CanvasTextAlign::Center => "center",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "start" => CanvasTextAlign::Start,
+            "end" => CanvasTextAlign::End,
+            "left" => CanvasTextAlign::Left,
+            "right" => CanvasTextAlign::Right,
+            "center" => CanvasTextAlign::Center,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum CanvasTextBaseline {
+    Top,
+    Hanging,
+    Middle,
+    Alphabetic,
+    Ideographic,
+    Bottom,
+}
+
+impl CanvasTextBaseline {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            CanvasTextBaseline::Top => "top",
+            CanvasTextBaseline::Hanging => "hanging",
+            CanvasTextBaseline::Middle => "middle",
+            CanvasTextBaseline::Alphabetic => "alphabetic",
+            CanvasTextBaseline::Ideographic => "ideographic",
+            CanvasTextBaseline::Bottom => "bottom",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "top" => CanvasTextBaseline::Top,
+            "hanging" => CanvasTextBaseline::Hanging,
+            "middle" => CanvasTextBaseline::Middle,
+            "alphabetic" => CanvasTextBaseline::Alphabetic,
+            "ideographic" => CanvasTextBaseline::Ideographic,
+            "bottom" => CanvasTextBaseline::Bottom,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum DOMParserSupportedType {
     TextHtml,
     TextXml,
@@ -1540,6 +1738,55 @@ impl FontFaceSetLoadStatus {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ImageDataPixelFormat {
+    RgbaUnorm8,
+    RgbaFloat16,
+}
+
+impl ImageDataPixelFormat {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ImageDataPixelFormat::RgbaUnorm8 => "rgba-unorm8",
+            ImageDataPixelFormat::RgbaFloat16 => "rgba-float16",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "rgba-unorm8" => ImageDataPixelFormat::RgbaUnorm8,
+            "rgba-float16" => ImageDataPixelFormat::RgbaFloat16,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ImageSmoothingQuality {
+    Low,
+    Medium,
+    High,
+}
+
+impl ImageSmoothingQuality {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ImageSmoothingQuality::Low => "low",
+            ImageSmoothingQuality::Medium => "medium",
+            ImageSmoothingQuality::High => "high",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "low" => ImageSmoothingQuality::Low,
+            "medium" => ImageSmoothingQuality::Medium,
+            "high" => ImageSmoothingQuality::High,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum NavigationTimingType {
     Navigate,
     Reload,
@@ -1560,6 +1807,35 @@ impl NavigationTimingType {
             "navigate" => NavigationTimingType::Navigate,
             "reload" => NavigationTimingType::Reload,
             "back_forward" => NavigationTimingType::BackForward,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum PredefinedColorSpace {
+    Srgb,
+    SrgbLinear,
+    DisplayP3,
+    DisplayP3Linear,
+}
+
+impl PredefinedColorSpace {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            PredefinedColorSpace::Srgb => "srgb",
+            PredefinedColorSpace::SrgbLinear => "srgb-linear",
+            PredefinedColorSpace::DisplayP3 => "display-p3",
+            PredefinedColorSpace::DisplayP3Linear => "display-p3-linear",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "srgb" => PredefinedColorSpace::Srgb,
+            "srgb-linear" => PredefinedColorSpace::SrgbLinear,
+            "display-p3" => PredefinedColorSpace::DisplayP3,
+            "display-p3-linear" => PredefinedColorSpace::DisplayP3Linear,
             _ => return None,
         })
     }
@@ -2185,6 +2461,30 @@ pub struct CustomEventInit {
 }
 
 #[derive(Clone, Debug)]
+pub struct DOMMatrix2DInit {
+    pub a: Option<f64>,
+    pub b: Option<f64>,
+    pub c: Option<f64>,
+    pub d: Option<f64>,
+    pub e: Option<f64>,
+    pub f: Option<f64>,
+    pub m11: Option<f64>,
+    pub m12: Option<f64>,
+    pub m21: Option<f64>,
+    pub m22: Option<f64>,
+    pub m41: Option<f64>,
+    pub m42: Option<f64>,
+}
+
+#[derive(Clone, Debug)]
+pub struct DOMPointInit {
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub w: f64,
+}
+
+#[derive(Clone, Debug)]
 pub struct ElementCreationOptions {
     pub custom_element_registry: Option<ObjectId>,
     pub is: Option<String>,
@@ -2269,6 +2569,12 @@ pub struct HashChangeEventInit {
     pub composed: bool,
     pub old_url: String,
     pub new_url: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct ImageDataSettings {
+    pub color_space: Option<PredefinedColorSpace>,
+    pub pixel_format: ImageDataPixelFormat,
 }
 
 #[derive(Clone, Debug)]
@@ -2693,6 +2999,19 @@ pub enum DocumentOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString {
 }
 
 #[derive(Clone, Debug)]
+pub enum DoubleOrDOMPointInit {
+    Double(f64),
+    DOMPointInit(DOMPointInit),
+}
+
+#[derive(Clone, Debug)]
+pub enum DoubleOrDOMPointInitOrDoubleOrDOMPointInitSequence {
+    Double(f64),
+    DOMPointInit(DOMPointInit),
+    DoubleOrDOMPointInitSequence(Vec<DoubleOrDOMPointInit>),
+}
+
+#[derive(Clone, Debug)]
 pub enum DoubleOrDoubleSequence {
     Double(f64),
     DoubleSequence(Vec<f64>),
@@ -2723,6 +3042,14 @@ pub enum FileOrString {
 }
 
 #[derive(Clone, Debug)]
+pub enum HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement {
+    HTMLImageElement(NodeId),
+    SVGImageElement(NodeId),
+    HTMLVideoElement(NodeId),
+    HTMLCanvasElement(NodeId),
+}
+
+#[derive(Clone, Debug)]
 pub enum MediaListOrString {
     MediaList(ObjectId),
     String(String),
@@ -2731,6 +3058,12 @@ pub enum MediaListOrString {
 #[derive(Clone, Debug)]
 pub enum NodeOrString {
     Node(NodeId),
+    String(String),
+}
+
+#[derive(Clone, Debug)]
+pub enum Path2DOrString {
+    Path2D(ObjectId),
     String(String),
 }
 
@@ -2766,6 +3099,13 @@ pub enum StringOrArrayBuffer {
 pub enum StringOrBufferSource {
     String(String),
     BufferSource(Vec<u8>),
+}
+
+#[derive(Clone, Debug)]
+pub enum StringOrCanvasGradientOrCanvasPattern {
+    String(String),
+    CanvasGradient(ObjectId),
+    CanvasPattern(ObjectId),
 }
 
 #[derive(Clone, Debug)]
@@ -2831,6 +3171,378 @@ pub trait BodyImpl {
     fn form_data(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
     fn json(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
     fn text(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PromiseRef>;
+}
+
+pub trait CanvasCompositingImpl {
+    fn global_alpha(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn set_global_alpha(cx: &mut Cx<'_>, this: ObjectId, value: f64) -> Fallible<()>;
+    fn global_composite_operation(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_global_composite_operation(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        value: String,
+    ) -> Fallible<()>;
+}
+
+pub trait CanvasDrawImageImpl {
+    fn draw_image(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        image: HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement,
+        dx: f64,
+        dy: f64,
+    ) -> Fallible<()>;
+    fn draw_image_overload2(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        image: HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement,
+        dx: f64,
+        dy: f64,
+        dw: f64,
+        dh: f64,
+    ) -> Fallible<()>;
+    fn draw_image_overload3(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        image: HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement,
+        sx: f64,
+        sy: f64,
+        sw: f64,
+        sh: f64,
+        dx: f64,
+        dy: f64,
+        dw: f64,
+        dh: f64,
+    ) -> Fallible<()>;
+}
+
+pub trait CanvasDrawPathImpl {
+    fn begin_path(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn fill(cx: &mut Cx<'_>, this: ObjectId, fill_rule: CanvasFillRule) -> Fallible<()>;
+    fn fill_overload2(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        path: ObjectId,
+        fill_rule: CanvasFillRule,
+    ) -> Fallible<()>;
+    fn stroke(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn stroke_overload2(cx: &mut Cx<'_>, this: ObjectId, path: ObjectId) -> Fallible<()>;
+    fn clip(cx: &mut Cx<'_>, this: ObjectId, fill_rule: CanvasFillRule) -> Fallible<()>;
+    fn clip_overload2(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        path: ObjectId,
+        fill_rule: CanvasFillRule,
+    ) -> Fallible<()>;
+    fn is_point_in_path(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        x: f64,
+        y: f64,
+        fill_rule: CanvasFillRule,
+    ) -> Fallible<bool>;
+    fn is_point_in_path_overload2(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        path: ObjectId,
+        x: f64,
+        y: f64,
+        fill_rule: CanvasFillRule,
+    ) -> Fallible<bool>;
+    fn is_point_in_stroke(cx: &mut Cx<'_>, this: ObjectId, x: f64, y: f64) -> Fallible<bool>;
+    fn is_point_in_stroke_overload2(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        path: ObjectId,
+        x: f64,
+        y: f64,
+    ) -> Fallible<bool>;
+}
+
+pub trait CanvasFillStrokeStylesImpl {
+    fn stroke_style(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+    ) -> Fallible<StringOrCanvasGradientOrCanvasPattern>;
+    fn set_stroke_style(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        value: StringOrCanvasGradientOrCanvasPattern,
+    ) -> Fallible<()>;
+    fn fill_style(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+    ) -> Fallible<StringOrCanvasGradientOrCanvasPattern>;
+    fn set_fill_style(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        value: StringOrCanvasGradientOrCanvasPattern,
+    ) -> Fallible<()>;
+    fn create_linear_gradient(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        x0: f64,
+        y0: f64,
+        x1: f64,
+        y1: f64,
+    ) -> Fallible<ObjectId>;
+    fn create_radial_gradient(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        x0: f64,
+        y0: f64,
+        r0: f64,
+        x1: f64,
+        y1: f64,
+        r1: f64,
+    ) -> Fallible<ObjectId>;
+    fn create_conic_gradient(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        start_angle: f64,
+        x: f64,
+        y: f64,
+    ) -> Fallible<ObjectId>;
+    fn create_pattern(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        image: HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement,
+        repetition: String,
+    ) -> Fallible<Option<ObjectId>>;
+}
+
+pub trait CanvasFiltersImpl {
+    fn filter(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_filter(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+}
+
+pub trait CanvasImageDataImpl {
+    fn create_image_data(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        sw: i32,
+        sh: i32,
+        settings: ImageDataSettings,
+    ) -> Fallible<ObjectId>;
+    fn create_image_data_overload2(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        image_data: ObjectId,
+    ) -> Fallible<ObjectId>;
+    fn get_image_data(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        sx: i32,
+        sy: i32,
+        sw: i32,
+        sh: i32,
+        settings: ImageDataSettings,
+    ) -> Fallible<ObjectId>;
+    fn put_image_data(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        image_data: ObjectId,
+        dx: i32,
+        dy: i32,
+    ) -> Fallible<()>;
+    fn put_image_data_overload2(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        image_data: ObjectId,
+        dx: i32,
+        dy: i32,
+        dirty_x: i32,
+        dirty_y: i32,
+        dirty_width: i32,
+        dirty_height: i32,
+    ) -> Fallible<()>;
+}
+
+pub trait CanvasImageSmoothingImpl {
+    fn image_smoothing_enabled(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn set_image_smoothing_enabled(cx: &mut Cx<'_>, this: ObjectId, value: bool) -> Fallible<()>;
+    fn image_smoothing_quality(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ImageSmoothingQuality>;
+    fn set_image_smoothing_quality(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        value: ImageSmoothingQuality,
+    ) -> Fallible<()>;
+}
+
+pub trait CanvasPathImpl {
+    fn close_path(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn move_to(cx: &mut Cx<'_>, this: ObjectId, x: f64, y: f64) -> Fallible<()>;
+    fn line_to(cx: &mut Cx<'_>, this: ObjectId, x: f64, y: f64) -> Fallible<()>;
+    fn quadratic_curve_to(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        cpx: f64,
+        cpy: f64,
+        x: f64,
+        y: f64,
+    ) -> Fallible<()>;
+    fn bezier_curve_to(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        cp1x: f64,
+        cp1y: f64,
+        cp2x: f64,
+        cp2y: f64,
+        x: f64,
+        y: f64,
+    ) -> Fallible<()>;
+    fn arc_to(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        x1: f64,
+        y1: f64,
+        x2: f64,
+        y2: f64,
+        radius: f64,
+    ) -> Fallible<()>;
+    fn rect(cx: &mut Cx<'_>, this: ObjectId, x: f64, y: f64, w: f64, h: f64) -> Fallible<()>;
+    fn round_rect(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        x: f64,
+        y: f64,
+        w: f64,
+        h: f64,
+        radii: DoubleOrDOMPointInitOrDoubleOrDOMPointInitSequence,
+    ) -> Fallible<()>;
+    fn arc(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        x: f64,
+        y: f64,
+        radius: f64,
+        start_angle: f64,
+        end_angle: f64,
+        counterclockwise: bool,
+    ) -> Fallible<()>;
+    fn ellipse(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        x: f64,
+        y: f64,
+        radius_x: f64,
+        radius_y: f64,
+        rotation: f64,
+        start_angle: f64,
+        end_angle: f64,
+        counterclockwise: bool,
+    ) -> Fallible<()>;
+}
+
+pub trait CanvasPathDrawingStylesImpl {
+    fn line_width(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn set_line_width(cx: &mut Cx<'_>, this: ObjectId, value: f64) -> Fallible<()>;
+    fn line_cap(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<CanvasLineCap>;
+    fn set_line_cap(cx: &mut Cx<'_>, this: ObjectId, value: CanvasLineCap) -> Fallible<()>;
+    fn line_join(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<CanvasLineJoin>;
+    fn set_line_join(cx: &mut Cx<'_>, this: ObjectId, value: CanvasLineJoin) -> Fallible<()>;
+    fn miter_limit(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn set_miter_limit(cx: &mut Cx<'_>, this: ObjectId, value: f64) -> Fallible<()>;
+    fn set_line_dash(cx: &mut Cx<'_>, this: ObjectId, segments: Vec<f64>) -> Fallible<()>;
+    fn get_line_dash(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<f64>>;
+    fn line_dash_offset(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn set_line_dash_offset(cx: &mut Cx<'_>, this: ObjectId, value: f64) -> Fallible<()>;
+}
+
+pub trait CanvasRectImpl {
+    fn clear_rect(cx: &mut Cx<'_>, this: ObjectId, x: f64, y: f64, w: f64, h: f64) -> Fallible<()>;
+    fn fill_rect(cx: &mut Cx<'_>, this: ObjectId, x: f64, y: f64, w: f64, h: f64) -> Fallible<()>;
+    fn stroke_rect(cx: &mut Cx<'_>, this: ObjectId, x: f64, y: f64, w: f64, h: f64)
+    -> Fallible<()>;
+}
+
+pub trait CanvasShadowStylesImpl {
+    fn shadow_offset_x(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn set_shadow_offset_x(cx: &mut Cx<'_>, this: ObjectId, value: f64) -> Fallible<()>;
+    fn shadow_offset_y(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn set_shadow_offset_y(cx: &mut Cx<'_>, this: ObjectId, value: f64) -> Fallible<()>;
+    fn shadow_blur(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn set_shadow_blur(cx: &mut Cx<'_>, this: ObjectId, value: f64) -> Fallible<()>;
+    fn shadow_color(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_shadow_color(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+}
+
+pub trait CanvasStateImpl {
+    fn save(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn restore(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn reset(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn is_context_lost(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+}
+
+pub trait CanvasTextImpl {
+    fn fill_text(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        text: String,
+        x: f64,
+        y: f64,
+        max_width: Option<f64>,
+    ) -> Fallible<()>;
+    fn stroke_text(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        text: String,
+        x: f64,
+        y: f64,
+        max_width: Option<f64>,
+    ) -> Fallible<()>;
+    fn measure_text(cx: &mut Cx<'_>, this: ObjectId, text: String) -> Fallible<ObjectId>;
+}
+
+pub trait CanvasTextDrawingStylesImpl {
+    fn font(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_font(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+    fn text_align(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<CanvasTextAlign>;
+    fn set_text_align(cx: &mut Cx<'_>, this: ObjectId, value: CanvasTextAlign) -> Fallible<()>;
+    fn text_baseline(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<CanvasTextBaseline>;
+    fn set_text_baseline(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        value: CanvasTextBaseline,
+    ) -> Fallible<()>;
+    fn direction(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<CanvasDirection>;
+    fn set_direction(cx: &mut Cx<'_>, this: ObjectId, value: CanvasDirection) -> Fallible<()>;
+    fn letter_spacing(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_letter_spacing(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+    fn word_spacing(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_word_spacing(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+}
+
+pub trait CanvasTransformImpl {
+    fn scale(cx: &mut Cx<'_>, this: ObjectId, x: f64, y: f64) -> Fallible<()>;
+    fn rotate(cx: &mut Cx<'_>, this: ObjectId, angle: f64) -> Fallible<()>;
+    fn translate(cx: &mut Cx<'_>, this: ObjectId, x: f64, y: f64) -> Fallible<()>;
+    fn transform(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        a: f64,
+        b: f64,
+        c: f64,
+        d: f64,
+        e: f64,
+        f: f64,
+    ) -> Fallible<()>;
+    fn set_transform(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        a: f64,
+        b: f64,
+        c: f64,
+        d: f64,
+        e: f64,
+        f: f64,
+    ) -> Fallible<()>;
+    fn set_transform_overload2(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        transform: DOMMatrix2DInit,
+    ) -> Fallible<()>;
+    fn reset_transform(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
 }
 
 pub trait ChildNodeImpl {
@@ -3133,6 +3845,18 @@ pub trait CSSStylePropertiesImpl {
     fn named_get(cx: &mut Cx<'_>, this: ObjectId, name: &str) -> Fallible<Option<String>>;
     fn named_properties(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<String>>;
     fn named_set(cx: &mut Cx<'_>, this: ObjectId, name: &str, value: String) -> Fallible<()>;
+}
+
+pub trait CanvasGradientImpl {
+    fn add_color_stop(cx: &mut Cx<'_>, this: ObjectId, offset: f64, color: String) -> Fallible<()>;
+}
+
+pub trait CanvasPatternImpl {
+    fn set_transform(cx: &mut Cx<'_>, this: ObjectId, transform: DOMMatrix2DInit) -> Fallible<()>;
+}
+
+pub trait CanvasRenderingContext2DImpl {
+    fn canvas(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<NodeId>;
 }
 
 pub trait CatPawRemoteWindowImpl {
@@ -3491,6 +4215,26 @@ pub trait HistoryImpl {
     ) -> Fallible<()>;
 }
 
+pub trait ImageDataImpl {
+    fn width(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn height(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn data(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Uint8ArrayData>;
+    fn color_space(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<PredefinedColorSpace>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        sw: u32,
+        sh: u32,
+        settings: ImageDataSettings,
+    ) -> Fallible<ObjectId>;
+    fn constructor_overload2(
+        cx: &mut Cx<'_>,
+        data: Vec<u8>,
+        sw: u32,
+        sh: Option<u32>,
+        settings: ImageDataSettings,
+    ) -> Fallible<ObjectId>;
+}
+
 pub trait IntersectionObserverImpl {
     fn root(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<ElementOrDocument>>;
     fn root_margin(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
@@ -3741,6 +4485,16 @@ pub trait NodeListImpl {
     fn item(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<NodeId>>;
     fn length(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
     fn indexed_get(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<NodeId>>;
+}
+
+pub trait Path2DImpl {
+    fn add_path(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        path: ObjectId,
+        transform: DOMMatrix2DInit,
+    ) -> Fallible<()>;
+    fn constructor(cx: &mut Cx<'_>, path: Option<Path2DOrString>) -> Fallible<ObjectId>;
 }
 
 pub trait PerformanceImpl {
@@ -4197,6 +4951,21 @@ pub trait TextDecoderImpl {
 pub trait TextEncoderImpl {
     fn encode(cx: &mut Cx<'_>, this: ObjectId, input: String) -> Fallible<Uint8ArrayData>;
     fn constructor(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
+}
+
+pub trait TextMetricsImpl {
+    fn width(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn actual_bounding_box_left(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn actual_bounding_box_right(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn font_bounding_box_ascent(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn font_bounding_box_descent(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn actual_bounding_box_ascent(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn actual_bounding_box_descent(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn em_height_ascent(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn em_height_descent(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn hanging_baseline(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn alphabetic_baseline(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+    fn ideographic_baseline(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
 }
 
 pub trait TransformStreamImpl {
@@ -5240,6 +6009,25 @@ pub trait HTMLCanvasElementImpl {
     fn set_width(cx: &mut Cx<'_>, this: NodeId, value: u32) -> Fallible<()>;
     fn height(cx: &mut Cx<'_>, this: NodeId) -> Fallible<u32>;
     fn set_height(cx: &mut Cx<'_>, this: NodeId, value: u32) -> Fallible<()>;
+    fn get_context(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        context_id: String,
+        options: Value,
+    ) -> Fallible<Option<ObjectId>>;
+    fn to_data_url(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        type_: String,
+        quality: Value,
+    ) -> Fallible<String>;
+    fn to_blob(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        callback: Callback,
+        type_: String,
+        quality: Value,
+    ) -> Fallible<()>;
 }
 
 pub trait CSSImpl {

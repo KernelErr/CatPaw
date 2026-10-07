@@ -32,6 +32,90 @@ impl IntoJs for web::BinaryType {
     }
 }
 
+impl FromJs for web::CanvasDirection {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::CanvasDirection::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid CanvasDirection")))
+    }
+}
+
+impl IntoJs for web::CanvasDirection {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
+impl FromJs for web::CanvasFillRule {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::CanvasFillRule::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid CanvasFillRule")))
+    }
+}
+
+impl IntoJs for web::CanvasFillRule {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
+impl FromJs for web::CanvasLineCap {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::CanvasLineCap::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid CanvasLineCap")))
+    }
+}
+
+impl IntoJs for web::CanvasLineCap {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
+impl FromJs for web::CanvasLineJoin {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::CanvasLineJoin::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid CanvasLineJoin")))
+    }
+}
+
+impl IntoJs for web::CanvasLineJoin {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
+impl FromJs for web::CanvasTextAlign {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::CanvasTextAlign::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid CanvasTextAlign")))
+    }
+}
+
+impl IntoJs for web::CanvasTextAlign {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
+impl FromJs for web::CanvasTextBaseline {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::CanvasTextBaseline::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid CanvasTextBaseline")))
+    }
+}
+
+impl IntoJs for web::CanvasTextBaseline {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
 impl FromJs for web::DOMParserSupportedType {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let s = rt::string_from_js(v, ctx)?;
@@ -116,6 +200,34 @@ impl IntoJs for web::FontFaceSetLoadStatus {
     }
 }
 
+impl FromJs for web::ImageDataPixelFormat {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::ImageDataPixelFormat::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid ImageDataPixelFormat")))
+    }
+}
+
+impl IntoJs for web::ImageDataPixelFormat {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
+impl FromJs for web::ImageSmoothingQuality {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::ImageSmoothingQuality::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid ImageSmoothingQuality")))
+    }
+}
+
+impl IntoJs for web::ImageSmoothingQuality {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
 impl FromJs for web::NavigationTimingType {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let s = rt::string_from_js(v, ctx)?;
@@ -125,6 +237,20 @@ impl FromJs for web::NavigationTimingType {
 }
 
 impl IntoJs for web::NavigationTimingType {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
+impl FromJs for web::PredefinedColorSpace {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::PredefinedColorSpace::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid PredefinedColorSpace")))
+    }
+}
+
+impl IntoJs for web::PredefinedColorSpace {
     fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
         self.as_str().into_js(ctx)
     }
@@ -595,6 +721,116 @@ impl IntoJs for web::CustomEventInit {
     }
 }
 
+impl FromJs for web::DOMMatrix2DInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "DOMMatrix2DInit")?;
+        Ok(Self {
+            a: match rt::dictionary_member(&obj, "a", ctx)? {
+                Some(m) => Some((&m).to_number(ctx)?),
+                None => None,
+            },
+            b: match rt::dictionary_member(&obj, "b", ctx)? {
+                Some(m) => Some((&m).to_number(ctx)?),
+                None => None,
+            },
+            c: match rt::dictionary_member(&obj, "c", ctx)? {
+                Some(m) => Some((&m).to_number(ctx)?),
+                None => None,
+            },
+            d: match rt::dictionary_member(&obj, "d", ctx)? {
+                Some(m) => Some((&m).to_number(ctx)?),
+                None => None,
+            },
+            e: match rt::dictionary_member(&obj, "e", ctx)? {
+                Some(m) => Some((&m).to_number(ctx)?),
+                None => None,
+            },
+            f: match rt::dictionary_member(&obj, "f", ctx)? {
+                Some(m) => Some((&m).to_number(ctx)?),
+                None => None,
+            },
+            m11: match rt::dictionary_member(&obj, "m11", ctx)? {
+                Some(m) => Some((&m).to_number(ctx)?),
+                None => None,
+            },
+            m12: match rt::dictionary_member(&obj, "m12", ctx)? {
+                Some(m) => Some((&m).to_number(ctx)?),
+                None => None,
+            },
+            m21: match rt::dictionary_member(&obj, "m21", ctx)? {
+                Some(m) => Some((&m).to_number(ctx)?),
+                None => None,
+            },
+            m22: match rt::dictionary_member(&obj, "m22", ctx)? {
+                Some(m) => Some((&m).to_number(ctx)?),
+                None => None,
+            },
+            m41: match rt::dictionary_member(&obj, "m41", ctx)? {
+                Some(m) => Some((&m).to_number(ctx)?),
+                None => None,
+            },
+            m42: match rt::dictionary_member(&obj, "m42", ctx)? {
+                Some(m) => Some((&m).to_number(ctx)?),
+                None => None,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::DOMMatrix2DInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "a", self.a, ctx)?;
+        rt::set_member(&obj, "b", self.b, ctx)?;
+        rt::set_member(&obj, "c", self.c, ctx)?;
+        rt::set_member(&obj, "d", self.d, ctx)?;
+        rt::set_member(&obj, "e", self.e, ctx)?;
+        rt::set_member(&obj, "f", self.f, ctx)?;
+        rt::set_member(&obj, "m11", self.m11, ctx)?;
+        rt::set_member(&obj, "m12", self.m12, ctx)?;
+        rt::set_member(&obj, "m21", self.m21, ctx)?;
+        rt::set_member(&obj, "m22", self.m22, ctx)?;
+        rt::set_member(&obj, "m41", self.m41, ctx)?;
+        rt::set_member(&obj, "m42", self.m42, ctx)?;
+        Ok(obj.into())
+    }
+}
+
+impl FromJs for web::DOMPointInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "DOMPointInit")?;
+        Ok(Self {
+            x: match rt::dictionary_member(&obj, "x", ctx)? {
+                Some(m) => (&m).to_number(ctx)?,
+                None => 0_f64,
+            },
+            y: match rt::dictionary_member(&obj, "y", ctx)? {
+                Some(m) => (&m).to_number(ctx)?,
+                None => 0_f64,
+            },
+            z: match rt::dictionary_member(&obj, "z", ctx)? {
+                Some(m) => (&m).to_number(ctx)?,
+                None => 0_f64,
+            },
+            w: match rt::dictionary_member(&obj, "w", ctx)? {
+                Some(m) => (&m).to_number(ctx)?,
+                None => 1_f64,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::DOMPointInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "x", self.x, ctx)?;
+        rt::set_member(&obj, "y", self.y, ctx)?;
+        rt::set_member(&obj, "z", self.z, ctx)?;
+        rt::set_member(&obj, "w", self.w, ctx)?;
+        Ok(obj.into())
+    }
+}
+
 impl FromJs for web::ElementCreationOptions {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let obj = rt::dictionary_object(v, "ElementCreationOptions")?;
@@ -998,6 +1234,31 @@ impl IntoJs for web::HashChangeEventInit {
         rt::set_member(&obj, "composed", self.composed, ctx)?;
         rt::set_member(&obj, "oldURL", self.old_url, ctx)?;
         rt::set_member(&obj, "newURL", self.new_url, ctx)?;
+        Ok(obj.into())
+    }
+}
+
+impl FromJs for web::ImageDataSettings {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "ImageDataSettings")?;
+        Ok(Self {
+            color_space: match rt::dictionary_member(&obj, "colorSpace", ctx)? {
+                Some(m) => Some(<web::PredefinedColorSpace as FromJs>::from_js((&m), ctx)?),
+                None => None,
+            },
+            pixel_format: match rt::dictionary_member(&obj, "pixelFormat", ctx)? {
+                Some(m) => <web::ImageDataPixelFormat as FromJs>::from_js((&m), ctx)?,
+                None => web::ImageDataPixelFormat::RgbaUnorm8,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::ImageDataSettings {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "colorSpace", self.color_space, ctx)?;
+        rt::set_member(&obj, "pixelFormat", self.pixel_format, ctx)?;
         Ok(obj.into())
     }
 }
@@ -3075,6 +3336,60 @@ web::DocumentOrBlobOrBufferSourceOrFormDataOrURLSearchParamsOrString::String(v) 
     }
 }
 
+impl FromJs for web::DoubleOrDOMPointInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if v.is_object() || v.is_null_or_undefined() {
+            return Ok(web::DoubleOrDOMPointInit::DOMPointInit(
+                <web::DOMPointInit as FromJs>::from_js(v, ctx)?,
+            ));
+        }
+        if v.is_number() {
+            return Ok(web::DoubleOrDOMPointInit::Double(v.to_number(ctx)?));
+        }
+        Ok(web::DoubleOrDOMPointInit::Double(v.to_number(ctx)?))
+    }
+}
+
+impl IntoJs for web::DoubleOrDOMPointInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+            web::DoubleOrDOMPointInit::Double(v) => v.into_js(ctx),
+            web::DoubleOrDOMPointInit::DOMPointInit(v) => v.into_js(ctx),
+        }
+    }
+}
+
+impl FromJs for web::DoubleOrDOMPointInitOrDoubleOrDOMPointInitSequence {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if rt::is_iterable(v, ctx)? {
+            return Ok(web::DoubleOrDOMPointInitOrDoubleOrDOMPointInitSequence::DoubleOrDOMPointInitSequence(rt::sequence_from_js(v, ctx, |v, ctx| Ok(<web::DoubleOrDOMPointInit as FromJs>::from_js(v, ctx)?))?));
+        }
+        if v.is_object() || v.is_null_or_undefined() {
+            return Ok(
+                web::DoubleOrDOMPointInitOrDoubleOrDOMPointInitSequence::DOMPointInit(
+                    <web::DOMPointInit as FromJs>::from_js(v, ctx)?,
+                ),
+            );
+        }
+        if v.is_number() {
+            return Ok(
+                web::DoubleOrDOMPointInitOrDoubleOrDOMPointInitSequence::Double(v.to_number(ctx)?),
+            );
+        }
+        Ok(web::DoubleOrDOMPointInitOrDoubleOrDOMPointInitSequence::Double(v.to_number(ctx)?))
+    }
+}
+
+impl IntoJs for web::DoubleOrDOMPointInitOrDoubleOrDOMPointInitSequence {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+web::DoubleOrDOMPointInitOrDoubleOrDOMPointInitSequence::Double(v) => v.into_js(ctx),
+web::DoubleOrDOMPointInitOrDoubleOrDOMPointInitSequence::DOMPointInit(v) => v.into_js(ctx),
+web::DoubleOrDOMPointInitOrDoubleOrDOMPointInitSequence::DoubleOrDOMPointInitSequence(v) => v.into_js(ctx),
+}
+    }
+}
+
 impl FromJs for web::DoubleOrDoubleSequence {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         if rt::is_iterable(v, ctx)? {
@@ -3201,6 +3516,37 @@ impl IntoJs for web::FileOrString {
     }
 }
 
+impl FromJs for web::HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if rt::is_instance(v, I::HTMLImageElement, ctx) {
+            return Ok(web::HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement::HTMLImageElement(rt::node_from_js(v, I::HTMLImageElement, ctx)?));
+        }
+        if rt::is_instance(v, I::SVGImageElement, ctx) {
+            return Ok(web::HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement::SVGImageElement(rt::node_from_js(v, I::SVGImageElement, ctx)?));
+        }
+        if rt::is_instance(v, I::HTMLVideoElement, ctx) {
+            return Ok(web::HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement::HTMLVideoElement(rt::node_from_js(v, I::HTMLVideoElement, ctx)?));
+        }
+        if rt::is_instance(v, I::HTMLCanvasElement, ctx) {
+            return Ok(web::HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement::HTMLCanvasElement(rt::node_from_js(v, I::HTMLCanvasElement, ctx)?));
+        }
+        Err(rt::type_error(
+            "value is not convertible to HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement",
+        ))
+    }
+}
+
+impl IntoJs for web::HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+web::HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement::HTMLImageElement(v) => v.into_js(ctx),
+web::HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement::SVGImageElement(v) => v.into_js(ctx),
+web::HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement::HTMLVideoElement(v) => v.into_js(ctx),
+web::HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement::HTMLCanvasElement(v) => v.into_js(ctx),
+}
+    }
+}
+
 impl FromJs for web::MediaListOrString {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         if rt::is_instance(v, I::MediaList, ctx) {
@@ -3237,6 +3583,28 @@ impl IntoJs for web::NodeOrString {
         match self {
             web::NodeOrString::Node(v) => v.into_js(ctx),
             web::NodeOrString::String(v) => v.into_js(ctx),
+        }
+    }
+}
+
+impl FromJs for web::Path2DOrString {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if rt::is_instance(v, I::Path2D, ctx) {
+            return Ok(web::Path2DOrString::Path2D(rt::object_from_js(
+                v,
+                I::Path2D,
+                ctx,
+            )?));
+        }
+        Ok(web::Path2DOrString::String(rt::string_from_js(v, ctx)?))
+    }
+}
+
+impl IntoJs for web::Path2DOrString {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+            web::Path2DOrString::Path2D(v) => v.into_js(ctx),
+            web::Path2DOrString::String(v) => v.into_js(ctx),
         }
     }
 }
@@ -3374,6 +3742,34 @@ impl IntoJs for web::StringOrBufferSource {
         match self {
             web::StringOrBufferSource::String(v) => v.into_js(ctx),
             web::StringOrBufferSource::BufferSource(v) => v.into_js(ctx),
+        }
+    }
+}
+
+impl FromJs for web::StringOrCanvasGradientOrCanvasPattern {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if rt::is_instance(v, I::CanvasGradient, ctx) {
+            return Ok(web::StringOrCanvasGradientOrCanvasPattern::CanvasGradient(
+                rt::object_from_js(v, I::CanvasGradient, ctx)?,
+            ));
+        }
+        if rt::is_instance(v, I::CanvasPattern, ctx) {
+            return Ok(web::StringOrCanvasGradientOrCanvasPattern::CanvasPattern(
+                rt::object_from_js(v, I::CanvasPattern, ctx)?,
+            ));
+        }
+        Ok(web::StringOrCanvasGradientOrCanvasPattern::String(
+            rt::string_from_js(v, ctx)?,
+        ))
+    }
+}
+
+impl IntoJs for web::StringOrCanvasGradientOrCanvasPattern {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+            web::StringOrCanvasGradientOrCanvasPattern::String(v) => v.into_js(ctx),
+            web::StringOrCanvasGradientOrCanvasPattern::CanvasGradient(v) => v.into_js(ctx),
+            web::StringOrCanvasGradientOrCanvasPattern::CanvasPattern(v) => v.into_js(ctx),
         }
     }
 }
@@ -4409,6 +4805,1780 @@ pub mod css_style_properties {
             attribute_like: true,
             unenumerable_names: false,
         }),
+    };
+}
+
+pub mod canvas_gradient {
+    use super::*;
+
+    fn op_add_color_stop(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasGradient, ctx)?;
+        rt::require_args(args, 2, "CanvasGradient.addColorStop")?;
+        let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
+        let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasGradientImpl>::add_color_stop(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::CanvasGradient,
+        name: "CanvasGradient",
+        parent: None,
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[rt::OpDef {
+            name: "addColorStop",
+            func: op_add_color_stop,
+            length: 2,
+        }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod canvas_pattern {
+    use super::*;
+
+    fn op_set_transform(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasPattern, ctx)?;
+        let a0 = <web::DOMMatrix2DInit as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPatternImpl>::set_transform(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::CanvasPattern,
+        name: "CanvasPattern",
+        parent: None,
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[rt::OpDef {
+            name: "setTransform",
+            func: op_set_transform,
+            length: 0,
+        }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod canvas_rendering_context2_d {
+    use super::*;
+
+    fn get_canvas(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasRenderingContext2DImpl>::canvas(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_global_alpha(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasCompositingImpl>::global_alpha(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_global_alpha(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasCompositingImpl>::set_global_alpha(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_global_composite_operation(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasCompositingImpl>::global_composite_operation(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_global_composite_operation(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasCompositingImpl>::set_global_composite_operation(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_image_smoothing_enabled(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasImageSmoothingImpl>::image_smoothing_enabled(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_image_smoothing_enabled(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let a0 = rt::arg(args, 0).to_boolean();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasImageSmoothingImpl>::set_image_smoothing_enabled(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_image_smoothing_quality(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasImageSmoothingImpl>::image_smoothing_quality(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_image_smoothing_quality(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let s = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let Some(a0) = web::ImageSmoothingQuality::parse(&s) else {
+            return Ok(JsValue::undefined());
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasImageSmoothingImpl>::set_image_smoothing_quality(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_stroke_style(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasFillStrokeStylesImpl>::stroke_style(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_stroke_style(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let a0 =
+            <web::StringOrCanvasGradientOrCanvasPattern as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasFillStrokeStylesImpl>::set_stroke_style(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_fill_style(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasFillStrokeStylesImpl>::fill_style(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_fill_style(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let a0 =
+            <web::StringOrCanvasGradientOrCanvasPattern as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasFillStrokeStylesImpl>::set_fill_style(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_shadow_offset_x(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasShadowStylesImpl>::shadow_offset_x(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_shadow_offset_x(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasShadowStylesImpl>::set_shadow_offset_x(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_shadow_offset_y(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasShadowStylesImpl>::shadow_offset_y(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_shadow_offset_y(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasShadowStylesImpl>::set_shadow_offset_y(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_shadow_blur(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasShadowStylesImpl>::shadow_blur(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_shadow_blur(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasShadowStylesImpl>::set_shadow_blur(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_shadow_color(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasShadowStylesImpl>::shadow_color(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_shadow_color(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasShadowStylesImpl>::set_shadow_color(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_filter(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::CanvasFiltersImpl>::filter(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn set_filter(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasFiltersImpl>::set_filter(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_line_width(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathDrawingStylesImpl>::line_width(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_line_width(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathDrawingStylesImpl>::set_line_width(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_line_cap(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathDrawingStylesImpl>::line_cap(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_line_cap(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let s = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let Some(a0) = web::CanvasLineCap::parse(&s) else {
+            return Ok(JsValue::undefined());
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathDrawingStylesImpl>::set_line_cap(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_line_join(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathDrawingStylesImpl>::line_join(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_line_join(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let s = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let Some(a0) = web::CanvasLineJoin::parse(&s) else {
+            return Ok(JsValue::undefined());
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathDrawingStylesImpl>::set_line_join(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_miter_limit(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathDrawingStylesImpl>::miter_limit(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_miter_limit(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathDrawingStylesImpl>::set_miter_limit(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_line_dash_offset(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathDrawingStylesImpl>::line_dash_offset(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_line_dash_offset(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathDrawingStylesImpl>::set_line_dash_offset(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_font(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasTextDrawingStylesImpl>::font(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_font(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasTextDrawingStylesImpl>::set_font(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_text_align(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasTextDrawingStylesImpl>::text_align(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_text_align(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let s = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let Some(a0) = web::CanvasTextAlign::parse(&s) else {
+            return Ok(JsValue::undefined());
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasTextDrawingStylesImpl>::set_text_align(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_text_baseline(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasTextDrawingStylesImpl>::text_baseline(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_text_baseline(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let s = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let Some(a0) = web::CanvasTextBaseline::parse(&s) else {
+            return Ok(JsValue::undefined());
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasTextDrawingStylesImpl>::set_text_baseline(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_direction(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasTextDrawingStylesImpl>::direction(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_direction(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let s = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let Some(a0) = web::CanvasDirection::parse(&s) else {
+            return Ok(JsValue::undefined());
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasTextDrawingStylesImpl>::set_direction(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_letter_spacing(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasTextDrawingStylesImpl>::letter_spacing(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_letter_spacing(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasTextDrawingStylesImpl>::set_letter_spacing(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_word_spacing(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasTextDrawingStylesImpl>::word_spacing(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_word_spacing(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasTextDrawingStylesImpl>::set_word_spacing(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn op_save(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::CanvasStateImpl>::save(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_restore(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::CanvasStateImpl>::restore(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_reset(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::CanvasStateImpl>::reset(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_is_context_lost(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasStateImpl>::is_context_lost(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_scale(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 2, "CanvasRenderingContext2D.scale")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasTransformImpl>::scale(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_rotate(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 1, "CanvasRenderingContext2D.rotate")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasTransformImpl>::rotate(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_translate(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 2, "CanvasRenderingContext2D.translate")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasTransformImpl>::translate(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_transform(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 6, "CanvasRenderingContext2D.transform")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let a2 = rt::arg(args, 2).to_number(ctx)?;
+        let a3 = rt::arg(args, 3).to_number(ctx)?;
+        let a4 = rt::arg(args, 4).to_number(ctx)?;
+        let a5 = rt::arg(args, 5).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasTransformImpl>::transform(cx, this, a0, a1, a2, a3, a4, a5)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_set_transform(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        if args.len() >= 6 && rt::arg(args, 0).is_number() {
+            rt::require_args(args, 6, "CanvasRenderingContext2D.setTransform")?;
+            let a0 = rt::arg(args, 0).to_number(ctx)?;
+            let a1 = rt::arg(args, 1).to_number(ctx)?;
+            let a2 = rt::arg(args, 2).to_number(ctx)?;
+            let a3 = rt::arg(args, 3).to_number(ctx)?;
+            let a4 = rt::arg(args, 4).to_number(ctx)?;
+            let a5 = rt::arg(args, 5).to_number(ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::CanvasTransformImpl>::set_transform(cx, this, a0, a1, a2, a3, a4, a5)
+            });
+            rt::ret(r, ctx)
+        } else if args.len() >= 0 && true {
+            let a0 = <web::DOMMatrix2DInit as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::CanvasTransformImpl>::set_transform_overload2(cx, this, a0)
+            });
+            rt::ret(r, ctx)
+        } else {
+            Err(rt::type_error(
+                "CanvasRenderingContext2D.setTransform: no overload matches the arguments",
+            ))
+        }
+    }
+
+    fn op_reset_transform(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasTransformImpl>::reset_transform(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_create_linear_gradient(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 4, "CanvasRenderingContext2D.createLinearGradient")?;
+        let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
+        let a1 = rt::to_finite(rt::arg(args, 1), ctx)?;
+        let a2 = rt::to_finite(rt::arg(args, 2), ctx)?;
+        let a3 = rt::to_finite(rt::arg(args, 3), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasFillStrokeStylesImpl>::create_linear_gradient(
+                cx, this, a0, a1, a2, a3,
+            )
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_create_radial_gradient(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 6, "CanvasRenderingContext2D.createRadialGradient")?;
+        let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
+        let a1 = rt::to_finite(rt::arg(args, 1), ctx)?;
+        let a2 = rt::to_finite(rt::arg(args, 2), ctx)?;
+        let a3 = rt::to_finite(rt::arg(args, 3), ctx)?;
+        let a4 = rt::to_finite(rt::arg(args, 4), ctx)?;
+        let a5 = rt::to_finite(rt::arg(args, 5), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasFillStrokeStylesImpl>::create_radial_gradient(
+                cx, this, a0, a1, a2, a3, a4, a5,
+            )
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_create_conic_gradient(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 3, "CanvasRenderingContext2D.createConicGradient")?;
+        let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
+        let a1 = rt::to_finite(rt::arg(args, 1), ctx)?;
+        let a2 = rt::to_finite(rt::arg(args, 2), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasFillStrokeStylesImpl>::create_conic_gradient(cx, this, a0, a1, a2)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_create_pattern(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 2, "CanvasRenderingContext2D.createPattern")?;
+        let a0 = <web::HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::string_from_js_null_empty(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasFillStrokeStylesImpl>::create_pattern(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_clear_rect(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 4, "CanvasRenderingContext2D.clearRect")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let a2 = rt::arg(args, 2).to_number(ctx)?;
+        let a3 = rt::arg(args, 3).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasRectImpl>::clear_rect(cx, this, a0, a1, a2, a3)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_fill_rect(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 4, "CanvasRenderingContext2D.fillRect")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let a2 = rt::arg(args, 2).to_number(ctx)?;
+        let a3 = rt::arg(args, 3).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasRectImpl>::fill_rect(cx, this, a0, a1, a2, a3)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_stroke_rect(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 4, "CanvasRenderingContext2D.strokeRect")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let a2 = rt::arg(args, 2).to_number(ctx)?;
+        let a3 = rt::arg(args, 3).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasRectImpl>::stroke_rect(cx, this, a0, a1, a2, a3)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_begin_path(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasDrawPathImpl>::begin_path(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_fill(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        if args.len() >= 1 && rt::is_instance(rt::arg(args, 0), I::Path2D, ctx) {
+            rt::require_args(args, 1, "CanvasRenderingContext2D.fill")?;
+            let a0 = rt::object_from_js(rt::arg(args, 0), I::Path2D, ctx)?;
+            let a1 = if args.len() > 1 && !args[1].is_undefined() {
+                <web::CanvasFillRule as FromJs>::from_js(rt::arg(args, 1), ctx)?
+            } else {
+                web::CanvasFillRule::Nonzero
+            };
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::CanvasDrawPathImpl>::fill_overload2(cx, this, a0, a1)
+            });
+            rt::ret(r, ctx)
+        } else if args.len() >= 0 && true {
+            let a0 = if args.len() > 0 && !args[0].is_undefined() {
+                <web::CanvasFillRule as FromJs>::from_js(rt::arg(args, 0), ctx)?
+            } else {
+                web::CanvasFillRule::Nonzero
+            };
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::CanvasDrawPathImpl>::fill(cx, this, a0)
+            });
+            rt::ret(r, ctx)
+        } else {
+            Err(rt::type_error(
+                "CanvasRenderingContext2D.fill: no overload matches the arguments",
+            ))
+        }
+    }
+
+    fn op_stroke(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        if args.len() >= 1 && true {
+            rt::require_args(args, 1, "CanvasRenderingContext2D.stroke")?;
+            let a0 = rt::object_from_js(rt::arg(args, 0), I::Path2D, ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::CanvasDrawPathImpl>::stroke_overload2(cx, this, a0)
+            });
+            rt::ret(r, ctx)
+        } else if args.len() >= 0 && true {
+            let r = rt::with_cx(ctx, |cx| <Web as web::CanvasDrawPathImpl>::stroke(cx, this));
+            rt::ret(r, ctx)
+        } else {
+            Err(rt::type_error(
+                "CanvasRenderingContext2D.stroke: no overload matches the arguments",
+            ))
+        }
+    }
+
+    fn op_clip(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        if args.len() >= 1 && rt::is_instance(rt::arg(args, 0), I::Path2D, ctx) {
+            rt::require_args(args, 1, "CanvasRenderingContext2D.clip")?;
+            let a0 = rt::object_from_js(rt::arg(args, 0), I::Path2D, ctx)?;
+            let a1 = if args.len() > 1 && !args[1].is_undefined() {
+                <web::CanvasFillRule as FromJs>::from_js(rt::arg(args, 1), ctx)?
+            } else {
+                web::CanvasFillRule::Nonzero
+            };
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::CanvasDrawPathImpl>::clip_overload2(cx, this, a0, a1)
+            });
+            rt::ret(r, ctx)
+        } else if args.len() >= 0 && true {
+            let a0 = if args.len() > 0 && !args[0].is_undefined() {
+                <web::CanvasFillRule as FromJs>::from_js(rt::arg(args, 0), ctx)?
+            } else {
+                web::CanvasFillRule::Nonzero
+            };
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::CanvasDrawPathImpl>::clip(cx, this, a0)
+            });
+            rt::ret(r, ctx)
+        } else {
+            Err(rt::type_error(
+                "CanvasRenderingContext2D.clip: no overload matches the arguments",
+            ))
+        }
+    }
+
+    fn op_is_point_in_path(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        if args.len() >= 3 && rt::is_instance(rt::arg(args, 0), I::Path2D, ctx) {
+            rt::require_args(args, 3, "CanvasRenderingContext2D.isPointInPath")?;
+            let a0 = rt::object_from_js(rt::arg(args, 0), I::Path2D, ctx)?;
+            let a1 = rt::arg(args, 1).to_number(ctx)?;
+            let a2 = rt::arg(args, 2).to_number(ctx)?;
+            let a3 = if args.len() > 3 && !args[3].is_undefined() {
+                <web::CanvasFillRule as FromJs>::from_js(rt::arg(args, 3), ctx)?
+            } else {
+                web::CanvasFillRule::Nonzero
+            };
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::CanvasDrawPathImpl>::is_point_in_path_overload2(
+                    cx, this, a0, a1, a2, a3,
+                )
+            });
+            rt::ret(r, ctx)
+        } else if args.len() >= 2 && rt::arg(args, 0).is_number() {
+            rt::require_args(args, 2, "CanvasRenderingContext2D.isPointInPath")?;
+            let a0 = rt::arg(args, 0).to_number(ctx)?;
+            let a1 = rt::arg(args, 1).to_number(ctx)?;
+            let a2 = if args.len() > 2 && !args[2].is_undefined() {
+                <web::CanvasFillRule as FromJs>::from_js(rt::arg(args, 2), ctx)?
+            } else {
+                web::CanvasFillRule::Nonzero
+            };
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::CanvasDrawPathImpl>::is_point_in_path(cx, this, a0, a1, a2)
+            });
+            rt::ret(r, ctx)
+        } else {
+            Err(rt::type_error(
+                "CanvasRenderingContext2D.isPointInPath: no overload matches the arguments",
+            ))
+        }
+    }
+
+    fn op_is_point_in_stroke(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        if args.len() >= 3 && rt::is_instance(rt::arg(args, 0), I::Path2D, ctx) {
+            rt::require_args(args, 3, "CanvasRenderingContext2D.isPointInStroke")?;
+            let a0 = rt::object_from_js(rt::arg(args, 0), I::Path2D, ctx)?;
+            let a1 = rt::arg(args, 1).to_number(ctx)?;
+            let a2 = rt::arg(args, 2).to_number(ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::CanvasDrawPathImpl>::is_point_in_stroke_overload2(cx, this, a0, a1, a2)
+            });
+            rt::ret(r, ctx)
+        } else if args.len() >= 2 && rt::arg(args, 0).is_number() {
+            rt::require_args(args, 2, "CanvasRenderingContext2D.isPointInStroke")?;
+            let a0 = rt::arg(args, 0).to_number(ctx)?;
+            let a1 = rt::arg(args, 1).to_number(ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::CanvasDrawPathImpl>::is_point_in_stroke(cx, this, a0, a1)
+            });
+            rt::ret(r, ctx)
+        } else {
+            Err(rt::type_error(
+                "CanvasRenderingContext2D.isPointInStroke: no overload matches the arguments",
+            ))
+        }
+    }
+
+    fn op_fill_text(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 3, "CanvasRenderingContext2D.fillText")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let a2 = rt::arg(args, 2).to_number(ctx)?;
+        let a3 = if args.len() > 3 && !args[3].is_undefined() {
+            Some(rt::arg(args, 3).to_number(ctx)?)
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasTextImpl>::fill_text(cx, this, a0, a1, a2, a3)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_stroke_text(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 3, "CanvasRenderingContext2D.strokeText")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let a2 = rt::arg(args, 2).to_number(ctx)?;
+        let a3 = if args.len() > 3 && !args[3].is_undefined() {
+            Some(rt::arg(args, 3).to_number(ctx)?)
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasTextImpl>::stroke_text(cx, this, a0, a1, a2, a3)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_measure_text(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 1, "CanvasRenderingContext2D.measureText")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasTextImpl>::measure_text(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_draw_image(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        if args.len() >= 9 && true {
+            rt::require_args(args, 9, "CanvasRenderingContext2D.drawImage")?;
+            let a0 = <web::HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+            let a1 = rt::arg(args, 1).to_number(ctx)?;
+            let a2 = rt::arg(args, 2).to_number(ctx)?;
+            let a3 = rt::arg(args, 3).to_number(ctx)?;
+            let a4 = rt::arg(args, 4).to_number(ctx)?;
+            let a5 = rt::arg(args, 5).to_number(ctx)?;
+            let a6 = rt::arg(args, 6).to_number(ctx)?;
+            let a7 = rt::arg(args, 7).to_number(ctx)?;
+            let a8 = rt::arg(args, 8).to_number(ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::CanvasDrawImageImpl>::draw_image_overload3(
+                    cx, this, a0, a1, a2, a3, a4, a5, a6, a7, a8,
+                )
+            });
+            rt::ret(r, ctx)
+        } else if args.len() >= 5 && true {
+            rt::require_args(args, 5, "CanvasRenderingContext2D.drawImage")?;
+            let a0 = <web::HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+            let a1 = rt::arg(args, 1).to_number(ctx)?;
+            let a2 = rt::arg(args, 2).to_number(ctx)?;
+            let a3 = rt::arg(args, 3).to_number(ctx)?;
+            let a4 = rt::arg(args, 4).to_number(ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::CanvasDrawImageImpl>::draw_image_overload2(
+                    cx, this, a0, a1, a2, a3, a4,
+                )
+            });
+            rt::ret(r, ctx)
+        } else if args.len() >= 3 && true {
+            rt::require_args(args, 3, "CanvasRenderingContext2D.drawImage")?;
+            let a0 = <web::HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+            let a1 = rt::arg(args, 1).to_number(ctx)?;
+            let a2 = rt::arg(args, 2).to_number(ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::CanvasDrawImageImpl>::draw_image(cx, this, a0, a1, a2)
+            });
+            rt::ret(r, ctx)
+        } else {
+            Err(rt::type_error(
+                "CanvasRenderingContext2D.drawImage: no overload matches the arguments",
+            ))
+        }
+    }
+
+    fn op_create_image_data(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        if args.len() >= 2 && rt::arg(args, 0).is_number() {
+            rt::require_args(args, 2, "CanvasRenderingContext2D.createImageData")?;
+            let a0 = rt::arg(args, 0).to_i32(ctx)?;
+            let a1 = rt::arg(args, 1).to_i32(ctx)?;
+            let a2 = <web::ImageDataSettings as FromJs>::from_js(rt::arg(args, 2), ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::CanvasImageDataImpl>::create_image_data(cx, this, a0, a1, a2)
+            });
+            rt::ret(r, ctx)
+        } else if args.len() >= 1 && rt::is_instance(rt::arg(args, 0), I::ImageData, ctx) {
+            rt::require_args(args, 1, "CanvasRenderingContext2D.createImageData")?;
+            let a0 = rt::object_from_js(rt::arg(args, 0), I::ImageData, ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::CanvasImageDataImpl>::create_image_data_overload2(cx, this, a0)
+            });
+            rt::ret(r, ctx)
+        } else {
+            Err(rt::type_error(
+                "CanvasRenderingContext2D.createImageData: no overload matches the arguments",
+            ))
+        }
+    }
+
+    fn op_get_image_data(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 4, "CanvasRenderingContext2D.getImageData")?;
+        let a0 = rt::arg(args, 0).to_i32(ctx)?;
+        let a1 = rt::arg(args, 1).to_i32(ctx)?;
+        let a2 = rt::arg(args, 2).to_i32(ctx)?;
+        let a3 = rt::arg(args, 3).to_i32(ctx)?;
+        let a4 = <web::ImageDataSettings as FromJs>::from_js(rt::arg(args, 4), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasImageDataImpl>::get_image_data(cx, this, a0, a1, a2, a3, a4)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_put_image_data(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        if args.len() >= 7 && true {
+            rt::require_args(args, 7, "CanvasRenderingContext2D.putImageData")?;
+            let a0 = rt::object_from_js(rt::arg(args, 0), I::ImageData, ctx)?;
+            let a1 = rt::arg(args, 1).to_i32(ctx)?;
+            let a2 = rt::arg(args, 2).to_i32(ctx)?;
+            let a3 = rt::arg(args, 3).to_i32(ctx)?;
+            let a4 = rt::arg(args, 4).to_i32(ctx)?;
+            let a5 = rt::arg(args, 5).to_i32(ctx)?;
+            let a6 = rt::arg(args, 6).to_i32(ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::CanvasImageDataImpl>::put_image_data_overload2(
+                    cx, this, a0, a1, a2, a3, a4, a5, a6,
+                )
+            });
+            rt::ret(r, ctx)
+        } else if args.len() >= 3 && true {
+            rt::require_args(args, 3, "CanvasRenderingContext2D.putImageData")?;
+            let a0 = rt::object_from_js(rt::arg(args, 0), I::ImageData, ctx)?;
+            let a1 = rt::arg(args, 1).to_i32(ctx)?;
+            let a2 = rt::arg(args, 2).to_i32(ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::CanvasImageDataImpl>::put_image_data(cx, this, a0, a1, a2)
+            });
+            rt::ret(r, ctx)
+        } else {
+            Err(rt::type_error(
+                "CanvasRenderingContext2D.putImageData: no overload matches the arguments",
+            ))
+        }
+    }
+
+    fn op_set_line_dash(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 1, "CanvasRenderingContext2D.setLineDash")?;
+        let a0 = rt::sequence_from_js(rt::arg(args, 0), ctx, |v, ctx| Ok(v.to_number(ctx)?))?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathDrawingStylesImpl>::set_line_dash(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_get_line_dash(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathDrawingStylesImpl>::get_line_dash(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_close_path(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::CanvasPathImpl>::close_path(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_move_to(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 2, "CanvasRenderingContext2D.moveTo")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathImpl>::move_to(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_line_to(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 2, "CanvasRenderingContext2D.lineTo")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathImpl>::line_to(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_quadratic_curve_to(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 4, "CanvasRenderingContext2D.quadraticCurveTo")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let a2 = rt::arg(args, 2).to_number(ctx)?;
+        let a3 = rt::arg(args, 3).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathImpl>::quadratic_curve_to(cx, this, a0, a1, a2, a3)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_bezier_curve_to(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 6, "CanvasRenderingContext2D.bezierCurveTo")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let a2 = rt::arg(args, 2).to_number(ctx)?;
+        let a3 = rt::arg(args, 3).to_number(ctx)?;
+        let a4 = rt::arg(args, 4).to_number(ctx)?;
+        let a5 = rt::arg(args, 5).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathImpl>::bezier_curve_to(cx, this, a0, a1, a2, a3, a4, a5)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_arc_to(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 5, "CanvasRenderingContext2D.arcTo")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let a2 = rt::arg(args, 2).to_number(ctx)?;
+        let a3 = rt::arg(args, 3).to_number(ctx)?;
+        let a4 = rt::arg(args, 4).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathImpl>::arc_to(cx, this, a0, a1, a2, a3, a4)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_rect(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 4, "CanvasRenderingContext2D.rect")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let a2 = rt::arg(args, 2).to_number(ctx)?;
+        let a3 = rt::arg(args, 3).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathImpl>::rect(cx, this, a0, a1, a2, a3)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_round_rect(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 4, "CanvasRenderingContext2D.roundRect")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let a2 = rt::arg(args, 2).to_number(ctx)?;
+        let a3 = rt::arg(args, 3).to_number(ctx)?;
+        let a4 = if args.len() > 4 && !args[4].is_undefined() {
+            <web::DoubleOrDOMPointInitOrDoubleOrDOMPointInitSequence as FromJs>::from_js(
+                rt::arg(args, 4),
+                ctx,
+            )?
+        } else {
+            web::DoubleOrDOMPointInitOrDoubleOrDOMPointInitSequence::Double(0_f64)
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathImpl>::round_rect(cx, this, a0, a1, a2, a3, a4)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_arc(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 5, "CanvasRenderingContext2D.arc")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let a2 = rt::arg(args, 2).to_number(ctx)?;
+        let a3 = rt::arg(args, 3).to_number(ctx)?;
+        let a4 = rt::arg(args, 4).to_number(ctx)?;
+        let a5 = if args.len() > 5 && !args[5].is_undefined() {
+            rt::arg(args, 5).to_boolean()
+        } else {
+            false
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathImpl>::arc(cx, this, a0, a1, a2, a3, a4, a5)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_ellipse(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::CanvasRenderingContext2D, ctx)?;
+        rt::require_args(args, 7, "CanvasRenderingContext2D.ellipse")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let a2 = rt::arg(args, 2).to_number(ctx)?;
+        let a3 = rt::arg(args, 3).to_number(ctx)?;
+        let a4 = rt::arg(args, 4).to_number(ctx)?;
+        let a5 = rt::arg(args, 5).to_number(ctx)?;
+        let a6 = rt::arg(args, 6).to_number(ctx)?;
+        let a7 = if args.len() > 7 && !args[7].is_undefined() {
+            rt::arg(args, 7).to_boolean()
+        } else {
+            false
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathImpl>::ellipse(cx, this, a0, a1, a2, a3, a4, a5, a6, a7)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::CanvasRenderingContext2D,
+        name: "CanvasRenderingContext2D",
+        parent: None,
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "canvas",
+                getter: get_canvas,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "globalAlpha",
+                getter: get_global_alpha,
+                setter: Some(set_global_alpha),
+            },
+            rt::AttrDef {
+                name: "globalCompositeOperation",
+                getter: get_global_composite_operation,
+                setter: Some(set_global_composite_operation),
+            },
+            rt::AttrDef {
+                name: "imageSmoothingEnabled",
+                getter: get_image_smoothing_enabled,
+                setter: Some(set_image_smoothing_enabled),
+            },
+            rt::AttrDef {
+                name: "imageSmoothingQuality",
+                getter: get_image_smoothing_quality,
+                setter: Some(set_image_smoothing_quality),
+            },
+            rt::AttrDef {
+                name: "strokeStyle",
+                getter: get_stroke_style,
+                setter: Some(set_stroke_style),
+            },
+            rt::AttrDef {
+                name: "fillStyle",
+                getter: get_fill_style,
+                setter: Some(set_fill_style),
+            },
+            rt::AttrDef {
+                name: "shadowOffsetX",
+                getter: get_shadow_offset_x,
+                setter: Some(set_shadow_offset_x),
+            },
+            rt::AttrDef {
+                name: "shadowOffsetY",
+                getter: get_shadow_offset_y,
+                setter: Some(set_shadow_offset_y),
+            },
+            rt::AttrDef {
+                name: "shadowBlur",
+                getter: get_shadow_blur,
+                setter: Some(set_shadow_blur),
+            },
+            rt::AttrDef {
+                name: "shadowColor",
+                getter: get_shadow_color,
+                setter: Some(set_shadow_color),
+            },
+            rt::AttrDef {
+                name: "filter",
+                getter: get_filter,
+                setter: Some(set_filter),
+            },
+            rt::AttrDef {
+                name: "lineWidth",
+                getter: get_line_width,
+                setter: Some(set_line_width),
+            },
+            rt::AttrDef {
+                name: "lineCap",
+                getter: get_line_cap,
+                setter: Some(set_line_cap),
+            },
+            rt::AttrDef {
+                name: "lineJoin",
+                getter: get_line_join,
+                setter: Some(set_line_join),
+            },
+            rt::AttrDef {
+                name: "miterLimit",
+                getter: get_miter_limit,
+                setter: Some(set_miter_limit),
+            },
+            rt::AttrDef {
+                name: "lineDashOffset",
+                getter: get_line_dash_offset,
+                setter: Some(set_line_dash_offset),
+            },
+            rt::AttrDef {
+                name: "font",
+                getter: get_font,
+                setter: Some(set_font),
+            },
+            rt::AttrDef {
+                name: "textAlign",
+                getter: get_text_align,
+                setter: Some(set_text_align),
+            },
+            rt::AttrDef {
+                name: "textBaseline",
+                getter: get_text_baseline,
+                setter: Some(set_text_baseline),
+            },
+            rt::AttrDef {
+                name: "direction",
+                getter: get_direction,
+                setter: Some(set_direction),
+            },
+            rt::AttrDef {
+                name: "letterSpacing",
+                getter: get_letter_spacing,
+                setter: Some(set_letter_spacing),
+            },
+            rt::AttrDef {
+                name: "wordSpacing",
+                getter: get_word_spacing,
+                setter: Some(set_word_spacing),
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "save",
+                func: op_save,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "restore",
+                func: op_restore,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "reset",
+                func: op_reset,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "isContextLost",
+                func: op_is_context_lost,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "scale",
+                func: op_scale,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "rotate",
+                func: op_rotate,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "translate",
+                func: op_translate,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "transform",
+                func: op_transform,
+                length: 6,
+            },
+            rt::OpDef {
+                name: "setTransform",
+                func: op_set_transform,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "resetTransform",
+                func: op_reset_transform,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "createLinearGradient",
+                func: op_create_linear_gradient,
+                length: 4,
+            },
+            rt::OpDef {
+                name: "createRadialGradient",
+                func: op_create_radial_gradient,
+                length: 6,
+            },
+            rt::OpDef {
+                name: "createConicGradient",
+                func: op_create_conic_gradient,
+                length: 3,
+            },
+            rt::OpDef {
+                name: "createPattern",
+                func: op_create_pattern,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "clearRect",
+                func: op_clear_rect,
+                length: 4,
+            },
+            rt::OpDef {
+                name: "fillRect",
+                func: op_fill_rect,
+                length: 4,
+            },
+            rt::OpDef {
+                name: "strokeRect",
+                func: op_stroke_rect,
+                length: 4,
+            },
+            rt::OpDef {
+                name: "beginPath",
+                func: op_begin_path,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "fill",
+                func: op_fill,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "stroke",
+                func: op_stroke,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "clip",
+                func: op_clip,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "isPointInPath",
+                func: op_is_point_in_path,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "isPointInStroke",
+                func: op_is_point_in_stroke,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "fillText",
+                func: op_fill_text,
+                length: 3,
+            },
+            rt::OpDef {
+                name: "strokeText",
+                func: op_stroke_text,
+                length: 3,
+            },
+            rt::OpDef {
+                name: "measureText",
+                func: op_measure_text,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "drawImage",
+                func: op_draw_image,
+                length: 3,
+            },
+            rt::OpDef {
+                name: "createImageData",
+                func: op_create_image_data,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "getImageData",
+                func: op_get_image_data,
+                length: 4,
+            },
+            rt::OpDef {
+                name: "putImageData",
+                func: op_put_image_data,
+                length: 3,
+            },
+            rt::OpDef {
+                name: "setLineDash",
+                func: op_set_line_dash,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "getLineDash",
+                func: op_get_line_dash,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "closePath",
+                func: op_close_path,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "moveTo",
+                func: op_move_to,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "lineTo",
+                func: op_line_to,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "quadraticCurveTo",
+                func: op_quadratic_curve_to,
+                length: 4,
+            },
+            rt::OpDef {
+                name: "bezierCurveTo",
+                func: op_bezier_curve_to,
+                length: 6,
+            },
+            rt::OpDef {
+                name: "arcTo",
+                func: op_arc_to,
+                length: 5,
+            },
+            rt::OpDef {
+                name: "rect",
+                func: op_rect,
+                length: 4,
+            },
+            rt::OpDef {
+                name: "roundRect",
+                func: op_round_rect,
+                length: 4,
+            },
+            rt::OpDef {
+                name: "arc",
+                func: op_arc,
+                length: 5,
+            },
+            rt::OpDef {
+                name: "ellipse",
+                func: op_ellipse,
+                length: 7,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
     };
 }
 
@@ -7764,6 +9934,113 @@ pub mod history {
     };
 }
 
+pub mod image_data {
+    use super::*;
+
+    fn get_width(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::ImageData, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ImageDataImpl>::width(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_height(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::ImageData, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ImageDataImpl>::height(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_data(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "data", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_object(this_js, I::ImageData, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ImageDataImpl>::data(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "data", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_color_space(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::ImageData, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::ImageDataImpl>::color_space(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "ImageData")?;
+        if args.len() >= 2 {
+            rt::require_args(args, 2, "ImageData constructor")?;
+            let a0 = rt::arg(args, 0).to_u32(ctx)?;
+            let a1 = rt::arg(args, 1).to_u32(ctx)?;
+            let a2 = <web::ImageDataSettings as FromJs>::from_js(rt::arg(args, 2), ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::ImageDataImpl>::constructor(cx, a0, a1, a2)
+            });
+            let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+            return rt::wrap_constructed_object(id, new_target, I::ImageData, ctx);
+        }
+        rt::require_args(args, 2, "ImageData constructor")?;
+        let a0 = rt::buffer_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::arg(args, 1).to_u32(ctx)?;
+        let a2 = if args.len() > 2 && !args[2].is_undefined() {
+            Some(rt::arg(args, 2).to_u32(ctx)?)
+        } else {
+            None
+        };
+        let a3 = <web::ImageDataSettings as FromJs>::from_js(rt::arg(args, 3), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::ImageDataImpl>::constructor_overload2(cx, a0, a1, a2, a3)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::ImageData, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::ImageData,
+        name: "ImageData",
+        parent: None,
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
+        constructor: Some(ctor),
+        constructor_length: 2,
+        attrs: &[
+            rt::AttrDef {
+                name: "width",
+                getter: get_width,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "height",
+                getter: get_height,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "data",
+                getter: get_data,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "colorSpace",
+                getter: get_color_space,
+                setter: None,
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod intersection_observer {
     use super::*;
 
@@ -10553,6 +12830,275 @@ pub mod node_list {
             attribute_like: false,
             unenumerable_names: false,
         }),
+    };
+}
+
+pub mod path2_d {
+    use super::*;
+
+    fn op_add_path(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Path2D, ctx)?;
+        rt::require_args(args, 1, "Path2D.addPath")?;
+        let a0 = rt::object_from_js(rt::arg(args, 0), I::Path2D, ctx)?;
+        let a1 = <web::DOMMatrix2DInit as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::Path2DImpl>::add_path(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_close_path(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Path2D, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::CanvasPathImpl>::close_path(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_move_to(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Path2D, ctx)?;
+        rt::require_args(args, 2, "Path2D.moveTo")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathImpl>::move_to(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_line_to(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Path2D, ctx)?;
+        rt::require_args(args, 2, "Path2D.lineTo")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathImpl>::line_to(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_quadratic_curve_to(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Path2D, ctx)?;
+        rt::require_args(args, 4, "Path2D.quadraticCurveTo")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let a2 = rt::arg(args, 2).to_number(ctx)?;
+        let a3 = rt::arg(args, 3).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathImpl>::quadratic_curve_to(cx, this, a0, a1, a2, a3)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_bezier_curve_to(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Path2D, ctx)?;
+        rt::require_args(args, 6, "Path2D.bezierCurveTo")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let a2 = rt::arg(args, 2).to_number(ctx)?;
+        let a3 = rt::arg(args, 3).to_number(ctx)?;
+        let a4 = rt::arg(args, 4).to_number(ctx)?;
+        let a5 = rt::arg(args, 5).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathImpl>::bezier_curve_to(cx, this, a0, a1, a2, a3, a4, a5)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_arc_to(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Path2D, ctx)?;
+        rt::require_args(args, 5, "Path2D.arcTo")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let a2 = rt::arg(args, 2).to_number(ctx)?;
+        let a3 = rt::arg(args, 3).to_number(ctx)?;
+        let a4 = rt::arg(args, 4).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathImpl>::arc_to(cx, this, a0, a1, a2, a3, a4)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_rect(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Path2D, ctx)?;
+        rt::require_args(args, 4, "Path2D.rect")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let a2 = rt::arg(args, 2).to_number(ctx)?;
+        let a3 = rt::arg(args, 3).to_number(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathImpl>::rect(cx, this, a0, a1, a2, a3)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_round_rect(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Path2D, ctx)?;
+        rt::require_args(args, 4, "Path2D.roundRect")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let a2 = rt::arg(args, 2).to_number(ctx)?;
+        let a3 = rt::arg(args, 3).to_number(ctx)?;
+        let a4 = if args.len() > 4 && !args[4].is_undefined() {
+            <web::DoubleOrDOMPointInitOrDoubleOrDOMPointInitSequence as FromJs>::from_js(
+                rt::arg(args, 4),
+                ctx,
+            )?
+        } else {
+            web::DoubleOrDOMPointInitOrDoubleOrDOMPointInitSequence::Double(0_f64)
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathImpl>::round_rect(cx, this, a0, a1, a2, a3, a4)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_arc(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Path2D, ctx)?;
+        rt::require_args(args, 5, "Path2D.arc")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let a2 = rt::arg(args, 2).to_number(ctx)?;
+        let a3 = rt::arg(args, 3).to_number(ctx)?;
+        let a4 = rt::arg(args, 4).to_number(ctx)?;
+        let a5 = if args.len() > 5 && !args[5].is_undefined() {
+            rt::arg(args, 5).to_boolean()
+        } else {
+            false
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathImpl>::arc(cx, this, a0, a1, a2, a3, a4, a5)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_ellipse(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Path2D, ctx)?;
+        rt::require_args(args, 7, "Path2D.ellipse")?;
+        let a0 = rt::arg(args, 0).to_number(ctx)?;
+        let a1 = rt::arg(args, 1).to_number(ctx)?;
+        let a2 = rt::arg(args, 2).to_number(ctx)?;
+        let a3 = rt::arg(args, 3).to_number(ctx)?;
+        let a4 = rt::arg(args, 4).to_number(ctx)?;
+        let a5 = rt::arg(args, 5).to_number(ctx)?;
+        let a6 = rt::arg(args, 6).to_number(ctx)?;
+        let a7 = if args.len() > 7 && !args[7].is_undefined() {
+            rt::arg(args, 7).to_boolean()
+        } else {
+            false
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::CanvasPathImpl>::ellipse(cx, this, a0, a1, a2, a3, a4, a5, a6, a7)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "Path2D")?;
+        let a0 = if args.len() > 0 && !args[0].is_undefined() {
+            Some(<web::Path2DOrString as FromJs>::from_js(
+                rt::arg(args, 0),
+                ctx,
+            )?)
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| <Web as web::Path2DImpl>::constructor(cx, a0));
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::Path2D, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::Path2D,
+        name: "Path2D",
+        parent: None,
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
+        constructor: Some(ctor),
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[
+            rt::OpDef {
+                name: "addPath",
+                func: op_add_path,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "closePath",
+                func: op_close_path,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "moveTo",
+                func: op_move_to,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "lineTo",
+                func: op_line_to,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "quadraticCurveTo",
+                func: op_quadratic_curve_to,
+                length: 4,
+            },
+            rt::OpDef {
+                name: "bezierCurveTo",
+                func: op_bezier_curve_to,
+                length: 6,
+            },
+            rt::OpDef {
+                name: "arcTo",
+                func: op_arc_to,
+                length: 5,
+            },
+            rt::OpDef {
+                name: "rect",
+                func: op_rect,
+                length: 4,
+            },
+            rt::OpDef {
+                name: "roundRect",
+                func: op_round_rect,
+                length: 4,
+            },
+            rt::OpDef {
+                name: "arc",
+                func: op_arc,
+                length: 5,
+            },
+            rt::OpDef {
+                name: "ellipse",
+                func: op_ellipse,
+                length: 7,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
     };
 }
 
@@ -15216,6 +17762,229 @@ pub mod text_encoder {
             func: op_encode,
             length: 0,
         }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod text_metrics {
+    use super::*;
+
+    fn get_width(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextMetrics, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::TextMetricsImpl>::width(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_actual_bounding_box_left(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextMetrics, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TextMetricsImpl>::actual_bounding_box_left(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_actual_bounding_box_right(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextMetrics, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TextMetricsImpl>::actual_bounding_box_right(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_font_bounding_box_ascent(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextMetrics, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TextMetricsImpl>::font_bounding_box_ascent(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_font_bounding_box_descent(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextMetrics, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TextMetricsImpl>::font_bounding_box_descent(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_actual_bounding_box_ascent(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextMetrics, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TextMetricsImpl>::actual_bounding_box_ascent(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_actual_bounding_box_descent(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextMetrics, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TextMetricsImpl>::actual_bounding_box_descent(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_em_height_ascent(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextMetrics, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TextMetricsImpl>::em_height_ascent(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_em_height_descent(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextMetrics, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TextMetricsImpl>::em_height_descent(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_hanging_baseline(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextMetrics, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TextMetricsImpl>::hanging_baseline(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_alphabetic_baseline(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextMetrics, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TextMetricsImpl>::alphabetic_baseline(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_ideographic_baseline(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextMetrics, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TextMetricsImpl>::ideographic_baseline(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::TextMetrics,
+        name: "TextMetrics",
+        parent: None,
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "width",
+                getter: get_width,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "actualBoundingBoxLeft",
+                getter: get_actual_bounding_box_left,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "actualBoundingBoxRight",
+                getter: get_actual_bounding_box_right,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "fontBoundingBoxAscent",
+                getter: get_font_bounding_box_ascent,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "fontBoundingBoxDescent",
+                getter: get_font_bounding_box_descent,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "actualBoundingBoxAscent",
+                getter: get_actual_bounding_box_ascent,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "actualBoundingBoxDescent",
+                getter: get_actual_bounding_box_descent,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "emHeightAscent",
+                getter: get_em_height_ascent,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "emHeightDescent",
+                getter: get_em_height_descent,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "hangingBaseline",
+                getter: get_hanging_baseline,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "alphabeticBaseline",
+                getter: get_alphabetic_baseline,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "ideographicBaseline",
+                getter: get_ideographic_baseline,
+                setter: None,
+            },
+        ],
+        ops: &[],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -52735,6 +55504,50 @@ pub mod html_canvas_element {
         Ok(JsValue::undefined())
     }
 
+    fn op_get_context(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::HTMLCanvasElement, ctx)?;
+        rt::require_args(args, 1, "HTMLCanvasElement.getContext")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::value_from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLCanvasElementImpl>::get_context(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_to_data_url(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::HTMLCanvasElement, ctx)?;
+        let a0 = if args.len() > 0 && !args[0].is_undefined() {
+            rt::string_from_js(rt::arg(args, 0), ctx)?
+        } else {
+            "image/png".to_string()
+        };
+        let a1 = rt::value_from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLCanvasElementImpl>::to_data_url(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_to_blob(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::HTMLCanvasElement, ctx)?;
+        rt::require_args(args, 1, "HTMLCanvasElement.toBlob")?;
+        let a0 = rt::callback_from_js(rt::arg(args, 0), CallbackKind::Function, ctx)?;
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            rt::string_from_js(rt::arg(args, 1), ctx)?
+        } else {
+            "image/png".to_string()
+        };
+        let a2 = rt::value_from_js(rt::arg(args, 2), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLCanvasElementImpl>::to_blob(cx, this, a0, a1, a2)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         rt::html_constructor(new_target, I::HTMLCanvasElement, ctx)
     }
@@ -52762,7 +55575,23 @@ pub mod html_canvas_element {
                 setter: Some(set_height),
             },
         ],
-        ops: &[],
+        ops: &[
+            rt::OpDef {
+                name: "getContext",
+                func: op_get_context,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "toDataURL",
+                func: op_to_data_url,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "toBlob",
+                func: op_to_blob,
+                length: 1,
+            },
+        ],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -54363,6 +57192,9 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &css_rule_list::DEF,
     &css_style_declaration::DEF,
     &css_style_properties::DEF,
+    &canvas_gradient::DEF,
+    &canvas_pattern::DEF,
+    &canvas_rendering_context2_d::DEF,
     &cat_paw_remote_window::DEF,
     &crypto::DEF,
     &custom_element_registry::DEF,
@@ -54386,6 +57218,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &hash_change_event::DEF,
     &headers::DEF,
     &history::DEF,
+    &image_data::DEF,
     &intersection_observer::DEF,
     &intersection_observer_entry::DEF,
     &location::DEF,
@@ -54401,6 +57234,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &node::DEF,
     &node_iterator::DEF,
     &node_list::DEF,
+    &path2_d::DEF,
     &performance::DEF,
     &performance_entry::DEF,
     &performance_mark::DEF,
@@ -54434,6 +57268,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &subtle_crypto::DEF,
     &text_decoder::DEF,
     &text_encoder::DEF,
+    &text_metrics::DEF,
     &transform_stream::DEF,
     &transform_stream_default_controller::DEF,
     &tree_walker::DEF,

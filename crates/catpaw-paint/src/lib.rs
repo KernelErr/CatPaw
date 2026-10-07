@@ -23,6 +23,8 @@ use tiny_skia::{FillRule, Mask, Paint, PathBuilder, Pixmap, Transform};
 
 pub use tiny_skia;
 
+pub mod canvas;
+
 /// What to paint.
 #[derive(Clone, Debug)]
 pub struct Options {
@@ -35,9 +37,23 @@ pub struct Options {
     pub scale: f32,
 }
 
+/// The bitmap behind a replaced element (a canvas), if it has one.
+pub type ReplacedContent<'a> = &'a dyn Fn(NodeId) -> Option<Pixmap>;
+
 /// Paints the tree into a pixmap of `options.width × options.height` CSS
 /// pixels (times the scale), white where nothing is drawn.
 pub fn render(tree: &LayoutTree, dom: &Dom, options: &Options) -> Pixmap {
+    render_with(tree, dom, options, &|_| None)
+}
+
+/// `render`, with the bitmaps of replaced elements drawn in their content
+/// boxes.
+pub fn render_with(
+    tree: &LayoutTree,
+    dom: &Dom,
+    options: &Options,
+    replaced: ReplacedContent<'_>,
+) -> Pixmap {
     let width = ((options.width as f32) * options.scale).round().max(1.0) as u32;
     let height = ((options.height as f32) * options.scale).round().max(1.0) as u32;
     let mut pixmap = Pixmap::new(width, height).expect("a non-empty pixmap");
@@ -51,6 +67,7 @@ pub fn render(tree: &LayoutTree, dom: &Dom, options: &Options) -> Pixmap {
         clip: None,
         masks: HashMap::new(),
         glyphs: HashMap::new(),
+        replaced,
     };
     painter.paint_canvas();
     if let Some(root) = tree.root() {
@@ -64,7 +81,17 @@ pub fn render(tree: &LayoutTree, dom: &Dom, options: &Options) -> Pixmap {
 
 /// `render`, encoded as PNG.
 pub fn render_png(tree: &LayoutTree, dom: &Dom, options: &Options) -> Vec<u8> {
-    render(tree, dom, options)
+    render_png_with(tree, dom, options, &|_| None)
+}
+
+/// `render_with`, encoded as PNG.
+pub fn render_png_with(
+    tree: &LayoutTree,
+    dom: &Dom,
+    options: &Options,
+    replaced: ReplacedContent<'_>,
+) -> Vec<u8> {
+    render_with(tree, dom, options, replaced)
         .encode_png()
         .expect("PNG encoding of an in-memory pixmap")
 }
@@ -80,6 +107,7 @@ struct Painter<'a> {
     masks: HashMap<[i32; 4], Mask>,
     /// Glyph outlines at a size, by font, glyph and size.
     glyphs: HashMap<(u64, u32, u32, u32), Option<tiny_skia::Path>>,
+    replaced: ReplacedContent<'a>,
 }
 
 /// An sRGB colour with alpha, components in 0..=1.
@@ -247,12 +275,40 @@ impl Painter<'_> {
             let content = self.to_output(self.tree.content_box(id), fixed);
             self.paint_inline(id, content.x, content.y);
         }
+        if visible
+            && b.kind == BoxKind::Replaced
+            && let Some(node) = b.node
+            && let Some(bitmap) = (self.replaced)(node)
+        {
+            let content = self.to_output(self.tree.content_box(id), fixed);
+            self.paint_bitmap(&bitmap, content);
+        }
         let mut children: Vec<BoxId> = self.tree.children(id).to_vec();
         children.sort_by_key(|c| self.tree.get(*c).positioning != Positioning::Static);
         for child in children {
             self.paint_box(child);
         }
         self.clip = outer_clip;
+    }
+
+    /// Draws a bitmap scaled into `rect`, clipped like everything else.
+    fn paint_bitmap(&mut self, bitmap: &Pixmap, rect: Rect) {
+        if rect.width <= 0.0 || rect.height <= 0.0 {
+            return;
+        }
+        let transform = Transform::from_translate(rect.x, rect.y).pre_scale(
+            rect.width / bitmap.width() as f32,
+            rect.height / bitmap.height() as f32,
+        );
+        let mask = self.clip_mask().cloned();
+        self.pixmap.draw_pixmap(
+            0,
+            0,
+            bitmap.as_ref(),
+            &tiny_skia::PixmapPaint::default(),
+            transform,
+            mask.as_ref(),
+        );
     }
 
     fn paint_borders(&mut self, id: BoxId, outer: Rect, inner: Rect, style: &ComputedValues) {
@@ -437,8 +493,8 @@ impl Painter<'_> {
 
 /// Builds a tiny-skia path from a glyph outline, flipping y so that the
 /// font's upwards y grows downwards on the page.
-struct PathPen {
-    builder: PathBuilder,
+pub(crate) struct PathPen {
+    pub(crate) builder: PathBuilder,
 }
 
 impl skrifa::outline::OutlinePen for PathPen {

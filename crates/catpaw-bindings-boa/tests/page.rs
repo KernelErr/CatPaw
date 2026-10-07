@@ -1133,7 +1133,7 @@ fn every_html_element_has_its_interface() {
         ),
         (
             "var c = document.getElementById('c'); c instanceof HTMLCanvasElement && c.width + ' ' + c.height + ' ' + typeof c.getContext",
-            "40 150 undefined",
+            "40 150 function",
         ),
         (
             "var v = document.getElementById('v'); v instanceof HTMLVideoElement && v instanceof HTMLMediaElement && v instanceof HTMLElement",

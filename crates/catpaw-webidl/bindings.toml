@@ -69,6 +69,59 @@ members = ["view", "detail", "which"]
 constructor = true
 members = ["relatedTarget"]
 
+# ---------------------------------------------------------------- canvas
+
+[interfaces.CanvasRenderingContext2D]
+members = ["canvas"]
+[mixins.CanvasState]
+members = ["save", "restore", "reset", "isContextLost"]
+[mixins.CanvasTransform]
+members = ["scale", "rotate", "translate", "transform", "setTransform", "resetTransform"]
+[mixins.CanvasCompositing]
+members = ["globalAlpha", "globalCompositeOperation"]
+[mixins.CanvasImageSmoothing]
+members = ["imageSmoothingEnabled", "imageSmoothingQuality"]
+[mixins.CanvasFillStrokeStyles]
+members = ["strokeStyle", "fillStyle", "createLinearGradient", "createRadialGradient", "createConicGradient", "createPattern"]
+[mixins.CanvasShadowStyles]
+members = ["shadowOffsetX", "shadowOffsetY", "shadowBlur", "shadowColor"]
+[mixins.CanvasFilters]
+members = ["filter"]
+[mixins.CanvasRect]
+members = ["clearRect", "fillRect", "strokeRect"]
+[mixins.CanvasDrawPath]
+members = ["beginPath", "fill", "stroke", "clip", "isPointInPath", "isPointInStroke"]
+[mixins.CanvasText]
+members = ["fillText", "strokeText", "measureText"]
+[mixins.CanvasDrawImage]
+members = ["drawImage"]
+[mixins.CanvasImageData]
+members = ["createImageData", "getImageData", "putImageData"]
+[mixins.CanvasPathDrawingStyles]
+members = ["lineWidth", "lineCap", "lineJoin", "miterLimit", "setLineDash", "getLineDash", "lineDashOffset"]
+[mixins.CanvasTextDrawingStyles]
+members = ["font", "textAlign", "textBaseline", "direction", "letterSpacing", "wordSpacing"]
+[mixins.CanvasPath]
+members = ["closePath", "moveTo", "lineTo", "quadraticCurveTo", "bezierCurveTo", "arcTo", "rect", "roundRect", "arc", "ellipse"]
+
+[interfaces.CanvasGradient]
+members = ["addColorStop"]
+
+[interfaces.CanvasPattern]
+members = ["setTransform"]
+
+[interfaces.TextMetrics]
+members = ["width", "actualBoundingBoxLeft", "actualBoundingBoxRight", "fontBoundingBoxAscent", "fontBoundingBoxDescent", "actualBoundingBoxAscent", "actualBoundingBoxDescent", "emHeightAscent", "emHeightDescent", "hangingBaseline", "alphabeticBaseline", "ideographicBaseline"]
+
+[interfaces.Path2D]
+constructor = true
+members = ["addPath"]
+
+[interfaces.ImageData]
+constructor = true
+members = ["width", "height", "data", "colorSpace"]
+same_object = ["data"]
+
 # ------------------------------------------------------------- websockets
 
 [interfaces.WebSocket]
@@ -427,7 +480,7 @@ members = ["dataset", "focus", "blur"]
 [interfaces.HTMLVideoElement]
 [interfaces.HTMLBaseElement]
 [interfaces.HTMLCanvasElement]
-members = ["width", "height"]
+members = ["width", "height", "getContext", "toDataURL", "toBlob"]
 [interfaces.HTMLDListElement]
 [interfaces.HTMLDataElement]
 [interfaces.HTMLDataListElement]

@@ -30,7 +30,11 @@ isolated contexts.
 > see each other only through `postMessage`, `parent`/`top`/`contentWindow`
 > and the `load` events, as cross-origin frames do; `--action "frame <selector>"`
 > addresses a frame for the actions and `--eval` that follow (`frame top`,
-> `frame parent` go back). Workers: dedicated workers (`new Worker`, from
+> `frame parent` go back). Canvas: `getContext('2d')` draws with tiny-skia (paths, arcs,
+> rounded rects, fills, strokes, dashes, clips, gradients, transforms,
+> compositing, text through the same fonts as layout, `drawImage` from
+> other canvases, `getImageData`/`putImageData`, `toDataURL`/`toBlob`),
+> and canvases are painted into screenshots. Workers: dedicated workers (`new Worker`, from
 > same-origin, `blob:` and `data:` scripts; `postMessage` both ways,
 > `importScripts`, `close`, `terminate`, errors relayed to the owner) run as
 > realms of their own on the page's thread, in turns with the page and its

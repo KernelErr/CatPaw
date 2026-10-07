@@ -11,6 +11,7 @@ description = "CatPaw browser engine: painting and screenshots"
 catpaw-dom = { path = "../catpaw-dom", version = "0.0.1" }
 catpaw-layout = { path = "../catpaw-layout", version = "0.0.1" }
 catpaw-text = { path = "../catpaw-text", version = "0.0.1" }
+csscolorparser = "0.7"
 style = { package = "stylo", version = "0.22" }
 tiny-skia.workspace = true
 

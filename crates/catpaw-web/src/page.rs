@@ -305,6 +305,8 @@ pub struct PageState {
     pub workers: crate::workers::WorkerState,
     pub(crate) channels: crate::channels::Channels,
     pub(crate) sockets: crate::websocket::Sockets,
+    /// The bitmaps of `<canvas>` elements.
+    pub canvases: crate::canvas::Canvases,
     pub(crate) attrs: crate::attributes::AttrObjects,
     pub(crate) timeline: crate::performance::Timeline,
     pub(crate) traversers: crate::traversal::Traversers,
@@ -393,6 +395,7 @@ impl PageState {
             workers: Default::default(),
             channels: Default::default(),
             sockets: Default::default(),
+            canvases: Default::default(),
             attrs: Default::default(),
             timeline: Default::default(),
             traversers: Default::default(),

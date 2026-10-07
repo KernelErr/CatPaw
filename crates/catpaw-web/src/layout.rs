@@ -472,7 +472,7 @@ pub fn screenshot(page: &PageState, full_page: bool) -> Vec<u8> {
                 window_scroll(page),
             )
         };
-        catpaw_paint::render_png(
+        catpaw_paint::render_png_with(
             tree,
             dom,
             &catpaw_paint::Options {
@@ -481,6 +481,7 @@ pub fn screenshot(page: &PageState, full_page: bool) -> Vec<u8> {
                 scroll,
                 scale: page.config.device_pixel_ratio as f32,
             },
+            &|node| page.canvases.pixmap(node),
         )
     })
 }

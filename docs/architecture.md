@@ -133,7 +133,14 @@ generic families so that layout is the same on every machine (the
 `system-fonts` feature adds the machine's fonts behind them). Boxes hold
 document coordinates; fixed boxes keep viewport ones. `catpaw-paint` draws
 a tree with tiny-skia for screenshots: backgrounds, borders and glyph
-outlines, in tree order, clipped by overflow.
+outlines, in tree order, clipped by overflow, and the bitmaps of
+replaced elements that have one. `catpaw-paint::canvas` is the Canvas
+2D raster backend (state stack, user-space paths, strokes, clips,
+gradients, text shaped by Parley over the same fonts, pixel access);
+`catpaw-web` maps `CanvasRenderingContext2D` onto it and keeps one
+bitmap per `<canvas>`, reset when its size attributes change. Not
+there yet: patterns, shadows, filters, SVG path data, images as
+sources (images are not decoded).
 
 **Navigation.** html5ever drives parsing in time-budgeted tasks with the
 spec's script pauses (`document.write`, parser-blocking, defer/async/module).
