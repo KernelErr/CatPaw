@@ -66,6 +66,7 @@ mod svg;
 mod traversal;
 mod ui_events;
 mod url_api;
+mod webcrypto;
 mod websocket;
 mod window;
 pub mod workers;

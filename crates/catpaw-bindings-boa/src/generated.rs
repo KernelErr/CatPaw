@@ -6833,6 +6833,89 @@ pub mod crypto {
     };
 }
 
+pub mod crypto_key {
+    use super::*;
+
+    fn get_type(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CryptoKey, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::CryptoKeyImpl>::type_(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_extractable(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::CryptoKey, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::CryptoKeyImpl>::extractable(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_algorithm(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "algorithm", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_object(this_js, I::CryptoKey, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::CryptoKeyImpl>::algorithm(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "algorithm", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_usages(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "usages", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_object(this_js, I::CryptoKey, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::CryptoKeyImpl>::usages(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "usages", &v, ctx);
+        Ok(v)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::CryptoKey,
+        name: "CryptoKey",
+        parent: None,
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: true,
+        },
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "type",
+                getter: get_type,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "extractable",
+                getter: get_extractable,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "algorithm",
+                getter: get_algorithm,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "usages",
+                getter: get_usages,
+                setter: None,
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod custom_element_registry {
     use super::*;
 
@@ -17582,6 +17665,145 @@ pub mod subtle_crypto {
         rt::ret(r, ctx)
     }
 
+    fn op_encrypt(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::SubtleCrypto, ctx)?;
+        rt::require_args(args, 3, "SubtleCrypto.encrypt")?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::object_from_js(rt::arg(args, 1), I::CryptoKey, ctx)?;
+        let a2 = rt::buffer_from_js(rt::arg(args, 2), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SubtleCryptoImpl>::encrypt(cx, this, a0, a1, a2)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_decrypt(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::SubtleCrypto, ctx)?;
+        rt::require_args(args, 3, "SubtleCrypto.decrypt")?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::object_from_js(rt::arg(args, 1), I::CryptoKey, ctx)?;
+        let a2 = rt::buffer_from_js(rt::arg(args, 2), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SubtleCryptoImpl>::decrypt(cx, this, a0, a1, a2)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_sign(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::SubtleCrypto, ctx)?;
+        rt::require_args(args, 3, "SubtleCrypto.sign")?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::object_from_js(rt::arg(args, 1), I::CryptoKey, ctx)?;
+        let a2 = rt::buffer_from_js(rt::arg(args, 2), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SubtleCryptoImpl>::sign(cx, this, a0, a1, a2)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_verify(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::SubtleCrypto, ctx)?;
+        rt::require_args(args, 4, "SubtleCrypto.verify")?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::object_from_js(rt::arg(args, 1), I::CryptoKey, ctx)?;
+        let a2 = rt::buffer_from_js(rt::arg(args, 2), ctx)?;
+        let a3 = rt::buffer_from_js(rt::arg(args, 3), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SubtleCryptoImpl>::verify(cx, this, a0, a1, a2, a3)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_generate_key(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::SubtleCrypto, ctx)?;
+        rt::require_args(args, 3, "SubtleCrypto.generateKey")?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::arg(args, 1).to_boolean();
+        let a2 = rt::sequence_from_js(rt::arg(args, 2), ctx, |v, ctx| {
+            Ok(rt::string_from_js(v, ctx)?)
+        })?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SubtleCryptoImpl>::generate_key(cx, this, a0, a1, a2)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_derive_key(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::SubtleCrypto, ctx)?;
+        rt::require_args(args, 5, "SubtleCrypto.deriveKey")?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::object_from_js(rt::arg(args, 1), I::CryptoKey, ctx)?;
+        let a2 = rt::value_from_js(rt::arg(args, 2), ctx)?;
+        let a3 = rt::arg(args, 3).to_boolean();
+        let a4 = rt::sequence_from_js(rt::arg(args, 4), ctx, |v, ctx| {
+            Ok(rt::string_from_js(v, ctx)?)
+        })?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SubtleCryptoImpl>::derive_key(cx, this, a0, a1, a2, a3, a4)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_derive_bits(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::SubtleCrypto, ctx)?;
+        rt::require_args(args, 2, "SubtleCrypto.deriveBits")?;
+        let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::object_from_js(rt::arg(args, 1), I::CryptoKey, ctx)?;
+        let a2 = if args.len() > 2 && !args[2].is_undefined() {
+            if rt::arg(args, 2).is_null_or_undefined() {
+                None
+            } else {
+                Some(rt::arg(args, 2).to_u32(ctx)?)
+            }
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SubtleCryptoImpl>::derive_bits(cx, this, a0, a1, a2)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_import_key(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::SubtleCrypto, ctx)?;
+        rt::require_args(args, 5, "SubtleCrypto.importKey")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::value_from_js(rt::arg(args, 1), ctx)?;
+        let a2 = rt::value_from_js(rt::arg(args, 2), ctx)?;
+        let a3 = rt::arg(args, 3).to_boolean();
+        let a4 = rt::sequence_from_js(rt::arg(args, 4), ctx, |v, ctx| {
+            Ok(rt::string_from_js(v, ctx)?)
+        })?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SubtleCryptoImpl>::import_key(cx, this, a0, a1, a2, a3, a4)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_export_key(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::SubtleCrypto, ctx)?;
+        rt::require_args(args, 2, "SubtleCrypto.exportKey")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::object_from_js(rt::arg(args, 1), I::CryptoKey, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::SubtleCryptoImpl>::export_key(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::SubtleCrypto,
         name: "SubtleCrypto",
@@ -17594,11 +17816,58 @@ pub mod subtle_crypto {
         constructor: None,
         constructor_length: 0,
         attrs: &[],
-        ops: &[rt::OpDef {
-            name: "digest",
-            func: op_digest,
-            length: 2,
-        }],
+        ops: &[
+            rt::OpDef {
+                name: "digest",
+                func: op_digest,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "encrypt",
+                func: op_encrypt,
+                length: 3,
+            },
+            rt::OpDef {
+                name: "decrypt",
+                func: op_decrypt,
+                length: 3,
+            },
+            rt::OpDef {
+                name: "sign",
+                func: op_sign,
+                length: 3,
+            },
+            rt::OpDef {
+                name: "verify",
+                func: op_verify,
+                length: 4,
+            },
+            rt::OpDef {
+                name: "generateKey",
+                func: op_generate_key,
+                length: 3,
+            },
+            rt::OpDef {
+                name: "deriveKey",
+                func: op_derive_key,
+                length: 5,
+            },
+            rt::OpDef {
+                name: "deriveBits",
+                func: op_derive_bits,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "importKey",
+                func: op_import_key,
+                length: 5,
+            },
+            rt::OpDef {
+                name: "exportKey",
+                func: op_export_key,
+                length: 2,
+            },
+        ],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -57197,6 +57466,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &canvas_rendering_context2_d::DEF,
     &cat_paw_remote_window::DEF,
     &crypto::DEF,
+    &crypto_key::DEF,
     &custom_element_registry::DEF,
     &dom_implementation::DEF,
     &dom_parser::DEF,

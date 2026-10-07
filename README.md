@@ -34,7 +34,10 @@ isolated contexts.
 > rounded rects, fills, strokes, dashes, clips, gradients, transforms,
 > compositing, text through the same fonts as layout, `drawImage` from
 > other canvases, `getImageData`/`putImageData`, `toDataURL`/`toBlob`),
-> and canvases are painted into screenshots. Workers: dedicated workers (`new Worker`, from
+> and canvases are painted into screenshots. Web Crypto: `crypto.subtle`
+> with HMAC, AES-GCM/CBC/CTR, PBKDF2, HKDF, ECDSA and ECDH on P-256 and
+> P-384, RSA (PKCS#1 v1.5, PSS, OAEP), Ed25519 and X25519, in raw, JWK,
+> PKCS#8 and SPKI formats, over the RustCrypto crates. Workers: dedicated workers (`new Worker`, from
 > same-origin, `blob:` and `data:` scripts; `postMessage` both ways,
 > `importScripts`, `close`, `terminate`, errors relayed to the owner) run as
 > realms of their own on the page's thread, in turns with the page and its

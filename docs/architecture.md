@@ -142,6 +142,15 @@ bitmap per `<canvas>`, reset when its size attributes change. Not
 there yet: patterns, shadows, filters, SVG path data, images as
 sources (images are not decoded).
 
+**Web Crypto.** `crypto.subtle` (`catpaw-web/src/webcrypto.rs`) keeps
+keys as platform objects holding their material (secret bytes, EC
+scalars and points, RSA keys, OKP keys) and runs every operation to
+completion on the page thread over the RustCrypto crates, settling the
+promise at once. The specification's algorithm dictionaries are read
+from the `any` the overlay IDL declares, since the parser does not read
+the spec's own IDL. OKP PKCS#8 and SPKI are written by hand (fixed
+shapes); everything else goes through the crates' encoders.
+
 **Navigation.** html5ever drives parsing in time-budgeted tasks with the
 spec's script pauses (`document.write`, parser-blocking, defer/async/module).
 Session history, `pushState`, iframes with cross-origin `WindowProxy` and

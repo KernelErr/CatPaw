@@ -50,13 +50,33 @@ interface Crypto {
   DOMString randomUUID();
 };
 
-// https://w3c.github.io/webcrypto/#subtlecrypto-interface: digest() alone,
-// whose algorithm (`AlgorithmIdentifier`, a name or an object with a
-// `name`) is taken as `any` and read by the implementation. The key-based
-// methods are absent until there is key handling.
+// https://w3c.github.io/webcrypto/#subtlecrypto-interface, with every
+// algorithm (`AlgorithmIdentifier`, a name or an object with a `name` and
+// parameters) and key datum taken as `any` and read by the implementation:
+// the specification's dictionaries are many, and the parser here does not
+// read the IDL they come in. wrapKey/unwrapKey are not offered.
 [Exposed=(Window,Worker)]
 interface SubtleCrypto {
   Promise<any> digest(any algorithm, BufferSource data);
+  Promise<any> encrypt(any algorithm, CryptoKey key, BufferSource data);
+  Promise<any> decrypt(any algorithm, CryptoKey key, BufferSource data);
+  Promise<any> sign(any algorithm, CryptoKey key, BufferSource data);
+  Promise<any> verify(any algorithm, CryptoKey key, BufferSource signature, BufferSource data);
+  Promise<any> generateKey(any algorithm, boolean extractable, sequence<DOMString> keyUsages);
+  Promise<any> deriveKey(any algorithm, CryptoKey baseKey, any derivedKeyType, boolean extractable, sequence<DOMString> keyUsages);
+  Promise<any> deriveBits(any algorithm, CryptoKey baseKey, optional unsigned long? length = null);
+  Promise<any> importKey(DOMString format, any keyData, any algorithm, boolean extractable, sequence<DOMString> keyUsages);
+  Promise<any> exportKey(DOMString format, CryptoKey key);
+};
+
+// https://w3c.github.io/webcrypto/#cryptokey-interface. `algorithm` and
+// `usages` are the plain object and array the specification returns.
+[Exposed=(Window,Worker)]
+interface CryptoKey {
+  readonly attribute DOMString type;
+  readonly attribute boolean extractable;
+  readonly attribute any algorithm;
+  readonly attribute any usages;
 };
 
 // A window of another frame (an iframe's `contentWindow`, a frame's

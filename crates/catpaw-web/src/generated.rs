@@ -34,6 +34,7 @@ pub enum InterfaceId {
     CanvasRenderingContext2D,
     CatPawRemoteWindow,
     Crypto,
+    CryptoKey,
     CustomElementRegistry,
     DOMImplementation,
     DOMParser,
@@ -266,8 +267,8 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 241;
-    pub const ALL: [InterfaceId; 241] = [
+    pub const COUNT: usize = 242;
+    pub const ALL: [InterfaceId; 242] = [
         InterfaceId::AbortController,
         InterfaceId::AbstractRange,
         InterfaceId::Blob,
@@ -280,6 +281,7 @@ impl InterfaceId {
         InterfaceId::CanvasRenderingContext2D,
         InterfaceId::CatPawRemoteWindow,
         InterfaceId::Crypto,
+        InterfaceId::CryptoKey,
         InterfaceId::CustomElementRegistry,
         InterfaceId::DOMImplementation,
         InterfaceId::DOMParser,
@@ -525,6 +527,7 @@ impl InterfaceId {
             InterfaceId::CanvasRenderingContext2D => "CanvasRenderingContext2D",
             InterfaceId::CatPawRemoteWindow => "CatPawRemoteWindow",
             InterfaceId::Crypto => "Crypto",
+            InterfaceId::CryptoKey => "CryptoKey",
             InterfaceId::CustomElementRegistry => "CustomElementRegistry",
             InterfaceId::DOMImplementation => "DOMImplementation",
             InterfaceId::DOMParser => "DOMParser",
@@ -771,6 +774,7 @@ impl InterfaceId {
             "CanvasRenderingContext2D" => InterfaceId::CanvasRenderingContext2D,
             "CatPawRemoteWindow" => InterfaceId::CatPawRemoteWindow,
             "Crypto" => InterfaceId::Crypto,
+            "CryptoKey" => InterfaceId::CryptoKey,
             "CustomElementRegistry" => InterfaceId::CustomElementRegistry,
             "DOMImplementation" => InterfaceId::DOMImplementation,
             "DOMParser" => InterfaceId::DOMParser,
@@ -1018,6 +1022,7 @@ impl InterfaceId {
             InterfaceId::CanvasRenderingContext2D => None,
             InterfaceId::CatPawRemoteWindow => None,
             InterfaceId::Crypto => None,
+            InterfaceId::CryptoKey => None,
             InterfaceId::CustomElementRegistry => None,
             InterfaceId::DOMImplementation => None,
             InterfaceId::DOMParser => None,
@@ -3890,6 +3895,13 @@ pub trait CryptoImpl {
     fn random_uuid(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
 }
 
+pub trait CryptoKeyImpl {
+    fn type_(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn extractable(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn algorithm(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
+    fn usages(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
+}
+
 pub trait CustomElementRegistryImpl {
     fn define(
         cx: &mut Cx<'_>,
@@ -4931,6 +4943,73 @@ pub trait SubtleCryptoImpl {
         this: ObjectId,
         algorithm: Value,
         data: Vec<u8>,
+    ) -> Fallible<PromiseRef>;
+    fn encrypt(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        algorithm: Value,
+        key: ObjectId,
+        data: Vec<u8>,
+    ) -> Fallible<PromiseRef>;
+    fn decrypt(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        algorithm: Value,
+        key: ObjectId,
+        data: Vec<u8>,
+    ) -> Fallible<PromiseRef>;
+    fn sign(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        algorithm: Value,
+        key: ObjectId,
+        data: Vec<u8>,
+    ) -> Fallible<PromiseRef>;
+    fn verify(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        algorithm: Value,
+        key: ObjectId,
+        signature: Vec<u8>,
+        data: Vec<u8>,
+    ) -> Fallible<PromiseRef>;
+    fn generate_key(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        algorithm: Value,
+        extractable: bool,
+        key_usages: Vec<String>,
+    ) -> Fallible<PromiseRef>;
+    fn derive_key(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        algorithm: Value,
+        base_key: ObjectId,
+        derived_key_type: Value,
+        extractable: bool,
+        key_usages: Vec<String>,
+    ) -> Fallible<PromiseRef>;
+    fn derive_bits(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        algorithm: Value,
+        base_key: ObjectId,
+        length: Option<u32>,
+    ) -> Fallible<PromiseRef>;
+    fn import_key(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        format: String,
+        key_data: Value,
+        algorithm: Value,
+        extractable: bool,
+        key_usages: Vec<String>,
+    ) -> Fallible<PromiseRef>;
+    fn export_key(
+        cx: &mut Cx<'_>,
+        this: ObjectId,
+        format: String,
+        key: ObjectId,
     ) -> Fallible<PromiseRef>;
 }
 

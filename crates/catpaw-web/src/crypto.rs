@@ -1,13 +1,9 @@
 //! `window.crypto`: random values and digests
 //! (<https://w3c.github.io/webcrypto/>).
 //!
-//! `crypto.subtle` offers `digest()` with the SHA family; the key-based
-//! operations are absent rather than present and failing, so pages can
-//! tell.
+//! `crypto.subtle` lives in `webcrypto`.
 
-use catpaw_js::{Exception, Fallible, ObjectId, PromiseRef, Value};
-use sha1::Sha1;
-use sha2::{Digest, Sha256, Sha384, Sha512};
+use catpaw_js::{Exception, Fallible, ObjectId, Value};
 
 use crate::generated as web;
 use crate::page::Cx;
@@ -76,7 +72,7 @@ impl web::CryptoImpl for Web {
 
 /// The algorithm name of an `AlgorithmIdentifier`: a string, or an
 /// object's `name`.
-fn algorithm_name(cx: &mut Cx<'_>, algorithm: &Value) -> Fallible<String> {
+pub(crate) fn algorithm_name(cx: &mut Cx<'_>, algorithm: &Value) -> Fallible<String> {
     let name = match algorithm {
         Value::String(s) => s.clone(),
         Value::Object(_) | Value::Opaque(_) => match cx.script.get_property(algorithm, "name")? {
@@ -94,42 +90,4 @@ fn algorithm_name(cx: &mut Cx<'_>, algorithm: &Value) -> Fallible<String> {
         }
     };
     Ok(name)
-}
-
-impl web::SubtleCryptoImpl for Web {
-    /// <https://w3c.github.io/webcrypto/#SubtleCrypto-method-digest>
-    fn digest(
-        cx: &mut Cx<'_>,
-        this: ObjectId,
-        algorithm: Value,
-        data: Vec<u8>,
-    ) -> Fallible<PromiseRef> {
-        cx.page.with::<SubtleCryptoObject, _>(this, |_| ())?;
-        let promise = cx.script.new_promise();
-        // A bad algorithm rejects rather than throws.
-        let name = match algorithm_name(cx, &algorithm) {
-            Ok(name) => name,
-            Err(e) => {
-                cx.script.reject_promise(&promise, e);
-                return Ok(promise);
-            }
-        };
-        let hashed: Option<Vec<u8>> = match name.to_ascii_uppercase().as_str() {
-            "SHA-1" => Some(Sha1::digest(&data).to_vec()),
-            "SHA-256" => Some(Sha256::digest(&data).to_vec()),
-            "SHA-384" => Some(Sha384::digest(&data).to_vec()),
-            "SHA-512" => Some(Sha512::digest(&data).to_vec()),
-            _ => None,
-        };
-        match hashed {
-            Some(bytes) => cx
-                .script
-                .resolve_promise(&promise, Value::ArrayBuffer(bytes)),
-            None => cx.script.reject_promise(
-                &promise,
-                Exception::not_supported(format!("The algorithm `{name}` is not supported")),
-            ),
-        }
-        Ok(promise)
-    }
 }

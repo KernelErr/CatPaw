@@ -1299,7 +1299,7 @@ fn subtle_crypto_digests() {
             &mut page,
             "var hex = function (b) { return Array.from(new Uint8Array(b)).map(function (x) { return x.toString(16).padStart(2, '0'); }).join(''); }; var data = new TextEncoder().encode('abc'); Promise.all([crypto.subtle.digest('SHA-1', data), crypto.subtle.digest({ name: 'sha-256' }, data), crypto.subtle.digest('SHA-384', data.buffer), crypto.subtle.digest('SHA-512', data)]).then(function (r) { log.push(r.map(hex).map(function (h) { return h.slice(0, 16); }).join(' ')); }); crypto.subtle.digest('MD5', data).catch(function (e) { log.push(e.name); }); crypto.subtle.digest(5, data).catch(function (e) { log.push(e.name); }); (crypto.subtle === crypto.subtle) + ' ' + String(crypto.subtle) + ' ' + typeof crypto.subtle.encrypt"
         ),
-        "true [object SubtleCrypto] undefined"
+        "true [object SubtleCrypto] function"
     );
     page.with_cx(|cx| {
         catpaw_web::event_loop::run(cx, &catpaw_web::event_loop::LoopLimits::default());

@@ -715,7 +715,11 @@ members = ["getEntries", "getEntriesByType", "getEntriesByName"]
 members = ["randomUUID", "subtle"]
 
 [interfaces.SubtleCrypto]
-members = ["digest"]
+members = ["digest", "encrypt", "decrypt", "sign", "verify", "generateKey", "deriveKey", "deriveBits", "importKey", "exportKey"]
+
+[interfaces.CryptoKey]
+members = ["type", "extractable", "algorithm", "usages"]
+same_object = ["algorithm", "usages"]
 
 # ------------------------------------------------------------------- CSSOM
 # Sheets as lists of top-level rules (`catpaw_style::cssom`); edits reach the
