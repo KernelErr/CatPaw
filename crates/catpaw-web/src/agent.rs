@@ -152,3 +152,21 @@ pub fn option_label_and_value(page: &PageState, option: NodeId) -> (String, Stri
         crate::forms::option_value(&dom, option),
     )
 }
+
+/// The element's border box in viewport CSS pixels (x, y, width, height),
+/// `None` when it has no box.
+pub fn element_rect(page: &PageState, el: NodeId) -> Option<(f32, f32, f32, f32)> {
+    let rect = crate::layout::bounding_client_rect(page, el);
+    (rect.width > 0.0 || rect.height > 0.0).then_some((rect.x, rect.y, rect.width, rect.height))
+}
+
+/// Whether an element is disabled: a disabled form control (a disabled
+/// fieldset counts), or `aria-disabled="true"` on it or an ancestor.
+pub fn is_disabled(page: &PageState, el: NodeId) -> bool {
+    let dom = page.dom.borrow();
+    crate::forms::is_disabled(&dom, el)
+        || std::iter::once(el).chain(dom.ancestors(el)).any(|n| {
+            dom.attr(n, "aria-disabled")
+                .is_some_and(|v| v.trim().eq_ignore_ascii_case("true"))
+        })
+}

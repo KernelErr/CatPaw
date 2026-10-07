@@ -319,6 +319,97 @@ impl GroupState {
         }
     }
 
+    /// The checks before acting on an element: enabled (when the action
+    /// needs it), and holding still while the page animates.
+    fn actionable(&mut self, tab: u32, aim: &Aim, enabled: bool) -> Result<(), Failure> {
+        let Some(state) = self.page.frame_state(aim.frame).cloned() else {
+            return Ok(());
+        };
+        let what = self.aimed(tab, aim);
+        if enabled && agent::is_disabled(&state, aim.node) {
+            return Err(
+                Failure::new(ErrorCode::NotActionable, format!("{what} is disabled"))
+                    .with(advice::DISABLED),
+            );
+        }
+        let animating = self.page.pending_of(aim.frame).is_some_and(|p| p.animating);
+        if !animating {
+            return Ok(());
+        }
+        let mut last = agent::element_rect(&state, aim.node);
+        for _ in 0..10 {
+            self.page.settle(&LoopLimits {
+                wall: std::time::Duration::from_millis(500),
+                virtual_ms: 17.0,
+                settle: None,
+                ..LoopLimits::default()
+            });
+            let Some(state) = self.page.frame_state(aim.frame).cloned() else {
+                return Ok(());
+            };
+            let now = agent::element_rect(&state, aim.node);
+            if now == last {
+                return Ok(());
+            }
+            last = now;
+        }
+        Err(
+            Failure::new(ErrorCode::NotActionable, format!("{what} keeps moving"))
+                .with(advice::MOVING),
+        )
+    }
+
+    /// A control in or around what covers an element that would dismiss
+    /// it: a close, accept or "no thanks" button.
+    fn dismiss_hint(&mut self, tab: u32, frame: FrameId, cover: catpaw_dom::NodeId) -> Option<u32> {
+        const WORDS: &[&str] = &[
+            "close",
+            "dismiss",
+            "accept",
+            "agree",
+            "got it",
+            "ok",
+            "no thanks",
+            "reject",
+            "decline",
+            "continue",
+            "allow",
+            "×",
+            "✕",
+            "✖",
+        ];
+        let state = self.page.frame_state(frame)?.clone();
+        let found = agent::with_styles(&state, |engine, dom| {
+            let oracle = crate::oracle::EngineOracle {
+                engine,
+                page: &state,
+            };
+            for around in std::iter::once(cover).chain(dom.ancestors(cover)).take(6) {
+                for n in std::iter::once(around).chain(dom.descendants(around)) {
+                    let role = catpaw_agent::a11y::role_for(dom, n);
+                    if !matches!(role, Some("button" | "link")) {
+                        continue;
+                    }
+                    let label = dom
+                        .attr(n, "aria-label")
+                        .map(str::to_string)
+                        .unwrap_or_else(|| catpaw_agent::a11y::subtree_text(dom, n, &oracle))
+                        .trim()
+                        .to_lowercase();
+                    let fits = label == "x"
+                        || WORDS
+                            .iter()
+                            .any(|w| label == *w || (label.len() <= 30 && label.contains(w)));
+                    if fits && !catpaw_agent::visibility::is_hidden(dom, n, &oracle) {
+                        return Some(n);
+                    }
+                }
+            }
+            None
+        })?;
+        self.ref_for(tab, frame, found)
+    }
+
     /// Words an input error about the aimed-at element.
     fn action_failure(
         &mut self,
@@ -327,7 +418,7 @@ impl GroupState {
         error: ActionError,
         report: Report,
     ) -> Failure {
-        let what = self.describe(tab, aim.r);
+        let what = self.aimed(tab, aim);
         let mut failure = match error {
             ActionError::Input(InputError::Detached) => {
                 Failure::new(ErrorCode::StaleRef, format!("{what} (removed)")).with(advice::STALE)
@@ -350,8 +441,14 @@ impl GroupState {
                 let cover = cover
                     .map(|r| self.describe(tab, r))
                     .unwrap_or_else(|| "another element".to_string());
-                Failure::new(ErrorCode::Occluded, format!("{what} is covered by {cover}"))
-                    .with(advice::OCCLUDED)
+                let failure =
+                    Failure::new(ErrorCode::Occluded, format!("{what} is covered by {cover}"));
+                match self.dismiss_hint(tab, aim.frame, by) {
+                    Some(r) => failure
+                        .with(format!("maybe dismiss it with {}", self.describe(tab, r)))
+                        .with(advice::OCCLUDED),
+                    None => failure.with(advice::OCCLUDED),
+                }
             }
             ActionError::NoFrame(_) => {
                 Failure::new(ErrorCode::StaleRef, format!("{what} (frame closed)"))
@@ -425,13 +522,25 @@ impl GroupState {
     pub(crate) fn click(&mut self, tab: u32, p: params::Click, view: View) -> CallResult {
         let options = p.options();
         let aim = self.aim(tab, &p.target)?;
-        let status = format!("ok click {}", self.describe(tab, aim.r));
-        self.act_on(tab, aim, status, &options, view, |cx, aim| {
+        let force = p.force;
+        if !force && aim.point.is_none() {
+            self.actionable(tab, &aim, true)?;
+        }
+        let status = format!("ok click {}", self.aimed(tab, &aim));
+        self.act_on(tab, aim, status, &options, view, move |cx, aim| {
             match aim.point {
                 Some((x, y)) => {
                     input::click_at(cx, x, y);
                     Ok(())
                 }
+                // Forced: the element gets the click, whatever covers it.
+                None if force => match input::click_element(cx, aim.node) {
+                    Err(InputError::Occluded { .. } | InputError::NotVisible) => {
+                        catpaw_web::activation::click(cx, aim.node, true);
+                        Ok(())
+                    }
+                    other => other.map(drop),
+                },
                 None => input::click_element(cx, aim.node).map(drop),
             }
         })
@@ -452,10 +561,12 @@ impl GroupState {
                     node,
                     r,
                     point: None,
+                    retargeted: None,
                 }
             }
         };
-        let mut status = format!("ok type {}", self.describe(tab, aim.r));
+        self.actionable(tab, &aim, true)?;
+        let mut status = format!("ok type {}", self.aimed(tab, &aim));
         if p.submit {
             status.push_str(" + Enter");
         }
@@ -490,7 +601,7 @@ impl GroupState {
         match &p.target {
             Some(target) => {
                 let aim = self.aim(tab, target)?;
-                let status = format!("ok press {key}{times} on {}", self.describe(tab, aim.r));
+                let status = format!("ok press {key}{times} on {}", self.aimed(tab, &aim));
                 self.act_on(tab, aim, status, &options, view, move |cx, aim| {
                     input::focus(cx, aim.node)?;
                     for _ in 0..repeat {
@@ -519,7 +630,7 @@ impl GroupState {
             .frame_state(aim.frame)
             .cloned()
             .ok_or_else(|| Failure::new(ErrorCode::NoTab, format!("t{tab} is closed")))?;
-        let what = self.describe(tab, aim.r);
+        let what = self.aimed(tab, &aim);
         if !state.dom.borrow().is_html_element(aim.node, "select") {
             return Err(Failure::new(
                 ErrorCode::NotActionable,
@@ -562,6 +673,7 @@ impl GroupState {
                 }
             }
         }
+        self.actionable(tab, &aim, true)?;
         let labels: Vec<String> = chosen.iter().map(|(_, l)| quote(l)).collect();
         let status = format!("ok select {what} ← {}", labels.join(", "));
         let nodes: Vec<catpaw_dom::NodeId> = chosen.iter().map(|(n, _)| *n).collect();
@@ -587,7 +699,7 @@ impl GroupState {
             .target
             .ok_or_else(|| Failure::bad_argument(format!("{} needs a target", kind.as_str())))?;
         let aim = self.aim(tab, &target)?;
-        let what = self.describe(tab, aim.r);
+        let what = self.aimed(tab, &aim);
         let mut aria_checked = None;
         if matches!(kind, params::ActKind::Check | params::ActKind::Uncheck) {
             let role = self
@@ -619,6 +731,11 @@ impl GroupState {
                 );
             }
         }
+        let enabled = matches!(
+            kind,
+            params::ActKind::Check | params::ActKind::Uncheck | params::ActKind::Clear
+        );
+        self.actionable(tab, &aim, enabled)?;
         let status = format!("ok {} {what}", kind.as_str());
         self.act_on(
             tab,

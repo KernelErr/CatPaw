@@ -207,6 +207,12 @@ pub enum LineKind {
     Text(String),
     /// Nodes left out for the budget.
     Truncated(usize),
+    /// The rest of a long list, left out for the budget: how many lines,
+    /// and the ref of the last item shown.
+    More {
+        count: usize,
+        after: Option<u32>,
+    },
 }
 
 /// Writes one line, without the newline.
@@ -260,6 +266,19 @@ pub fn render_line(out: &mut String, line: &SnapLine, format: Format) {
                 out.push_str("- ");
             }
             let _ = write!(out, "[truncated: {n} more nodes]");
+        }
+        LineKind::More { count, after } => {
+            if format == Format::Aria {
+                out.push_str("- ");
+            }
+            match after {
+                Some(r) => {
+                    let _ = write!(out, "[more={count} nodes after e{r}]");
+                }
+                None => {
+                    let _ = write!(out, "[more={count} nodes]");
+                }
+            }
         }
     }
 }

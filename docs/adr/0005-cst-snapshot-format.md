@@ -75,18 +75,30 @@ Playwright form one option away.
    document's arena reuses keys. A stale ref reports `removed`,
    `navigated away` or `frame closed`, with the live ref that most likely
    replaced it (same frame, role and name, parent of the same role and
-   name). Retargeting automatically when that replacement is unambiguous
-   relaxes "the agent must opt in" (M3 phase 2).
+   name). When that replacement is certain (the node diffs paired with the
+   stale one, or the only node of the same frame, role and name under a
+   parent of the same role and name), an action on the stale ref goes to
+   it and says so (`(e13 re-rendered → e52)`): the original "the agent
+   must opt in" is relaxed for removals, never across navigations.
 6. **Header keys in a fixed order**, each present only when it carries
    something (`settled` always): `# sN [diff-from=sM] tab doc
    [navigated-from] url title vp scroll [focus] filter [root] nodes settled
    [pending] [challenge] [budget=hit] [full=…]`. Dialogs are reported as
    consequence lines of the action that raised them, not in the header.
 7. **Budget**: `maxTokens` (default 4000) at a fixed 3.5 bytes a token.
-   Until containers collapse (M3 phase 2), a snapshot over budget ends in
-   `[truncated: N more nodes]` and advice; `root` shows one subtree. The
-   `cursor=` continuation of the original decision becomes `root`/`after`.
-8. **Diffs** are what actions return (ADR 0006). They compare the trees
+   Over budget, long lists show their first ten items and
+   `[more=N nodes after eX]`; then containers fold, deepest first and
+   those with the fewest things to act on first, into
+   `eN role [collapsed=K]`; only then is the end cut
+   (`[truncated: N more nodes]`). `snapshot({root: "eN"})` opens a folded
+   container and `snapshot({root: "eL", after: "eX"})` the rest of a list,
+   replacing the original `cursor=`. Diffs are computed on whole snapshots,
+   never on folded ones.
+8. **Frames** are shown under their `iframe` line,
+   `e20 iframe "Payment" [frame=f2 origin=pay.example]` (the origin when
+   it differs from the parent's), their lines one level deeper. Refs are
+   unique across a tab's frames, and every tool takes a ref of any frame.
+9. **Diffs** are what actions return (ADR 0006). They compare the trees
    two snapshots describe, elements by ref and texts by parent and
    position, and add `>` for moved nodes, `text[i]` for the i-th text of a
    parent, and `(replaces eN)` for a node the page rendered again (same

@@ -58,7 +58,8 @@ pub static TOOLS: &[ToolDef] = &[
         description: "Show the current tab as a tree: one line per element worth reading or acting on, each with a ref (e12) that other tools take as target. Actions already return what changed; call this to see the whole page again, with another filter, or one part of it.\nExample: {\"filter\":\"interactive\"}",
         schema: r#"{"type":"object","properties":{
 "filter":{"type":"string","enum":["interesting","interactive","all"],"description":"interesting (default): controls, headings, landmarks and text; interactive: controls only; all: every element"},
-"root":{"type":"string","description":"Ref of a subtree to show alone"},
+"root":{"type":"string","description":"Ref of a subtree to show alone (a [collapsed] one, say)"},
+"after":{"type":"string","description":"With root: show the items after this ref ([more=… after eN])"},
 "maxTokens":{"type":"integer","minimum":200,"description":"Size budget (default 4000)"},
 "attrs":{"type":"array","items":{"type":"string","enum":["href","src","description"]},"description":"Extra attributes: link URLs, image sources, descriptions"},
 "format":{"type":"string","enum":["compact","aria"],"description":"compact (default): e12 link \"Home\"; aria: - link \"Home\" [ref=e12]. Later results use it too"},
@@ -71,7 +72,8 @@ pub static TOOLS: &[ToolDef] = &[
         title: "Click",
         description: "Click an element: scroll it into view, check that nothing covers it, click its centre. Returns the outcome and what changed on the page.\nExample: {\"target\":\"e12\"}",
         schema: r#"{"type":"object","properties":{
-"target":{"type":"string","description":"Ref (e12), css:<selector> or xy:<x>,<y>"},
+"target":{"type":"string","description":"Ref (e12), text:<visible text>, role \"name\", css:<selector> or xy:<x>,<y>"},
+"force":{"type":"boolean","description":"Skip the checks (covered, disabled, moving) and click the element itself"},
 "snapshot":{"type":"string","enum":["diff","full","none"]},
 "dialog":{"type":"string","enum":["accept","dismiss"]},
 "promptText":{"type":"string"}
@@ -83,7 +85,7 @@ pub static TOOLS: &[ToolDef] = &[
         title: "Type",
         description: "Type into a text field or editable element, replacing its value unless append is true; submit presses Enter afterwards. Without target, types into the focused element.\nExample: {\"target\":\"e5\",\"text\":\"catpaw\",\"submit\":true}",
         schema: r#"{"type":"object","properties":{
-"target":{"type":"string","description":"Ref (e12) or css:<selector>"},
+"target":{"type":"string","description":"Ref (e12), text:<visible text>, role \"name\" or css:<selector>"},
 "text":{"type":"string"},
 "append":{"type":"boolean","description":"Keep the current value and add to it"},
 "submit":{"type":"boolean","description":"Press Enter afterwards"},
@@ -99,7 +101,7 @@ pub static TOOLS: &[ToolDef] = &[
         description: "Press a key or chord on the focused element, or on target after focusing it: Enter, Tab, Escape, ArrowDown, Backspace, Control+a, Shift+Tab.\nExample: {\"key\":\"Enter\"}",
         schema: r#"{"type":"object","properties":{
 "key":{"type":"string"},
-"target":{"type":"string","description":"Ref (e12) or css:<selector>"},
+"target":{"type":"string","description":"Ref (e12), text:<visible text>, role \"name\" or css:<selector>"},
 "repeat":{"type":"integer","minimum":1,"maximum":50},
 "snapshot":{"type":"string","enum":["diff","full","none"]},
 "dialog":{"type":"string","enum":["accept","dismiss"]},
@@ -112,7 +114,7 @@ pub static TOOLS: &[ToolDef] = &[
         title: "Select option",
         description: "Choose an option of a <select> by its visible label (or value); an array chooses several in a multiple select. When nothing matches, the error lists the options.\nExample: {\"target\":\"e8\",\"option\":\"Price (low to high)\"}",
         schema: r#"{"type":"object","properties":{
-"target":{"type":"string","description":"Ref (e12) or css:<selector>"},
+"target":{"type":"string","description":"Ref (e12), text:<visible text>, role \"name\" or css:<selector>"},
 "option":{"anyOf":[{"type":"string"},{"type":"array","items":{"type":"string"}}]},
 "snapshot":{"type":"string","enum":["diff","full","none"]},
 "dialog":{"type":"string","enum":["accept","dismiss"]},
@@ -126,7 +128,7 @@ pub static TOOLS: &[ToolDef] = &[
         description: "Less common element actions: hover, check, uncheck, focus, clear (empty a field), scroll (target into view, or the page by dy pixels; one screen down by default).\nExample: {\"kind\":\"check\",\"target\":\"e14\"}",
         schema: r#"{"type":"object","properties":{
 "kind":{"type":"string","enum":["hover","check","uncheck","focus","clear","scroll"]},
-"target":{"type":"string","description":"Ref (e12) or css:<selector>"},
+"target":{"type":"string","description":"Ref (e12), text:<visible text>, role \"name\" or css:<selector>"},
 "dy":{"type":"number","description":"Page scroll in pixels; negative scrolls up"},
 "snapshot":{"type":"string","enum":["diff","full","none"]},
 "dialog":{"type":"string","enum":["accept","dismiss"]},
@@ -163,7 +165,7 @@ pub static TOOLS: &[ToolDef] = &[
         description: "Run JavaScript in the page and return the result as a console shows it; promises are awaited. The script is an expression, or statements that return. el is the target's element; $ref(\"e12\") gives any ref's element.\nExample: {\"script\":\"el.value\",\"target\":\"e5\"}",
         schema: r#"{"type":"object","properties":{
 "script":{"type":"string"},
-"target":{"type":"string","description":"Ref (e12) or css:<selector>"}
+"target":{"type":"string","description":"Ref (e12), text:<visible text>, role \"name\" or css:<selector>"}
 },"required":["script"],"additionalProperties":false}"#,
         read_only: false,
     },

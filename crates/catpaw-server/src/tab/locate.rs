@@ -1,0 +1,184 @@
+//! Finding elements by what they show: `text:` and `role "name"` targets.
+//!
+//! The search runs over what a snapshot shows (frames included), so a
+//! target means what the agent read. It never guesses: an exact match
+//! beats a partial one, a single element to act on beats others, and
+//! anything still tied is an `AmbiguousTarget` listing the candidates.
+
+use catpaw_agent::a11y::{is_interactive, subtree_text};
+use catpaw_agent::snapshot::{LineKind, quote};
+use catpaw_agent::{ExtraAttrs, Filter};
+use catpaw_engine::FrameId;
+use catpaw_protocol::wording::{ErrorCode, advice};
+use catpaw_web::agent;
+
+use super::{Aim, GroupState};
+use crate::oracle::EngineOracle;
+use crate::output::Failure;
+
+fn normalize(text: &str) -> String {
+    text.split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_lowercase()
+}
+
+/// A candidate: its ref, whether it matched exactly, and whether it is
+/// something to act on.
+struct Candidate {
+    r: u32,
+    exact: bool,
+    actionable: bool,
+}
+
+impl GroupState {
+    pub(super) fn locate(
+        &mut self,
+        tab: u32,
+        role: Option<&str>,
+        text: &str,
+    ) -> Result<Aim, Failure> {
+        let needle = normalize(text);
+        let what = match role {
+            Some(role) => format!("{role} {}", quote(text)),
+            None => format!("text:{text}"),
+        };
+        let model = self.model(tab, Filter::Interesting, ExtraAttrs::default(), None)?;
+        let mut found: Vec<Candidate> = Vec::new();
+        let mut text_parents: Vec<(u32, bool)> = Vec::new();
+        let mut parent_stack: Vec<(u16, u32)> = Vec::new();
+        for line in &model.lines {
+            while parent_stack.last().is_some_and(|&(d, _)| d >= line.depth) {
+                parent_stack.pop();
+            }
+            match &line.kind {
+                LineKind::Element {
+                    r,
+                    role: line_role,
+                    name,
+                    attrs,
+                    text: inline,
+                    ..
+                } => {
+                    parent_stack.push((line.depth, *r));
+                    if role.is_some_and(|wanted| wanted != *line_role) {
+                        continue;
+                    }
+                    let shown = [Some(name.as_str()), inline.as_deref()];
+                    let mut best: Option<bool> = None;
+                    for value in shown.into_iter().flatten() {
+                        let value = normalize(value);
+                        if value.is_empty() {
+                            continue;
+                        }
+                        if value == needle {
+                            best = Some(true);
+                        } else if value.contains(&needle) && best.is_none() {
+                            best = Some(false);
+                        }
+                    }
+                    if let Some(exact) = best {
+                        found.push(Candidate {
+                            r: *r,
+                            exact,
+                            actionable: is_interactive(line_role)
+                                || attrs.iter().any(|(k, _)| *k == "clickable"),
+                        });
+                    }
+                }
+                LineKind::Text(t) if role.is_none() => {
+                    let value = normalize(t);
+                    if let Some(&(_, parent)) = parent_stack.last()
+                        && value.contains(&needle)
+                    {
+                        text_parents.push((parent, value == needle));
+                    }
+                }
+                _ => {}
+            }
+        }
+        // Texts outside any named element: the smallest element holding
+        // the text, under the element whose line holds it.
+        if found.is_empty() {
+            for (parent, exact) in text_parents {
+                if let Some(r) = self.smallest_holding(tab, parent, &needle)
+                    && !found.iter().any(|c| c.r == r)
+                {
+                    found.push(Candidate {
+                        r,
+                        exact,
+                        actionable: false,
+                    });
+                }
+            }
+        }
+        if found.is_empty() {
+            return Err(
+                Failure::new(ErrorCode::NotFound, format!("{what} matches nothing"))
+                    .with(advice::UNKNOWN_REF),
+            );
+        }
+        // Exact matches first; then one thing to act on among them.
+        if found.iter().any(|c| c.exact) {
+            found.retain(|c| c.exact);
+        }
+        if found.len() > 1 && found.iter().filter(|c| c.actionable).count() == 1 {
+            found.retain(|c| c.actionable);
+        }
+        if found.len() > 1 {
+            let listed: Vec<String> = found
+                .iter()
+                .take(5)
+                .map(|c| self.describe(tab, c.r))
+                .collect();
+            let mut message = format!(
+                "{what} matches {} elements: {}",
+                found.len(),
+                listed.join(", ")
+            );
+            if found.len() > 5 {
+                message.push_str(", …");
+            }
+            return Err(Failure::new(ErrorCode::AmbiguousTarget, message).with(advice::AMBIGUOUS));
+        }
+        let r = found[0].r;
+        let key = self
+            .tabs
+            .get(&tab)
+            .and_then(|t| t.refs.entry(r))
+            .map(|e| e.key)
+            .ok_or_else(|| Failure::new(ErrorCode::NotFound, format!("{what} matches nothing")))?;
+        Ok(Aim {
+            frame: FrameId(key.frame),
+            node: key.node,
+            r,
+            point: None,
+            retargeted: None,
+        })
+    }
+
+    /// The deepest element under `parent` whose visible text holds
+    /// `needle`, with a ref.
+    fn smallest_holding(&mut self, tab: u32, parent: u32, needle: &str) -> Option<u32> {
+        let key = self.tabs.get(&tab)?.refs.entry(parent)?.key;
+        let frame = FrameId(key.frame);
+        let state = self.page.frame_state(frame)?.clone();
+        let node = agent::with_styles(&state, |engine, dom| {
+            let oracle = EngineOracle {
+                engine,
+                page: &state,
+            };
+            let mut best = key.node;
+            loop {
+                let next = dom.children(best).find(|&c| {
+                    dom.is_element(c) && normalize(&subtree_text(dom, c, &oracle)).contains(needle)
+                });
+                match next {
+                    Some(child) => best = child,
+                    None => break best,
+                }
+            }
+        });
+        self.ref_for(tab, frame, node)
+    }
+}

@@ -68,6 +68,7 @@ pub enum Go {
 pub struct Snapshot {
     pub filter: Option<Filter>,
     pub root: Option<String>,
+    pub after: Option<String>,
     pub max_tokens: Option<u32>,
     pub attrs: Option<Vec<Attr>>,
     pub format: Option<Format>,
@@ -103,6 +104,9 @@ pub enum Format {
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct Click {
     pub target: String,
+    /// Skip the checks and click the element itself.
+    #[serde(default)]
+    pub force: bool,
     pub snapshot: Option<SnapshotMode>,
     pub dialog: Option<DialogChoice>,
     pub prompt_text: Option<String>,

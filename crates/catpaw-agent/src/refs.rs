@@ -214,6 +214,39 @@ impl RefTable {
             .max()
     }
 
+    /// The live ref that took a removed one's place, when there is no
+    /// doubt about it: the one the page rendered in its place, or the only
+    /// live ref of the same frame, role and name under a parent of the same
+    /// role and name. Refs gone with their document have no replacement.
+    pub fn replacement(&self, r: u32, is_live: impl Fn(&RefKey) -> bool) -> Option<u32> {
+        let entry = self.entries.get(&r)?;
+        if entry
+            .stale
+            .is_some_and(|reason| reason != StaleReason::Removed)
+        {
+            return None;
+        }
+        if let Some(next) = entry.replaced_by
+            && let Some(e) = self.entries.get(&next)
+            && e.stale.is_none()
+            && is_live(&e.key)
+        {
+            return Some(next);
+        }
+        let parent_sig = self.parent_signature(entry.parent);
+        let mut found = self.entries.iter().filter(|&(&other, e)| {
+            other != r
+                && e.stale.is_none()
+                && e.key.frame == entry.key.frame
+                && e.role == entry.role
+                && e.name == entry.name
+                && self.parent_signature(e.parent) == parent_sig
+                && is_live(&e.key)
+        });
+        let first = found.next().map(|(&other, _)| other);
+        if found.next().is_some() { None } else { first }
+    }
+
     /// The role and name of a parent ref, for matching replacements.
     fn parent_signature(&self, parent: Option<u32>) -> Option<(&'static str, &str)> {
         parent
@@ -382,5 +415,17 @@ mod tests {
         }
         refs.set_replaced(old, new);
         assert_eq!(refs.suggest(old, live), Some(new));
+        assert_eq!(refs.replacement(old, live), Some(new));
+        // Without the record, two rows alike leave room for doubt.
+        let mut doubt = RefTable::new();
+        let a = doubt.get_or_assign(k(nodes[0]), "listitem", "Socks", None);
+        let b = doubt.get_or_assign(k(nodes[1]), "button", "Remove", Some(a));
+        let c = doubt.get_or_assign(k(nodes[2]), "listitem", "Socks", None);
+        doubt.get_or_assign(k(nodes[3]), "button", "Remove", Some(c));
+        let all_live = |_: &RefKey| true;
+        let _ = doubt.lookup(&format!("e{b}"), |key| key.node != removed);
+        assert_eq!(doubt.replacement(b, all_live), Some(4));
+        doubt.document_replaced(0, 9);
+        assert_eq!(doubt.replacement(b, all_live), None);
     }
 }

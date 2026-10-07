@@ -16,10 +16,9 @@ use catpaw_protocol::params::{self, WaitFor};
 use catpaw_protocol::wording::{ErrorCode, advice};
 use catpaw_web::agent;
 
-use super::{GroupState, View, is_live, query, seconds};
+use super::{GroupState, View, seconds};
 use crate::oracle::EngineOracle;
 use crate::output::{CallResult, Failure};
-use crate::target::{self, Target};
 
 /// Page time one slice of a wait may take.
 const SLICE_MS: f64 = 250.0;
@@ -50,32 +49,19 @@ impl GroupState {
 
     /// Whether a target is in the document and shown.
     fn target_visible(&mut self, tab: u32, text: &str) -> Result<bool, Failure> {
-        let (frame, state) = self.root_state(tab)?;
-        let node = match target::parse(text)? {
-            Target::Css(selector) => query(&state, &selector)?,
-            Target::Ref(text) => {
-                let page = &self.page;
-                let entry = self.tabs.get_mut(&tab).expect("root_state found the tab");
-                entry.sync(page);
-                match entry.refs.lookup(&text, |key| is_live(page, key)) {
-                    Ok(key) if FrameId(key.frame) == frame => Some(key.node),
-                    Ok(_) => None,
-                    Err(catpaw_agent::RefError::Stale { .. }) => None,
-                    Err(_) => {
-                        return Err(Failure::new(
-                            ErrorCode::NotFound,
-                            format!("{text} was never shown in this tab"),
-                        ));
-                    }
-                }
+        let aim = match self.aim(tab, text) {
+            Ok(aim) => aim,
+            Err(f) if matches!(f.code, ErrorCode::StaleRef | ErrorCode::NotFound) => {
+                return Ok(false);
             }
-            Target::Point(..) => {
-                return Err(Failure::bad_argument("wait takes a ref or css:<selector>"));
-            }
+            // Several shown is shown.
+            Err(f) if f.code == ErrorCode::AmbiguousTarget => return Ok(true),
+            Err(f) => return Err(f),
         };
-        let Some(node) = node else {
+        let Some(state) = self.page.frame_state(aim.frame).cloned() else {
             return Ok(false);
         };
+        let node = aim.node;
         Ok(agent::with_styles(&state, |engine, dom| {
             let oracle = EngineOracle {
                 engine,

@@ -10,6 +10,7 @@
 //! styles alone and is what a parse-only pipeline uses.
 
 pub mod a11y;
+pub mod budget;
 pub mod diff;
 pub mod extract;
 pub mod read;

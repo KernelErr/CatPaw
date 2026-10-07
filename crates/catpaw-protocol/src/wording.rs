@@ -13,6 +13,8 @@ pub enum ErrorCode {
     StaleRef,
     /// Nothing matches the target.
     NotFound,
+    /// More than one element matches the target.
+    AmbiguousTarget,
     /// The element cannot take the action (disabled, hidden, not editable).
     NotActionable,
     /// Something else is on top of the element.
@@ -36,6 +38,7 @@ impl ErrorCode {
             ErrorCode::NoTab => "NoTab",
             ErrorCode::StaleRef => "StaleRef",
             ErrorCode::NotFound => "NotFound",
+            ErrorCode::AmbiguousTarget => "AmbiguousTarget",
             ErrorCode::NotActionable => "NotActionable",
             ErrorCode::Occluded => "Occluded",
             ErrorCode::NavigationFailed => "NavigationFailed",
@@ -53,7 +56,9 @@ pub mod advice {
     pub const STALE_GONE: &str =
         "advice: the page changed since that ref was shown; use the latest snapshot";
     pub const UNKNOWN_REF: &str = "advice: refs come from this tab's snapshots; take one";
-    pub const TARGET_SYNTAX: &str = "advice: a target is a ref (e12), css:<selector> or xy:<x>,<y>";
+    pub const TARGET_SYNTAX: &str = "advice: a target is a ref (e12), text:<visible text>, role \"name\" (button \"Sign in\"), css:<selector> or xy:<x>,<y>";
+    pub const AMBIGUOUS: &str =
+        "advice: pick one by its ref, or narrow it with role \"name\" (button \"Sign in\")";
     pub const NO_TAB: &str = "advice: navigate to a URL first";
     pub const NOT_EDITABLE: &str =
         "advice: type into a text field or editable element; click the one that takes the text";
@@ -62,12 +67,14 @@ pub mod advice {
     pub const NOT_VISIBLE: &str =
         "advice: it has no size on screen; open the menu or section that holds it first";
     pub const DISABLED: &str = "advice: something on the page has to enable it first";
+    pub const MOVING: &str =
+        "advice: it is animating; wait({\"for\":\"settled\"}), or click with force:true";
     pub const NOTHING_FOCUSED: &str = "advice: pass target, or click the field first";
     pub const NOT_CHECKABLE: &str =
         "advice: check and uncheck work on checkboxes, radio buttons and switches; click others";
     pub const NOT_A_SELECT: &str =
         "advice: select works on <select>; for custom dropdowns click the option instead";
-    pub const SNAPSHOT_TRUNCATED: &str = "advice: snapshot({root:\"eN\"}) shows one part; filter:\"interactive\" shows controls only";
+    pub const SNAPSHOT_TRUNCATED: &str = "advice: snapshot({\"root\":\"eN\"}) opens a [collapsed] part, and with \"after\":\"eM\" the rest of a list; filter \"interactive\" shows controls only";
     pub const READ_CONTINUES: &str = "continues";
     pub const WAIT: &str =
         "advice: wait({\"for\":\"settled\"}) gives it more time, or wait for the text you expect";

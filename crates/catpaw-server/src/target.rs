@@ -13,6 +13,10 @@ pub(crate) enum Target {
     Css(String),
     /// `xy:<x>,<y>`, viewport CSS pixels.
     Point(f32, f32),
+    /// `text:<visible text>`: the element showing that text.
+    Text(String),
+    /// `role "name"`: a snapshot line without its ref.
+    Named(String, String),
 }
 
 /// Parses a target. A whole snapshot line (`e12 link "Home"`) or the
@@ -39,6 +43,22 @@ pub(crate) fn parse(text: &str) -> Result<Target, Failure> {
                     .with(advice::TARGET_SYNTAX))
             }
         };
+    }
+    if let Some(text) = t.strip_prefix("text:") {
+        let text = text.trim();
+        if text.is_empty() {
+            return Err(Failure::bad_argument("text: needs a text").with(advice::TARGET_SYNTAX));
+        }
+        return Ok(Target::Text(text.to_string()));
+    }
+    // `button "Sign in"`: a role, then a quoted name.
+    if let Some((role, rest)) = t.split_once(' ')
+        && !role.is_empty()
+        && role.bytes().all(|b| b.is_ascii_lowercase())
+        && let Some(name) = rest.trim().strip_prefix('"')
+        && let Some(name) = name.strip_suffix('"')
+    {
+        return Ok(Target::Named(role.to_string(), name.replace("\\\"", "\"")));
     }
     let first = t.split_whitespace().next().unwrap_or("");
     let first = first
@@ -113,6 +133,15 @@ mod tests {
         assert_eq!(parse("css:#a > b").unwrap(), Target::Css("#a > b".into()));
         assert_eq!(parse("xy:10, 20.5").unwrap(), Target::Point(10.0, 20.5));
         assert!(parse("Sign in").is_err());
+        assert_eq!(
+            parse("text: Sign in").unwrap(),
+            Target::Text("Sign in".into())
+        );
+        assert_eq!(
+            parse("button \"Sign in\"").unwrap(),
+            Target::Named("button".into(), "Sign in".into())
+        );
+        assert_eq!(parse("e3 button \"Go\"").unwrap(), Target::Ref("e3".into()));
         assert!(parse("xy:1").is_err());
         assert!(parse("css:").is_err());
     }

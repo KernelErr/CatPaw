@@ -36,9 +36,19 @@ of the model on every turn.
    and keeps the whole list under 9000 bytes (6.4 KB for the eleven tools
    today). Unknown fields are refused with the names of the right ones.
 4. **Targets** are one string: a ref `e12` (a whole snapshot line or
-   `[ref=e12]` is accepted, since models copy those), `css:<selector>` or
-   `xy:<x>,<y>`; `text:<label>` follows, refusing to guess between several
-   matches.
+   `[ref=e12]` is accepted, since models copy those), `text:<visible
+   text>`, `role "name"` (`button "Sign in"`: a snapshot line without its
+   ref), `css:<selector>` (shadow trees and frames included) or
+   `xy:<x>,<y>` (into the frame under the point). Text and names are
+   matched against what a snapshot shows, frames included; an exact match
+   beats a partial one and a single control beats other matches, and
+   anything still tied is `error AmbiguousTarget` listing up to five
+   candidates: the server never guesses. Before acting, an element must be
+   enabled (for clicks, typing, choosing and checking) and hold still while
+   the page animates; one covered by something else is reported with the
+   control that would dismiss the cover when there is one
+   (`maybe dismiss it with e45 button "Accept all"`). `force: true` on
+   `click` skips the checks and clicks the element itself.
 5. **Result grammar.** The first line is `ok …`, `error <Code> …`,
    `needs_confirmation cN …` or `blocked <reason> …`; only `error` sets
    MCP's `isError`. An `ok` line echoes the element acted on as
@@ -50,8 +60,8 @@ of the model on every turn.
    page busy when it did not settle). What changed on the page follows
    (decision 9). Errors say what to try next on an `advice:` line; the
    codes are `BadArgument`, `NoTab`, `StaleRef`, `NotFound`,
-   `NotActionable`, `Occluded`, `NavigationFailed`, `ScriptError`,
-   `Timeout`, `Unsupported` and `Crashed`.
+   `AmbiguousTarget`, `NotActionable`, `Occluded`, `NavigationFailed`,
+   `ScriptError`, `Timeout`, `Unsupported` and `Crashed`.
 6. **Byte stability.** Header keys, attributes, consequence lines and diff
    lines come in fixed orders; ids are never reused; no wall-clock time
    appears; defaults are not printed; all wording comes from one table

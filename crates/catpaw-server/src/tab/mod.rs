@@ -3,6 +3,7 @@
 //! the tools that act on them. Everything here runs on the group's thread.
 
 mod act;
+mod locate;
 mod pending;
 mod read;
 mod view;
@@ -17,7 +18,9 @@ use std::time::Duration;
 use catpaw_agent::snapshot::quote;
 use catpaw_agent::{ExtraAttrs, Filter, Format, RefError, RefKey, RefScope, RefTable, SnapLine};
 use catpaw_dom::NodeId;
-use catpaw_engine::{EngineError, FrameId, LoopLimits, Page, PageOptions, SettlePolicy, SharedNet};
+use catpaw_engine::{
+    EngineError, FrameId, FrameInfo, LoopLimits, Page, PageOptions, SettlePolicy, SharedNet,
+};
 use catpaw_protocol::wording::{ErrorCode, advice};
 use catpaw_web::{PageState, agent};
 use url::Url;
@@ -58,6 +61,8 @@ pub(crate) struct View {
 pub(crate) struct SnapRequest {
     pub filter: Filter,
     pub root: Option<String>,
+    /// With `root`: show the items after this one.
+    pub after: Option<String>,
     pub max_tokens: u32,
     pub extra: ExtraAttrs,
 }
@@ -67,6 +72,7 @@ impl Default for SnapRequest {
         Self {
             filter: Filter::Interesting,
             root: None,
+            after: None,
             max_tokens: SNAPSHOT_TOKENS,
             extra: ExtraAttrs::default(),
         }
@@ -170,6 +176,8 @@ struct Aim {
     r: u32,
     /// Where to click, for `xy:` targets.
     point: Option<(f32, f32)>,
+    /// The stale ref the page re-rendered as this one.
+    retargeted: Option<u32>,
 }
 
 /// The tabs of one browsing-context group and the page they live in.
@@ -318,52 +326,154 @@ impl GroupState {
         None
     }
 
+    /// The frames of a tab: its top frame and the frames inside it (not
+    /// the popups it opened), parents before children.
+    fn frames_of(&self, tab: u32) -> Vec<FrameInfo> {
+        let Some(root) = self.tabs.get(&tab).map(|t| t.root) else {
+            return Vec::new();
+        };
+        let all = self.page.frames();
+        let mut out: Vec<FrameInfo> = all.iter().filter(|f| f.id == root).cloned().collect();
+        let mut i = 0;
+        while i < out.len() {
+            let parent = out[i].id;
+            out.extend(
+                all.iter()
+                    .filter(|f| f.parent == Some(parent) && !f.popup)
+                    .cloned(),
+            );
+            i += 1;
+        }
+        out
+    }
+
     /// Resolves a target to a node of the tab, with a ref for it.
     fn aim(&mut self, tab: u32, text: &str) -> Result<Aim, Failure> {
         let target = target::parse(text)?;
         let (root, state) = self.root_state(tab)?;
-        let page = &self.page;
-        let entry = self.tabs.get_mut(&tab).expect("root_state found the tab");
-        entry.sync(page);
-        let epoch = entry.doc_epoch;
+        let frames = self.frames_of(tab);
+        let allowed: Vec<FrameId> = frames.iter().map(|f| f.id).collect();
+        {
+            let page = &self.page;
+            let entry = self.tabs.get_mut(&tab).expect("root_state found the tab");
+            entry.sync(page);
+        }
         match target {
             Target::Ref(text) => {
-                let (node, r) = resolve_ref(page, &mut entry.refs, &text, root)?;
-                Ok(Aim {
-                    frame: root,
-                    node,
-                    r,
-                    point: None,
-                })
+                let page = &self.page;
+                let entry = self.tabs.get_mut(&tab).expect("root_state found the tab");
+                match resolve_ref(page, &mut entry.refs, &text, &allowed) {
+                    Ok((frame, node, r)) => Ok(Aim {
+                        frame,
+                        node,
+                        r,
+                        point: None,
+                        retargeted: None,
+                    }),
+                    // A node the page rendered again is acted on under its
+                    // new ref, when there is no doubt which one it is.
+                    Err(failure) if failure.code == ErrorCode::StaleRef => {
+                        let old = RefTable::parse(&text).unwrap_or(0);
+                        self.retarget(tab, old, &allowed).ok_or(failure)
+                    }
+                    Err(failure) => Err(failure),
+                }
             }
             Target::Css(selector) => {
-                let node = query(&state, &selector)?.ok_or_else(|| {
-                    Failure::new(
-                        ErrorCode::NotFound,
-                        format!("css:{selector} matches nothing"),
-                    )
-                })?;
-                let r = assign(&state, &mut entry.refs, root.0, epoch, node);
-                Ok(Aim {
-                    frame: root,
-                    node,
-                    r,
-                    point: None,
-                })
+                for frame in &allowed {
+                    let Some(state) = self.page.frame_state(*frame).cloned() else {
+                        continue;
+                    };
+                    if let Some(node) = query(&state, &selector)? {
+                        let r = self.ref_for(tab, *frame, node).unwrap_or(0);
+                        return Ok(Aim {
+                            frame: *frame,
+                            node,
+                            r,
+                            point: None,
+                            retargeted: None,
+                        });
+                    }
+                }
+                Err(Failure::new(
+                    ErrorCode::NotFound,
+                    format!("css:{selector} matches nothing"),
+                ))
             }
+            Target::Named(role, name) => self.locate(tab, Some(&role), &name),
+            Target::Text(text) => self.locate(tab, None, &text),
             Target::Point(x, y) => {
-                let node = agent::element_at(&state, x, y).ok_or_else(|| {
-                    Failure::new(ErrorCode::NotFound, format!("nothing is at {x},{y}"))
-                })?;
-                let r = assign(&state, &mut entry.refs, root.0, epoch, node);
+                // Into the frame under the point, as a click goes.
+                let (mut frame, mut state, mut point) = (root, state, (x, y));
+                let node = loop {
+                    let node = agent::element_at(&state, point.0, point.1).ok_or_else(|| {
+                        Failure::new(ErrorCode::NotFound, format!("nothing is at {x},{y}"))
+                    })?;
+                    let child = frames
+                        .iter()
+                        .find(|f| f.parent == Some(frame) && f.element == Some(node));
+                    let (Some(child), Some(rect)) = (child, agent::element_rect(&state, node))
+                    else {
+                        break node;
+                    };
+                    let Some(inner) = self.page.frame_state(child.id).cloned() else {
+                        break node;
+                    };
+                    point = (point.0 - rect.0, point.1 - rect.1);
+                    frame = child.id;
+                    state = inner;
+                };
+                let r = self.ref_for(tab, frame, node).unwrap_or(0);
                 Ok(Aim {
-                    frame: root,
+                    frame,
                     node,
                     r,
-                    point: Some((x, y)),
+                    point: Some(point),
+                    retargeted: None,
                 })
             }
         }
+    }
+
+    /// The live node a stale ref was re-rendered as, if it is certain.
+    fn retarget(&mut self, tab: u32, old: u32, frames: &[FrameId]) -> Option<Aim> {
+        let find = |g: &Self| -> Option<u32> {
+            g.tabs.get(&tab)?.refs.replacement(old, |key| {
+                frames.contains(&FrameId(key.frame)) && is_live(&g.page, key)
+            })
+        };
+        let new = match find(self) {
+            Some(new) => Some(new),
+            None => {
+                // The new node may not have a ref yet: show the page to the
+                // ref table, then look again.
+                self.model(
+                    tab,
+                    catpaw_agent::Filter::Interesting,
+                    ExtraAttrs::default(),
+                    None,
+                )
+                .ok()?;
+                find(self)
+            }
+        }?;
+        let key = self.tabs.get(&tab)?.refs.entry(new)?.key;
+        Some(Aim {
+            frame: FrameId(key.frame),
+            node: key.node,
+            r: new,
+            point: None,
+            retargeted: Some(old),
+        })
+    }
+
+    /// An aimed-at element for a status line, with a re-render noted.
+    fn aimed(&self, tab: u32, aim: &Aim) -> String {
+        let mut text = self.describe(tab, aim.r);
+        if let Some(old) = aim.retargeted {
+            text.push_str(&format!(" (e{old} re-rendered → e{})", aim.r));
+        }
+        text
     }
 
     fn describe(&self, tab: u32, r: u32) -> String {
@@ -393,16 +503,16 @@ impl GroupState {
     }
 }
 
-/// The first element matching a CSS selector in a page.
+/// The first element matching a CSS selector in a page, shadow trees
+/// included.
 fn query(state: &PageState, selector: &str) -> Result<Option<NodeId>, Failure> {
     let selectors = catpaw_style::Selectors::parse(selector)
         .ok_or_else(|| Failure::bad_argument(format!("{selector:?} is not a valid selector")))?;
     let dom = state.dom.borrow();
-    Ok(catpaw_style::query::query_first(
-        &dom,
-        dom.document(),
-        &selectors,
-    ))
+    Ok(dom
+        .shadow_including_descendants(dom.document())
+        .into_iter()
+        .find(|&n| dom.is_element(n) && catpaw_style::query::matches(&dom, n, &selectors)))
 }
 
 /// The ref of `node`, named from what it shows.
@@ -416,20 +526,21 @@ fn assign(state: &PageState, refs: &mut RefTable, frame: u32, epoch: u64, node: 
     })
 }
 
-/// Resolves a ref of the tab's root document, wording failures.
+/// Resolves a ref of one of the tab's frames, wording failures.
 fn resolve_ref(
     page: &Page,
     refs: &mut RefTable,
     text: &str,
-    root: FrameId,
-) -> Result<(NodeId, u32), Failure> {
+    frames: &[FrameId],
+) -> Result<(FrameId, NodeId, u32), Failure> {
     let r = RefTable::parse(text).unwrap_or(0);
     match refs.lookup(text, |key| is_live(page, key)) {
-        Ok(key) if FrameId(key.frame) == root => Ok((key.node, r)),
+        Ok(key) if frames.contains(&FrameId(key.frame)) => Ok((FrameId(key.frame), key.node, r)),
         Ok(_) => Err(Failure::new(
-            ErrorCode::Unsupported,
-            format!("e{r} is inside a frame; frame refs come in a later version"),
-        )),
+            ErrorCode::StaleRef,
+            format!("e{r} is in another tab's frame"),
+        )
+        .with(advice::STALE_GONE)),
         Err(RefError::BadSyntax(text)) => {
             Err(Failure::bad_argument(format!("{text:?} is not a ref")).with(advice::TARGET_SYNTAX))
         }

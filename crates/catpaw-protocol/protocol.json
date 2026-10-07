@@ -46,6 +46,10 @@
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
+          "after": {
+            "description": "With root: show the items after this ref ([more=… after eN])",
+            "type": "string"
+          },
           "attrs": {
             "description": "Extra attributes: link URLs, image sources, descriptions",
             "items": {
@@ -85,7 +89,7 @@
             "type": "integer"
           },
           "root": {
-            "description": "Ref of a subtree to show alone",
+            "description": "Ref of a subtree to show alone (a [collapsed] one, say)",
             "type": "string"
           }
         },
@@ -106,6 +110,10 @@
             ],
             "type": "string"
           },
+          "force": {
+            "description": "Skip the checks (covered, disabled, moving) and click the element itself",
+            "type": "boolean"
+          },
           "promptText": {
             "type": "string"
           },
@@ -118,7 +126,7 @@
             "type": "string"
           },
           "target": {
-            "description": "Ref (e12), css:<selector> or xy:<x>,<y>",
+            "description": "Ref (e12), text:<visible text>, role \"name\", css:<selector> or xy:<x>,<y>",
             "type": "string"
           }
         },
@@ -162,7 +170,7 @@
             "type": "boolean"
           },
           "target": {
-            "description": "Ref (e12) or css:<selector>",
+            "description": "Ref (e12), text:<visible text>, role \"name\" or css:<selector>",
             "type": "string"
           },
           "text": {
@@ -209,7 +217,7 @@
             "type": "string"
           },
           "target": {
-            "description": "Ref (e12) or css:<selector>",
+            "description": "Ref (e12), text:<visible text>, role \"name\" or css:<selector>",
             "type": "string"
           }
         },
@@ -258,7 +266,7 @@
             "type": "string"
           },
           "target": {
-            "description": "Ref (e12) or css:<selector>",
+            "description": "Ref (e12), text:<visible text>, role \"name\" or css:<selector>",
             "type": "string"
           }
         },
@@ -310,7 +318,7 @@
             "type": "string"
           },
           "target": {
-            "description": "Ref (e12) or css:<selector>",
+            "description": "Ref (e12), text:<visible text>, role \"name\" or css:<selector>",
             "type": "string"
           }
         },
@@ -398,7 +406,7 @@
             "type": "string"
           },
           "target": {
-            "description": "Ref (e12) or css:<selector>",
+            "description": "Ref (e12), text:<visible text>, role \"name\" or css:<selector>",
             "type": "string"
           }
         },

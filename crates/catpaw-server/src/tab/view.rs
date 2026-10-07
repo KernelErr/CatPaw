@@ -6,7 +6,7 @@ use catpaw_agent::{
     ExtraAttrs, Filter, Format, Header, RefKey, SnapLine, SnapshotOptions, Snapshotter,
 };
 use catpaw_dom::NodeId;
-use catpaw_engine::FrameId;
+use catpaw_engine::{FrameId, FrameInfo};
 use catpaw_protocol::params::{self, SnapshotMode};
 use catpaw_protocol::wording::advice;
 use catpaw_web::agent;
@@ -34,25 +34,24 @@ pub(super) struct Model {
     pub root: Option<u32>,
 }
 
-/// Lines rendered within a byte budget: the text, and how many lines were
-/// left out.
-fn render_budgeted(lines: &[SnapLine], format: Format, max: usize) -> (String, usize) {
-    let mut out = String::new();
-    for (i, line) in lines.iter().enumerate() {
-        if out.len() >= max {
-            let rest = lines.len() - i;
-            let marker = SnapLine {
-                depth: 0,
-                kind: LineKind::Truncated(rest),
-            };
-            render_line(&mut out, &marker, format);
-            out.push('\n');
-            return (out, rest);
-        }
-        render_line(&mut out, line, format);
-        out.push('\n');
-    }
-    (out, 0)
+/// The lines after the item `after` of a subtree shown with `root`: the
+/// rest of a long list.
+fn after_item(lines: &[SnapLine], after: &str) -> Result<Vec<SnapLine>, Failure> {
+    let wanted = catpaw_agent::RefTable::parse(after)
+        .ok_or_else(|| Failure::bad_argument(format!("{after:?} is not a ref")))?;
+    let at = lines
+        .iter()
+        .position(|l| l.depth == 0 && matches!(l.kind, LineKind::Element { r, .. } if r == wanted));
+    let Some(at) = at else {
+        return Err(Failure::bad_argument(format!(
+            "e{wanted} is not an item of that root"
+        )));
+    };
+    let next = lines[at + 1..]
+        .iter()
+        .position(|l| l.depth == 0)
+        .map_or(lines.len(), |k| at + 1 + k);
+    Ok(lines[next..].to_vec())
 }
 
 /// The size of all the lines rendered.
@@ -74,45 +73,33 @@ impl GroupState {
         extra: ExtraAttrs,
         root: Option<&str>,
     ) -> Result<Model, Failure> {
-        let (frame, state) = self.root_state(tab)?;
+        let (top, state) = self.root_state(tab)?;
+        let frames = self.frames_of(tab);
+        let allowed: Vec<FrameId> = frames.iter().map(|f| f.id).collect();
         let page = &self.page;
         let entry = self.tabs.get_mut(&tab).expect("root_state found the tab");
         entry.sync(page);
         let epoch = entry.doc_epoch;
-        let root_node: Option<(NodeId, u32)> = match root {
-            Some(text) => Some(resolve_ref(page, &mut entry.refs, text, frame)?),
+        let doc = entry.doc;
+        let root_node: Option<(FrameId, NodeId, u32)> = match root {
+            Some(text) => Some(resolve_ref(page, &mut entry.refs, text, &allowed)?),
             None => None,
         };
         let url = state.url.borrow().to_string();
         let viewport = agent::viewport(&state);
         let (sx, sy) = agent::window_scroll(&state);
-        let (lines, total, title, focus) = agent::with_styles(&state, |engine, dom| {
-            let oracle = EngineOracle {
-                engine,
-                page: &state,
-            };
-            let options = SnapshotOptions {
-                filter,
-                format: Format::Compact,
-                root: root_node.map(|(node, _)| node),
-                max_depth: None,
-                max_chars: None,
-                extra,
-                ..SnapshotOptions::default()
-            };
-            let mut snapshotter =
-                Snapshotter::new(dom, &oracle, &mut entry.refs).in_frame(frame.0, epoch);
-            let body = snapshotter.body(&options);
-            let title = snapshotter.title();
-            let focus = agent::focused(&state).and_then(|node| {
-                entry.refs.get(RefKey {
-                    frame: frame.0,
-                    epoch,
-                    node,
-                })
-            });
-            (body.lines, body.total_elements, title, focus)
-        });
+        let start = root_node.map(|(frame, _, _)| frame).unwrap_or(top);
+        let (lines, total) = self.frame_lines(
+            tab,
+            start,
+            root_node.map(|(_, node, _)| node),
+            filter,
+            extra,
+            &frames,
+            0,
+        )?;
+        let title = super::title_of(&state);
+        let focus = self.focus_ref(tab, top, &frames);
         Ok(Model {
             lines,
             total,
@@ -122,9 +109,125 @@ impl GroupState {
             scroll: (sx.round() as i64, sy.round() as i64),
             viewport,
             epoch,
-            doc: entry.doc,
-            root: root_node.map(|(_, r)| r),
+            doc,
+            root: root_node.map(|(_, _, r)| r),
         })
+    }
+
+    /// The lines of one frame's document (or a subtree of it), with the
+    /// documents of the frames inside it under their `iframe` lines.
+    #[allow(clippy::too_many_arguments)]
+    fn frame_lines(
+        &mut self,
+        tab: u32,
+        frame: FrameId,
+        root: Option<NodeId>,
+        filter: Filter,
+        extra: ExtraAttrs,
+        frames: &[FrameInfo],
+        depth: u16,
+    ) -> Result<(Vec<SnapLine>, usize), Failure> {
+        let Some(state) = self.page.frame_state(frame).cloned() else {
+            return Ok((Vec::new(), 0));
+        };
+        let epoch = state.epoch;
+        let entry = self.tabs.get_mut(&tab).expect("the tab is open");
+        let (mut lines, mut total) = agent::with_styles(&state, |engine, dom| {
+            let oracle = EngineOracle {
+                engine,
+                page: &state,
+            };
+            let options = SnapshotOptions {
+                filter,
+                format: Format::Compact,
+                root,
+                max_depth: None,
+                max_chars: None,
+                extra,
+                ..SnapshotOptions::default()
+            };
+            let mut snapshotter =
+                Snapshotter::new(dom, &oracle, &mut entry.refs).in_frame(frame.0, epoch);
+            let body = snapshotter.body(&options);
+            (body.lines, body.total_elements)
+        });
+        for line in &mut lines {
+            line.depth += depth;
+        }
+        let children: Vec<&FrameInfo> = frames
+            .iter()
+            .filter(|f| f.parent == Some(frame) && !f.popup && f.element.is_some())
+            .collect();
+        if children.is_empty() || depth > 64 {
+            return Ok((lines, total));
+        }
+        // The frame each line hosts, if it is an `iframe` with a document.
+        let hosts: Vec<Option<&FrameInfo>> = {
+            let entry = self.tabs.get(&tab).expect("the tab is open");
+            lines
+                .iter()
+                .map(|line| match &line.kind {
+                    LineKind::Element { r, .. } => entry
+                        .refs
+                        .entry(*r)
+                        .filter(|e| e.key.frame == frame.0)
+                        .and_then(|e| children.iter().find(|c| c.element == Some(e.key.node)))
+                        .copied(),
+                    _ => None,
+                })
+                .collect()
+        };
+        let parent_url = state.url.borrow().clone();
+        let mut out = Vec::with_capacity(lines.len());
+        for (mut line, host) in lines.into_iter().zip(hosts) {
+            let Some(child) = host else {
+                out.push(line);
+                continue;
+            };
+            let (child_lines, child_total) =
+                self.frame_lines(tab, child.id, None, filter, extra, frames, line.depth + 1)?;
+            total += child_total;
+            if let LineKind::Element {
+                attrs,
+                has_children,
+                ..
+            } = &mut line.kind
+            {
+                attrs.push(("frame", format!("f{}", child.id.0)));
+                if child.url.origin() != parent_url.origin()
+                    && let Some(host) = child.url.host_str()
+                {
+                    attrs.push(("origin", host.to_string()));
+                }
+                *has_children |= !child_lines.is_empty();
+            }
+            out.push(line);
+            out.extend(child_lines);
+        }
+        Ok((out, total))
+    }
+
+    /// The ref of the focused element, following focus into frames.
+    fn focus_ref(&self, tab: u32, top: FrameId, frames: &[FrameInfo]) -> Option<u32> {
+        let entry = self.tabs.get(&tab)?;
+        let mut frame = top;
+        for _ in 0..16 {
+            let state = self.page.frame_state(frame)?;
+            let node = agent::focused(state)?;
+            if let Some(child) = frames
+                .iter()
+                .find(|f| f.parent == Some(frame) && f.element == Some(node))
+            {
+                frame = child.id;
+                continue;
+            }
+            return entry.refs.get(RefKey {
+                frame: frame.0,
+                epoch: state.epoch,
+                node,
+            });
+        }
+        None
     }
 
     /// Notes where the logs stand at snapshot `id`.
@@ -204,8 +307,14 @@ impl GroupState {
         let challenge = self.challenge(tab);
         let entry = self.tabs.get_mut(&tab).expect("model found the tab");
         let id = entry.take_id();
-        let (body, truncated) =
-            render_budgeted(&model.lines, view.format, token_bytes(request.max_tokens));
+        let mut shown = model.lines.clone();
+        if let Some(after) = &request.after {
+            shown = after_item(&shown, after)?;
+        }
+        let fitted =
+            catpaw_agent::budget::fit(&shown, view.format, token_bytes(request.max_tokens));
+        let truncated = fitted.hidden;
+        let body = catpaw_agent::snapshot::render_lines(&fitted.lines, view.format);
         let header = Header {
             id,
             tab: Some(format!("t{}", entry.id)),
@@ -218,7 +327,7 @@ impl GroupState {
             focus: model.focus,
             filter: Some(request.filter),
             root: model.root,
-            nodes: Some((model.lines.len() - truncated, model.total)),
+            nodes: Some((shown.len() - truncated, model.total)),
             settled: Some(settled),
             pending,
             challenge,
@@ -266,6 +375,7 @@ impl GroupState {
                 params::Filter::All => Filter::All,
             },
             root: p.root,
+            after: p.after,
             max_tokens: p.max_tokens.unwrap_or(SNAPSHOT_TOKENS).max(200),
             extra,
         };

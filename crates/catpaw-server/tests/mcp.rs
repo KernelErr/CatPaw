@@ -37,6 +37,48 @@ const LAB: &str = r#"<!doctype html><title>Lab</title>
 <table><caption>Prices</caption><tr><th>Item<th>Price</tr><tr><td>Socks<td>$5</tr><tr><td>Hat<td>$12</tr></table>
 <p>Shipping is free over $50.</p>"#;
 
+/// A page with a frame.
+const HOST: &str = r#"<!doctype html><title>Host</title><h1>Checkout</h1>
+<iframe src="/inner" title="Payment"></iframe><p id=out>waiting</p>"#;
+
+const INNER: &str = r#"<!doctype html><title>Inner</title>
+<button onclick="this.textContent = 'Paid'">Pay now</button>"#;
+
+/// Targets by text, re-rendering, disabled controls and an overlay.
+const P2: &str = r#"<!doctype html><title>Phase two</title>
+<ul id=list><li>Socks <button onclick="rerender()">Remove</button></li></ul>
+<button>Save</button><button>Save draft</button>
+<button disabled onclick="document.title='clicked'">Locked</button>
+<p id=out>idle</p>
+<button id=under onclick="document.getElementById('out').textContent='under'">Under</button>
+<div id=overlay style="position:fixed;left:0;top:0;width:100%;height:100%;background:#fff">
+  We use cookies <button onclick="document.getElementById('overlay').remove()">Accept all</button>
+</div>
+<script>
+function rerender() {
+  // A framework re-rendering the row: a new element, the same text.
+  document.getElementById('list').innerHTML = '<li>Socks <button onclick="rerender()">Remove</button></li>';
+  document.getElementById('out').textContent = 'rendered ' + (++window.renders || (window.renders = 1));
+}
+</script>"#;
+
+/// A long page.
+const LONG: &str = r##"<!doctype html><title>Long</title><main>
+<section><h2>Prose</h2>
+<p>One paragraph of prose that goes on for a while, to take some room in the snapshot.</p>
+<p>Another paragraph of prose that goes on for a while, to take some room as well.</p>
+<p>A third paragraph of prose that goes on for a while, to take some room still.</p>
+</section>
+<ul id=items></ul></main>
+<script>
+const ul = document.getElementById('items');
+for (let i = 0; i < 60; i++) {
+  const li = document.createElement('li');
+  li.innerHTML = '<a href="#' + i + '">Item ' + i + '</a>';
+  ul.append(li);
+}
+</script>"##;
+
 /// Serves `pages` by path (the query is ignored), a thread per
 /// connection; `/slow…` answers after 300 ms and `/hang…` after 3 s.
 fn serve(pages: HashMap<&'static str, &'static str>) -> u16 {
@@ -98,6 +140,10 @@ impl Client {
             ("/", INDEX),
             ("/next", NEXT),
             ("/lab", LAB),
+            ("/host", HOST),
+            ("/inner", INNER),
+            ("/p2", P2),
+            ("/long", LONG),
         ]));
         let mut config = SessionConfig::default();
         config.options.net.allow_private_network = true;
@@ -516,4 +562,108 @@ fn read_finds_text_and_shows_tables_and_html() {
     assert!(html.contains("<button id=\"start\" onclick="), "{html}");
     let bad = client.error("read", json!({"view": "find", "query": "/(/"}));
     assert!(bad.contains("is not a valid regex"), "{bad}");
+}
+
+#[test]
+fn frames_show_inside_their_host_and_take_actions() {
+    let mut client = Client::new();
+    let url = format!("{}/host", client.base);
+    let page = client.ok("navigate", json!({ "url": url }));
+    let host = ref_of(&page, "iframe \"Payment\"");
+    assert!(
+        page.contains(&format!("{host} iframe \"Payment\" [frame=f1]\n")),
+        "{page}"
+    );
+    let pay = ref_of(&page, "button \"Pay now\"");
+    let line = page.lines().find(|l| l.contains("Pay now")).unwrap();
+    assert!(
+        line.starts_with("  e"),
+        "the frame's lines sit under its host: {page}"
+    );
+    let paid = client.ok("click", json!({"target": pay}));
+    assert!(paid.contains("button \"Pay now\" → \"Paid\""), "{paid}");
+}
+
+#[test]
+fn targets_by_text_and_role_never_guess() {
+    let mut client = Client::new();
+    let url = format!("{}/p2", client.base);
+    client.ok("navigate", json!({ "url": url }));
+    let accepted = client.ok("click", json!({"target": "text:Accept all"}));
+    assert!(accepted.starts_with("ok click e"), "{accepted}");
+    assert!(accepted.contains("- e"), "the overlay went: {accepted}");
+    // "Save" names one button exactly; "Sav" two in part.
+    let saved = client.ok("click", json!({"target": "button \"Save\""}));
+    assert!(saved.contains("button \"Save\""), "{saved}");
+    let partial = client.error("click", json!({"target": "text:Sav"}));
+    assert!(
+        partial.starts_with("error AmbiguousTarget text:Sav matches 2 elements: e"),
+        "{partial}"
+    );
+    let missing = client.error("click", json!({"target": "text:Checkout"}));
+    assert!(
+        missing.contains("NotFound text:Checkout matches nothing"),
+        "{missing}"
+    );
+}
+
+#[test]
+fn a_rerendered_ref_is_followed_and_checks_come_first() {
+    let mut client = Client::new();
+    let url = format!("{}/p2", client.base);
+    let page = client.ok("navigate", json!({ "url": url }));
+    let under = ref_of(&page, "button \"Under\"");
+    let covered = client.error("click", json!({"target": under}));
+    assert!(covered.contains("Occluded"), "{covered}");
+    assert!(covered.contains("maybe dismiss it with e"), "{covered}");
+    assert!(covered.contains("button \"Accept all\""), "{covered}");
+    let forced = client.ok("click", json!({"target": under, "force": true}));
+    assert!(forced.contains(": idle → under"), "{forced}");
+
+    let remove = ref_of(&page, "button \"Remove\"");
+    let first = client.ok("click", json!({"target": remove, "force": true}));
+    assert!(first.contains("(replaces "), "{first}");
+    // The old ref is stale, but its replacement is certain.
+    let again = client.ok("click", json!({"target": remove, "force": true}));
+    assert!(
+        again.contains(&format!("({remove} re-rendered → e")),
+        "{again}"
+    );
+    assert!(again.contains(": rendered 1 → rendered 2"), "{again}");
+
+    let locked = ref_of(&page, "button \"Locked\"");
+    let refused = client.error("click", json!({"target": locked}));
+    assert!(refused.contains("NotActionable"), "{refused}");
+    assert!(refused.contains("is disabled"), "{refused}");
+    // Forced, the click goes through, and a disabled button ignores it.
+    let forced = client.ok("click", json!({"target": locked, "force": true}));
+    assert!(forced.ends_with("no changes"), "{forced}");
+}
+
+#[test]
+fn a_page_over_budget_folds_and_opens_again() {
+    let mut client = Client::new();
+    let url = format!("{}/long", client.base);
+    client.ok("navigate", json!({ "url": url, "snapshot": "none" }));
+    let small = client.ok("snapshot", json!({"maxTokens": 200}));
+    assert!(small.contains("budget=hit"), "{small}");
+    assert!(small.contains("[more=50 nodes after e"), "{small}");
+    let list_ref = small
+        .lines()
+        .find(|l| l.trim_start().contains(" list"))
+        .and_then(|l| l.split_whitespace().next())
+        .unwrap()
+        .to_string();
+    let more_line = small.lines().find(|l| l.contains("[more=")).unwrap();
+    let after = more_line
+        .rsplit("after ")
+        .next()
+        .unwrap()
+        .trim_end_matches(']');
+    let rest = client.ok(
+        "snapshot",
+        json!({"root": list_ref, "after": after, "maxTokens": 2000}),
+    );
+    assert!(rest.contains("link \"Item 10\""), "{rest}");
+    assert!(!rest.contains("link \"Item 9\""), "{rest}");
 }

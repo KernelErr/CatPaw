@@ -75,15 +75,28 @@ fn level_of(level: ConsoleLevel) -> LogLevel {
 
 impl GroupState {
     pub(crate) fn read(&mut self, tab: u32, p: params::Read) -> CallResult {
-        let (frame, state) = self.root_state(tab)?;
+        let (top, top_state) = self.root_state(tab)?;
+        let allowed: Vec<catpaw_engine::FrameId> =
+            self.frames_of(tab).iter().map(|f| f.id).collect();
         let page = &self.page;
         let entry = self.tabs.get_mut(&tab).expect("root_state found the tab");
         entry.sync(page);
-        let epoch = entry.doc_epoch;
-        let root = match &p.root {
-            Some(text) => Some(resolve_ref(page, &mut entry.refs, text, frame)?.0),
-            None => None,
+        // A root inside a frame reads that frame's document.
+        let (frame, root) = match &p.root {
+            Some(text) => {
+                let (frame, node, _) = resolve_ref(page, &mut entry.refs, text, &allowed)?;
+                (frame, Some(node))
+            }
+            None => (top, None),
         };
+        let state = if frame == top {
+            top_state
+        } else {
+            page.frame_state(frame)
+                .cloned()
+                .ok_or_else(|| Failure::new(ErrorCode::NoTab, format!("t{tab} is closed")))?
+        };
+        let epoch = state.epoch;
         let view = p.view;
         let find = match (view, &p.query) {
             (ReadView::Find, Some(query)) => Some(matcher(query)?),

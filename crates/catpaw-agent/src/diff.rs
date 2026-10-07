@@ -39,7 +39,7 @@ impl<'a> Tree<'a> {
         let mut children: HashMap<Option<usize>, Vec<usize>> = HashMap::new();
         let mut stack: Vec<(u16, usize)> = Vec::new();
         for (i, line) in lines.iter().enumerate() {
-            if matches!(line.kind, LineKind::Truncated(_)) {
+            if matches!(line.kind, LineKind::Truncated(_) | LineKind::More { .. }) {
                 continue;
             }
             while stack.last().is_some_and(|&(d, _)| d >= line.depth) {
@@ -182,6 +182,7 @@ fn label(line: &SnapLine) -> String {
         LineKind::Element { r, role, name, .. } => format!("e{r} {role} {}", quote(name)),
         LineKind::Text(t) => format!("text {}", quote(&truncate(t, 80))),
         LineKind::Truncated(n) => format!("[truncated: {n} more nodes]"),
+        LineKind::More { count, .. } => format!("[more={count} nodes]"),
     }
 }
 

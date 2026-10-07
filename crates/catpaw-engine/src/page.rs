@@ -225,6 +225,9 @@ pub struct FrameInfo {
     pub depth: u32,
     /// A popup (`window.open()`), a top-level page of its own.
     pub popup: bool,
+    /// The `iframe` element in the parent's document (`None` for the top
+    /// page and popups).
+    pub element: Option<NodeId>,
 }
 
 /// A loaded page. Lives on the thread that created it.
@@ -700,6 +703,7 @@ impl Page {
             url: self.url(),
             depth: 0,
             popup: false,
+            element: None,
         }];
         out.extend(self.frames.iter().map(|f| FrameInfo {
             id: f.id,
@@ -707,6 +711,7 @@ impl Page {
             url: f.boa.page().url.borrow().clone(),
             depth: f.depth,
             popup: f.element.is_none(),
+            element: f.element,
         }));
         out
     }
