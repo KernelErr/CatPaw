@@ -16,6 +16,7 @@ catpaw-js = { path = "../catpaw-js", version = "0.0.1" }
 catpaw-style = { path = "../catpaw-style", version = "0.0.1" }
 catpaw-layout = { path = "../catpaw-layout", version = "0.0.1" }
 catpaw-text = { path = "../catpaw-text", version = "0.0.1" }
+catpaw-paint = { path = "../catpaw-paint", version = "0.0.1" }
 base64.workspace = true
 encoding_rs.workspace = true
 indexmap.workspace = true

@@ -19,7 +19,9 @@ isolated contexts.
 > only when something asks for geometry; the CSSOM View answers from it
 > (`getBoundingClientRect`, `getClientRects`, `offset*`/`client*`/`scroll*`,
 > `scrollTo`, `scrollIntoView`, `elementFromPoint`), as do
-> `IntersectionObserver` and `ResizeObserver`.
+> `IntersectionObserver` and `ResizeObserver`. Screenshots
+> (`catpaw fetch --js --screenshot out.png [--full-page]`) paint backgrounds,
+> borders and text with tiny-skia.
 >
 > With `catpaw fetch --js`: classic scripts (inline, external, `defer`,
 > `async`, script-inserted, `document.write`) and module scripts (static and
@@ -44,8 +46,8 @@ isolated contexts.
 > server and the Python handlers its fetch and XHR tests use: `dom` 2978 of
 > 4246 subtests pass, `html/dom` 582 of 1066, `fetch/api` 1908 of 2237,
 > `xhr` 859 of 1200, `css/cssom-view` 478 of 1198 (much of the rest needs iframes, layout, or server
-> behaviour the stand-in does not emulate). Not there yet: painting and
-> screenshots, tables as a grid, images' intrinsic sizes, canvas, media,
+> behaviour the stand-in does not emulate). Not there yet: images,
+> gradients and rounded corners in screenshots, tables as a grid, images' intrinsic sizes, canvas, media,
 > workers, WebAssembly, and the members of HTML elements that go beyond
 > their attributes.
 >

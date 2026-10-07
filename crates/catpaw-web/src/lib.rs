@@ -37,6 +37,7 @@ mod hyperlink;
 mod implementation;
 mod intersection_observer;
 mod layout;
+pub use layout::screenshot;
 mod media;
 pub mod mime;
 mod mutation_observer;

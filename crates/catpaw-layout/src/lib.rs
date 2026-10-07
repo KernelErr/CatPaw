@@ -22,6 +22,7 @@ use std::sync::{Arc as StdArc, Mutex};
 use catpaw_dom::{Dom, NodeId};
 use catpaw_style::StyleEngine;
 use catpaw_text::Fonts;
+use catpaw_text::parley;
 use slotmap::{SlotMap, new_key_type};
 use style::properties::ComputedValues;
 use style::servo_arc::Arc;
@@ -178,6 +179,9 @@ pub struct LayoutTree {
     /// The inline formatting context each inline element and text node
     /// takes part in.
     pub(crate) inline_owner: HashMap<NodeId, BoxId>,
+    /// The computed style each inline element and text node was shaped
+    /// with (a text node's is its parent's), for painting.
+    pub(crate) inline_styles: HashMap<NodeId, Arc<ComputedValues>>,
     pub(crate) viewport: Viewport,
     pub(crate) fonts: StdArc<Mutex<Fonts>>,
     pub(crate) scroll_offsets: HashMap<NodeId, (f32, f32)>,
@@ -192,6 +196,7 @@ impl LayoutTree {
             oof_root: Vec::new(),
             node_box: HashMap::new(),
             inline_owner: HashMap::new(),
+            inline_styles: HashMap::new(),
             viewport: input.viewport,
             fonts: input.fonts.clone(),
             scroll_offsets: input.scroll_offsets.clone(),
@@ -222,6 +227,26 @@ impl LayoutTree {
     /// The principal box of an element, if it generates one.
     pub fn box_of(&self, node: NodeId) -> Option<BoxId> {
         self.node_box.get(&node).copied()
+    }
+
+    /// The boxes positioned against the viewport, painted last.
+    pub fn viewport_positioned(&self) -> &[BoxId] {
+        &self.oof_root
+    }
+
+    /// The shaped lines of an inline root.
+    pub fn inline_layout(&self, id: BoxId) -> Option<&parley::Layout<catpaw_text::Brush>> {
+        self.boxes[id].inline.as_ref().map(|c| &c.layout)
+    }
+
+    /// The style a text run's node was shaped with.
+    pub fn inline_style(&self, node: NodeId) -> Option<&Arc<ComputedValues>> {
+        self.inline_styles.get(&node)
+    }
+
+    /// The node a run's brush names.
+    pub fn node_of_brush(brush: catpaw_text::Brush) -> NodeId {
+        inline::node_of_brush(brush)
     }
 
     /// The number of boxes in the tree.

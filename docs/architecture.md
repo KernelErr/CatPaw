@@ -105,7 +105,9 @@ dropped when the document, the style sheets or a scroll position change.
 Fonts come from `catpaw-text`: a bundled DejaVu set stands in for the
 generic families so that layout is the same on every machine (the
 `system-fonts` feature adds the machine's fonts behind them). Boxes hold
-document coordinates; fixed boxes keep viewport ones.
+document coordinates; fixed boxes keep viewport ones. `catpaw-paint` draws
+a tree with tiny-skia for screenshots: backgrounds, borders and glyph
+outlines, in tree order, clipped by overflow.
 
 **Navigation.** html5ever drives parsing in time-budgeted tasks with the
 spec's script pauses (`document.write`, parser-blocking, defer/async/module).

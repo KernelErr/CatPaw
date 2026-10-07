@@ -117,6 +117,13 @@ struct FetchArgs {
     /// its result (awaiting a promise) instead of a view of the page.
     #[arg(long, requires = "js")]
     eval: Option<String>,
+    /// With --js: write a PNG of the page (the viewport) to this path once
+    /// it has settled.
+    #[arg(long, requires = "js")]
+    screenshot: Option<PathBuf>,
+    /// With --screenshot: capture the whole document, not just the viewport.
+    #[arg(long, requires = "screenshot")]
+    full_page: bool,
 }
 
 #[derive(Args)]
@@ -505,6 +512,15 @@ fn fetch_with_scripts(args: FetchArgs) -> Result<()> {
             }
         }
 
+        if let Some(path) = &args.screenshot {
+            let png = page.screenshot(args.full_page);
+            std::fs::write(path, &png)
+                .with_context(|| format!("writing {}", path.display()))?;
+            eprintln!("screenshot: {} ({} bytes)", path.display(), png.len());
+            if args.eval.is_none() {
+                return Ok(());
+            }
+        }
         if let Some(source) = &args.eval {
             // A promise is awaited, within the same time budget as the page.
             let limits = LoopLimits {

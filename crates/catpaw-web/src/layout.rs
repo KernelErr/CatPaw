@@ -452,6 +452,39 @@ pub(crate) fn elements_from_point(page: &PageState, x: f32, y: f32) -> Vec<NodeI
     })
 }
 
+/// A PNG of the page as laid out now: the viewport at its scroll position,
+/// or the whole document.
+pub fn screenshot(page: &PageState, full_page: bool) -> Vec<u8> {
+    with_layout(page, |tree, dom| {
+        let viewport = viewport(page);
+        let (width, height, scroll) = if full_page {
+            let (w, h) = document_scroll_size(page, tree, dom);
+            // Bounded, as browsers bound their screenshots.
+            (
+                w.clamp(1.0, 16384.0).ceil() as u32,
+                h.clamp(1.0, 16384.0).ceil() as u32,
+                (0.0, 0.0),
+            )
+        } else {
+            (
+                viewport.width.max(1.0) as u32,
+                viewport.height.max(1.0) as u32,
+                window_scroll(page),
+            )
+        };
+        catpaw_paint::render_png(
+            tree,
+            dom,
+            &catpaw_paint::Options {
+                width,
+                height,
+                scroll,
+                scale: page.config.device_pixel_ratio as f32,
+            },
+        )
+    })
+}
+
 /// A `DOMRectList`.
 pub struct RectListObject {
     pub rects: Vec<Rect>,

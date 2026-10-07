@@ -3,6 +3,7 @@
 //! into lines by Parley.
 
 use std::borrow::Cow;
+use std::collections::HashMap;
 
 use catpaw_dom::{Dom, NodeId, NodeKind};
 use catpaw_style::StyleEngine;
@@ -79,6 +80,7 @@ impl InlineContext {
             .unwrap_or_else(|| dom.document());
         let fonts = tree.fonts.clone();
         let mut fonts = fonts.lock().unwrap_or_else(|e| e.into_inner());
+        let mut inline_styles = std::mem::take(&mut tree.inline_styles);
         let Fonts { font_cx, layout_cx } = &mut *fonts;
         let root_text_style = text_style(&root_style, brush_for(root_node));
         let mut builder = layout_cx.tree_builder(font_cx, 1.0, true, &root_text_style);
@@ -86,15 +88,21 @@ impl InlineContext {
         let mut state = Pusher {
             dom,
             styles,
+            inline_styles: &mut inline_styles,
             boxes: &mut boxes,
             transform: root_style.clone_text_transform(),
-            collapse: white_space_collapse(&root_style),
+            ws: ws_mode(&root_style),
+            prev_space: true,
+            pending_space: false,
         };
-        builder.set_white_space_mode(state.collapse);
+        // White space is collapsed here, by the CSS rules; Parley gets the
+        // text as it should be shown.
+        builder.set_white_space_mode(WhiteSpaceCollapse::Preserve);
         for item in items {
             state.push_item(&mut builder, item);
         }
         let (layout, text) = builder.build();
+        tree.inline_styles = inline_styles;
         Self {
             layout,
             text,
@@ -106,9 +114,39 @@ impl InlineContext {
 struct Pusher<'a> {
     dom: &'a Dom,
     styles: &'a StyleEngine,
+    inline_styles: &'a mut HashMap<NodeId, Arc<ComputedValues>>,
     boxes: &'a mut Vec<BoxId>,
     transform: TextTransform,
-    collapse: WhiteSpaceCollapse,
+    ws: Ws,
+    /// The text so far ends in white space (or nothing yet): collapsible
+    /// white space coming next is dropped.
+    prev_space: bool,
+    /// A collapsible space was seen and not yet pushed; it goes in before
+    /// the next text or inline box, in that item's style.
+    pending_space: bool,
+}
+
+/// How a run of text treats its white space.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Ws {
+    /// Runs of white space become one space; leading ones go.
+    Collapse,
+    /// `pre-line`: like `Collapse`, but newlines stay and break lines.
+    PreserveBreaks,
+    /// `pre`, `pre-wrap`, `break-spaces`: as written.
+    Preserve,
+}
+
+fn ws_mode(style: &ComputedValues) -> Ws {
+    match style.clone_white_space_collapse() {
+        StyloWhiteSpaceCollapse::Collapse => Ws::Collapse,
+        StyloWhiteSpaceCollapse::PreserveBreaks => Ws::PreserveBreaks,
+        _ => Ws::Preserve,
+    }
+}
+
+fn is_collapsible(c: char) -> bool {
+    matches!(c, ' ' | '\t' | '\n' | '\r' | '\x0C')
 }
 
 impl Pusher<'_> {
@@ -125,6 +163,7 @@ impl Pusher<'_> {
                 let brush = brush_for(node);
                 match style {
                     Some(style) => {
+                        self.inline_styles.insert(node, style.clone());
                         let mut span = text_style(&style, brush);
                         span.brush = brush;
                         builder.push_style_span(span);
@@ -139,14 +178,18 @@ impl Pusher<'_> {
                 }
             }
             InlineItem::Element(node, style) => {
+                self.inline_styles.insert(node, style.clone());
                 let outer_transform = self.transform;
-                let outer_collapse = self.collapse;
+                let outer_ws = self.ws;
                 self.transform = style.clone_text_transform();
-                self.collapse = white_space_collapse(&style);
+                self.ws = ws_mode(&style);
                 builder.push_style_span(text_style(&style, brush_for(node)));
                 if self.dom.is_html_element(node, "br") {
-                    builder.set_white_space_mode(WhiteSpaceCollapse::Preserve);
+                    // A forced break: spaces before it are dropped, as are
+                    // those after it.
+                    self.pending_space = false;
                     builder.push_text("\n");
+                    self.prev_space = true;
                 } else if self.dom.is_html_element(node, "wbr") {
                     builder.push_text("\u{200B}");
                 } else {
@@ -166,10 +209,11 @@ impl Pusher<'_> {
                 }
                 builder.pop_style_span();
                 self.transform = outer_transform;
-                self.collapse = outer_collapse;
-                builder.set_white_space_mode(self.collapse);
+                self.ws = outer_ws;
             }
             InlineItem::Atomic(id) => {
+                self.flush_space(builder);
+                self.prev_space = false;
                 self.boxes.push(id);
                 builder.push_inline_box(parley::InlineBox {
                     id: slotmap::Key::data(&id).as_ffi(),
@@ -230,22 +274,67 @@ impl Pusher<'_> {
     }
 
     fn push_pseudo(&mut self, builder: &mut TreeBuilder<'_, Brush>, pseudo: PseudoText) {
+        self.inline_styles
+            .entry(pseudo.owner)
+            .or_insert_with(|| pseudo.style.clone());
         let outer_transform = self.transform;
-        let outer_collapse = self.collapse;
+        let outer_ws = self.ws;
         self.transform = pseudo.style.clone_text_transform();
-        self.collapse = white_space_collapse(&pseudo.style);
+        self.ws = ws_mode(&pseudo.style);
         builder.push_style_span(text_style(&pseudo.style, brush_for(pseudo.owner)));
         self.push_text(builder, &pseudo.text);
         builder.pop_style_span();
         self.transform = outer_transform;
-        self.collapse = outer_collapse;
-        builder.set_white_space_mode(self.collapse);
+        self.ws = outer_ws;
     }
 
+    /// Pushes a text node's characters with the white space the
+    /// `white-space-collapse` of its element leaves.
     fn push_text(&mut self, builder: &mut TreeBuilder<'_, Brush>, text: &str) {
-        builder.set_white_space_mode(self.collapse);
         let transformed = transform_text(text, self.transform);
-        builder.push_text(&transformed);
+        if transformed.is_empty() {
+            return;
+        }
+        match self.ws {
+            Ws::Preserve => {
+                self.flush_space(builder);
+                builder.push_text(&transformed);
+                self.prev_space = transformed.ends_with('\n');
+            }
+            Ws::Collapse | Ws::PreserveBreaks => {
+                let mut out = String::with_capacity(transformed.len());
+                for c in transformed.chars() {
+                    if self.ws == Ws::PreserveBreaks && c == '\n' {
+                        self.pending_space = false;
+                        out.push('\n');
+                        self.prev_space = true;
+                    } else if is_collapsible(c) {
+                        if !self.prev_space {
+                            self.pending_space = true;
+                            self.prev_space = true;
+                        }
+                    } else {
+                        if self.pending_space {
+                            out.push(' ');
+                            self.pending_space = false;
+                        }
+                        out.push(c);
+                        self.prev_space = false;
+                    }
+                }
+                if !out.is_empty() {
+                    builder.push_text(&out);
+                }
+            }
+        }
+    }
+
+    /// Pushes the space that is waiting, in the current style.
+    fn flush_space(&mut self, builder: &mut TreeBuilder<'_, Brush>) {
+        if self.pending_space {
+            self.pending_space = false;
+            builder.push_text(" ");
+        }
     }
 }
 
@@ -278,13 +367,6 @@ fn transform_text(text: &str, transform: TextTransform) -> Cow<'_, str> {
         Cow::Owned(out)
     } else {
         Cow::Borrowed(text)
-    }
-}
-
-pub(crate) fn white_space_collapse(style: &ComputedValues) -> WhiteSpaceCollapse {
-    match style.clone_white_space_collapse() {
-        StyloWhiteSpaceCollapse::Collapse => WhiteSpaceCollapse::Collapse,
-        _ => WhiteSpaceCollapse::Preserve,
     }
 }
 

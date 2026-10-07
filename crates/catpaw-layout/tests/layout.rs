@@ -302,3 +302,43 @@ fn offset_parent_is_the_nearest_positioned_ancestor() {
     );
     assert_eq!(page.tree.offset_parent(&page.dom, body), None);
 }
+
+#[test]
+fn white_space_collapses_across_inline_boundaries() {
+    let width = |html: &str| layout(html, "").rect("p").width;
+    let plain =
+        width(r#"<p id=p style="display:inline-block;font:16px sans-serif">one two three</p>"#);
+    let spans = width(
+        r#"<p id=p style="display:inline-block;font:16px sans-serif">one <span>two</span> three</p>"#,
+    );
+    let inner = width(
+        r#"<p id=p style="display:inline-block;font:16px sans-serif">one<span> two </span>three</p>"#,
+    );
+    let newlines = width(
+        "<p id=p style=\"display:inline-block;font:16px sans-serif\">\n  one\n  two   three\n</p>",
+    );
+    assert!(close(spans, plain), "{spans} vs {plain}");
+    assert!(close(inner, plain), "{inner} vs {plain}");
+    assert!(close(newlines, plain), "{newlines} vs {plain}");
+    let no_space = width(
+        r#"<p id=p style="display:inline-block;font:16px sans-serif">one<span>two</span>three</p>"#,
+    );
+    assert!(no_space < plain - 5.0, "{no_space} vs {plain}");
+    let pre = width(
+        "<p id=p style=\"display:inline-block;font:16px sans-serif;white-space:pre\">one  two</p>",
+    );
+    let one_space = width(
+        "<p id=p style=\"display:inline-block;font:16px sans-serif;white-space:pre\">one two</p>",
+    );
+    assert!(pre > one_space + 2.0, "{pre} vs {one_space}");
+}
+
+#[test]
+fn line_boxes_take_the_tallest_run() {
+    let page = layout(
+        r#"<p id=p style="margin:0;font:16px sans-serif;line-height:1.6">one two<sup style="font-size:smaller;line-height:1">[1]</sup> three<br>second line</p>"#,
+        "",
+    );
+    let rect = page.rect("p");
+    assert!(close(rect.height, 2.0 * 25.6), "{rect:?}");
+}

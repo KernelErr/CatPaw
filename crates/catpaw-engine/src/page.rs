@@ -198,6 +198,11 @@ impl Page {
         self.boa.page()
     }
 
+    /// A PNG of the page: the viewport, or the whole document.
+    pub fn screenshot(&self, full_page: bool) -> Vec<u8> {
+        catpaw_web::screenshot(self.boa.page(), full_page)
+    }
+
     pub fn dom(&self) -> Ref<'_, Dom> {
         self.boa.page().dom.borrow()
     }
