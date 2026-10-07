@@ -146,7 +146,6 @@ dom/events/EventTarget-dispatchEvent.html	If the event's initialized flag is not
 dom/events/KeyEvent-initKeyEvent.html	KeyboardEvent.initKeyEvent shouldn't be defined (created by createEvent("KeyboardEvent")
 dom/events/click-on-absolute-pseudo.html	-
 dom/events/click-on-absolute-pseudo.html	Click on pseudo-element that disappears on mousedown
-dom/events/event-global-event-targets.html	window.event is set when dispatching on FileReader
 dom/events/event-global-extra.window.html	-
 dom/events/event-global-extra.window.html	Listener from a different global
 dom/events/event-global-extra.window.html	window.event and element from another document
@@ -546,8 +545,8 @@ dom/nodes/Document-createElement.html	createElement("<foo>") in XHTML document
 dom/nodes/Document-createElement.html	createElement("<foo>") in XML document
 dom/nodes/Document-createElement.html	createElement("FOO") in XHTML document
 dom/nodes/Document-createElement.html	createElement("FOO") in XML document
-dom/nodes/Document-createElement.html	createElement("\ufffffoo") in XHTML document
-dom/nodes/Document-createElement.html	createElement("\ufffffoo") in XML document
+dom/nodes/Document-createElement.html	createElement("\\ufffffoo") in XHTML document
+dom/nodes/Document-createElement.html	createElement("\\ufffffoo") in XML document
 dom/nodes/Document-createElement.html	createElement("f1oo") in XHTML document
 dom/nodes/Document-createElement.html	createElement("f1oo") in XML document
 dom/nodes/Document-createElement.html	createElement("f::oo") in XHTML document
@@ -560,8 +559,8 @@ dom/nodes/Document-createElement.html	createElement("f:oo") in XHTML document
 dom/nodes/Document-createElement.html	createElement("f:oo") in XML document
 dom/nodes/Document-createElement.html	createElement("f<oo") in XHTML document
 dom/nodes/Document-createElement.html	createElement("f<oo") in XML document
-dom/nodes/Document-createElement.html	createElement("f\uffffoo") in XHTML document
-dom/nodes/Document-createElement.html	createElement("f\uffffoo") in XML document
+dom/nodes/Document-createElement.html	createElement("f\\uffffoo") in XHTML document
+dom/nodes/Document-createElement.html	createElement("f\\uffffoo") in XML document
 dom/nodes/Document-createElement.html	createElement("fo o") in XHTML document
 dom/nodes/Document-createElement.html	createElement("fo o") in XML document
 dom/nodes/Document-createElement.html	createElement("foo") in XHTML document
@@ -580,8 +579,8 @@ dom/nodes/Document-createElement.html	createElement("foo:ெ") in XHTML document
 dom/nodes/Document-createElement.html	createElement("foo:ெ") in XML document
 dom/nodes/Document-createElement.html	createElement("foo>") in XHTML document
 dom/nodes/Document-createElement.html	createElement("foo>") in XML document
-dom/nodes/Document-createElement.html	createElement("foo\uffff") in XHTML document
-dom/nodes/Document-createElement.html	createElement("foo\uffff") in XML document
+dom/nodes/Document-createElement.html	createElement("foo\\uffff") in XHTML document
+dom/nodes/Document-createElement.html	createElement("foo\\uffff") in XML document
 dom/nodes/Document-createElement.html	createElement("foo}") in XHTML document
 dom/nodes/Document-createElement.html	createElement("foo}") in XML document
 dom/nodes/Document-createElement.html	createElement("fooெ") in XHTML document
@@ -718,8 +717,8 @@ dom/nodes/Node-replaceChild.html	Should check the 'parent' type before checking 
 dom/nodes/ParentNode-querySelector-All-content.html	-
 dom/nodes/ParentNode-querySelector-All.html	-
 dom/nodes/ParentNode-querySelector-basic-has.html	Basic :has() support in querySelector
-dom/nodes/ParentNode-querySelector-escapes.html	"\ud83dsurrogateFirst" should never match with "#\\d83d surrogateFirst"
-dom/nodes/ParentNode-querySelector-escapes.html	"surrogateSecond\udd11" should never match with "#surrogateSecond\\dd11"
+dom/nodes/ParentNode-querySelector-escapes.html	"\\ud83dsurrogateFirst" should never match with "#\\\\d83d surrogateFirst"
+dom/nodes/ParentNode-querySelector-escapes.html	"surrogateSecond\\udd11" should never match with "#surrogateSecond\\\\dd11"
 dom/nodes/ParentNode-querySelector-host-pseudo-class.html	Using :host pseudo-class selector in shadow DOM
 dom/nodes/ParentNode-querySelectorAll-nested-not-has.html	querySelectorAll with :not(:has(..))
 dom/nodes/ParentNode-querySelectorAll-scope-change.html	Change the scope of querySelectorAll

@@ -217,7 +217,6 @@ html/dom/documents/resource-metadata-management/document-lastModified-01.html	Da
 html/dom/documents/resource-metadata-management/document-lastModified-01.html	Date returned by lastModified is current at page load
 html/dom/documents/resource-metadata-management/document-lastModified-01.html	Date returned by lastModified is in the form "MM/DD/YYYY hh:mm:ss".
 html/dom/documents/resource-metadata-management/document-lastModified.html	lastModified should return the last modified date and time
-html/dom/documents/resource-metadata-management/load-event-after-readystatechange-starts-load.html	-
 html/dom/elements/elements-in-the-dom/click-in-progress-flag.html	elements respect 'click in progress' flag
 html/dom/elements/global-attributes/cdata-dir_auto.html	-
 html/dom/elements/global-attributes/cdata-dir_auto.html	Content of CDATA is ignored for dir=auto in html document
@@ -627,9 +626,7 @@ html/dom/partial-updates/tentative/fragment/src-streaming.html	-
 html/dom/partial-updates/tentative/fragment/src-streaming.html	External template src streams progressively into target
 html/dom/partial-updates/tentative/fragment/streaming-target-marker-removed.html	Streaming target end marker can be removed mid-stream safely, falling back to appending
 html/dom/partial-updates/tentative/stream-append-has-invalidation.html	HTML partial updates - :has invalidation with streaming
-html/dom/partial-updates/tentative/stream-append-positional-pseudo-class-invalidation.html	
-  HTML partial updates - positional pseudo class invalidation with streaming
-
+html/dom/partial-updates/tentative/stream-append-positional-pseudo-class-invalidation.html	\n  HTML partial updates - positional pseudo class invalidation with streaming\n
 html/dom/partial-updates/tentative/stream-append-with-template-for.html	streamHTML methods can apply template with for
 html/dom/partial-updates/tentative/template-for-case-sensitive-dom-inserted.html	marker/end/start PI targets are parsed as lower case, but attributes are case-sensitive
 html/dom/partial-updates/tentative/template-for-case-sensitive.html	marker/end/start PI targets, attributes and their values are case-sensitive
@@ -737,7 +734,6 @@ html/dom/render-blocking/script-inserted-style-element.html	Render-blocking styl
 html/dom/render-blocking/script-inserted-style-element.html	Rendering is blocked before render-blocking resources are loaded
 html/dom/render-blocking/script-inserted-stylesheet-link.html	Rendering is blocked before render-blocking resources are loaded
 html/dom/self-origin.sub.html	-
-html/dom/self-origin.sub.html	Assigning blob url
 html/dom/self-origin.sub.html	Should have the right origin for IDN subframe
 html/dom/self-origin.sub.html	Should have the right origin for IDN subframe after setting document.domain
 html/dom/self-origin.sub.html	Should have the right origin for cross-origin subframe

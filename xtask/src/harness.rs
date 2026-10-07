@@ -546,8 +546,9 @@ fn load_expectations(path: &Path) -> Result<Expectations> {
         return Ok(out);
     }
     let text = fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
-    for line in text.lines().map(str::trim) {
-        if line.is_empty() || line.starts_with('#') {
+    // Keys keep their trailing spaces: subtest names may end in one.
+    for line in text.lines().map(|l| l.trim_end_matches('\r')) {
+        if line.trim().is_empty() || line.starts_with('#') {
             continue;
         }
         match line.strip_prefix("skip ") {
@@ -563,8 +564,14 @@ fn load_expectations(path: &Path) -> Result<Expectations> {
 }
 
 /// A failing result's key in an expectation file: the test path, and
-/// the subtest after a tab (`-` for the harness itself).
+/// the subtest after a tab (`-` for the harness itself), with the
+/// subtest's line breaks and tabs escaped so that a key is one line.
 fn key(test: &str, subtest: &str) -> String {
+    let subtest = subtest
+        .replace('\\', "\\\\")
+        .replace('\n', "\\n")
+        .replace('\r', "\\r")
+        .replace('\t', "\\t");
     format!("{test}\t{subtest}")
 }
 

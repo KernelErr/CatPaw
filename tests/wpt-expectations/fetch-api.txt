@@ -44,7 +44,6 @@ fetch/api/abort/general.any.html	response.text() rejects if already aborted
 fetch/api/abort/general.any.html	response.text() rejects with abort reason if already aborted
 fetch/api/abort/keepalive.html	aborting a detached keepalive fetch should not do anything
 fetch/api/abort/keepalive.html	aborting a keepalive fetch should work
-fetch/api/abort/request.any.html	-
 fetch/api/abort/serviceworker-intercepted.https.html	Abort reason serialization happens on abort
 fetch/api/abort/serviceworker-intercepted.https.html	Already aborted request does not land in service worker
 fetch/api/abort/serviceworker-intercepted.https.html	Service Worker can observe the fetch abort and associated abort reason
@@ -88,10 +87,6 @@ fetch/api/basic/error-after-response.any.html	Response reader read() promise sho
 fetch/api/basic/fetch-in-popup-from-iframe.html	Fetch from initial empty document in popup opened from iframe
 fetch/api/basic/gc.any.html	GC/CC should not abruptly close the stream while being consumed by Response
 fetch/api/basic/gc.any.html	GC/CC should not discard a FormData body's Blob before its stream is read
-fetch/api/basic/gc.any.html	GC/CC should not discard a Request's FormData body Blob before it is read
-fetch/api/basic/gc.any.html	GC/CC should not discard a Response's FormData body Blob before it is read
-fetch/api/basic/gc.any.html	GC/CC should not discard a cloned FormData body's Blob before it is read
-fetch/api/basic/gc.any.html	GC/CC should not discard a moved FormData body's Blob before it is read
 fetch/api/basic/header-value-combining.any.html	response.headers.get('content-length') expects 0
 fetch/api/basic/header-value-combining.any.html	response.headers.get('content-length') expects 0, 0
 fetch/api/basic/header-value-combining.any.html	response.headers.get('double-trouble') expects , 
@@ -138,15 +133,30 @@ fetch/api/basic/request-forbidden-headers.any.html	header x-method-override is a
 fetch/api/basic/request-headers-case.any.html	Multiple headers with the same name, different case (THIS-IS-A-TEST first)
 fetch/api/basic/request-headers-case.any.html	Multiple headers with the same name, different case (THIS-is-A-test first)
 fetch/api/basic/request-headers-nonascii.any.html	Non-ascii bytes in request headers
-fetch/api/basic/request-headers.any.html	-
+fetch/api/basic/request-headers.any.html	Fetch with Chicken
+fetch/api/basic/request-headers.any.html	Fetch with Chicken with body
 fetch/api/basic/request-headers.any.html	Fetch with GET
 fetch/api/basic/request-headers.any.html	Fetch with HEAD
+fetch/api/basic/request-headers.any.html	Fetch with POST and mode "no-cors" needs an Origin header
+fetch/api/basic/request-headers.any.html	Fetch with POST and mode "same-origin" needs an Origin header
+fetch/api/basic/request-headers.any.html	Fetch with POST with ArrayBuffer body
+fetch/api/basic/request-headers.any.html	Fetch with POST with Blob body
+fetch/api/basic/request-headers.any.html	Fetch with POST with Blob body with mime type
+fetch/api/basic/request-headers.any.html	Fetch with POST with DataView body
+fetch/api/basic/request-headers.any.html	Fetch with POST with Float16Array body
+fetch/api/basic/request-headers.any.html	Fetch with POST with Float32Array body
+fetch/api/basic/request-headers.any.html	Fetch with POST with Float64Array body
 fetch/api/basic/request-headers.any.html	Fetch with POST with FormData body
+fetch/api/basic/request-headers.any.html	Fetch with POST with Int8Array body
 fetch/api/basic/request-headers.any.html	Fetch with POST with URLSearchParams body
+fetch/api/basic/request-headers.any.html	Fetch with POST with Uint8Array body
 fetch/api/basic/request-headers.any.html	Fetch with POST with text body
 fetch/api/basic/request-headers.any.html	Fetch with POST without body
+fetch/api/basic/request-headers.any.html	Fetch with PUT and mode "same-origin" needs an Origin header
 fetch/api/basic/request-headers.any.html	Fetch with PUT with body
 fetch/api/basic/request-headers.any.html	Fetch with PUT without body
+fetch/api/basic/request-headers.any.html	Fetch with TacO and mode "cors" needs an Origin header
+fetch/api/basic/request-headers.any.html	Fetch with TacO and mode "same-origin" needs an Origin header
 fetch/api/basic/request-referrer-redirected-worker.html	-
 fetch/api/basic/request-referrer.any.html	about:client referrer
 fetch/api/basic/request-referrer.any.html	url referrer
@@ -182,7 +192,13 @@ fetch/api/basic/response-null-body.any.html	Response.body is null for responses 
 fetch/api/basic/response-null-body.any.html	Response.body is null for responses with status=304 (method=GET)
 fetch/api/basic/response-null-body.any.html	Response.body is null for responses with status=304 (method=OPTIONS)
 fetch/api/basic/response-null-body.any.html	Response.body is null for responses with status=304 (method=POST)
-fetch/api/basic/scheme-blob.sub.any.html	-
+fetch/api/basic/scheme-blob.sub.any.html	Fetching URL.createObjectURL(invalid_type_blob) is OK
+fetch/api/basic/scheme-blob.sub.any.html	Fetching [DELETE] URL.createObjectURL(blob) is KO
+fetch/api/basic/scheme-blob.sub.any.html	Fetching [HEAD] URL.createObjectURL(blob) is KO
+fetch/api/basic/scheme-blob.sub.any.html	Fetching [INVALID] URL.createObjectURL(blob) is KO
+fetch/api/basic/scheme-blob.sub.any.html	Fetching [OPTIONS] URL.createObjectURL(blob) is KO
+fetch/api/basic/scheme-blob.sub.any.html	Fetching [POST] URL.createObjectURL(blob) is KO
+fetch/api/basic/scheme-blob.sub.any.html	Fetching [PUT] URL.createObjectURL(blob) is KO
 fetch/api/basic/scheme-data.any.html	Fetching [HEAD] data:,response%27s%20body is OK
 fetch/api/basic/status.h2.any.html	statusText over H2 for status 200 should be the empty string
 fetch/api/basic/status.h2.any.html	statusText over H2 for status 210 should be the empty string
@@ -204,20 +220,6 @@ fetch/api/basic/text-utf8.any.html	UTF-8 with BOM with fetched data (UTF-8 chars
 fetch/api/basic/text-utf8.any.html	UTF-8 without BOM with fetched data (UTF-16 charset)
 fetch/api/basic/text-utf8.any.html	UTF-8 without BOM with fetched data (UTF-8 charset)
 fetch/api/basic/url-parsing.sub.html	Request's referrer uses the UTF-8 URL parser
-fetch/api/body/formdata.any.html	Consume empty request.formData() as FormData
-fetch/api/body/formdata.any.html	Consume empty response.formData() as FormData
-fetch/api/body/formdata.any.html	Consume multipart/form-data headers case-insensitively
-fetch/api/body/mime-type.any.html	-
-fetch/api/body/mime-type.any.html	Request: MIME type for Blob from empty body
-fetch/api/body/mime-type.any.html	Request: MIME type for Blob from empty body with Content-Type
-fetch/api/body/mime-type.any.html	Request: overriding explicit Content-Type
-fetch/api/body/mime-type.any.html	Request: removing implicit Content-Type
-fetch/api/body/mime-type.any.html	Request: setting missing Content-Type
-fetch/api/body/mime-type.any.html	Response: MIME type for Blob from empty body
-fetch/api/body/mime-type.any.html	Response: MIME type for Blob from empty body with Content-Type
-fetch/api/body/mime-type.any.html	Response: overriding explicit Content-Type
-fetch/api/body/mime-type.any.html	Response: removing implicit Content-Type
-fetch/api/body/mime-type.any.html	Response: setting missing Content-Type
 fetch/api/body/textstream.any.html	Request.textStream() basic functionality
 fetch/api/body/textstream.any.html	Request.textStream() ignores Content-Type charset (UTF-16LE)
 fetch/api/body/textstream.any.html	Request.textStream() with null body
@@ -570,80 +572,74 @@ fetch/api/headers/headers-basic.any.html	Removing elements already iterated over
 fetch/api/headers/headers-errors.any.html	Check headers append with an invalid value invalidĀ
 fetch/api/headers/headers-errors.any.html	Check headers set with an invalid value invalidĀ
 fetch/api/headers/headers-errors.any.html	Create headers giving bad header value as init argument
-fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value 	track
-fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value 
-connect
-fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value trace
 fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value  connect
 fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value CONNECT
 fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value GET,track 
 fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value TRACE
 fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value TRACK
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value \nconnect
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value \rtrace
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value \ttrack
 fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value connect
 fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value trace
 fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value trace,
 fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD is forbidden to use value track
-fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value 	track
-fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value 
-connect
-fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value trace
 fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value  connect
 fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value CONNECT
 fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value GET,track 
 fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value TRACE
 fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value TRACK
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value \nconnect
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value \rtrace
+fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value \ttrack
 fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value connect
 fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value trace
 fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value trace,
 fetch/api/headers/headers-forbidden-override.any.html	header X-HTTP-METHOD-OVERRIDE is forbidden to use value track
-fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value 	track
-fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value 
-connect
-fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value trace
 fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value  connect
 fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value CONNECT
 fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value GET,track 
 fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value TRACE
 fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value TRACK
+fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value \nconnect
+fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value \rtrace
+fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value \ttrack
 fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value connect
 fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value trace
 fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value trace,
 fetch/api/headers/headers-forbidden-override.any.html	header X-METHOD-OVERRIDE is forbidden to use value track
-fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value 	track
-fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value 
-connect
-fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value trace
 fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value  connect
 fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value CONNECT
 fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value GET,track 
 fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value TRACE
 fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value TRACK
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value \nconnect
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value \rtrace
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value \ttrack
 fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value connect
 fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value trace
 fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value trace,
 fetch/api/headers/headers-forbidden-override.any.html	header x-http-method is forbidden to use value track
-fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value 	track
-fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value 
-connect
-fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value trace
 fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value  connect
 fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value CONNECT
 fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value GET,track 
 fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value TRACE
 fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value TRACK
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value \nconnect
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value \rtrace
+fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value \ttrack
 fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value connect
 fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value trace
 fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value trace,
 fetch/api/headers/headers-forbidden-override.any.html	header x-http-method-override is forbidden to use value track
-fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value 	track
-fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value 
-connect
-fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value trace
 fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value  connect
 fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value CONNECT
 fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value GET,track 
 fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value TRACE
 fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value TRACK
+fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value \nconnect
+fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value \rtrace
+fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value \ttrack
 fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value connect
 fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value trace
 fetch/api/headers/headers-forbidden-override.any.html	header x-method-override is forbidden to use value trace,
@@ -768,7 +764,20 @@ fetch/api/redirect/redirect-location.any.html	Redirect 308 in "manual" mode with
 fetch/api/redirect/redirect-location.any.html	Redirect 308 in "manual" mode with invalid location
 fetch/api/redirect/redirect-location.any.html	Redirect 308 in "manual" mode with valid location
 fetch/api/redirect/redirect-location.any.html	Redirect 308 in "manual" mode without location
-fetch/api/redirect/redirect-method.any.html	-
+fetch/api/redirect/redirect-method.any.html	Redirect 301 with GET
+fetch/api/redirect/redirect-method.any.html	Redirect 301 with HEAD
+fetch/api/redirect/redirect-method.any.html	Redirect 301 with POST
+fetch/api/redirect/redirect-method.any.html	Redirect 302 with GET
+fetch/api/redirect/redirect-method.any.html	Redirect 302 with HEAD
+fetch/api/redirect/redirect-method.any.html	Redirect 302 with POST
+fetch/api/redirect/redirect-method.any.html	Redirect 303 with GET
+fetch/api/redirect/redirect-method.any.html	Redirect 303 with HEAD
+fetch/api/redirect/redirect-method.any.html	Redirect 303 with POST
+fetch/api/redirect/redirect-method.any.html	Redirect 303 with TESTING
+fetch/api/redirect/redirect-method.any.html	Redirect 307 with GET
+fetch/api/redirect/redirect-method.any.html	Redirect 307 with HEAD
+fetch/api/redirect/redirect-method.any.html	Redirect 307 with POST (blob body)
+fetch/api/redirect/redirect-method.any.html	Redirect 307 with POST (string body)
 fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 301 in error redirect and cors mode
 fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 301 in error redirect and no-cors mode
 fetch/api/redirect/redirect-mode.any.html	cross-origin redirect 301 in follow redirect and cors mode
@@ -1042,13 +1051,9 @@ fetch/api/request/request-cache-reload.any.html	-
 fetch/api/request/request-clone-readable-stream-body.any.html	new Request(clone) preserves a ReadableStream body that came from clone()
 fetch/api/request/request-constructor-init-body-override.any.html	Check that the body of a new request can be duplicated from an existing Request object
 fetch/api/request/request-constructor-init-body-override.any.html	Check that the body of a new request can be overridden when created from an existing Request object
-fetch/api/request/request-consume-empty.any.html	-
-fetch/api/request/request-consume-empty.any.html	Consume request's body as blob
-fetch/api/request/request-consume-empty.any.html	Consume request's body as formData with correct multipart type (error case)
-fetch/api/request/request-consume-empty.any.html	Consume request's body as formData with correct urlencoded type
-fetch/api/request/request-consume-empty.any.html	Consume request's body as formData without correct type (error case)
-fetch/api/request/request-consume.any.html	-
-fetch/api/request/request-disturbed.any.html	-
+fetch/api/request/request-consume-empty.any.html	Consume empty FormData request body as text
+fetch/api/request/request-disturbed.any.html	Check creating a new request with a new body from a disturbed request
+fetch/api/request/request-disturbed.any.html	Request construction failure should not set "bodyUsed"
 fetch/api/request/request-error.any.html	Request with cache mode: only-if-cached and fetch mode cors
 fetch/api/request/request-error.any.html	Request with cache mode: only-if-cached and fetch mode no-cors
 fetch/api/request/request-error.any.html	RequestInit's cache mode is only-if-cached and mode is not same-origin
@@ -1091,19 +1096,9 @@ fetch/api/request/request-headers.any.html	Adding invalid request header "proxy-
 fetch/api/request/request-headers.any.html	Adding invalid request header "sec-b: KO"
 fetch/api/request/request-headers.any.html	Check that no-cors request constructor is filtering headers provided as init parameter
 fetch/api/request/request-headers.any.html	Check that no-cors request constructor is filtering headers provided as part of request parameter
-fetch/api/request/request-headers.any.html	Testing empty Request Content-Type header
 fetch/api/request/request-init-001.sub.html	Check referrer init value of /relative/ressource and associated getter
 fetch/api/request/request-init-001.sub.html	Check referrer init value of http://test.url and associated getter
-fetch/api/request/request-init-002.any.html	-
-fetch/api/request/request-init-contenttype.any.html	Can override Content-Type for Request with Blob body (empty type)
-fetch/api/request/request-init-contenttype.any.html	Can override Content-Type for Request with Blob body (no type set)
-fetch/api/request/request-init-contenttype.any.html	Can override Content-Type for Request with Blob body (set type)
-fetch/api/request/request-init-contenttype.any.html	Can override Content-Type for Request with FormData body
 fetch/api/request/request-init-contenttype.any.html	Can override Content-Type for Request with ReadableStream body
-fetch/api/request/request-init-contenttype.any.html	Default Content-Type for Request with Blob body (empty type)
-fetch/api/request/request-init-contenttype.any.html	Default Content-Type for Request with Blob body (no type set)
-fetch/api/request/request-init-contenttype.any.html	Default Content-Type for Request with Blob body (set type)
-fetch/api/request/request-init-contenttype.any.html	Default Content-Type for Request with FormData body
 fetch/api/request/request-init-contenttype.any.html	Default Content-Type for Request with ReadableStream body
 fetch/api/request/request-init-priority.any.html	fetch() with an invalid priority returns a rejected promise with a TypeError
 fetch/api/request/request-init-stream.any.html	-
@@ -1111,11 +1106,8 @@ fetch/api/request/request-init-stream.any.html	Constructing a Request with a Req
 fetch/api/request/request-init-stream.any.html	Constructing a Request with a Request on which body.getReader().read() is called
 fetch/api/request/request-init-stream.any.html	Constructing a Request with a Request on which read() and releaseLock() are called
 fetch/api/request/request-init-stream.any.html	Constructing a Request with a stream holds the original object.
-fetch/api/request/request-init-stream.any.html	It is OK to omit .duplex when the body is a Blob.
 fetch/api/request/request-init-stream.any.html	It is OK to omit duplex when init.body is not given and input.body is given.
-fetch/api/request/request-init-stream.any.html	It is OK to set .duplex = 'half' when the body is a Blob.
 fetch/api/request/request-init-stream.any.html	It is OK to set .duplex = 'half' when the body is a ReadableStream.
-fetch/api/request/request-init-stream.any.html	It is error to set .duplex = 'full' when the body is a Blob.
 fetch/api/request/request-keepalive-quota.html	A Keep-Alive fetch() should not be allowed if the Quota is used up.
 fetch/api/request/request-keepalive-quota.html	A Keep-Alive fetch() should return only its allocated Quota upon promise resolution.
 fetch/api/request/request-keepalive-quota.html	A Keep-Alive fetch() with a body over the Quota Limit should reject.
@@ -1125,8 +1117,6 @@ fetch/api/request/request-reset-attributes.https.html	Request.mode is reset with
 fetch/api/request/request-structure.any.html	Check duplex attribute
 fetch/api/request/request-structure.any.html	Check isHistoryNavigation attribute
 fetch/api/request/request-structure.any.html	Check isReloadNavigation attribute
-fetch/api/request/request-structure.any.html	Request has blob method
-fetch/api/request/request-structure.any.html	Request has formData method
 fetch/api/response/many-empty-chunks-crash.html	-
 fetch/api/response/multi-globals/current/current.html	-
 fetch/api/response/multi-globals/incumbent/incumbent.html	-
@@ -1138,9 +1128,6 @@ fetch/api/response/response-blob-realm.any.html	-
 fetch/api/response/response-blob-realm.any.html	realm of the Uint8Array from Response bytes()
 fetch/api/response/response-body-read-task-handling.html	-
 fetch/api/response/response-body-stashed-chunk.html	Response body: chunks stashed while the source is not pulling are delivered on the next pull
-fetch/api/response/response-cancel-stream.any.html	Cancelling a closed blob Response stream
-fetch/api/response/response-cancel-stream.any.html	Cancelling a loading blob Response stream
-fetch/api/response/response-cancel-stream.any.html	Cancelling a starting blob Response stream
 fetch/api/response/response-clone-iframe.window.html	-
 fetch/api/response/response-clone-iframe.window.html	clone within removed iframe should not crash
 fetch/api/response/response-clone.any.html	Cancelling stream should not affect cloned one
@@ -1159,14 +1146,24 @@ fetch/api/response/response-clone.any.html	Check response clone use structureClo
 fetch/api/response/response-clone.any.html	Check response clone use structureClone for teed ReadableStreams (Uint8Arraychunk)
 fetch/api/response/response-clone.any.html	Check response clone use structureClone for teed ReadableStreams (Uint8ClampedArraychunk)
 fetch/api/response/response-clone.any.html	Cloned responses should provide the same data
-fetch/api/response/response-consume-empty.any.html	-
-fetch/api/response/response-consume-empty.any.html	Consume response's body as blob
-fetch/api/response/response-consume-empty.any.html	Consume response's body as formData with correct multipart type (error case)
-fetch/api/response/response-consume-empty.any.html	Consume response's body as formData with correct urlencoded type
-fetch/api/response/response-consume-empty.any.html	Consume response's body as formData without correct type (error case)
-fetch/api/response/response-consume-stream.any.html	-
-fetch/api/response/response-consume-stream.any.html	Read empty blob response's body as readableStream
+fetch/api/response/response-consume-empty.any.html	Consume empty FormData response body as text
+fetch/api/response/response-consume-stream.any.html	Read URLSearchParams response's body as readableStream with mode=byob
+fetch/api/response/response-consume-stream.any.html	Read array buffer response's body as readableStream with mode=byob
+fetch/api/response/response-consume-stream.any.html	Read blob response's body as readableStream with mode=byob
+fetch/api/response/response-consume-stream.any.html	Read form data response's body as readableStream with mode=byob
+fetch/api/response/response-consume-stream.any.html	Read text response's body as readableStream with mode=byob
+fetch/api/response/response-consume-stream.any.html	Reading with offset from Response stream
 fetch/api/response/response-consume.html	-
+fetch/api/response/response-consume.html	Consume response's body: from fetch to blob
+fetch/api/response/response-consume.html	Consume response's body: from multipart form data blob to formData
+fetch/api/response/response-consume.html	Consume response's body: from stream to arrayBuffer
+fetch/api/response/response-consume.html	Consume response's body: from stream to blob
+fetch/api/response/response-consume.html	Consume response's body: from stream to json
+fetch/api/response/response-consume.html	Consume response's body: from stream to text
+fetch/api/response/response-consume.html	Consume response's body: from stream with correct multipart type to formData
+fetch/api/response/response-consume.html	Consume response's body: from stream with correct urlencoded type to formData
+fetch/api/response/response-consume.html	Consume response's body: from stream without correct multipart type to formData (error case)
+fetch/api/response/response-consume.html	Consume response's body: from stream without correct urlencoded type to formData (error case)
 fetch/api/response/response-error-from-stream.any.html	-
 fetch/api/response/response-error-from-stream.any.html	ReadableStream pull() Error propagates to Response.arrayBuffer() Promise
 fetch/api/response/response-error-from-stream.any.html	ReadableStream pull() Error propagates to Response.blob() Promise
@@ -1181,31 +1178,9 @@ fetch/api/response/response-error-from-stream.any.html	ReadableStream start() Er
 fetch/api/response/response-error-from-stream.any.html	ReadableStream start() Error propagates to Response.json() Promise
 fetch/api/response/response-error-from-stream.any.html	ReadableStream start() Error propagates to Response.text() Promise
 fetch/api/response/response-error.any.html	Throws TypeError when responseInit's statusText is Ā
-fetch/api/response/response-form-data.html	Empty form data
-fetch/api/response/response-form-data.html	Validate buggy form data - boundary
-fetch/api/response/response-form-data.html	Validate buggy form data - cr1
-fetch/api/response/response-form-data.html	Validate buggy form data - cr2
-fetch/api/response/response-form-data.html	Validate buggy form data - cr3
-fetch/api/response/response-form-data.html	Validate buggy form data - cr_
-fetch/api/response/response-form-data.html	Validate buggy form data - dashes
 fetch/api/response/response-form-data.html	Validate buggy form data - empty
-fetch/api/response/response-form-data.html	Validate form data - onePartWithEpilogue
-fetch/api/response/response-form-data.html	Validate form data - onePartWithTransportPadding
-fetch/api/response/response-form-data.html	Validate form data - onePartWithoutEpilogue
-fetch/api/response/response-form-data.html	Validate form data - twoPartsWithEpilogue
-fetch/api/response/response-form-data.html	Validate form data - twoPartsWithTransportPadding
-fetch/api/response/response-form-data.html	Validate form data - twoPartsWithoutEpilogue
 fetch/api/response/response-from-stream.any.html	-
-fetch/api/response/response-init-002.any.html	-
-fetch/api/response/response-init-contenttype.any.html	Can override Content-Type for Response with Blob body (empty type)
-fetch/api/response/response-init-contenttype.any.html	Can override Content-Type for Response with Blob body (no type set)
-fetch/api/response/response-init-contenttype.any.html	Can override Content-Type for Response with Blob body (set type)
-fetch/api/response/response-init-contenttype.any.html	Can override Content-Type for Response with FormData body
 fetch/api/response/response-init-contenttype.any.html	Can override Content-Type for Response with ReadableStream body
-fetch/api/response/response-init-contenttype.any.html	Default Content-Type for Response with Blob body (empty type)
-fetch/api/response/response-init-contenttype.any.html	Default Content-Type for Response with Blob body (no type set)
-fetch/api/response/response-init-contenttype.any.html	Default Content-Type for Response with Blob body (set type)
-fetch/api/response/response-init-contenttype.any.html	Default Content-Type for Response with FormData body
 fetch/api/response/response-init-contenttype.any.html	Default Content-Type for Response with ReadableStream body
 fetch/api/response/response-static-json.any.html	Check response returned by static json() with input U+dead
 fetch/api/response/response-static-json.any.html	Check response returned by static json() with input U+df06U+d834
@@ -1217,27 +1192,19 @@ fetch/api/response/response-stream-bad-chunk.any.html	ReadableStream with non-Ui
 fetch/api/response/response-stream-bad-chunk.any.html	ReadableStream with non-Uint8Array chunk passed to Response.text() causes TypeError
 fetch/api/response/response-stream-disturbed-1.any.html	-
 fetch/api/response/response-stream-disturbed-1.any.html	Getting arrayBuffer after getting the Response body - not disturbed, not locked (body source: stream)
-fetch/api/response/response-stream-disturbed-1.any.html	Getting blob after getting the Response body - not disturbed, not locked (body source: fetch)
 fetch/api/response/response-stream-disturbed-1.any.html	Getting blob after getting the Response body - not disturbed, not locked (body source: stream)
-fetch/api/response/response-stream-disturbed-1.any.html	Getting blob after getting the Response body - not disturbed, not locked (body source: string)
 fetch/api/response/response-stream-disturbed-1.any.html	Getting json after getting the Response body - not disturbed, not locked (body source: stream)
 fetch/api/response/response-stream-disturbed-1.any.html	Getting text after getting the Response body - not disturbed, not locked (body source: stream)
 fetch/api/response/response-stream-disturbed-2.any.html	Getting arrayBuffer after getting a locked Response body (body source: stream)
-fetch/api/response/response-stream-disturbed-2.any.html	Getting blob after getting a locked Response body (body source: fetch)
 fetch/api/response/response-stream-disturbed-2.any.html	Getting blob after getting a locked Response body (body source: stream)
-fetch/api/response/response-stream-disturbed-2.any.html	Getting blob after getting a locked Response body (body source: string)
 fetch/api/response/response-stream-disturbed-2.any.html	Getting json after getting a locked Response body (body source: stream)
 fetch/api/response/response-stream-disturbed-2.any.html	Getting text after getting a locked Response body (body source: stream)
 fetch/api/response/response-stream-disturbed-3.any.html	Getting arrayBuffer after reading the Response body (body source: stream)
-fetch/api/response/response-stream-disturbed-3.any.html	Getting blob after reading the Response body (body source: fetch)
 fetch/api/response/response-stream-disturbed-3.any.html	Getting blob after reading the Response body (body source: stream)
-fetch/api/response/response-stream-disturbed-3.any.html	Getting blob after reading the Response body (body source: string)
 fetch/api/response/response-stream-disturbed-3.any.html	Getting json after reading the Response body (body source: stream)
 fetch/api/response/response-stream-disturbed-3.any.html	Getting text after reading the Response body (body source: stream)
 fetch/api/response/response-stream-disturbed-4.any.html	Getting arrayBuffer after cancelling the Response body (body source: stream)
-fetch/api/response/response-stream-disturbed-4.any.html	Getting blob after cancelling the Response body (body source: fetch)
 fetch/api/response/response-stream-disturbed-4.any.html	Getting blob after cancelling the Response body (body source: stream)
-fetch/api/response/response-stream-disturbed-4.any.html	Getting blob after cancelling the Response body (body source: string)
 fetch/api/response/response-stream-disturbed-4.any.html	Getting json after cancelling the Response body (body source: stream)
 fetch/api/response/response-stream-disturbed-4.any.html	Getting text after cancelling the Response body (body source: stream)
 fetch/api/response/response-stream-disturbed-5.any.html	Getting a body reader after consuming as arrayBuffer (body source: fetch)

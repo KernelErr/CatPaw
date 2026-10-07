@@ -114,6 +114,8 @@ xhr/cors-expose-star.sub.any.html	* can be one of several values
 xhr/cors-expose-star.sub.any.html	* for credentialed fetches only matches literally
 xhr/cors-expose-star.sub.any.html	Basic Access-Control-Expose-Headers: * support
 xhr/cors-upload.any.html	-
+xhr/cors-upload.any.html	Cross-Origin POST FormData body but no preflight
+xhr/cors-upload.any.html	Cross-Origin POST with preflight and FormData body
 xhr/data-uri.htm	XHR method HEAD with MIME type text/plain
 xhr/event-error-order.sub.html	XMLHttpRequest: event - error (order of events)
 xhr/event-error.sub.any.html	-
@@ -129,79 +131,29 @@ xhr/event-upload-progress.any.html	Upload events registered on time (http://www1
 xhr/event-upload-progress.any.html	Upload events registered on time (resources/redirect.py?code=307&location=http://www1.web-platform.test:8000/xhr/resources/corsenabled.py)
 xhr/firing-events-http-content-length.html	ProgressEvent: firing events for HTTP with Content-Length
 xhr/firing-events-http-no-content-length.html	ProgressEvent: firing events for HTTP with no Content-Length
-xhr/formdata.html	-
-xhr/formdata/append-formelement.html	testFormDataAppendToForm1
-xhr/formdata/append-formelement.html	testFormDataAppendToForm2
-xhr/formdata/append-formelement.html	testFormDataAppendToFormNull1
-xhr/formdata/append-formelement.html	testFormDataAppendToFormNull2
+xhr/formdata.html	Newly created FormData contains entries added to "formData" IDL attribute of FormDataEvent.
+xhr/formdata.html	empty formdata
+xhr/formdata.html	formdata from form
+xhr/formdata.html	formdata with blob
+xhr/formdata.html	formdata with named blob
+xhr/formdata.html	formdata with named string
+xhr/formdata.html	formdata with string
+xhr/formdata.html	|new FormData()| in formdata event handler should throw
 xhr/formdata/append-formelement.html	testFormDataAppendToFormString
-xhr/formdata/append-formelement.html	testFormDataAppendToFormUndefined1
-xhr/formdata/append-formelement.html	testFormDataAppendToFormUndefined2
 xhr/formdata/append-formelement.html	testFormDataAppendToFormWrongPlatformObject
-xhr/formdata/append.any.html	testFormDataAppend1
-xhr/formdata/append.any.html	testFormDataAppend2
 xhr/formdata/append.any.html	testFormDataAppendEmptyBlob
-xhr/formdata/append.any.html	testFormDataAppendNull1
-xhr/formdata/append.any.html	testFormDataAppendNull2
-xhr/formdata/append.any.html	testFormDataAppendUndefined1
-xhr/formdata/append.any.html	testFormDataAppendUndefined2
 xhr/formdata/constructor-formelement.html	test that FormData is correctly constructed from the form data set
 xhr/formdata/constructor-submitter-coordinate.html	The constructed FormData object should contain correct entries for Image Button submitter's dispatched coordinate
-xhr/formdata/constructor-submitter.html	FormData construction should allow a null submitter
-xhr/formdata/constructor-submitter.html	FormData construction should allow an undefined form and a null submitter
-xhr/formdata/constructor-submitter.html	FormData construction should allow an undefined form and an undefined submitter
 xhr/formdata/constructor-submitter.html	FormData construction should throw a 'NotFoundError' DOMException if a non-null submitter is not owned by the form
 xhr/formdata/constructor-submitter.html	FormData construction should throw a TypeError if a non-null submitter is not a submit button
 xhr/formdata/constructor-submitter.html	The constructed FormData object should contain an in-tree-order entry for a named submit button submitter
 xhr/formdata/constructor-submitter.html	The constructed FormData object should contain in-tree-order entries for an activated Image Button submitter
 xhr/formdata/constructor-submitter.html	The constructed FormData object should contain in-tree-order entries for an unactivated Image Button submitter
-xhr/formdata/constructor-submitter.html	The constructed FormData object should not contain an entry for an unnamed submit button submitter
-xhr/formdata/constructor.any.html	Constructors should throw a type error
-xhr/formdata/delete-formelement.html	testFormDataDeleteFromEmptyForm
-xhr/formdata/delete-formelement.html	testFormDataDeleteFromForm
-xhr/formdata/delete-formelement.html	testFormDataDeleteFromFormNonExistentKey
-xhr/formdata/delete-formelement.html	testFormDataDeleteFromFormOtherKey
-xhr/formdata/delete.any.html	testFormDataDelete
-xhr/formdata/delete.any.html	testFormDataDeleteNonExistentKey
-xhr/formdata/delete.any.html	testFormDataDeleteOtherKey
-xhr/formdata/foreach.any.html	-
-xhr/formdata/get-formelement.html	testFormDataGetAllFromEmptyForm
-xhr/formdata/get-formelement.html	testFormDataGetAllFromForm
-xhr/formdata/get-formelement.html	testFormDataGetAllFromFormNull
-xhr/formdata/get-formelement.html	testFormDataGetFromEmptyForm
-xhr/formdata/get-formelement.html	testFormDataGetFromForm
-xhr/formdata/get-formelement.html	testFormDataGetFromFormNull
-xhr/formdata/get.any.html	testFormDataGet
-xhr/formdata/get.any.html	testFormDataGetAll
-xhr/formdata/get.any.html	testFormDataGetAllEmpty1
-xhr/formdata/get.any.html	testFormDataGetAllEmpty2
-xhr/formdata/get.any.html	testFormDataGetNull1
-xhr/formdata/get.any.html	testFormDataGetNull2
-xhr/formdata/has-formelement.html	testFormDataHasFromEmptyForm
-xhr/formdata/has-formelement.html	testFormDataHasFromForm
-xhr/formdata/has-formelement.html	testFormDataHasFromFormNull
-xhr/formdata/has.any.html	testFormDataHas
-xhr/formdata/has.any.html	testFormDataHasEmpty1
-xhr/formdata/has.any.html	testFormDataHasEmpty2
 xhr/formdata/iteration.any.html	Appending a value pair during iteration causes it to be reached during iteration
 xhr/formdata/iteration.any.html	Iteration skips elements removed while iterating
 xhr/formdata/iteration.any.html	Removing elements already iterated over causes an element to be skipped during iteration
-xhr/formdata/set-blob.any.html	-
-xhr/formdata/set-formelement.html	testFormDataSetToForm1
-xhr/formdata/set-formelement.html	testFormDataSetToForm2
-xhr/formdata/set-formelement.html	testFormDataSetToFormNull1
-xhr/formdata/set-formelement.html	testFormDataSetToFormNull2
 xhr/formdata/set-formelement.html	testFormDataSetToFormString
-xhr/formdata/set-formelement.html	testFormDataSetToFormUndefined1
-xhr/formdata/set-formelement.html	testFormDataSetToFormUndefined2
 xhr/formdata/set-formelement.html	testFormDataSetToFormWrongPlatformObject
-xhr/formdata/set.any.html	testFormDataSet1
-xhr/formdata/set.any.html	testFormDataSet2
-xhr/formdata/set.any.html	testFormDataSetEmptyBlob
-xhr/formdata/set.any.html	testFormDataSetNull1
-xhr/formdata/set.any.html	testFormDataSetNull2
-xhr/formdata/set.any.html	testFormDataSetUndefined1
-xhr/formdata/set.any.html	testFormDataSetUndefined2
 xhr/formdata/submitter-coordinate-value.html	dispatched event coordinates should match user intention coordinates
 xhr/getallresponseheaders-after-reuse.html	getAllResponseHeaders() must not return the previous response's headers
 xhr/getallresponseheaders-cookies.htm	XMLHttpRequest: getAllResponseHeaders() excludes cookies
@@ -229,14 +181,14 @@ xhr/headers-normalize-response.htm	Header value:
 xhr/headers-normalize-response.htm	Header value: [tab]
 xhr/headers-normalize-response.htm	Header value: [tab]hello_world
 xhr/headers-normalize-response.htm	Header value: [tab]hello_world[tab]
-xhr/headers-normalize-response.htm	Header value: \0
-xhr/headers-normalize-response.htm	Header value: \0hello world
+xhr/headers-normalize-response.htm	Header value: \\0
+xhr/headers-normalize-response.htm	Header value: \\0hello world
 xhr/headers-normalize-response.htm	Header value: ___
 xhr/headers-normalize-response.htm	Header value: __hello_world
 xhr/headers-normalize-response.htm	Header value: __hello_world__
-xhr/headers-normalize-response.htm	Header value: hello world\0
+xhr/headers-normalize-response.htm	Header value: hello world\\0
 xhr/headers-normalize-response.htm	Header value: hello[tab]world
-xhr/headers-normalize-response.htm	Header value: hello\0world
+xhr/headers-normalize-response.htm	Header value: hello\\0world
 xhr/headers-normalize-response.htm	Header value: hello______world
 xhr/headers-normalize-response.htm	Header value: hello_world[tab]
 xhr/headers-normalize-response.htm	Header value: hello_world__
@@ -319,7 +271,6 @@ xhr/preserve-ua-header-on-redirect.htm	XMLHttpRequest: User-Agent header is pres
 xhr/preserve-ua-header-on-redirect.htm	XMLHttpRequest: User-Agent header is preserved on redirect 1
 xhr/progress-events-response-data-gzip.htm	XMLHttpRequest: progress events and GZIP encoding
 xhr/progressevent-constructor.html	Default event values.
-xhr/request-content-length.any.html	Fetched blob: URLs set the Content-Length header
 xhr/request-content-length.any.html	Uploads need to set the Content-Length header
 xhr/response-body-errors.any.html	Asynchronous XMLHttpRequest should clear response on bad chunk
 xhr/response-body-errors.any.html	Synchronous XMLHttpRequest should throw on bad chunk
@@ -429,7 +380,14 @@ xhr/send-authentication-cors-setrequestheader-no-cred.htm	CORS request with setR
 xhr/send-authentication-existing-session-manual.htm	-
 xhr/send-authentication-prompt-2-manual.htm	XMLHttpRequest: WWW-Authenticate challenge when user,pass are not passed to open()
 xhr/send-authentication-prompt-manual.htm	XMLHttpRequest: send() - "Basic" authentication gets 401 response
-xhr/send-blob-with-no-mime-type.html	-
+xhr/send-blob-with-no-mime-type.html	Asynchronous blob loading with invalid mime type [POST]
+xhr/send-blob-with-no-mime-type.html	Asynchronous blob loading with invalid mime type [PUT]
+xhr/send-blob-with-no-mime-type.html	Asynchronous blob loading with no mime type [POST]
+xhr/send-blob-with-no-mime-type.html	Asynchronous blob loading with no mime type [PUT]
+xhr/send-blob-with-no-mime-type.html	Synchronous blob loading with invalid mime type [POST]
+xhr/send-blob-with-no-mime-type.html	Synchronous blob loading with invalid mime type [PUT]
+xhr/send-blob-with-no-mime-type.html	Synchronous blob loading with no mime type [POST]
+xhr/send-blob-with-no-mime-type.html	Synchronous blob loading with no mime type [PUT]
 xhr/send-conditional-cors.htm	304 with appropriate CORS header
 xhr/send-conditional-cors.htm	304 without appropriate CORS header
 xhr/send-conditional.htm	XMLHttpRequest: send() - conditional requests (date)
@@ -466,14 +424,14 @@ xhr/send-data-sharedarraybuffer.any.html	sending a Uint16Array backed by a Share
 xhr/send-data-sharedarraybuffer.any.html	sending a Uint32Array backed by a SharedArrayBuffer
 xhr/send-data-sharedarraybuffer.any.html	sending a Uint8Array backed by a SharedArrayBuffer
 xhr/send-data-sharedarraybuffer.any.html	sending a Uint8ClampedArray backed by a SharedArrayBuffer
-xhr/send-data-string-invalid-unicode.any.html	invalid unicode '\u{d83d}' should be fixed with replacement character
-xhr/send-data-string-invalid-unicode.any.html	invalid unicode '\u{d83d}ab' should be fixed with replacement character
-xhr/send-data-string-invalid-unicode.any.html	invalid unicode '\u{dc94}' should be fixed with replacement character
-xhr/send-data-string-invalid-unicode.any.html	invalid unicode '\u{dc94}ab' should be fixed with replacement character
-xhr/send-data-string-invalid-unicode.any.html	invalid unicode 'a\u{d83d}b' should be fixed with replacement character
-xhr/send-data-string-invalid-unicode.any.html	invalid unicode 'a\u{dc94}b' should be fixed with replacement character
-xhr/send-data-string-invalid-unicode.any.html	invalid unicode 'ab\u{d83d}' should be fixed with replacement character
-xhr/send-data-string-invalid-unicode.any.html	invalid unicode 'ab\u{dc94}' should be fixed with replacement character
+xhr/send-data-string-invalid-unicode.any.html	invalid unicode '\\u{d83d}' should be fixed with replacement character
+xhr/send-data-string-invalid-unicode.any.html	invalid unicode '\\u{d83d}ab' should be fixed with replacement character
+xhr/send-data-string-invalid-unicode.any.html	invalid unicode '\\u{dc94}' should be fixed with replacement character
+xhr/send-data-string-invalid-unicode.any.html	invalid unicode '\\u{dc94}ab' should be fixed with replacement character
+xhr/send-data-string-invalid-unicode.any.html	invalid unicode 'a\\u{d83d}b' should be fixed with replacement character
+xhr/send-data-string-invalid-unicode.any.html	invalid unicode 'a\\u{dc94}b' should be fixed with replacement character
+xhr/send-data-string-invalid-unicode.any.html	invalid unicode 'ab\\u{d83d}' should be fixed with replacement character
+xhr/send-data-string-invalid-unicode.any.html	invalid unicode 'ab\\u{dc94}' should be fixed with replacement character
 xhr/send-data-string-invalid-unicode.any.html	valid unicode should be sent correctly
 xhr/send-data-unexpected-tostring.htm	open() called from data stringification
 xhr/send-data-unexpected-tostring.htm	send() called from data stringification
@@ -532,7 +490,11 @@ xhr/send-redirect-no-location.htm	XMLHttpRequest: send() - Redirects (no Locatio
 xhr/send-redirect-no-location.htm	XMLHttpRequest: send() - Redirects (no Location header) (302)
 xhr/send-redirect-no-location.htm	XMLHttpRequest: send() - Redirects (no Location header) (303)
 xhr/send-redirect-no-location.htm	XMLHttpRequest: send() - Redirects (no Location header) (307)
-xhr/send-redirect-post-upload.htm	-
+xhr/send-redirect-post-upload.htm	XMLHttpRequest: The send() method: POSTing to URL that redirects (301)
+xhr/send-redirect-post-upload.htm	XMLHttpRequest: The send() method: POSTing to URL that redirects (302)
+xhr/send-redirect-post-upload.htm	XMLHttpRequest: The send() method: POSTing to URL that redirects (303)
+xhr/send-redirect-post-upload.htm	XMLHttpRequest: The send() method: POSTing to URL that redirects (307 (blob))
+xhr/send-redirect-post-upload.htm	XMLHttpRequest: The send() method: POSTing to URL that redirects (307 (string))
 xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (301 GET with explicit Content-Type safelisted)
 xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (301 GET with explicit Content-Type)
 xhr/send-redirect-to-cors.htm	XMLHttpRequest: send() - Redirect to CORS-enabled resource (301 POST with string and explicit Content-Type safelisted)
@@ -740,8 +702,7 @@ xhr/xmlhttprequest-sync-block-defer-scripts.html	Check that a sync XHR in a defe
 xhr/xmlhttprequest-sync-default-permissions-policy.tentative.sub.html	-
 xhr/xmlhttprequest-sync-not-hang-scriptloader-subframe.html	-
 xhr/xmlhttprequest-sync-not-hang-scriptloader.html	-
-xhr/xmlhttprequest-sync-not-hang-scriptloader.html	Ensure that an async script added during a defer script that then does a
-  sync XHR still runs
+xhr/xmlhttprequest-sync-not-hang-scriptloader.html	Ensure that an async script added during a defer script that then does a\n  sync XHR still runs
 xhr/xmlhttprequest-timeout-aborted.html	-
 xhr/xmlhttprequest-timeout-abortedonmain.html	-
 xhr/xmlhttprequest-timeout-overrides.html	-
