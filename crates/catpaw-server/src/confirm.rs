@@ -1,23 +1,40 @@
 //! Confirmations: calls the policy stops until the user approves them, and
-//! the local page where the user does (ADR 0006, decision 8).
+//! the approval page where the user decides (ADR 0006, decision 8).
 //!
 //! The host approves through MCP elicitation when it offers that. Without
-//! it, a page served on 127.0.0.1 takes the decision, and only with the
-//! approval key: a secret kept in a file the agent is never shown (its
-//! tools never print it, and the browser it drives refuses private
-//! addresses). A browser that approved once keeps the key in a cookie.
+//! it, a page served on 127.0.0.1 (see [`crate::local`]) takes the
+//! decision, and only with the approval key: a secret kept in a file the
+//! agent is never shown (its tools never print it, and the browser it
+//! drives refuses private addresses). The browser that approved once keeps
+//! the key in its storage for the page's origin.
 
 use std::collections::BTreeMap;
 use std::io::Write;
-use std::net::{TcpListener, TcpStream};
+use std::net::TcpStream;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use crate::http::{escape, page, read_request, respond};
+use serde_json::json;
 
-/// How long a confirmation waits for the user.
-pub const LIFETIME: Duration = Duration::from_secs(600);
+use crate::http::{Request, escape, page, respond, respond_bytes};
+use crate::local::{Pages, body_field};
+
+/// How long a confirmation waits for the user, unless configured.
+const LIFETIME: Duration = Duration::from_secs(600);
+/// How long a repeated call waits for the user's decision before it says
+/// the confirmation is still pending, unless configured.
+const DECISION_WAIT: Duration = Duration::from_secs(45);
+
+/// A span as a result says it: `10m`, `45s`.
+pub(crate) fn span(d: Duration) -> String {
+    let secs = d.as_secs();
+    if secs >= 60 && secs.is_multiple_of(60) {
+        format!("{}m", secs / 60)
+    } else {
+        format!("{secs}s")
+    }
+}
 
 /// Where a confirmation stopped its call.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -34,14 +51,18 @@ pub enum State {
     Pending,
     Approved,
     Declined,
+    /// The page no longer holds what it was about (it asked for something
+    /// else, or moved on).
+    Superseded,
 }
 
 impl State {
-    fn as_str(self) -> &'static str {
+    pub(crate) fn as_str(self) -> &'static str {
         match self {
             State::Pending => "pending",
             State::Approved => "approved",
             State::Declined => "declined",
+            State::Superseded => "superseded",
         }
     }
 }
@@ -55,46 +76,88 @@ pub struct Confirmation {
     pub fingerprint: String,
     /// What would happen, as results and the approval page say it.
     pub what: String,
+    /// The action as the result's first line names it (`click e8 button
+    /// "Login"`).
+    pub action: String,
     pub stage: Stage,
+    /// For a held stage: the hold numbers in the tab's page.
+    pub holds: Vec<u64>,
+    /// The exact call that resumes it (`click {"confirmation":"c1",…}`).
+    pub repeat: String,
     pub state: State,
     created: Instant,
+    lifetime: Duration,
 }
 
 impl Confirmation {
     pub fn expired(&self) -> bool {
-        self.created.elapsed() > LIFETIME
+        self.created.elapsed() > self.lifetime
     }
 
     fn minutes_left(&self) -> u64 {
-        LIFETIME
+        self.lifetime
             .saturating_sub(self.created.elapsed())
             .as_secs()
             .div_ceil(60)
     }
 }
 
+/// A confirmation to record.
+pub(crate) struct NewConfirmation {
+    pub tab: u32,
+    pub fingerprint: String,
+    pub what: String,
+    pub action: String,
+    pub stage: Stage,
+    pub holds: Vec<u64>,
+    pub repeat: String,
+}
+
 #[derive(Default)]
-struct Store {
+pub(crate) struct Store {
     next: u32,
     items: BTreeMap<u32, Confirmation>,
 }
 
-/// Where the approval page finds its key, and the port it listens on.
-#[derive(Clone, Debug, Default)]
+/// The confirmations, shared with the approval page.
+pub(crate) type SharedStore = Arc<Mutex<Store>>;
+
+fn lock(store: &SharedStore) -> std::sync::MutexGuard<'_, Store> {
+    store.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// Where the approval page finds its key, the port it listens on, and
+/// how long the user has.
+#[derive(Clone, Debug)]
 pub struct ApprovalConfig {
     /// The file holding the approval key, made with a fresh key when
     /// missing. By default `catpaw/approval-key` in the user's data
     /// directory.
     pub key_file: Option<PathBuf>,
-    /// The port of the approval page; 0 takes any free one.
-    pub port: u16,
+    /// The port of the local pages; by default a fixed one while it is
+    /// free (the browser then keeps the key for it), 0 for any free one.
+    pub port: Option<u16>,
+    /// How long a confirmation waits for the user (10 minutes).
+    pub lifetime: Duration,
+    /// How long a repeated call waits for a decision still to come before
+    /// it answers (45 seconds).
+    pub decision_wait: Duration,
+}
+
+impl Default for ApprovalConfig {
+    fn default() -> Self {
+        Self {
+            key_file: None,
+            port: None,
+            lifetime: LIFETIME,
+            decision_wait: DECISION_WAIT,
+        }
+    }
 }
 
 pub struct Confirmations {
-    store: Arc<Mutex<Store>>,
+    store: SharedStore,
     config: ApprovalConfig,
-    /// The approval page's port, once a confirmation needed the page.
-    port: Option<u16>,
 }
 
 impl Confirmations {
@@ -102,36 +165,86 @@ impl Confirmations {
         Self {
             store: Arc::default(),
             config,
-            port: None,
         }
     }
 
-    fn store(&self) -> std::sync::MutexGuard<'_, Store> {
-        self.store.lock().unwrap_or_else(|e| e.into_inner())
+    pub fn config(&self) -> &ApprovalConfig {
+        &self.config
+    }
+
+    pub(crate) fn shared(&self) -> SharedStore {
+        self.store.clone()
     }
 
     /// Records a confirmation; its id (the N of `cN`).
-    pub fn create(&self, tab: u32, fingerprint: String, what: String, stage: Stage) -> u32 {
-        let mut store = self.store();
+    pub(crate) fn create(&self, new: NewConfirmation) -> u32 {
+        let mut store = lock(&self.store);
         store.next += 1;
         let id = store.next;
         store.items.insert(
             id,
             Confirmation {
                 id,
-                tab,
-                fingerprint,
-                what,
-                stage,
+                tab: new.tab,
+                fingerprint: new.fingerprint,
+                what: new.what,
+                action: new.action,
+                stage: new.stage,
+                holds: new.holds,
+                repeat: new.repeat,
                 state: State::Pending,
                 created: Instant::now(),
+                lifetime: self.config.lifetime,
             },
         );
         id
     }
 
+    /// Sets the call that resumes a confirmation.
+    pub fn set_repeat(&self, id: u32, repeat: String) {
+        if let Some(c) = lock(&self.store).items.get_mut(&id) {
+            c.repeat = repeat;
+        }
+    }
+
+    /// Starts a confirmation's time again (when the host could not ask
+    /// and the approval page takes over).
+    pub fn restart(&self, id: u32) {
+        if let Some(c) = lock(&self.store).items.get_mut(&id) {
+            c.created = Instant::now();
+        }
+    }
+
+    /// Marks the pending confirmations of `tab` whose holds all went
+    /// (`dropped`) as superseded; their ids.
+    pub fn supersede(&self, tab: u32, dropped: &[u64]) -> Vec<u32> {
+        let mut store = lock(&self.store);
+        let mut gone = Vec::new();
+        for c in store.items.values_mut() {
+            if c.tab == tab
+                && c.state == State::Pending
+                && c.stage == Stage::Held
+                && !c.holds.is_empty()
+                && c.holds.iter().all(|h| dropped.contains(h))
+            {
+                c.state = State::Superseded;
+                gone.push(c.id);
+            }
+        }
+        gone
+    }
+
+    /// Voids the pending confirmations of a tab that closed.
+    pub fn close_for_tab(&self, tab: u32) {
+        for c in lock(&self.store).items.values_mut() {
+            if c.tab == tab && c.state == State::Pending {
+                c.state = State::Superseded;
+            }
+        }
+    }
+
     pub fn get(&self, id: u32) -> Option<Confirmation> {
-        self.store().items.get(&id).cloned()
+        lock(&self.store).items.get(&id).cloned()
     }
 
     /// Approves or declines a pending confirmation that has not run out;
@@ -142,43 +255,12 @@ impl Confirmations {
 
     /// Forgets a confirmation once it was used.
     pub fn remove(&self, id: u32) {
-        self.store().items.remove(&id);
-    }
-
-    /// The address of the approval page for `cN`, starting the page when
-    /// it is not running yet.
-    pub fn url(&mut self, id: u32) -> std::io::Result<String> {
-        let port = match self.port {
-            Some(port) => port,
-            None => {
-                let key_file = match &self.config.key_file {
-                    Some(path) => path.clone(),
-                    None => default_key_file().ok_or_else(|| {
-                        std::io::Error::other("no data directory for the approval key")
-                    })?,
-                };
-                let key = load_or_make_key(&key_file)?;
-                let listener = TcpListener::bind(("127.0.0.1", self.config.port))?;
-                let port = listener.local_addr()?.port();
-                let shared = Arc::new(Shared {
-                    store: self.store.clone(),
-                    key,
-                    key_file,
-                    port,
-                });
-                std::thread::Builder::new()
-                    .name("catpaw-approvals".to_string())
-                    .spawn(move || serve(listener, &shared))?;
-                self.port = Some(port);
-                port
-            }
-        };
-        Ok(format!("http://127.0.0.1:{port}/confirm/c{id}"))
+        lock(&self.store).items.remove(&id);
     }
 }
 
-fn decide(store: &Mutex<Store>, id: u32, approve: bool) -> bool {
-    let mut store = store.lock().unwrap_or_else(|e| e.into_inner());
+fn decide(store: &SharedStore, id: u32, approve: bool) -> bool {
+    let mut store = lock(store);
     match store.items.get_mut(&id) {
         Some(c) if c.state == State::Pending && !c.expired() => {
             c.state = if approve {
@@ -189,6 +271,15 @@ fn decide(store: &Mutex<Store>, id: u32, approve: bool) -> bool {
             true
         }
         _ => false,
+    }
+}
+
+/// The file the approval key is kept in.
+pub(crate) fn key_file(config: &ApprovalConfig) -> std::io::Result<PathBuf> {
+    match &config.key_file {
+        Some(path) => Ok(path.clone()),
+        None => default_key_file()
+            .ok_or_else(|| std::io::Error::other("no data directory for the approval key")),
     }
 }
 
@@ -211,7 +302,7 @@ fn default_key_file() -> Option<PathBuf> {
 
 /// The key in `path`, or a fresh one written there (readable by the user
 /// alone).
-fn load_or_make_key(path: &Path) -> std::io::Result<String> {
+pub(crate) fn load_or_make_key(path: &Path) -> std::io::Result<String> {
     if let Ok(text) = std::fs::read_to_string(path) {
         let key = text.trim().to_string();
         if key.len() >= 32 {
@@ -224,208 +315,156 @@ fn load_or_make_key(path: &Path) -> std::io::Result<String> {
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)?;
     }
-    let mut options = std::fs::OpenOptions::new();
-    options.write(true).create(true).truncate(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        options.mode(0o600);
-    }
-    options
-        .open(path)?
-        .write_all(format!("{key}\n").as_bytes())?;
+    crate::profile::private_file(path)?.write_all(format!("{key}\n").as_bytes())?;
     Ok(key)
 }
 
-/// What the page's thread shares with the session.
-struct Shared {
-    store: Arc<Mutex<Store>>,
-    key: String,
-    key_file: PathBuf,
-    port: u16,
-}
+/// What the approval page's script may do: post the decision to its own
+/// address.
+const PAGE: &str = "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; form-action 'none'";
 
-fn serve(listener: TcpListener, shared: &Shared) {
-    for stream in listener.incoming() {
-        let Ok(stream) = stream else { continue };
-        let _ = stream.set_read_timeout(Some(Duration::from_secs(10)));
-        let _ = handle(stream, shared);
-    }
-}
-
-fn handle(stream: TcpStream, shared: &Shared) -> std::io::Result<()> {
-    let request = read_request(&stream)?;
-    let ours = [
-        format!("127.0.0.1:{}", shared.port),
-        format!("localhost:{}", shared.port),
-    ];
-    // Another name for this address (DNS rebinding) is refused.
-    if !request
-        .header("host")
-        .is_some_and(|h| ours.iter().any(|o| o == h))
-    {
-        return respond(
-            stream,
-            "421 Misdirected Request",
-            "text/plain",
-            &[],
-            "wrong host\n",
-        );
-    }
-    let id = request
-        .path
-        .split('?')
-        .next()
-        .and_then(|p| p.strip_prefix("/confirm/c"))
-        .and_then(|n| n.parse::<u32>().ok());
-    let Some(id) = id else {
+/// `/confirm/cN`: the page (GET) and the decision (POST, with the key).
+pub(crate) fn handle(
+    stream: TcpStream,
+    request: &Request,
+    rest: &str,
+    pages: &Pages,
+) -> std::io::Result<()> {
+    let Some(id) = rest.strip_prefix('c').and_then(|n| n.parse::<u32>().ok()) else {
         return respond(stream, "404 Not Found", "text/plain", &[], "not found\n");
     };
-    let Some(confirmation) = shared
-        .store
-        .lock()
-        .ok()
-        .and_then(|s| s.items.get(&id).cloned())
-    else {
-        return respond(
+    let Some(confirmation) = lock(&pages.approvals).items.get(&id).cloned() else {
+        return respond_bytes(
             stream,
             "404 Not Found",
             "text/html; charset=utf-8",
+            PAGE,
             &[],
-            &page("CatPaw", "<h1>No such confirmation</h1>"),
+            page(
+                "CatPaw",
+                "<h1>No such confirmation</h1><p>It was used, or it never was.</p>",
+            )
+            .as_bytes(),
         );
     };
-    let api = request.header("authorization").is_some();
-    let bearer = request
-        .header("authorization")
-        .and_then(|v| v.strip_prefix("Bearer "))
-        .map(str::trim);
-    let form: Vec<(String, String)> = url::form_urlencoded::parse(&request.body)
-        .into_owned()
-        .collect();
-    let field = |name: &str| {
-        form.iter()
-            .find(|(n, _)| n == name)
-            .map(|(_, v)| v.as_str())
-    };
-    let cookie_ok = request.cookie("catpaw_key") == Some(shared.key.as_str());
-    let state = if confirmation.expired() && confirmation.state == State::Pending {
+    let state = if confirmation.state == State::Pending && confirmation.expired() {
         "expired"
     } else {
         confirmation.state.as_str()
     };
-
-    if request.method == "GET" {
-        let mut body = format!(
-            "<h1>Approve this action?</h1><p>An agent using CatPaw asks to:</p><pre>{}</pre>",
-            escape(&confirmation.what)
-        );
-        if state == "pending" {
-            body.push_str(&format!(
-                "<p><small>c{id}, expires in {} min</small></p><form method=post>",
-                confirmation.minutes_left()
-            ));
-            if !cookie_ok {
-                body.push_str(&format!(
-                    "<p><label>Approval key <input type=password name=key autocomplete=off required></label><br><small>From <code>{}</code>; this browser keeps it after the first time.</small></p>",
-                    escape(&shared.key_file.display().to_string())
-                ));
-            }
-            body.push_str("<button name=decision value=approve>Approve</button><button name=decision value=decline>Decline</button></form>");
-        } else {
-            body.push_str(&format!("<p>This confirmation is {state}.</p>"));
+    match request.method.as_str() {
+        "GET" => {
+            let body = approval_page(id, &confirmation, state, &pages.key_file);
+            respond_bytes(
+                stream,
+                "200 OK",
+                "text/html; charset=utf-8",
+                PAGE,
+                &[],
+                page(&format!("CatPaw: approve c{id}?"), &body).as_bytes(),
+            )
         }
-        return respond(
-            stream,
-            "200 OK",
-            "text/html; charset=utf-8",
-            &[],
-            &page(&format!("CatPaw: approve c{id}?"), &body),
-        );
-    }
-    if request.method != "POST" {
-        return respond(
+        "POST" => {
+            if !pages.key_given(request) {
+                return respond(
+                    stream,
+                    "403 Forbidden",
+                    "application/json",
+                    &[],
+                    "{\"error\":\"wrong key\"}\n",
+                );
+            }
+            let approve = match body_field(request, "decision").as_deref() {
+                Some("approve") => true,
+                Some("decline") => false,
+                _ => {
+                    return respond(
+                        stream,
+                        "400 Bad Request",
+                        "application/json",
+                        &[],
+                        "{\"error\":\"decision: approve or decline\"}\n",
+                    );
+                }
+            };
+            let changed = decide(&pages.approvals, id, approve);
+            if changed {
+                pages.journal(
+                    "decision",
+                    json!({"id": format!("c{id}"), "approved": approve, "via": "page"}),
+                );
+            }
+            let now = lock(&pages.approvals)
+                .items
+                .get(&id)
+                .map(|c| c.state.as_str())
+                .unwrap_or("gone");
+            let body = json!({"id": format!("c{id}"), "state": now, "changed": changed});
+            respond(
+                stream,
+                "200 OK",
+                "application/json",
+                &[],
+                &format!("{body}\n"),
+            )
+        }
+        _ => respond(
             stream,
             "405 Method Not Allowed",
             "text/plain",
             &[],
             "GET or POST\n",
-        );
+        ),
     }
-    // A form posted from another site is not the user's decision.
-    if let Some(origin) = request.header("origin")
-        && !ours.iter().any(|o| origin == format!("http://{o}"))
-    {
-        return respond(stream, "403 Forbidden", "text/plain", &[], "wrong origin\n");
+}
+
+fn approval_page(id: u32, confirmation: &Confirmation, state: &str, key_file: &Path) -> String {
+    let mut body = format!(
+        "<h1>Approve this action?</h1><p>An agent using CatPaw asks to:</p><pre>{}</pre>",
+        escape(&confirmation.what)
+    );
+    if state != "pending" {
+        body.push_str(&format!("<p>This confirmation is {state}.</p>"));
+        return body;
     }
-    let typed = field("key").map(str::trim);
-    let authorized =
-        cookie_ok || bearer == Some(shared.key.as_str()) || typed == Some(shared.key.as_str());
-    if !authorized {
-        return if api {
-            respond(
-                stream,
-                "403 Forbidden",
-                "application/json",
-                &[],
-                "{\"error\":\"wrong key\"}\n",
-            )
-        } else {
-            respond(
-                stream,
-                "403 Forbidden",
-                "text/html; charset=utf-8",
-                &[],
-                &page(
-                    "CatPaw",
-                    "<h1>That key does not match</h1><p><a href=\"\">Try again</a></p>",
-                ),
-            )
-        };
-    }
-    let approve = match field("decision") {
-        Some("approve") => true,
-        Some("decline") => false,
-        _ => {
-            return respond(
-                stream,
-                "400 Bad Request",
-                "text/plain",
-                &[],
-                "decision: approve or decline\n",
-            );
-        }
-    };
-    let decided = decide(&shared.store, id, approve);
-    let now = shared
-        .store
-        .lock()
-        .ok()
-        .and_then(|s| s.items.get(&id).map(|c| c.state.as_str()))
-        .unwrap_or("gone");
-    if api {
-        let body = format!("{{\"id\":\"c{id}\",\"state\":\"{now}\",\"changed\":{decided}}}\n");
-        return respond(stream, "200 OK", "application/json", &[], &body);
-    }
-    let mut extra = Vec::new();
-    if typed == Some(shared.key.as_str()) {
-        extra.push(format!(
-            "Set-Cookie: catpaw_key={}; Path=/; HttpOnly; SameSite=Strict",
-            shared.key
-        ));
-    }
-    let said = match (decided, approve) {
-        (true, true) => "Approved. The agent can go on.".to_string(),
-        (true, false) => "Declined. The agent is told so.".to_string(),
-        (false, _) => format!("This confirmation is {now}; nothing changed."),
-    };
-    respond(
-        stream,
-        "200 OK",
-        "text/html; charset=utf-8",
-        &extra,
-        &page(&format!("CatPaw: c{id}"), &format!("<h1>{said}</h1>")),
-    )
+    body.push_str(&format!(
+        r#"<p><small>c{id}, expires in {minutes} min</small></p>
+<div id=keyrow><p><label>Approval key <input id=key type=password autocomplete=off></label><br>
+<small>From <code>{file}</code>. <label><input id=remember type=checkbox checked style="width:auto"> Remember it in this browser</label></small></p></div>
+<p id=buttons><button id=approve>Approve</button><button id=decline>Decline</button></p>
+<p id=said></p>
+<script>
+const said = document.getElementById('said');
+const keyField = document.getElementById('key');
+let key = null;
+try {{ key = localStorage.getItem('catpaw-approval-key'); }} catch (e) {{}}
+if (key) document.getElementById('keyrow').hidden = true;
+async function decide(decision) {{
+  const k = key || keyField.value.trim();
+  const r = await fetch(location.pathname, {{method: 'POST', headers: {{'Content-Type': 'application/json'}}, body: JSON.stringify({{decision, key: k}})}});
+  const s = await r.json().catch(() => ({{}}));
+  if (r.status === 403) {{
+    try {{ localStorage.removeItem('catpaw-approval-key'); }} catch (e) {{}}
+    key = null;
+    document.getElementById('keyrow').hidden = false;
+    said.textContent = 'That key does not match.';
+    return;
+  }}
+  if (r.ok && !key && document.getElementById('remember').checked) {{
+    try {{ localStorage.setItem('catpaw-approval-key', k); }} catch (e) {{}}
+  }}
+  document.getElementById('buttons').hidden = true;
+  said.textContent = s.state === 'approved' ? 'Approved. The agent can go on.'
+    : s.state === 'declined' ? 'Declined. The agent is told so.'
+    : 'This confirmation is ' + (s.state || 'gone') + '.';
+}}
+document.getElementById('approve').onclick = () => decide('approve');
+document.getElementById('decline').onclick = () => decide('decline');
+</script>"#,
+        minutes = confirmation.minutes_left(),
+        file = escape(&key_file.display().to_string()),
+    ));
+    body
 }
 
 #[cfg(test)]
@@ -433,6 +472,15 @@ mod tests {
     use std::io::Read;
 
     use super::*;
+    use crate::local::LocalServer;
+
+    fn raw(port: u16, request: &str) -> String {
+        let mut stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+        stream.write_all(request.as_bytes()).unwrap();
+        let mut out = String::new();
+        stream.read_to_string(&mut out).unwrap();
+        out
+    }
 
     fn post(port: u16, path: &str, headers: &str, body: &str) -> String {
         let mut stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
@@ -450,29 +498,32 @@ mod tests {
     fn only_the_key_approves() {
         let dir = std::env::temp_dir().join(format!("catpaw-approve-{}", std::process::id()));
         let key_file = dir.join("key");
-        let mut confirmations = Confirmations::new(ApprovalConfig {
-            key_file: Some(key_file.clone()),
-            port: 0,
-        });
-        let id = confirmations.create(
-            1,
-            "click {}".into(),
-            "click e2 would submit".into(),
-            Stage::Held,
-        );
-        let url = confirmations.url(id).unwrap();
-        let port: u16 = url
-            .strip_prefix("http://127.0.0.1:")
-            .and_then(|r| r.split('/').next())
-            .unwrap()
-            .parse()
-            .unwrap();
-        let key = std::fs::read_to_string(&key_file)
-            .unwrap()
-            .trim()
-            .to_string();
+        let key = load_or_make_key(&key_file).unwrap();
         assert_eq!(key.len(), 64);
-
+        let confirmations = Confirmations::new(ApprovalConfig {
+            key_file: Some(key_file.clone()),
+            port: Some(0),
+            ..ApprovalConfig::default()
+        });
+        let id = confirmations.create(NewConfirmation {
+            tab: 1,
+            fingerprint: "click {}".into(),
+            what: "click e2 would submit".into(),
+            action: "click e2".into(),
+            stage: Stage::Held,
+            holds: vec![1],
+            repeat: "click {}".into(),
+        });
+        let server = LocalServer::start(Some(0), |port| Pages {
+            key: key.clone(),
+            key_file: key_file.clone(),
+            port,
+            approvals: confirmations.shared(),
+            handoffs: Arc::default(),
+            journal: None,
+        })
+        .unwrap();
+        let port = server.port();
         let path = format!("/confirm/c{id}");
         let wrong = post(
             port,
@@ -488,23 +539,42 @@ mod tests {
             &format!("decision=approve&key={key}"),
         );
         assert!(elsewhere.starts_with("HTTP/1.1 403"), "{elsewhere}");
+        // Requests too large are refused, not cut short.
+        let big = raw(
+            port,
+            &format!(
+                "POST {path} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nContent-Length: 99999\r\n\r\n"
+            ),
+        );
+        assert!(big.starts_with("HTTP/1.1 413"), "{big}");
+        let long = raw(
+            port,
+            &format!("GET {path}?{} HTTP/1.1\r\n\r\n", "x".repeat(9000)),
+        );
+        assert!(long.starts_with("HTTP/1.1 414"), "{long}");
         assert_eq!(confirmations.get(id).unwrap().state, State::Pending);
 
         let typed = post(port, &path, "", &format!("decision=approve&key={key}"));
         assert!(typed.starts_with("HTTP/1.1 200"), "{typed}");
-        assert!(typed.contains("Set-Cookie: catpaw_key="), "{typed}");
+        assert!(
+            !typed.to_ascii_lowercase().contains("set-cookie"),
+            "{typed}"
+        );
         assert_eq!(confirmations.get(id).unwrap().state, State::Approved);
 
-        // Decided once; an API call reports it.
+        // Decided once; another call reports it.
         let again = post(
             port,
             &path,
             &format!("Authorization: Bearer {key}\r\n"),
             "decision=decline",
         );
+        assert!(again.contains("\"state\":\"approved\""), "{again}");
+        assert!(again.contains("\"changed\":false"), "{again}");
+        drop(server);
         assert!(
-            again.contains("\"state\":\"approved\",\"changed\":false"),
-            "{again}"
+            TcpStream::connect(("127.0.0.1", port)).is_err(),
+            "the server stops with its owner"
         );
         let _ = std::fs::remove_dir_all(dir);
     }

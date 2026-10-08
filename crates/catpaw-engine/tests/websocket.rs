@@ -170,3 +170,33 @@ fn the_server_can_close_and_failures_are_reported() {
         assert!(log.contains("server closed 4001 bye true"), "{log}");
     });
 }
+
+#[test]
+fn a_handshake_that_hangs_stops_holding_the_page_up() {
+    // Takes connections and never answers them.
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+    std::thread::spawn(move || {
+        let mut held = Vec::new();
+        for stream in listener.incoming() {
+            held.push(stream);
+        }
+    });
+    let html = format!(
+        "<!doctype html><title>start</title><script>const ws = new WebSocket('ws://127.0.0.1:{port}/'); document.title = 'waiting';</script>"
+    );
+    let mut options = options();
+    options.limits.settle = Some(Default::default());
+    let started = std::time::Instant::now();
+    with_html(
+        Url::parse("https://app.test/").unwrap(),
+        html,
+        options,
+        |page| {
+            assert!(page.is_settled(), "{:?}", page.report());
+            assert_eq!(page.eval("ws.readyState").unwrap(), "0", "still connecting");
+        },
+    )
+    .expect("the page runs");
+    assert!(started.elapsed() < std::time::Duration::from_secs(9));
+}

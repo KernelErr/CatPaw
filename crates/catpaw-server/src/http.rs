@@ -18,53 +18,87 @@ impl Request {
             .find(|(n, _)| n.eq_ignore_ascii_case(name))
             .map(|(_, v)| v.as_str())
     }
-
-    pub fn cookie(&self, name: &str) -> Option<&str> {
-        self.header("cookie")?.split(';').find_map(|pair| {
-            let (n, v) = pair.trim().split_once('=')?;
-            (n == name).then_some(v)
-        })
-    }
 }
 
-pub(crate) fn read_request(stream: &TcpStream) -> std::io::Result<Request> {
-    let mut reader = BufReader::new(stream);
+/// The longest request line or header line.
+const MAX_LINE: usize = 8 * 1024;
+/// The most header lines a request may have.
+const MAX_HEADERS: usize = 100;
+/// The largest body a request may have.
+const MAX_BODY: usize = 16 * 1024;
+
+/// One line, `None` when it is longer than [`MAX_LINE`].
+fn read_line(reader: &mut impl BufRead) -> std::io::Result<Option<String>> {
     let mut line = String::new();
-    reader.read_line(&mut line)?;
+    let read = reader.take(MAX_LINE as u64).read_line(&mut line)?;
+    Ok((read < MAX_LINE || line.ends_with('\n')).then_some(line))
+}
+
+/// Reads a request; `Ok(Err(status))` for one too large to take, with
+/// the status to refuse it with.
+pub(crate) fn read_request(stream: &TcpStream) -> std::io::Result<Result<Request, &'static str>> {
+    const LONG_HEADERS: &str = "431 Request Header Fields Too Large";
+    let mut reader = BufReader::new(stream);
+    let Some(line) = read_line(&mut reader)? else {
+        return Ok(Err("414 URI Too Long"));
+    };
     let mut words = line.split_whitespace();
     let method = words.next().unwrap_or("").to_string();
     let path = words.next().unwrap_or("/").to_string();
     let mut headers = Vec::new();
     loop {
-        let mut line = String::new();
-        if reader.read_line(&mut line)? == 0 {
-            break;
-        }
+        let Some(line) = read_line(&mut reader)? else {
+            return Ok(Err(LONG_HEADERS));
+        };
         let line = line.trim_end();
         if line.is_empty() {
             break;
         }
+        if headers.len() == MAX_HEADERS {
+            return Ok(Err(LONG_HEADERS));
+        }
         if let Some((name, value)) = line.split_once(':') {
             headers.push((name.trim().to_string(), value.trim().to_string()));
         }
-        if headers.len() > 100 {
-            break;
-        }
     }
-    let length = headers
+    let length = match headers
         .iter()
         .find(|(n, _)| n.eq_ignore_ascii_case("content-length"))
-        .and_then(|(_, v)| v.parse::<usize>().ok())
-        .unwrap_or(0)
-        .min(16 * 1024);
+    {
+        None => 0,
+        Some((_, v)) => match v.parse::<usize>() {
+            Ok(length) if length <= MAX_BODY => length,
+            Ok(_) => return Ok(Err("413 Content Too Large")),
+            Err(_) => return Ok(Err("400 Bad Request")),
+        },
+    };
     let mut body = vec![0; length];
     reader.read_exact(&mut body)?;
-    Ok(Request {
+    Ok(Ok(Request {
         method,
         path,
         headers,
         body,
-    })
+    }))
+}
+
+/// Refuses a request that was not read to its end: answers, then reads
+/// (and drops) a little of what the client still sends, so that closing
+/// does not reset the connection before the client reads the answer.
+pub(crate) fn refuse_unread(stream: TcpStream, status: &str) -> std::io::Result<()> {
+    let rest = stream.try_clone()?;
+    respond(stream, status, "text/plain", &[], "refused\n")?;
+    rest.shutdown(std::net::Shutdown::Write)?;
+    rest.set_read_timeout(Some(std::time::Duration::from_millis(500)))?;
+    let mut buf = [0u8; 8192];
+    let mut drained = 0;
+    while drained < 1 << 20 {
+        match (&rest).read(&mut buf) {
+            Ok(0) | Err(_) => break,
+            Ok(n) => drained += n,
+        }
+    }
+    Ok(())
 }
 
 pub(crate) fn escape(text: &str) -> String {

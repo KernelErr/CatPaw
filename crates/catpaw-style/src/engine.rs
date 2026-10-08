@@ -448,6 +448,18 @@ impl StyleEngine {
             .is_some_and(|style| style.get_inherited_box().visibility != Visibility::Visible)
     }
 
+    /// Whether the element's box is block-level (block, flex, grid, list
+    /// items, table parts: anything not laid out within a line); `None`
+    /// without style data.
+    pub fn is_block_level(&self, id: NodeId) -> Option<bool> {
+        use style::values::specified::box_::DisplayOutside;
+        let display = self.primary_style(id)?.get_box().display;
+        Some(matches!(
+            display.outside(),
+            DisplayOutside::Block | DisplayOutside::TableCaption | DisplayOutside::InternalTable
+        ))
+    }
+
     /// `cursor: pointer` on the element (the property inherits, so this is
     /// also true inside a pointer-cursor ancestor).
     pub fn is_pointer_cursor(&self, id: NodeId) -> bool {

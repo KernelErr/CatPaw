@@ -14,6 +14,25 @@ use crate::page::{Cx, PageState};
 /// `textarea`): the edited value when the user or script changed it, else
 /// the default from the markup. `None` for other elements.
 pub fn control_value(page: &PageState, el: NodeId) -> Option<String> {
+    let value = raw_control_value(page, el)?;
+    if !value.is_empty() && page.masked_values.borrow().contains(&el) {
+        return Some("***".to_string());
+    }
+    Some(value)
+}
+
+/// Marks a control's value as the user's own (typed during a hand-off):
+/// [`control_value`] gives `***` for it until [`unmask_value`].
+pub fn mask_value(page: &PageState, el: NodeId) {
+    page.masked_values.borrow_mut().insert(el);
+}
+
+/// Ends [`mask_value`] for a control the agent itself sets.
+pub fn unmask_value(page: &PageState, el: NodeId) {
+    page.masked_values.borrow_mut().remove(&el);
+}
+
+fn raw_control_value(page: &PageState, el: NodeId) -> Option<String> {
     let dom = page.dom.borrow();
     let element = dom.element(el)?;
     if !element.is_html() {

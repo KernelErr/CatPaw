@@ -43,6 +43,10 @@ impl StyleOracle for EngineOracle<'_> {
         self.engine.is_pointer_cursor(id)
     }
 
+    fn is_block_level(&self, _dom: &Dom, id: NodeId) -> Option<bool> {
+        self.engine.is_block_level(id)
+    }
+
     fn has_activation_listener(&self, _dom: &Dom, id: NodeId) -> bool {
         agent::has_activation_listener(self.page, id)
     }

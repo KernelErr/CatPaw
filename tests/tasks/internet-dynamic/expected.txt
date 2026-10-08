@@ -10,14 +10,14 @@ e5 link "Elemental Selenium"
 
 > click {"target":"button \"Start\""}
 ok click e4 button "Start"
-# s2 diff-from=s1 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e4 settled=yes changed=1 added=0 removed=1 unchanged=4
-~ text[0] "Powered by" → "Loading... Powered by"
+# s2 diff-from=s1 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e4 settled=yes changed=0 added=1 removed=1 unchanged=4
++ text[0] "Loading..."
 - e4 button "Start"
 
 > wait {"for":"text","text":"Hello World!"}
 ok wait text "Hello World!" (4.9s)
-# s3 diff-from=s2 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e4 settled=yes changed=1 added=1 removed=0 unchanged=4
+# s3 diff-from=s2 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e4 settled=yes changed=0 added=1 removed=1 unchanged=4
 + e6 heading "Hello World!" [level=4] (after e3)
-~ text[0] "Loading... Powered by" → "Powered by"
+- text[0] "Loading..."
 
 ? text_contains "Hello World!" → yes

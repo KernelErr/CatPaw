@@ -56,6 +56,9 @@ pub struct InputState {
     /// Typing changed the focused control's value since it took focus, so
     /// `change` fires when focus leaves it.
     typed: Cell<bool>,
+    /// The control whose whole content is selected (Control+A): what is
+    /// typed next replaces it.
+    all_selected: Cell<Option<NodeId>>,
 }
 
 // ------------------------------------------------------------------ events
@@ -350,6 +353,7 @@ fn focus_for_input(cx: &mut Cx<'_>, to: Option<NodeId>) {
     if from == to {
         return;
     }
+    cx.page.input.all_selected.set(None);
     if cx.page.input.typed.replace(false)
         && let Some(old) = from.filter(|&n| cx.dom().contains(n))
     {
@@ -435,14 +439,29 @@ fn aim(cx: &mut Cx<'_>, el: NodeId) -> Result<(f32, f32), InputError> {
 /// use HTML drag and drop (`draggable`, `dragstart`, `drop`) need a
 /// `DataTransfer`, which is not there yet.
 pub fn drag_element(cx: &mut Cx<'_>, el: NodeId, onto: NodeId) -> Result<(), InputError> {
-    aim(cx, el)?;
-    let to = aim(cx, onto)?;
-    // Aiming at the drop target may have scrolled the dragged one away.
-    let from = aim(cx, el)?;
-    if aim(cx, onto)? != to {
-        return Err(InputError::NotVisible);
+    // Aiming at the drop target may scroll the dragged one away: settle on
+    // a scroll where aiming at either moves nothing.
+    let mut points = None;
+    for _ in 0..3 {
+        let from = aim(cx, el)?;
+        let to = aim(cx, onto)?;
+        if aim(cx, el)? == from {
+            points = Some((from, to));
+            break;
+        }
     }
+    let (from, to) = points.ok_or(InputError::NotVisible)?;
     let target = pointer_move(cx, from.0, from.1).ok_or(InputError::NotVisible)?;
+    // The press must land on what is dragged.
+    {
+        let dom = cx.dom();
+        let on_it = target == el
+            || dom.ancestors(target).any(|a| a == el)
+            || dom.ancestors(el).any(|a| a == target);
+        if !on_it {
+            return Err(InputError::Occluded { by: target });
+        }
+    }
     let down = mouse_state(cx, from.0, from.1, 0, 1, 1);
     if fire_pointer(cx, target, "pointerdown", true, down.clone()) {
         fire_pointer(cx, target, "mousedown", true, down);
@@ -577,7 +596,13 @@ fn edit_value(
     if !fire_input(cx, el, "beforeinput", input_type, data.clone()) {
         return false;
     }
-    let current = control_value(cx, el, kind);
+    // A selection of everything is replaced by the edit.
+    let current = if cx.page.input.all_selected.get() == Some(el) {
+        cx.page.input.all_selected.set(None);
+        String::new()
+    } else {
+        control_value(cx, el, kind)
+    };
     let next = edit(current);
     set_control_value(cx, el, kind, next);
     cx.page.input.typed.set(true);
@@ -692,6 +717,19 @@ fn press_on(cx: &mut Cx<'_>, target: NodeId, key: &Key, kind: Option<Editable>) 
                     default_done = true;
                     let next = next_focusable(cx, target, key.modifiers.shift);
                     focus_for_input(cx, next);
+                }
+                "a" | "A"
+                    if (key.modifiers.ctrl || key.modifiers.meta)
+                        && !key.modifiers.alt
+                        && kind.is_some() =>
+                {
+                    default_done = true;
+                    cx.page.input.all_selected.set(Some(target));
+                }
+                "ArrowLeft" | "ArrowRight" | "ArrowUp" | "ArrowDown" | "Home" | "End"
+                    if !key.modifiers.shift =>
+                {
+                    cx.page.input.all_selected.set(None);
                 }
                 _ => {}
             }

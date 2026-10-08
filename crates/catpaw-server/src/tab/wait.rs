@@ -32,19 +32,27 @@ fn collapse(text: &str) -> String {
 impl GroupState {
     /// The tab's visible text, whitespace collapsed, lowercased.
     fn visible_text(&self, tab: u32) -> Result<String, Failure> {
-        let (_, state) = self.root_state(tab)?;
-        Ok(agent::with_styles(&state, |engine, dom| {
-            let oracle = EngineOracle {
-                engine,
-                page: &state,
+        self.root_state(tab)?;
+        // The tab's frames are part of what it shows.
+        let mut all = Vec::new();
+        for frame in self.frames_of(tab) {
+            let Some(state) = self.page.frame_state(frame.id).cloned() else {
+                continue;
             };
-            collapse(&catpaw_agent::text_with(
-                dom,
-                &oracle,
-                &ReadOptions::default(),
-            ))
-            .to_lowercase()
-        }))
+            all.push(agent::with_styles(&state, |engine, dom| {
+                let oracle = EngineOracle {
+                    engine,
+                    page: &state,
+                };
+                collapse(&catpaw_agent::text_with(
+                    dom,
+                    &oracle,
+                    &ReadOptions::default(),
+                ))
+                .to_lowercase()
+            }));
+        }
+        Ok(all.join("\n"))
     }
 
     /// Whether a target is in the document and shown.
@@ -134,7 +142,7 @@ impl GroupState {
         let outcome: Result<(), bool> = loop {
             let met = match p.until {
                 WaitFor::Handoff => true,
-                WaitFor::Settled => self.page.is_settled() && waited > 0.0,
+                WaitFor::Settled => self.page.is_settled_in(root) && waited > 0.0,
                 WaitFor::Text => self
                     .visible_text(tab)?
                     .contains(needle.as_deref().unwrap_or("")),
@@ -187,7 +195,7 @@ impl GroupState {
             }
             clock = now;
             if p.until == WaitFor::Settled {
-                if self.page.is_settled() {
+                if self.page.is_settled_in(root) {
                     break Ok(());
                 }
             } else if !self.page.last_run_progressed() && p.until != WaitFor::Time {

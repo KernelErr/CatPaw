@@ -49,6 +49,11 @@ pub struct TimerSite {
     pub site: SourceSite,
     /// Timers armed here; every repeat of an interval counts.
     pub arms: u32,
+    /// Of those, the ones that re-armed themselves: an interval's repeats,
+    /// and timers set here from a callback of a timer set here (polling).
+    /// A timer armed again and again from elsewhere (a debounce, reset on
+    /// each key) is not counted: its work is still to come.
+    pub rearms: u32,
     /// The shortest delay asked for here, in milliseconds.
     pub min_delay_ms: f64,
     /// Whether an interval was set here.
@@ -225,7 +230,7 @@ impl SettlePolicy {
     }
 
     fn is_polling(&self, site: &TimerSite) -> bool {
-        site.arms >= self.polling_rearm && site.min_delay_ms >= self.polling_min_delay_ms
+        site.rearms >= self.polling_rearm && site.min_delay_ms >= self.polling_min_delay_ms
     }
 }
 
@@ -373,6 +378,7 @@ pub(crate) fn arm_site(page: &PageState, site: SourceSite, delay_ms: f64, repeat
         sites.push(TimerSite {
             site,
             arms: 0,
+            rearms: 0,
             min_delay_ms: f64::INFINITY,
             repeat: false,
         });
@@ -380,6 +386,9 @@ pub(crate) fn arm_site(page: &PageState, site: SourceSite, delay_ms: f64, repeat
     });
     let entry = &mut sites[i];
     entry.arms = entry.arms.saturating_add(1);
+    if page.settle.initiator.get() == Some(Initiator::Timer { site: Some(i) }) {
+        entry.rearms = entry.rearms.saturating_add(1);
+    }
     entry.min_delay_ms = entry.min_delay_ms.min(delay_ms);
     entry.repeat |= repeat;
     i
@@ -389,6 +398,7 @@ pub(crate) fn arm_site(page: &PageState, site: SourceSite, delay_ms: f64, repeat
 pub(crate) fn rearm_site(page: &PageState, i: usize) {
     if let Some(entry) = page.settle.sites.borrow_mut().get_mut(i) {
         entry.arms = entry.arms.saturating_add(1);
+        entry.rearms = entry.rearms.saturating_add(1);
     }
 }
 
@@ -471,10 +481,15 @@ fn site_of(host: &str) -> &str {
 }
 
 /// Whether two URLs are of the same site (scheme aside), the site being
-/// the host's last two labels (three under `co.uk` and the like).
+/// the host's last two labels (three under `co.uk` and the like); an IP
+/// address is a site of its own.
 pub fn same_site(a: &Url, b: &Url) -> bool {
-    match (a.host_str(), b.host_str()) {
-        (Some(x), Some(y)) => site_of(x) == site_of(y),
+    use url::Host;
+    match (a.host(), b.host()) {
+        (Some(Host::Domain(x)), Some(Host::Domain(y))) => {
+            site_of(x).eq_ignore_ascii_case(site_of(y))
+        }
+        (Some(x), Some(y)) => x == y,
         _ => true,
     }
 }
@@ -501,7 +516,9 @@ pub(crate) fn blocking_requests(page: &PageState, policy: &SettlePolicy) -> usiz
         .filter(|(token, _)| callbacks.contains_key(token) && !is_held(page, **token))
         .filter(|(_, info)| classify_request(page, policy, info) == RequestClass::Relevant)
         .count();
-    requests + page.sockets.connecting(page)
+    // A handshake that hangs (a socket a network drops) stops holding the
+    // page up after a while, as a slow asset does.
+    requests + page.sockets.connecting_within(page, policy.asset_timeout)
 }
 
 /// How a timer counts, `now` being the page clock.
@@ -635,5 +652,44 @@ mod tests {
         assert!(policy.ignores_host(&Url::parse("https://www.google-analytics.com/g").unwrap()));
         assert!(policy.ignores_host(&Url::parse("https://1.log.optimizely.com/e").unwrap()));
         assert!(!policy.ignores_host(&Url::parse("https://notgoogle-analytics.com/").unwrap()));
+    }
+}
+
+#[cfg(test)]
+mod site_tests {
+    use super::*;
+
+    #[test]
+    fn sites_are_registrable_domains_or_addresses() {
+        let url = |s: &str| Url::parse(s).unwrap();
+        assert!(same_site(
+            &url("https://a.example.com/"),
+            &url("http://b.example.com/x")
+        ));
+        assert!(same_site(
+            &url("https://shop.example.co.uk/"),
+            &url("https://example.co.uk/")
+        ));
+        assert!(!same_site(
+            &url("https://a.example.co.uk/"),
+            &url("https://other.co.uk/")
+        ));
+        assert!(!same_site(
+            &url("http://127.0.0.1/"),
+            &url("http://10.0.0.1/")
+        ));
+        assert!(!same_site(
+            &url("http://192.168.0.1/"),
+            &url("http://10.0.0.1/")
+        ));
+        assert!(same_site(
+            &url("http://127.0.0.1:80/"),
+            &url("http://127.0.0.1:8080/")
+        ));
+        assert!(!same_site(&url("http://[::1]/"), &url("http://[::2]/")));
+        assert!(!same_site(
+            &url("http://127.0.0.1/"),
+            &url("http://localhost/")
+        ));
     }
 }

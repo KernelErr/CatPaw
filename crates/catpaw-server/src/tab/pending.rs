@@ -84,7 +84,7 @@ impl GroupState {
     /// Why the page did not settle, and what it was still doing, when it
     /// did not: lines for the end of an action's consequences.
     pub(super) fn not_settled(&self, root: FrameId) -> Vec<String> {
-        if self.page.is_settled() {
+        if self.page.is_settled_in(root) {
             return Vec::new();
         }
         let stop = self.page.frame_report(root).map(|r| r.stop);

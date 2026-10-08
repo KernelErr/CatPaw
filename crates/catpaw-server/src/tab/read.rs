@@ -75,28 +75,20 @@ fn level_of(level: ConsoleLevel) -> LogLevel {
 
 impl GroupState {
     pub(crate) fn read(&mut self, tab: u32, p: params::Read) -> CallResult {
-        let (top, top_state) = self.root_state(tab)?;
-        let allowed: Vec<catpaw_engine::FrameId> =
-            self.frames_of(tab).iter().map(|f| f.id).collect();
-        let page = &self.page;
-        let entry = self.tabs.get_mut(&tab).expect("root_state found the tab");
-        entry.sync(page);
+        let (top, _) = self.root_state(tab)?;
+        let frames = self.frames_of(tab);
+        let allowed: Vec<catpaw_engine::FrameId> = frames.iter().map(|f| f.id).collect();
         // A root inside a frame reads that frame's document.
         let (frame, root) = match &p.root {
             Some(text) => {
+                let page = &self.page;
+                let entry = self.tabs.get_mut(&tab).expect("root_state found the tab");
+                entry.sync(page);
                 let (frame, node, _) = resolve_ref(page, &mut entry.refs, text, &allowed)?;
                 (frame, Some(node))
             }
             None => (top, None),
         };
-        let state = if frame == top {
-            top_state
-        } else {
-            page.frame_state(frame)
-                .cloned()
-                .ok_or_else(|| Failure::new(ErrorCode::NoTab, format!("t{tab} is closed")))?
-        };
-        let epoch = state.epoch;
         let view = p.view;
         let find = match (view, &p.query) {
             (ReadView::Find, Some(query)) => Some(matcher(query)?),
@@ -104,66 +96,34 @@ impl GroupState {
             _ => None,
         };
         let main = p.main;
-        let mut found = 0;
-        let full = agent::with_styles(&state, |engine, dom| {
-            let oracle = EngineOracle {
-                engine,
-                page: &state,
-            };
-            let scope = RefScope::new(&mut entry.refs, frame.0, epoch);
-            let options = ReadOptions {
-                link_style: LinkStyle::Ref,
-                main_only: main,
-                root,
-            };
-            match view {
-                ReadView::Markdown => catpaw_agent::markdown(dom, &oracle, Some(scope), &options),
-                ReadView::Text => catpaw_agent::text_with(
-                    dom,
-                    &oracle,
-                    &ReadOptions {
-                        link_style: LinkStyle::Url,
-                        ..options
-                    },
-                ),
-                ReadView::Links => {
-                    let mut out = String::new();
-                    for link in catpaw_agent::links(dom, &oracle, Some(scope)) {
-                        let _ = writeln!(
-                            out,
-                            "{} {} {}",
-                            link.r#ref.unwrap_or_default(),
-                            quote(&truncate(&link.text, 100)),
-                            link.href
-                        );
-                    }
-                    out
+        let (mut full, mut found) = self.read_frame(tab, frame, root, view, find.as_ref(), main)?;
+        // The whole tab: the frames inside it follow, each under the line
+        // of its frame element.
+        if p.root.is_none() {
+            for inner in frames.iter().filter(|f| f.id != top) {
+                let (part, hits) =
+                    self.read_frame(tab, inner.id, None, view, find.as_ref(), main)?;
+                if part.trim().is_empty() {
+                    continue;
                 }
-                ReadView::Forms => render_forms(&catpaw_agent::forms(dom, &oracle, Some(scope))),
-                ReadView::Tables => catpaw_agent::tables(dom, &oracle, Some(scope), root),
-                ReadView::Html => catpaw_agent::html(dom, root),
-                ReadView::Find => {
-                    let matches = find.as_ref().expect("checked above");
-                    let (hits, total) =
-                        catpaw_agent::find(dom, &oracle, Some(scope), root, matches, FIND_HITS);
-                    found = total;
-                    let mut out = String::new();
-                    for hit in hits {
-                        let _ = writeln!(
-                            out,
-                            "{} {}: {}",
-                            hit.r#ref.unwrap_or_default(),
-                            hit.role,
-                            hit.context
-                        );
-                    }
-                    if total > FIND_HITS {
-                        let _ = writeln!(out, "[+{} more matches]", total - FIND_HITS);
-                    }
-                    out
+                let host = match (inner.parent, inner.element) {
+                    (Some(parent), Some(element)) => self
+                        .ref_for(tab, parent, element)
+                        .map(|r| self.describe(tab, r)),
+                    _ => None,
+                };
+                if !full.is_empty() && !full.ends_with('\n') {
+                    full.push('\n');
                 }
+                let _ = writeln!(
+                    full,
+                    "--- frame {}",
+                    host.unwrap_or_else(|| format!("f{}", inner.id.0))
+                );
+                full.push_str(&part);
+                found += hits;
             }
-        });
+        }
         let offset = floor_char_boundary(&full, p.offset.unwrap_or(0).min(full.len()));
         let budget = token_bytes(p.max_tokens.unwrap_or(READ_TOKENS).max(200));
         let rest = &full[offset..];
@@ -231,6 +191,89 @@ impl GroupState {
             );
         }
         Ok(ToolOutput::ok(text))
+    }
+
+    /// One frame's document (or a subtree of it) in a read view; with
+    /// `find`, the number of matches too.
+    fn read_frame(
+        &mut self,
+        tab: u32,
+        frame: catpaw_engine::FrameId,
+        root: Option<catpaw_dom::NodeId>,
+        view: ReadView,
+        find: Option<&Matcher>,
+        main: bool,
+    ) -> Result<(String, usize), Failure> {
+        let state = self
+            .page
+            .frame_state(frame)
+            .cloned()
+            .ok_or_else(|| Failure::new(ErrorCode::NoTab, format!("t{tab} is closed")))?;
+        let epoch = state.epoch;
+        let entry = self.tabs.get_mut(&tab).expect("root_state found the tab");
+        let mut found = 0;
+        let text = agent::with_styles(&state, |engine, dom| {
+            let oracle = EngineOracle {
+                engine,
+                page: &state,
+            };
+            let scope = RefScope::new(&mut entry.refs, frame.0, epoch);
+            let options = ReadOptions {
+                link_style: LinkStyle::Ref,
+                main_only: main,
+                root,
+            };
+            match view {
+                ReadView::Markdown => catpaw_agent::markdown(dom, &oracle, Some(scope), &options),
+                ReadView::Text => catpaw_agent::text_with(
+                    dom,
+                    &oracle,
+                    &ReadOptions {
+                        link_style: LinkStyle::Url,
+                        ..options
+                    },
+                ),
+                ReadView::Links => {
+                    let mut out = String::new();
+                    for link in catpaw_agent::links(dom, &oracle, Some(scope)) {
+                        let _ = writeln!(
+                            out,
+                            "{} {} {}",
+                            link.r#ref.unwrap_or_default(),
+                            quote(&truncate(&link.text, 100)),
+                            link.href
+                        );
+                    }
+                    out
+                }
+                ReadView::Forms => render_forms(&catpaw_agent::forms(dom, &oracle, Some(scope))),
+                ReadView::Tables => catpaw_agent::tables(dom, &oracle, Some(scope), root),
+                ReadView::Html => catpaw_agent::html(dom, root),
+                ReadView::Find => {
+                    let Some(matches) = find else {
+                        return String::new();
+                    };
+                    let (hits, total) =
+                        catpaw_agent::find(dom, &oracle, Some(scope), root, matches, FIND_HITS);
+                    found = total;
+                    let mut out = String::new();
+                    for hit in hits {
+                        let _ = writeln!(
+                            out,
+                            "{} {}: {}",
+                            hit.r#ref.unwrap_or_default(),
+                            hit.role,
+                            hit.context
+                        );
+                    }
+                    if total > FIND_HITS {
+                        let _ = writeln!(out, "[+{} more matches]", total - FIND_HITS);
+                    }
+                    out
+                }
+            }
+        });
+        Ok((text, found))
     }
 
     pub(crate) fn logs(&mut self, tab: u32, p: params::Logs) -> CallResult {

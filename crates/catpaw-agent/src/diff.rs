@@ -529,14 +529,10 @@ pub fn diff(old: &[SnapLine], new: &[SnapLine]) -> Diff {
             for k in 0..common {
                 let (oi, nj) = (gap_old[k], gap_new[k]);
                 out.changed += 1;
-                items.push((
-                    new_texts[nj].0 as f64,
-                    format!(
-                        "~ {prefix}text[{nj}] {} → {}",
-                        quote(&truncate(olds[oi], 120)),
-                        quote(&truncate(news[nj], 120))
-                    ),
-                ));
+                items.push((new_texts[nj].0 as f64, {
+                    let (old, new) = excerpts(olds[oi], news[nj], 120);
+                    format!("~ {prefix}text[{nj}] {} → {}", quote(&old), quote(&new))
+                }));
             }
             for &nj in &gap_new[common..] {
                 out.added += 1;
@@ -560,6 +556,26 @@ pub fn diff(old: &[SnapLine], new: &[SnapLine]) -> Diff {
     items.sort_by(|x, y| x.0.total_cmp(&y.0));
     out.lines = items.into_iter().map(|(_, line)| line).collect();
     out
+}
+
+/// Excerpts of two texts, at most `max` characters each, from a little
+/// before where they first differ (`…` marks what is left out), so that a
+/// change far into a long text shows.
+fn excerpts(old: &str, new: &str, max: usize) -> (String, String) {
+    let first = old
+        .chars()
+        .zip(new.chars())
+        .take_while(|(a, b)| a == b)
+        .count();
+    let start = first.saturating_sub(max / 4);
+    let cut = |text: &str| {
+        if start == 0 {
+            return truncate(text, max);
+        }
+        let rest: String = text.chars().skip(start).collect();
+        format!("…{}", truncate(&rest, max - 1))
+    };
+    (cut(old), cut(new))
 }
 
 /// Pairs the nodes of a re-rendered subtree with the old one's, where the
@@ -646,6 +662,18 @@ mod tests {
         let d = diff(&lines, &lines);
         assert!(d.is_empty());
         assert_eq!(d.stats(), "no changes");
+    }
+
+    #[test]
+    fn a_change_far_into_a_long_text_shows() {
+        let start = "a".repeat(300);
+        let old = vec![el(0, 1, "main", ""), text(1, &format!("{start} old end"))];
+        let new = vec![el(0, 1, "main", ""), text(1, &format!("{start} new end"))];
+        let d = diff(&old, &new);
+        let text = d.text();
+        assert!(text.contains("old end\" → \"…"), "{text}");
+        assert!(text.ends_with("new end\"\n"), "{text}");
+        assert!(text.contains("\"…aaa"), "{text}");
     }
 
     #[test]

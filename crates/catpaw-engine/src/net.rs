@@ -5,7 +5,7 @@
 //! finished requests from a channel.
 
 use std::cell::{Cell, RefCell};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -13,7 +13,7 @@ use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
 use std::time::Duration;
 
 use bytes::Bytes;
-use catpaw_fetch::{FetchedDocument, fetch_document_with};
+use catpaw_fetch::{FetchedDocument, fetch_document_hop};
 use catpaw_net::WsMessage;
 use catpaw_net::{NetClient, NetConfig, NetError, RequestOptions};
 use catpaw_web::net::{
@@ -121,7 +121,8 @@ pub struct EngineNet {
     tx: Sender<HostEvent>,
     rx: Receiver<HostEvent>,
     next_token: Cell<u64>,
-    inflight: RefCell<HashMap<u64, (AbortHandle, usize)>>,
+    /// Requests on their way: the task, the log entry and the kind.
+    inflight: RefCell<HashMap<u64, (AbortHandle, usize, RequestKind)>>,
     /// Open sockets: what to send them, and whether the handshake is still
     /// pending (then the socket counts as in flight).
     sockets: RefCell<HashMap<u64, (UnboundedSender<WsOutbound>, bool)>>,
@@ -137,12 +138,74 @@ pub struct EngineNet {
     /// the page's frames and workers.
     gate: Rc<RefCell<Option<Rc<RequestGate>>>>,
     /// Requests the gate held: started for the page, not sent.
-    held: RefCell<Vec<(u64, NetRequest, usize)>>,
+    held: RefCell<Vec<HeldRequest>>,
+    /// Numbers what the gates hold, navigations and requests alike, across
+    /// the page's frames and workers.
+    hold_ids: Rc<Cell<u64>>,
+    /// Fetch chains (`NetRequest::chain`) let through after approval:
+    /// their later hops and the request after a preflight go ungated.
+    approved: Rc<RefCell<HashSet<u64>>>,
+    /// Requests the gate refused, or that could not wait for approval, for
+    /// the page to report.
+    refused: RefCell<Vec<RefusedRequest>>,
+}
+
+/// The most redirects a document request follows.
+const MAX_REDIRECTS: usize = 20;
+
+/// How a document request ended.
+pub enum DocumentFetch {
+    Loaded(FetchedDocument),
+    /// Stopped before requesting a redirect hop the check did not let
+    /// through (it said `Hold` or `Deny`): the hop as it would have gone.
+    Stopped {
+        method: String,
+        url: Url,
+        body: Option<(String, Vec<u8>)>,
+        gate: Gate,
+    },
 }
 
 /// Decides about a request script makes (`fetch`, `XMLHttpRequest`,
-/// `sendBeacon`) before it is sent.
+/// `sendBeacon`, a WebSocket) before it is sent.
 pub type RequestGate = dyn Fn(&NetRequest) -> Gate;
+
+struct HeldRequest {
+    id: u64,
+    token: u64,
+    request: NetRequest,
+    index: usize,
+}
+
+/// Judges a redirect hop of a document fetch: its method, URL and body.
+pub type HopCheck<'a> = dyn FnMut(&str, &Url, Option<&(String, Vec<u8>)>) -> Gate + 'a;
+
+/// A request the gate holds (see [`EngineNet::held_requests`]).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HeldRequestInfo {
+    /// Its hold number: what a release or a drop names.
+    pub id: u64,
+    pub method: String,
+    pub url: Url,
+}
+
+/// A request that was not sent: the gate refused it, or it needed an
+/// approval it could not wait for.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RefusedRequest {
+    pub method: String,
+    pub url: Url,
+    pub reason: String,
+}
+
+/// A header of a request, by name.
+fn header<'a>(request: &'a NetRequest, name: &str) -> Option<&'a str> {
+    request
+        .headers
+        .iter()
+        .find(|(n, _)| n.eq_ignore_ascii_case(name))
+        .map(|(_, v)| v.as_str())
+}
 
 async fn perform(client: &NetClient, request: NetRequest) -> NetResult {
     let method = Method::from_bytes(request.method.as_bytes())
@@ -218,6 +281,9 @@ impl EngineNet {
             ready: RefCell::new(std::collections::VecDeque::new()),
             gate: Rc::new(RefCell::new(None)),
             held: RefCell::new(Vec::new()),
+            hold_ids: Rc::new(Cell::new(0)),
+            approved: Rc::new(RefCell::new(HashSet::new())),
+            refused: RefCell::new(Vec::new()),
         }
     }
 
@@ -229,8 +295,8 @@ impl EngineNet {
         }
     }
 
-    /// Fetches a document (a navigation or a frame's) and logs it with the
-    /// page's other requests.
+    /// Fetches a document (a navigation or a frame's), following its
+    /// redirects, and logs each hop with the page's other requests.
     pub fn fetch_document(
         &self,
         method: &str,
@@ -238,20 +304,83 @@ impl EngineNet {
         body: Option<(String, Vec<u8>)>,
         referrer: Option<&Url>,
     ) -> Result<FetchedDocument, NetError> {
-        let referrer = referrer.and_then(|from| navigation_referrer(from, url));
-        let result = self.block_on(fetch_document_with(
-            &self.client,
-            method,
-            url,
-            body,
-            referrer.as_ref(),
-        ));
-        self.record_document(
-            method,
-            url,
-            result.as_ref().ok().map(|d| d.response.status.as_u16()),
-        );
-        result
+        match self
+            .fetch_document_checked(method, url, body, referrer, &mut |_, _, _| Gate::Allow)?
+        {
+            DocumentFetch::Loaded(fetched) => Ok(fetched),
+            DocumentFetch::Stopped { .. } => unreachable!("every hop is allowed"),
+        }
+    }
+
+    /// Fetches a document one hop at a time: before a redirect is
+    /// followed, `check` judges the next hop (method, URL, body) as it
+    /// would a navigation — the first hop is the caller's to judge. Each
+    /// hop is logged with the page's other requests.
+    pub fn fetch_document_checked(
+        &self,
+        method: &str,
+        url: &Url,
+        body: Option<(String, Vec<u8>)>,
+        referrer: Option<&Url>,
+        check: &mut HopCheck<'_>,
+    ) -> Result<DocumentFetch, NetError> {
+        let mut method = method.to_string();
+        let mut url = url.clone();
+        let mut body = body;
+        let mut chain = Vec::new();
+        for _ in 0..=MAX_REDIRECTS {
+            let hop_referrer = referrer.and_then(|from| navigation_referrer(from, &url));
+            let result = self.block_on(fetch_document_hop(
+                &self.client,
+                &method,
+                &url,
+                body.clone(),
+                hop_referrer.as_ref(),
+            ));
+            self.record_document(
+                &method,
+                &url,
+                result.as_ref().ok().map(|d| d.response.status.as_u16()),
+            );
+            let mut fetched = result?;
+            let status = fetched.response.status.as_u16();
+            let next = fetched
+                .response
+                .headers
+                .get("location")
+                .and_then(|v| v.to_str().ok())
+                .and_then(|location| url.join(location).ok())
+                .filter(|_| matches!(status, 301 | 302 | 303 | 307 | 308));
+            if let Some(next) = next {
+                // 303, and 301/302 after a POST, go on as GET without a body.
+                let to_get = (status == 303 && method != "GET" && method != "HEAD")
+                    || (matches!(status, 301 | 302) && method == "POST");
+                let (next_method, next_body) = if to_get {
+                    ("GET".to_string(), None)
+                } else {
+                    (method.clone(), body.clone())
+                };
+                match check(&next_method, &next, next_body.as_ref()) {
+                    Gate::Allow => {}
+                    gate => {
+                        return Ok(DocumentFetch::Stopped {
+                            method: next_method,
+                            url: next,
+                            body: next_body,
+                            gate,
+                        });
+                    }
+                }
+                chain.push(url);
+                url = next;
+                method = next_method;
+                body = next_body;
+                continue;
+            }
+            fetched.response.redirect_chain = chain;
+            return Ok(DocumentFetch::Loaded(fetched));
+        }
+        Err(NetError::TooManyRedirects(MAX_REDIRECTS))
     }
 
     /// A host for another frame of the same page: the same runtime, client
@@ -271,6 +400,9 @@ impl EngineNet {
             ready: RefCell::new(std::collections::VecDeque::new()),
             gate: self.gate.clone(),
             held: RefCell::new(Vec::new()),
+            hold_ids: self.hold_ids.clone(),
+            approved: self.approved.clone(),
+            refused: RefCell::new(Vec::new()),
         }
     }
 
@@ -284,31 +416,143 @@ impl EngineNet {
         *self.gate.borrow_mut() = gate;
     }
 
-    /// The requests the gate holds: method and URL.
-    pub fn held_requests(&self) -> Vec<(String, Url)> {
+    /// A new hold number, page-wide.
+    pub(crate) fn next_hold_id(&self) -> u64 {
+        let id = self.hold_ids.get() + 1;
+        self.hold_ids.set(id);
+        id
+    }
+
+    /// The number the next hold gets: holds numbered from here on are
+    /// newer than now.
+    pub fn hold_watermark(&self) -> u64 {
+        self.hold_ids.get() + 1
+    }
+
+    /// The requests the gate holds here.
+    pub fn held_requests(&self) -> Vec<HeldRequestInfo> {
         self.held
             .borrow()
             .iter()
-            .map(|(_, request, _)| (request.method.clone(), request.url.clone()))
+            .map(|h| HeldRequestInfo {
+                id: h.id,
+                method: h.request.method.clone(),
+                url: h.request.url.clone(),
+            })
             .collect()
     }
 
-    /// Sends the held requests, as though the gate had let them through.
-    pub fn release_held(&self) {
-        let held = std::mem::take(&mut *self.held.borrow_mut());
-        for (token, request, index) in held {
-            self.dispatch(token, request, index);
-        }
+    fn take_held(&self, ids: &[u64]) -> Vec<HeldRequest> {
+        let mut held = self.held.borrow_mut();
+        let (taken, kept): (Vec<_>, Vec<_>) = std::mem::take(&mut *held)
+            .into_iter()
+            .partition(|h| ids.contains(&h.id));
+        *held = kept;
+        taken
     }
 
-    /// Fails the held requests as refused by the network.
-    pub fn drop_held(&self) {
-        let held = std::mem::take(&mut *self.held.borrow_mut());
-        for (token, _, index) in held {
-            let result: NetResult = Err("the request was not allowed".to_string());
-            self.finish(index, &result);
-            self.ready.borrow_mut().push_back((token, result));
+    /// Sends the held requests named, as though the gate had let them
+    /// through, with the rest of their fetch (redirect hops, the request
+    /// after a preflight). Returns how many were held here.
+    pub fn release_held(&self, ids: &[u64]) -> usize {
+        let taken = self.take_held(ids);
+        let count = taken.len();
+        for held in taken {
+            if held.request.chain != 0 {
+                self.approved.borrow_mut().insert(held.request.chain);
+            }
+            self.dispatch(held.token, held.request, held.index);
         }
+        count
+    }
+
+    /// Fails the held requests named, as a network that refused them
+    /// would. Returns how many were held here.
+    pub fn drop_held(&self, ids: &[u64]) -> usize {
+        let taken = self.take_held(ids);
+        let count = taken.len();
+        for held in taken {
+            let result: NetResult = Err("the request was not allowed".to_string());
+            self.finish(held.index, &result);
+            self.ready.borrow_mut().push_back((held.token, result));
+        }
+        count
+    }
+
+    /// The requests refused since the last call.
+    pub fn take_refused(&self) -> Vec<RefusedRequest> {
+        std::mem::take(&mut *self.refused.borrow_mut())
+    }
+
+    fn refuse(&self, request: &NetRequest, reason: &str) {
+        self.refused.borrow_mut().push(RefusedRequest {
+            method: request.method.clone(),
+            url: request.url.clone(),
+            reason: reason.to_string(),
+        });
+    }
+
+    /// What the gate says about a request script makes; `None` when it
+    /// need not be asked. A preflight is judged as the request it
+    /// prepares, and the later hops of an approved fetch go ungated.
+    fn judge(&self, request: &NetRequest) -> Option<Gate> {
+        if request.chain != 0 && self.approved.borrow().contains(&request.chain) {
+            return None;
+        }
+        let gate = self.gate.borrow().clone()?;
+        if request.method.eq_ignore_ascii_case("OPTIONS")
+            && let Some(method) = header(request, "access-control-request-method")
+        {
+            let prepared = NetRequest {
+                method: method.to_ascii_uppercase(),
+                ..request.clone()
+            };
+            return Some(gate(&prepared));
+        }
+        Some(gate(request))
+    }
+
+    /// The document that made the requests is gone: what it holds fails
+    /// unsent, what it has on the way is abandoned (beacons excepted, as
+    /// browsers let them finish), and its sockets close. Returns the hold
+    /// numbers it dropped.
+    pub fn leave_document(&self) -> Vec<u64> {
+        let held = std::mem::take(&mut *self.held.borrow_mut());
+        let dropped = held.iter().map(|h| h.id).collect();
+        for held in held {
+            self.finish(
+                held.index,
+                &Err("the page moved on before the request was allowed".to_string()),
+            );
+        }
+        let aborted: Vec<(u64, usize)> = {
+            let mut inflight = self.inflight.borrow_mut();
+            let gone: Vec<u64> = inflight
+                .iter()
+                .filter(|(_, (_, _, kind))| *kind != RequestKind::Beacon)
+                .map(|(token, _)| *token)
+                .collect();
+            gone.into_iter()
+                .filter_map(|token| {
+                    inflight.remove(&token).map(|(task, index, _)| {
+                        task.abort();
+                        (token, index)
+                    })
+                })
+                .collect()
+        };
+        for (_, index) in aborted {
+            self.finish(index, &Err("aborted: the page moved on".to_string()));
+        }
+        self.ready.borrow_mut().clear();
+        for (_, (out, _)) in self.sockets.borrow_mut().drain() {
+            let _ = out.send(WsOutbound::Close {
+                code: Some(1001),
+                reason: "going away".to_string(),
+            });
+        }
+        self.socket_events.borrow_mut().clear();
+        dropped
     }
 
     /// Sends a request started for the page.
@@ -321,13 +565,14 @@ impl EngineNet {
         }
         let client = self.client.clone();
         let tx = self.tx.clone();
+        let kind = request.kind;
         let task = self.runtime.spawn(async move {
             let result = perform(&client, request).await;
             let _ = tx.send(HostEvent::Response(token, result));
         });
         self.inflight
             .borrow_mut()
-            .insert(token, (task.abort_handle(), index));
+            .insert(token, (task.abort_handle(), index, kind));
     }
 
     /// Runs a future on the network runtime and waits for it. Must not be
@@ -416,15 +661,41 @@ impl EngineNet {
 
     fn accept(&self, out: &mut Vec<(u64, NetResult)>, token: u64, result: NetResult) {
         // A result for an aborted request is dropped.
-        if let Some((_, index)) = self.inflight.borrow_mut().remove(&token) {
+        if let Some((_, index, _)) = self.inflight.borrow_mut().remove(&token) {
             self.finish(index, &result);
             out.push((token, result));
         }
     }
 }
 
+/// Whether script made the request (what the request gate judges).
+fn scripted(request: &NetRequest) -> bool {
+    matches!(
+        request.kind,
+        RequestKind::Fetch | RequestKind::Xhr | RequestKind::Beacon
+    )
+}
+
 impl NetHost for EngineNet {
     fn fetch_blocking(&self, request: NetRequest) -> NetResult {
+        // A synchronous request cannot be held: one the gate would hold is
+        // refused instead.
+        let decision = scripted(&request).then(|| self.judge(&request)).flatten();
+        let refusal = match decision {
+            Some(Gate::Hold) => Some(
+                "it needs the user's approval, which a synchronous request cannot wait for"
+                    .to_string(),
+            ),
+            Some(Gate::Deny(reason)) => Some(reason),
+            Some(Gate::Allow) | None => None,
+        };
+        if let Some(reason) = refusal {
+            self.refuse(&request, &reason);
+            let index = self.record(&request);
+            let result: NetResult = Err(format!("blocked: {reason}"));
+            self.finish(index, &result);
+            return result;
+        }
         let index = self.record(&request);
         let result = self.runtime.block_on(perform(&self.client, request));
         self.finish(index, &result);
@@ -435,14 +706,19 @@ impl NetHost for EngineNet {
         let token = self.next_token.get();
         self.next_token.set(token + 1);
         let index = self.record(&request);
-        let scripted = matches!(
-            request.kind,
-            RequestKind::Fetch | RequestKind::Xhr | RequestKind::Beacon
-        );
-        let gate = self.gate.borrow().clone();
-        match gate.filter(|_| scripted).map(|gate| gate(&request)) {
-            Some(Gate::Hold) => self.held.borrow_mut().push((token, request, index)),
+        let decision = scripted(&request).then(|| self.judge(&request)).flatten();
+        match decision {
+            Some(Gate::Hold) => {
+                let id = self.next_hold_id();
+                self.held.borrow_mut().push(HeldRequest {
+                    id,
+                    token,
+                    request,
+                    index,
+                });
+            }
             Some(Gate::Deny(reason)) => {
+                self.refuse(&request, &reason);
                 let result: NetResult = Err(format!("blocked: {reason}"));
                 self.finish(index, &result);
                 self.ready.borrow_mut().push_back((token, result));
@@ -477,14 +753,14 @@ impl NetHost for EngineNet {
 
     fn abort(&self, token: u64) {
         self.ready.borrow_mut().retain(|(t, _)| *t != token);
-        self.held.borrow_mut().retain(|(t, _, _)| *t != token);
-        if let Some((task, _)) = self.inflight.borrow_mut().remove(&token) {
+        self.held.borrow_mut().retain(|h| h.token != token);
+        if let Some((task, _, _)) = self.inflight.borrow_mut().remove(&token) {
             task.abort();
         }
     }
 
     fn is_held(&self, token: u64) -> bool {
-        self.held.borrow().iter().any(|(t, _, _)| *t == token)
+        self.held.borrow().iter().any(|h| h.token == token)
     }
 
     fn inflight(&self) -> usize {
@@ -498,6 +774,24 @@ impl NetHost for EngineNet {
     }
 
     fn ws_connect(&self, url: Url, protocols: Vec<String>, origin: String) -> Option<u64> {
+        // A socket cannot be held either: one the gate would hold is
+        // refused.
+        let gate = self.gate.borrow().clone();
+        if let Some(gate) = gate {
+            let mut probe = NetRequest::get(url.clone(), RequestKind::Other);
+            probe.headers.push(("origin".to_string(), origin.clone()));
+            let refusal = match gate(&probe) {
+                Gate::Hold => {
+                    Some("it needs the user's approval, which a socket cannot wait for".to_string())
+                }
+                Gate::Deny(reason) => Some(reason),
+                Gate::Allow => None,
+            };
+            if let Some(reason) = refusal {
+                self.refuse(&probe, &reason);
+                return None;
+            }
+        }
         let token = self.next_token.get();
         self.next_token.set(token + 1);
         let (out_tx, mut out_rx) = unbounded_channel::<WsOutbound>();

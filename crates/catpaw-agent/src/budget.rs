@@ -1,15 +1,17 @@
 //! Fitting a snapshot into a byte budget.
 //!
-//! Over budget, a snapshot first shows only the start of its long lists
-//! (`[more=460 nodes after e212]`), then folds containers, deepest first
-//! and those with the fewest things to act on first (`[collapsed=12]`). Whatever
-//! still does not fit is cut at the end. The ref of a folded container,
-//! as `root` (with `after` for a list), shows what was left out.
+//! Over budget, a snapshot first shows only the start of long texts
+//! (`… [+1830 chars]`), then only the start of its long lists, as much as
+//! fits (`[more=460 nodes after e212]`), then folds containers, deepest
+//! first and those with the fewest things to act on first
+//! (`[collapsed=12]`). Whatever still does not fit is cut at the end. The
+//! ref of a folded container, as `root` (with `after` for a list), shows
+//! what was left out.
 
 use std::collections::HashMap;
 
 use crate::a11y::is_interactive;
-use crate::snapshot::{Format, LineKind, SnapLine, render_line};
+use crate::snapshot::{Format, LineKind, SnapLine, cap_text, render_line};
 
 /// Items of a long list shown before the rest is left out.
 const LIST_HEAD: usize = 10;
@@ -40,23 +42,37 @@ fn line_ref(line: &SnapLine) -> Option<u32> {
     }
 }
 
+/// A line with its text, when long, cut to its start.
+fn capped(line: &SnapLine) -> SnapLine {
+    let mut line = line.clone();
+    if let LineKind::Text(t) | LineKind::Element { text: Some(t), .. } = &mut line.kind
+        && let Some(short) = cap_text(t)
+    {
+        *t = short;
+    }
+    line
+}
+
 /// Fits `lines` into `max` bytes as rendered in `format`.
 pub fn fit(lines: &[SnapLine], format: Format, max: usize) -> Fitted {
-    let n = lines.len();
-    let sizes: Vec<usize> = lines
-        .iter()
-        .map(|line| {
-            let mut out = String::new();
-            render_line(&mut out, line, format);
-            out.len() + 1
-        })
-        .collect();
-    let mut total: usize = sizes.iter().sum();
-    if total <= max {
+    let size = |line: &SnapLine| {
+        let mut out = String::new();
+        render_line(&mut out, line, format);
+        out.len() + 1
+    };
+    if lines.iter().map(size).sum::<usize>() <= max {
         return Fitted {
             lines: lines.to_vec(),
             hidden: 0,
         };
+    }
+    // Long texts show their start first.
+    let lines: Vec<SnapLine> = lines.iter().map(capped).collect();
+    let n = lines.len();
+    let sizes: Vec<usize> = lines.iter().map(size).collect();
+    let mut total: usize = sizes.iter().sum();
+    if total <= max {
+        return Fitted { lines, hidden: 0 };
     }
     // The tree: where each subtree ends, and each node's children.
     let mut end = vec![0usize; n];
@@ -120,7 +136,20 @@ pub fn fit(lines: &[SnapLine], format: Format, max: usize) -> Fitted {
         if hidden[i] {
             continue;
         }
-        let cut = children[i][LIST_HEAD];
+        // Leave out the last items, as many as the budget needs (the
+        // first ones always stay).
+        let needed = total - max + 32;
+        let kids = &children[i];
+        let mut from = kids.len();
+        let mut saving = 0;
+        while from > LIST_HEAD && saving < needed {
+            from -= 1;
+            saving += visible_bytes(&hidden, kids[from], end[kids[from]]);
+        }
+        if from == kids.len() {
+            continue;
+        }
+        let cut = kids[from];
         let saved = visible_bytes(&hidden, cut, end[i]);
         let count = (cut..end[i]).filter(|&k| !hidden[k]).count();
         for flag in &mut hidden[cut..end[i]] {
@@ -262,6 +291,41 @@ mod tests {
             depth,
             kind: LineKind::Text(t.to_string()),
         }
+    }
+
+    #[test]
+    fn long_texts_are_cut_before_anything_is_left_out() {
+        let long = "word ".repeat(100);
+        let lines = vec![el(0, 1, "main", ""), text(1, long.trim()), text(1, "short")];
+        let all = fit(&lines, Format::Compact, 10_000);
+        assert_eq!(all.lines, lines, "within budget, texts stay whole");
+        let fitted = fit(&lines, Format::Compact, 300);
+        assert_eq!(fitted.hidden, 0);
+        let shown = render_lines(&fitted.lines, Format::Compact);
+        assert!(shown.contains("… [+300 chars]"), "{shown}");
+        assert!(shown.contains("text: short"), "{shown}");
+    }
+
+    #[test]
+    fn a_long_list_keeps_as_many_items_as_fit() {
+        let mut lines = vec![el(0, 1, "list", "")];
+        for i in 0..40 {
+            lines.push(el(1, 2 + i, "link", &format!("Item {i}")));
+        }
+        let all: usize = lines
+            .iter()
+            .map(|l| {
+                let mut out = String::new();
+                render_line(&mut out, l, Format::Compact);
+                out.len() + 1
+            })
+            .sum();
+        // Room for all but a few items: only those are left out.
+        let fitted = fit(&lines, Format::Compact, all - 60);
+        let shown = render_lines(&fitted.lines, Format::Compact);
+        assert!(shown.contains("link \"Item 30\""), "{shown}");
+        assert!(!shown.contains("link \"Item 39\""), "{shown}");
+        assert!(shown.contains("[more="), "{shown}");
     }
 
     #[test]

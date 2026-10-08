@@ -30,20 +30,20 @@ ok type e6 textbox
 
 > click {"target":"button \"Login\""}
 needs_confirmation c1: click e7 button "Login" would submit → POST https://quotes.toscrape.com/login (fields: csrf_token=***, username=catpaw, password=***)
-  ask the user to approve at http://127.0.0.1:PORT/confirm/c1 (expires in 10m), then repeat the same call with confirmation:"c1"
-# s4 diff-from=s3 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e7 settled=yes no changes
+  ask the user to approve at http://127.0.0.1:PORT/confirm/c1 (expires in 10m); once they approve, repeat: click {"confirmation":"c1","target":"button \"Login\""}
 
 > (user) approve c1
 approved
 
 > click {"confirmation":"c1","target":"button \"Login\""}
 ok click e7 button "Login" (confirmed c1) → https://quotes.toscrape.com/ (POST, 200)
-# s5 tab=t1 doc=d2 navigated-from=d1 url=https://quotes.toscrape.com/ title="Quotes to Scrape" vp=1280x720 scroll=0,0 filter=interesting nodes=95/161 settled=yes full=navigated
+# s5 tab=t1 doc=d2 navigated-from=d1 url=https://quotes.toscrape.com/ title="Quotes to Scrape" vp=1280x720 scroll=0,0 filter=interesting nodes=105/161 settled=yes full=navigated
 e13 heading [level=1]
   e14 link "Quotes to Scrape"
 e15 paragraph
   e16 link "Logout"
-text: “The world as we have created it is a process of our thinking. It cannot be changed without changing our thinking.” by Albert Einstein
+text: “The world as we have created it is a process of our thinking. It cannot be changed without changing our thinking.”
+text: by Albert Einstein
 e17 link "(about)"
 e18 link "(Goodreads page)"
 text: Tags:
@@ -51,13 +51,15 @@ e19 link "change"
 e20 link "deep-thoughts"
 e21 link "thinking"
 e22 link "world"
-text: “It is our choices, Harry, that show what we truly are, far more than our abilities.” by J.K. Rowling
+text: “It is our choices, Harry, that show what we truly are, far more than our abilities.”
+text: by J.K. Rowling
 e23 link "(about)"
 e24 link "(Goodreads page)"
 text: Tags:
 e25 link "abilities"
 e26 link "choices"
-text: “There are only two ways to live your life. One is as though nothing is a miracle. The other is as though everything is a miracle.” by Albert Einstein
+text: “There are only two ways to live your life. One is as though nothing is a miracle. The other is as though everything is a miracle.”
+text: by Albert Einstein
 e27 link "(about)"
 e28 link "(Goodreads page)"
 text: Tags:
@@ -66,7 +68,8 @@ e30 link "life"
 e31 link "live"
 e32 link "miracle"
 e33 link "miracles"
-text: “The person, be it gentleman or lady, who has not pleasure in a good novel, must be intolerably stupid.” by Jane Austen
+text: “The person, be it gentleman or lady, who has not pleasure in a good novel, must be intolerably stupid.”
+text: by Jane Austen
 e34 link "(about)"
 e35 link "(Goodreads page)"
 text: Tags:
@@ -74,26 +77,30 @@ e36 link "aliteracy"
 e37 link "books"
 e38 link "classic"
 e39 link "humor"
-text: “Imperfection is beauty, madness is genius and it's better to be absolutely ridiculous than absolutely boring.” by Marilyn Monroe
+text: “Imperfection is beauty, madness is genius and it's better to be absolutely ridiculous than absolutely boring.”
+text: by Marilyn Monroe
 e40 link "(about)"
 e41 link "(Goodreads page)"
 text: Tags:
 e42 link "be-yourself"
 e43 link "inspirational"
-text: “Try not to become a man of success. Rather become a man of value.” by Albert Einstein
+text: “Try not to become a man of success. Rather become a man of value.”
+text: by Albert Einstein
 e44 link "(about)"
 e45 link "(Goodreads page)"
 text: Tags:
 e46 link "adulthood"
 e47 link "success"
 e48 link "value"
-text: “It is better to be hated for what you are than to be loved for what you are not.” by André Gide
+text: “It is better to be hated for what you are than to be loved for what you are not.”
+text: by André Gide
 e49 link "(about)"
 e50 link "(Goodreads page)"
 text: Tags:
 e51 link "life"
 e52 link "love"
-text: “I have not failed. I've just found 10,000 ways that won't work.” by Thomas A. Edison
+text: “I have not failed. I've just found 10,000 ways that won't work.”
+text: by Thomas A. Edison
 e53 link "(about)"
 e54 link "(Goodreads page)"
 text: Tags:
@@ -101,12 +108,14 @@ e55 link "edison"
 e56 link "failure"
 e57 link "inspirational"
 e58 link "paraphrased"
-text: “A woman is like a tea bag; you never know how strong it is until it's in hot water.” by Eleanor Roosevelt
+text: “A woman is like a tea bag; you never know how strong it is until it's in hot water.”
+text: by Eleanor Roosevelt
 e59 link "(about)"
 e60 link "(Goodreads page)"
 text: Tags:
 e61 link "misattributed-eleanor-roosevelt"
-text: “A day without sunshine is like, you know, night.” by Steve Martin
+text: “A day without sunshine is like, you know, night.”
+text: by Steve Martin
 e62 link "(about)"
 e63 link "(Goodreads page)"
 text: Tags:

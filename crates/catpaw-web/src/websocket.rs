@@ -26,6 +26,9 @@ pub struct WebSocketObject {
     extensions: RefCell<String>,
     binary_type: Cell<web::BinaryType>,
     buffered: Cell<u64>,
+    /// When it was made (wall time): a handshake that takes long stops
+    /// counting as work the page waits for.
+    made: std::time::Instant,
 }
 platform_object!(WebSocketObject, WebSocket);
 
@@ -49,6 +52,20 @@ impl Sockets {
     /// Sockets whose handshake is pending: work the page waits for.
     pub fn connecting(&self, page: &PageState) -> usize {
         self.count(page, CONNECTING)
+    }
+
+    /// Sockets whose handshake is pending and began less than `within`
+    /// ago.
+    pub fn connecting_within(&self, page: &PageState, within: std::time::Duration) -> usize {
+        self.by_token
+            .borrow()
+            .values()
+            .filter(|&&id| {
+                page.try_with::<WebSocketObject, _>(id, |s| {
+                    s.state.get() == CONNECTING && s.made.elapsed() < within
+                }) == Some(true)
+            })
+            .count()
     }
 
     /// Sockets that are open or closing: the server may still speak.
@@ -244,6 +261,7 @@ impl web::WebSocketImpl for Web {
             extensions: RefCell::new(String::new()),
             binary_type: Cell::new(web::BinaryType::Blob),
             buffered: Cell::new(0),
+            made: std::time::Instant::now(),
         });
         cx.pin(this);
         match token {

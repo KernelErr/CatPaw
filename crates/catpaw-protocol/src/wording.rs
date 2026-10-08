@@ -27,6 +27,8 @@ pub enum ErrorCode {
     Timeout,
     /// Not something this version can do.
     Unsupported,
+    /// The tab is with the user (a hand-off) until they give it back.
+    Busy,
     /// The engine failed while running the call; the tab is gone.
     Crashed,
 }
@@ -45,6 +47,7 @@ impl ErrorCode {
             ErrorCode::ScriptError => "ScriptError",
             ErrorCode::Timeout => "Timeout",
             ErrorCode::Unsupported => "Unsupported",
+            ErrorCode::Busy => "Busy",
             ErrorCode::Crashed => "Crashed",
         }
     }
@@ -60,7 +63,10 @@ pub mod advice {
     pub const AMBIGUOUS: &str =
         "advice: pick one by its ref, or narrow it with role \"name\" (button \"Sign in\")";
     pub const FULL_NAME: &str = "advice: use the ref, or the name in full as the snapshot shows it";
+    pub const OTHER_ROLE: &str = "advice: use the ref, or the role the snapshot shows";
     pub const NO_TAB: &str = "advice: navigate to a URL first";
+    pub const HANDED_OVER: &str =
+        "advice: wait({\"for\":\"handoff\"}) until the user gives the tab back, or use another tab";
     pub const HANDOFF: &str = "advice: the user still has the tab; wait({\"for\":\"handoff\"}) again once they say they are done";
     pub const NOT_EDITABLE: &str =
         "advice: type into a text field or editable element; click the one that takes the text";
@@ -103,6 +109,10 @@ pub mod outcome {
     pub const DECLINED: &str = "user: declined";
     /// The reason when the confirmation ran out.
     pub const EXPIRED: &str = "expired";
+    /// The reason when the page no longer holds what was approved.
+    pub const SUPERSEDED: &str = "superseded";
+    /// The reason when the host's user dismissed the question.
+    pub const CANCELLED: &str = "user: cancelled";
 }
 
 /// Words that start consequence lines (`! <word> ...`), in the order the
@@ -115,5 +125,6 @@ pub mod consequence {
     pub const DIALOG: &str = "dialog";
     pub const NETWORK: &str = "network";
     pub const CONSOLE: &str = "console";
+    pub const BLOCKED: &str = "blocked";
     pub const NOT_SETTLED: &str = "not-settled";
 }

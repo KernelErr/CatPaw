@@ -19,38 +19,45 @@ ok type e3 textbox "Username"
 
 > type {"submit":true,"target":"textbox \"Password\"","text":"secret_sauce"}
 ok type e4 textbox "Password" + Enter → https://www.saucedemo.com/inventory.html (same document)
-# s3 tab=t1 doc=d1 url=https://www.saucedemo.com/inventory.html title="Swag Labs" vp=1280x720 scroll=0,0 filter=interesting nodes=38/140 settled=yes full=large
+# s3 tab=t1 doc=d1 url=https://www.saucedemo.com/inventory.html title="Swag Labs" vp=1280x720 scroll=0,0 filter=interesting nodes=45/140 settled=yes full=large
 e8 banner
   e9 button "Open Menu"
   e10 img "Open Menu"
   text: Swag Labs
   e11 button "Cart, empty"
-  text: Products Name (A to Z)
+  text: Products
+  text: Name (A to Z)
   e12 combobox "Sort products" [value="Name (A to Z)"] [options=4]
 e13 main
   e14 button "View details for Sauce Labs Backpack"
   e15 button "View details for Sauce Labs Backpack"
-  text: carry.allTheThings() with the sleek, streamlined Sly Pack that melds uncompromising style with unequaled laptop and tablet protection. $29.99
+  text: carry.allTheThings() with the sleek, streamlined Sly Pack that melds uncompromising style with unequaled laptop and tablet protection.
+  text: $29.99
   e16 button "Add to cart"
   e17 button "View details for Sauce Labs Bike Light"
   e18 button "View details for Sauce Labs Bike Light"
-  text: A red light isn't the desired state in testing but it sure helps when riding your bike at night. Water-resistant with 3 lighting modes, 1 AAA battery included. $9.99
+  text: A red light isn't the desired state in testing but it sure helps when riding your bike at night. Water-resistant with 3 lighting modes, 1 AAA battery included.
+  text: $9.99
   e19 button "Add to cart"
   e20 button "View details for Sauce Labs Bolt T-Shirt"
   e21 button "View details for Sauce Labs Bolt T-Shirt"
-  text: Get your testing superhero on with the Sauce Labs bolt T-shirt. From American Apparel, 100% ringspun combed cotton, heather gray with red bolt. $15.99
+  text: Get your testing superhero on with the Sauce Labs bolt T-shirt. From American Apparel, 100% ringspun combed cotton, heather gray with red bolt.
+  text: $15.99
   e22 button "Add to cart"
   e23 button "View details for Sauce Labs Fleece Jacket"
   e24 button "View details for Sauce Labs Fleece Jacket"
-  text: It's not every day that you come across a midweight quarter-zip fleece jacket capable of handling everything from a relaxing day outdoors to a busy day at the office. $49.99
+  text: It's not every day that you come across a midweight quarter-zip fleece jacket capable of handling everything from a relaxing day outdoors to a busy day at the office.
+  text: $49.99
   e25 button "Add to cart"
   e26 button "View details for Sauce Labs Onesie"
   e27 button "View details for Sauce Labs Onesie"
-  text: Rib snap infant onesie for the junior automation engineer in development. Reinforced 3-snap bottom closure, two-needle hemmed sleeved and bottom won't unravel. $7.99
+  text: Rib snap infant onesie for the junior automation engineer in development. Reinforced 3-snap bottom closure, two-needle hemmed sleeved and bottom won't unravel.
+  text: $7.99
   e28 button "Add to cart"
   e29 button "View details for Test.allTheThings() T-Shirt (Red)"
   e30 button "View details for Test.allTheThings() T-Shirt (Red)"
-  text: This classic Sauce Labs t-shirt is perfect to wear when cozying up to your keyboard to automate a few tests. Super-soft and comfy ringspun combed cotton. $15.99
+  text: This classic Sauce Labs t-shirt is perfect to wear when cozying up to your keyboard to automate a few tests. Super-soft and comfy ringspun combed cotton.
+  text: $15.99
   e31 button "Add to cart"
 e32 contentinfo
   e33 list
@@ -61,38 +68,45 @@ e32 contentinfo
 
 > select {"option":"Price (low to high)","target":"combobox \"Sort products\""}
 ok select e12 combobox "Sort products" ← "Price (low to high)"
-# s4 tab=t1 doc=d1 url=https://www.saucedemo.com/inventory.html title="Swag Labs" vp=1280x720 scroll=0,0 filter=interesting nodes=38/140 settled=yes full=large
+# s4 tab=t1 doc=d1 url=https://www.saucedemo.com/inventory.html title="Swag Labs" vp=1280x720 scroll=0,0 filter=interesting nodes=45/140 settled=yes full=large
 e8 banner
   e9 button "Open Menu"
   e10 img "Open Menu"
   text: Swag Labs
   e11 button "Cart, empty"
-  text: Products Price (low to high)
+  text: Products
+  text: Price (low to high)
   e37 combobox "Sort products" [value="Price (low to high)"] [options=4]
 e13 main
   e26 button "View details for Sauce Labs Onesie"
   e27 button "View details for Sauce Labs Onesie"
-  text: Rib snap infant onesie for the junior automation engineer in development. Reinforced 3-snap bottom closure, two-needle hemmed sleeved and bottom won't unravel. $7.99
+  text: Rib snap infant onesie for the junior automation engineer in development. Reinforced 3-snap bottom closure, two-needle hemmed sleeved and bottom won't unravel.
+  text: $7.99
   e38 button "Add to cart"
   e17 button "View details for Sauce Labs Bike Light"
   e18 button "View details for Sauce Labs Bike Light"
-  text: A red light isn't the desired state in testing but it sure helps when riding your bike at night. Water-resistant with 3 lighting modes, 1 AAA battery included. $9.99
+  text: A red light isn't the desired state in testing but it sure helps when riding your bike at night. Water-resistant with 3 lighting modes, 1 AAA battery included.
+  text: $9.99
   e39 button "Add to cart"
   e20 button "View details for Sauce Labs Bolt T-Shirt"
   e21 button "View details for Sauce Labs Bolt T-Shirt"
-  text: Get your testing superhero on with the Sauce Labs bolt T-shirt. From American Apparel, 100% ringspun combed cotton, heather gray with red bolt. $15.99
+  text: Get your testing superhero on with the Sauce Labs bolt T-shirt. From American Apparel, 100% ringspun combed cotton, heather gray with red bolt.
+  text: $15.99
   e40 button "Add to cart"
   e29 button "View details for Test.allTheThings() T-Shirt (Red)"
   e30 button "View details for Test.allTheThings() T-Shirt (Red)"
-  text: This classic Sauce Labs t-shirt is perfect to wear when cozying up to your keyboard to automate a few tests. Super-soft and comfy ringspun combed cotton. $15.99
+  text: This classic Sauce Labs t-shirt is perfect to wear when cozying up to your keyboard to automate a few tests. Super-soft and comfy ringspun combed cotton.
+  text: $15.99
   e41 button "Add to cart"
   e14 button "View details for Sauce Labs Backpack"
   e15 button "View details for Sauce Labs Backpack"
-  text: carry.allTheThings() with the sleek, streamlined Sly Pack that melds uncompromising style with unequaled laptop and tablet protection. $29.99
+  text: carry.allTheThings() with the sleek, streamlined Sly Pack that melds uncompromising style with unequaled laptop and tablet protection.
+  text: $29.99
   e42 button "Add to cart"
   e23 button "View details for Sauce Labs Fleece Jacket"
   e24 button "View details for Sauce Labs Fleece Jacket"
-  text: It's not every day that you come across a midweight quarter-zip fleece jacket capable of handling everything from a relaxing day outdoors to a busy day at the office. $49.99
+  text: It's not every day that you come across a midweight quarter-zip fleece jacket capable of handling everything from a relaxing day outdoors to a busy day at the office.
+  text: $49.99
   e43 button "Add to cart"
 e32 contentinfo
   e33 list

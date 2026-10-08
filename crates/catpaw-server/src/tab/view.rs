@@ -34,24 +34,37 @@ pub(super) struct Model {
     pub root: Option<u32>,
 }
 
-/// The lines after the item `after` of a subtree shown with `root`: the
-/// rest of a long list.
+/// The items after `after` in the list (or other container) it is an item
+/// of, as the top of what is shown: the rest of a long list.
 fn after_item(lines: &[SnapLine], after: &str) -> Result<Vec<SnapLine>, Failure> {
     let wanted = catpaw_agent::RefTable::parse(after)
         .ok_or_else(|| Failure::bad_argument(format!("{after:?} is not a ref")))?;
     let at = lines
         .iter()
-        .position(|l| l.depth == 0 && matches!(l.kind, LineKind::Element { r, .. } if r == wanted));
+        .position(|l| matches!(l.kind, LineKind::Element { r, .. } if r == wanted));
     let Some(at) = at else {
         return Err(Failure::bad_argument(format!(
-            "e{wanted} is not an item of that root"
+            "e{wanted} is not on the page shown (or in that root)"
         )));
     };
+    let depth = lines[at].depth;
+    // The item's own lines end at the next line no deeper than it; its
+    // list's, at the next shallower one.
     let next = lines[at + 1..]
         .iter()
-        .position(|l| l.depth == 0)
+        .position(|l| l.depth <= depth)
         .map_or(lines.len(), |k| at + 1 + k);
-    Ok(lines[next..].to_vec())
+    let stop = lines[next..]
+        .iter()
+        .position(|l| l.depth < depth)
+        .map_or(lines.len(), |k| next + k);
+    Ok(lines[next..stop]
+        .iter()
+        .map(|l| SnapLine {
+            depth: l.depth - depth,
+            ..l.clone()
+        })
+        .collect())
 }
 
 /// The size of all the lines rendered.
@@ -79,6 +92,7 @@ impl GroupState {
         let page = &self.page;
         let entry = self.tabs.get_mut(&tab).expect("root_state found the tab");
         entry.sync(page);
+        entry.refs.begin_pass();
         let epoch = entry.doc_epoch;
         let doc = entry.doc;
         let root_node: Option<(FrameId, NodeId, u32)> = match root {
@@ -275,7 +289,10 @@ impl GroupState {
 
     /// The `settled=` and `pending=` of a header.
     fn settledness(&self, tab: u32) -> (bool, Option<String>) {
-        let settled = self.page.is_settled();
+        let settled = match self.tabs.get(&tab) {
+            Some(t) => self.page.is_settled_in(t.root),
+            None => self.page.is_settled(),
+        };
         let pending = if settled {
             None
         } else {

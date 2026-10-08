@@ -7,8 +7,11 @@ use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
-use catpaw_server::{ApprovalConfig, Asker, McpServer, Policy, Preset, Session, SessionConfig};
+use catpaw_server::{
+    Approval, ApprovalConfig, Host, McpServer, Policy, Preset, Session, SessionConfig,
+};
 use serde_json::{Value, json};
 
 const ORDER: &str = r#"<!doctype html><title>Order</title>
@@ -28,6 +31,17 @@ const LOGIN: &str = r#"<!doctype html><title>Sign in</title>
   <label>Password <input id=pass name=pass type=password></label>
   <button>Sign in</button>
 </form>"#;
+
+/// Two buttons, each sending a POST to another site (localhost, from a
+/// page on 127.0.0.1).
+const TWO_POSTS: &str = r#"<!doctype html><title>Two</title>
+<script>
+function send(name) {
+  fetch('http://localhost:' + location.port + '/' + name, {method: 'POST', body: name}).catch(() => {});
+}
+</script>
+<button onclick="send('one')">One</button>
+<button onclick="send('two')">Two</button>"#;
 
 type Log = Arc<Mutex<Vec<String>>>;
 
@@ -81,13 +95,21 @@ fn serve() -> (u16, Log) {
                     ORDER.to_string()
                 } else if path == "/login" {
                     LOGIN.to_string()
+                } else if path == "/two-posts" {
+                    TWO_POSTS.to_string()
                 } else {
                     format!("<!doctype html><title>Done</title><h1>{method} {path}</h1>")
                 };
-                let response = format!(
-                    "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{page}",
-                    page.len()
-                );
+                let response = if path == "/to-elsewhere" {
+                    format!(
+                        "HTTP/1.1 302 Found\r\nLocation: http://localhost:{port}/order\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                    )
+                } else {
+                    format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{page}",
+                        page.len()
+                    )
+                };
                 let _ = stream.write_all(response.as_bytes());
             });
         }
@@ -127,7 +149,9 @@ impl Client {
         config.options.net.allow_private_network = true;
         config.approval = ApprovalConfig {
             key_file: Some(key_file.clone()),
-            port: 0,
+            port: Some(0),
+            decision_wait: Duration::from_millis(300),
+            ..ApprovalConfig::default()
         };
         adjust(&mut config);
         Self {
@@ -139,23 +163,19 @@ impl Client {
         }
     }
 
-    fn line(&mut self, method: &str, params: Value, asker: &mut dyn Asker) -> Value {
+    fn line(&mut self, method: &str, params: Value, host: &mut dyn Host) -> Value {
         let id = self.next_id;
         self.next_id += 1;
         let line = json!({"jsonrpc": "2.0", "id": id, "method": method, "params": params});
         let reply = self
             .server
-            .handle_line_with(&line.to_string(), asker)
+            .handle_line_with(&line.to_string(), host)
             .expect("a reply");
         serde_json::from_str(&reply).unwrap()
     }
 
-    fn call_asking(&mut self, name: &str, args: Value, asker: &mut dyn Asker) -> String {
-        let reply = self.line(
-            "tools/call",
-            json!({"name": name, "arguments": args}),
-            asker,
-        );
+    fn call_asking(&mut self, name: &str, args: Value, host: &mut dyn Host) -> String {
+        let reply = self.line("tools/call", json!({"name": name, "arguments": args}), host);
         reply["result"]["content"][0]["text"]
             .as_str()
             .unwrap()
@@ -166,43 +186,69 @@ impl Client {
         self.call_asking(name, args, &mut Never)
     }
 
+    /// The approval key (the user's, never the agent's).
+    fn key(&self) -> String {
+        std::fs::read_to_string(&self.key_file)
+            .unwrap()
+            .trim()
+            .to_string()
+    }
+
     /// Decides confirmation `cN` on the approval page, with the key.
     fn decide(&self, text: &str, decision: &str) -> String {
-        let url = text
-            .split_whitespace()
-            .find(|w| w.starts_with("http://127.0.0.1:") && w.contains("/confirm/"))
-            .expect("an approval URL");
-        let rest = url.strip_prefix("http://127.0.0.1:").unwrap();
-        let (port, path) = rest.split_once('/').unwrap();
-        let key = std::fs::read_to_string(&self.key_file).unwrap();
-        let body = format!("decision={decision}");
-        let mut stream = TcpStream::connect(("127.0.0.1", port.parse::<u16>().unwrap())).unwrap();
-        let request = format!(
-            "POST /{path} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nAuthorization: Bearer {}\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: {}\r\n\r\n{body}",
-            key.trim(),
-            body.len()
-        );
-        stream.write_all(request.as_bytes()).unwrap();
-        let mut out = String::new();
-        stream.read_to_string(&mut out).unwrap();
-        out
+        decide_at(text, &self.key(), decision)
     }
+}
+
+/// Decides the confirmation whose approval page `text` names, as the
+/// user, with the key.
+fn decide_at(text: &str, key: &str, decision: &str) -> String {
+    let url = text
+        .split_whitespace()
+        .find(|w| w.starts_with("http://127.0.0.1:") && w.contains("/confirm/"))
+        .expect("an approval URL");
+    let rest = url.strip_prefix("http://127.0.0.1:").unwrap();
+    let (port, path) = rest.split_once('/').unwrap();
+    let body = format!("decision={decision}");
+    let mut stream = TcpStream::connect(("127.0.0.1", port.parse::<u16>().unwrap())).unwrap();
+    let request = format!(
+        "POST /{path} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nAuthorization: Bearer {key}\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: {}\r\n\r\n{body}",
+        body.len()
+    );
+    stream.write_all(request.as_bytes()).unwrap();
+    let mut out = String::new();
+    stream.read_to_string(&mut out).unwrap();
+    out
 }
 
 /// A host that cannot ask its user.
 struct Never;
-impl Asker for Never {
-    fn approve(&mut self, _: &str) -> Option<bool> {
-        None
+impl Host for Never {
+    fn approve(&mut self, _: &str) -> Approval {
+        Approval::Unavailable
+    }
+
+    fn pause(&mut self, wait: Duration) -> bool {
+        std::thread::sleep(wait);
+        false
     }
 }
 
 /// A host whose user always answers the same, and what it was asked.
 struct Answer(bool, Vec<String>);
-impl Asker for Answer {
-    fn approve(&mut self, message: &str) -> Option<bool> {
+impl Host for Answer {
+    fn approve(&mut self, message: &str) -> Approval {
         self.1.push(message.to_string());
-        Some(self.0)
+        if self.0 {
+            Approval::Approved
+        } else {
+            Approval::Declined
+        }
+    }
+
+    fn pause(&mut self, wait: Duration) -> bool {
+        std::thread::sleep(wait);
+        false
     }
 }
 
@@ -229,7 +275,13 @@ fn a_submission_waits_for_approval_then_goes_once() {
         asked.contains("ask the user to approve at http://127.0.0.1:"),
         "{asked}"
     );
-    assert!(asked.contains("confirmation:\"c1\""), "{asked}");
+    assert!(
+        asked.contains(
+            "repeat: click {\"confirmation\":\"c1\",\"target\":\"button \\\"Place order\\\"\"}"
+        ),
+        "{asked}"
+    );
+    assert!(!asked.contains("no changes"), "{asked}");
     assert!(
         !asked.contains(client.key_file.to_str().unwrap()),
         "the key file stays out"
@@ -346,7 +398,7 @@ fn uploads_ask_first_and_reach_the_server() {
     let args = json!({"kind": "upload", "target": "css:#doc", "files": ["hello.txt"]});
     let asked = client.call("act", args.clone());
     assert!(
-        asked.starts_with("needs_confirmation c1: upload hello.txt (12 B) into css:#doc"),
+        asked.starts_with("needs_confirmation c1: upload hello.txt (12 B) into e4 button"),
         "{asked}"
     );
     client.decide(&asked, "approve");
@@ -477,14 +529,24 @@ fn a_profile_keeps_cookies_and_a_journal() {
     assert!(!all.contains("hunter2"), "{all}");
 }
 
-/// One request to a hand-off page; the status line and the body.
-fn handoff_request(url: &str, method: &str, suffix: &str, body: &str) -> (String, Vec<u8>) {
+/// One request to a hand-off page, with the approval key when given; the
+/// status line and the body.
+fn handoff_request(
+    url: &str,
+    key: Option<&str>,
+    method: &str,
+    suffix: &str,
+    body: &str,
+) -> (String, Vec<u8>) {
     let rest = url.strip_prefix("http://127.0.0.1:").unwrap();
     let (port, path) = rest.split_once('/').unwrap();
     let (path, query) = path.split_once('?').unwrap();
     let mut stream = TcpStream::connect(("127.0.0.1", port.parse::<u16>().unwrap())).unwrap();
+    let key = key
+        .map(|k| format!("X-CatPaw-Key: {k}\r\n"))
+        .unwrap_or_default();
     let request = format!(
-        "{method} /{path}{suffix}?{query} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{body}",
+        "{method} /{path}{suffix}?{query} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n{key}Content-Type: application/json\r\nContent-Length: {}\r\n\r\n{body}",
         body.len()
     );
     stream.write_all(request.as_bytes()).unwrap();
@@ -529,32 +591,53 @@ fn the_user_takes_over_and_gives_back() {
         .unwrap()
         .to_string();
 
-    // The user's side: the viewer, a screenshot, clicks and typing.
-    let (status, page) = handoff_request(&link, "GET", "", "");
+    // The user's side: the viewer, a screenshot, clicks and typing; all
+    // but the viewer itself need the approval key as well as the link.
+    let key = client.key();
+    let user_side = |method: &str, suffix: &str, body: &str| {
+        handoff_request(&link, Some(&key), method, suffix, body)
+    };
+    let (status, page) = handoff_request(&link, None, "GET", "", "");
     assert_eq!(status, "HTTP/1.1 200 OK");
     assert!(String::from_utf8_lossy(&page).contains("Hand-off h1: tab t1"));
-    let (status, png) = handoff_request(&link, "GET", "/screen", "");
+    assert!(
+        !String::from_utf8_lossy(&page).contains(&key),
+        "the page never carries the key"
+    );
+    let (status, png) = user_side("GET", "/screen", "");
     assert_eq!(status, "HTTP/1.1 200 OK");
     assert!(png.starts_with(b"\x89PNG"));
     let wrong = link.replace("?t=", "?t=0");
-    assert!(handoff_request(&wrong, "GET", "", "").0.contains("403"));
+    assert!(
+        handoff_request(&wrong, Some(&key), "GET", "", "")
+            .0
+            .contains("403")
+    );
     let click = |at: (f64, f64)| json!({"kind": "click", "x": at.0, "y": at.1}).to_string();
-    handoff_request(&link, "POST", "/input", &click(user));
-    handoff_request(
-        &link,
+    // The link alone does not let anyone act.
+    assert!(
+        handoff_request(&link, None, "GET", "/screen", "")
+            .0
+            .contains("403")
+    );
+    assert!(
+        handoff_request(&link, None, "POST", "/input", &click(user))
+            .0
+            .contains("403")
+    );
+    user_side("POST", "/input", &click(user));
+    user_side(
         "POST",
         "/input",
         &json!({"kind": "text", "text": "ada"}).to_string(),
     );
-    handoff_request(&link, "POST", "/input", &click(pass));
-    handoff_request(
-        &link,
+    user_side("POST", "/input", &click(pass));
+    user_side(
         "POST",
         "/input",
         &json!({"kind": "text", "text": "s3cret"}).to_string(),
     );
-    let (_, moved) = handoff_request(
-        &link,
+    let (_, moved) = user_side(
         "POST",
         "/input",
         &json!({"kind": "key", "key": "Enter"}).to_string(),
@@ -564,10 +647,7 @@ fn the_user_takes_over_and_gives_back() {
         moved.contains("/welcome"),
         "the user's own submission goes: {moved}"
     );
-    assert_eq!(
-        handoff_request(&link, "POST", "/done", "").0,
-        "HTTP/1.1 200 OK"
-    );
+    assert_eq!(user_side("POST", "/done", "").0, "HTTP/1.1 200 OK");
 
     let back = client.call("wait", json!({"for": "handoff"}));
     assert!(
@@ -582,10 +662,248 @@ fn the_user_takes_over_and_gives_back() {
     assert_eq!(sent.len(), 1, "{sent:?}");
     assert!(sent[0].contains("user=ada&pass=s3cret"), "{sent:?}");
     // Over: the page stops answering, and there is nothing to wait for.
-    assert!(handoff_request(&link, "GET", "", "").0.contains("404"));
+    assert!(
+        handoff_request(&link, None, "GET", "", "")
+            .0
+            .contains("404")
+    );
     let none = client.call("wait", json!({"for": "handoff", "timeoutMs": 10}));
     assert!(
         none.starts_with("error BadArgument no hand-off is open"),
         "{none}"
     );
+}
+
+fn strict(config: &mut SessionConfig) {
+    config.policy = Policy {
+        preset: Preset::Strict,
+        ..Policy::default()
+    };
+}
+
+#[test]
+fn approving_one_confirmation_lets_go_its_own_holds_only() {
+    let mut client = Client::new("own-holds", strict);
+    let url = format!("{}/two-posts", client.base);
+    client.call("navigate", json!({ "url": url }));
+    let one = client.call("click", json!({"target": "button \"One\""}));
+    assert!(one.starts_with("needs_confirmation c1: click e"), "{one}");
+    let two = client.call("click", json!({"target": "button \"Two\""}));
+    assert!(two.starts_with("needs_confirmation c2: click e"), "{two}");
+    assert!(posts(&client.log).is_empty(), "both held");
+
+    client.decide(&one, "approve");
+    let done = client.call(
+        "click",
+        json!({"target": "button \"One\"", "confirmation": "c1"}),
+    );
+    assert!(done.starts_with("ok click e"), "{done}");
+    assert_eq!(posts(&client.log), vec!["POST /one one".to_string()]);
+
+    client.decide(&two, "decline");
+    let blocked = client.call(
+        "click",
+        json!({"target": "button \"Two\"", "confirmation": "c2"}),
+    );
+    assert_eq!(blocked, "blocked user: declined c2");
+    assert_eq!(posts(&client.log).len(), 1, "the declined one never goes");
+}
+
+#[test]
+fn moving_on_voids_what_the_page_held() {
+    let mut client = Client::new("moved-on", strict);
+    let url = format!("{}/two-posts", client.base);
+    client.call("navigate", json!({ "url": url }));
+    let asked = client.call("click", json!({"target": "button \"One\""}));
+    assert!(asked.starts_with("needs_confirmation c1"), "{asked}");
+    let order = format!("{}/order", client.base);
+    let moved = client.call("navigate", json!({ "url": order }));
+    assert!(
+        moved.contains("! c1 no longer applies: the page dropped what it held"),
+        "{moved}"
+    );
+    let decided = client.decide(&asked, "approve");
+    assert!(decided.contains("\"changed\":false"), "{decided}");
+    let repeated = client.call(
+        "click",
+        json!({"target": "button \"One\"", "confirmation": "c1"}),
+    );
+    assert!(
+        repeated.starts_with("blocked superseded: c1 no longer applies"),
+        "{repeated}"
+    );
+    assert!(posts(&client.log).is_empty());
+}
+
+#[test]
+fn a_repeated_call_waits_for_the_decision() {
+    let mut client = Client::new("waits", |config| {
+        config.approval.decision_wait = Duration::from_secs(30);
+    });
+    let url = format!("{}/order", client.base);
+    client.call("navigate", json!({ "url": url }));
+    let asked = client.call("click", json!({"target": "button \"Place order\""}));
+    let key = client.key();
+    let user = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(300));
+        decide_at(&asked, &key, "approve")
+    });
+    let started = std::time::Instant::now();
+    let done = client.call(
+        "click",
+        json!({"target": "button \"Place order\"", "confirmation": "c1"}),
+    );
+    assert!(done.contains("(confirmed c1) → "), "{done}");
+    assert!(started.elapsed() < Duration::from_secs(20));
+    assert!(user.join().unwrap().contains("\"state\":\"approved\""));
+    assert_eq!(posts(&client.log).len(), 1);
+}
+
+#[test]
+fn an_unanswered_confirmation_runs_out() {
+    let mut client = Client::new("runs-out", |config| {
+        config.approval.lifetime = Duration::from_millis(300);
+    });
+    let url = format!("{}/order", client.base);
+    client.call("navigate", json!({ "url": url }));
+    let asked = client.call("click", json!({"target": "button \"Place order\""}));
+    assert!(asked.starts_with("needs_confirmation c1"), "{asked}");
+    std::thread::sleep(Duration::from_millis(400));
+    let late = client.decide(&asked, "approve");
+    assert!(late.contains("\"changed\":false"), "{late}");
+    let repeated = client.call(
+        "click",
+        json!({"target": "button \"Place order\"", "confirmation": "c1"}),
+    );
+    assert_eq!(repeated, "blocked expired: c1 was not approved in time");
+    assert!(posts(&client.log).is_empty());
+}
+
+#[test]
+fn a_redirect_out_of_the_allowed_domains_is_not_followed() {
+    let mut client = Client::new("redirect", |config| {
+        config.policy = Policy {
+            preset: Preset::Open,
+            allowed_domains: vec!["127.0.0.1".into()],
+            ..Policy::default()
+        };
+    });
+    let url = format!("{}/to-elsewhere", client.base);
+    let blocked = client.call("navigate", json!({ "url": url }));
+    assert!(blocked.starts_with("blocked policy: "), "{blocked}");
+    assert!(
+        blocked.contains("localhost is not an allowed domain"),
+        "{blocked}"
+    );
+    assert_eq!(
+        *client.log.lock().unwrap(),
+        vec!["GET /to-elsewhere".to_string()],
+        "the hop elsewhere is never fetched"
+    );
+}
+
+#[test]
+fn a_handoff_leaves_the_agents_holds_alone() {
+    let mut client = Client::new("handoff-holds", |_| {});
+    let url = format!("{}/order", client.base);
+    client.call("navigate", json!({ "url": url }));
+    let asked = client.call("click", json!({"target": "button \"Place order\""}));
+    assert!(asked.starts_with("needs_confirmation c1"), "{asked}");
+    let started = client.call("handoff", json!({"reason": "Have a look"}));
+    let link = started
+        .split_whitespace()
+        .find(|w| w.contains("/handoff/h1?t="))
+        .unwrap()
+        .to_string();
+    let key = client.key();
+    // The user clicks where nothing is and gives the tab back.
+    let click = json!({"kind": "click", "x": 2, "y": 2}).to_string();
+    handoff_request(&link, Some(&key), "POST", "/input", &click);
+    handoff_request(&link, Some(&key), "POST", "/done", "");
+    let back = client.call("wait", json!({"for": "handoff"}));
+    assert!(back.starts_with("ok wait handoff h1: given back"), "{back}");
+    assert!(
+        posts(&client.log).is_empty(),
+        "what the agent's click held is still the user's to approve"
+    );
+    client.decide(&asked, "approve");
+    let done = client.call(
+        "click",
+        json!({"target": "button \"Place order\"", "confirmation": "c1"}),
+    );
+    assert!(done.contains("(confirmed c1) → "), "{done}");
+    assert_eq!(posts(&client.log).len(), 1);
+}
+
+#[test]
+fn a_damaged_checkpoint_leaves_the_session_alone() {
+    let profile = temp_dir("damaged-profile");
+    let dir = profile.clone();
+    let mut client = Client::new("damaged", move |config| {
+        config.profile = Some(dir);
+        config.tools = vec!["session".into()];
+    });
+    let url = format!("{}/order", client.base);
+    client.call("navigate", json!({ "url": url }));
+    let saved = client.call("session", json!({"op": "save", "name": "two words"}));
+    assert!(
+        saved.starts_with("ok session save \"two words\" (1 tab)"),
+        "{saved}"
+    );
+    assert!(profile.join("checkpoints/two%20words.json").exists());
+    std::fs::write(profile.join("checkpoints/broken.json"), "{not json").unwrap();
+    let listed = client.call("session", json!({"op": "list"}));
+    assert_eq!(listed, "ok session list\n\"broken\"\n\"two words\"");
+    let broken = client.call("session", json!({"op": "restore", "name": "broken"}));
+    assert!(
+        broken.starts_with("error Unsupported checkpoint \"broken\" is damaged"),
+        "{broken}"
+    );
+    let missing = client.call("session", json!({"op": "restore", "name": "nope"}));
+    assert!(
+        missing.starts_with("error NotFound nothing is saved as \"nope\""),
+        "{missing}"
+    );
+    // The session is as it was.
+    let still = client.call("snapshot", json!({}));
+    assert!(still.contains("/order title=\"Order\""), "{still}");
+}
+
+#[test]
+fn the_approval_key_is_never_uploaded() {
+    let mut client = Client::new("key-upload", |config| {
+        config.policy = Policy {
+            preset: Preset::Open,
+            ..Policy::default()
+        };
+    });
+    let url = format!("{}/order", client.base);
+    client.call("navigate", json!({ "url": url }));
+    std::fs::write(&client.key_file, format!("{}\n", "7".repeat(64))).unwrap();
+    // An input without `multiple` takes one file, as its picker would.
+    let dir = client.key_file.parent().unwrap().to_path_buf();
+    std::fs::write(dir.join("a.txt"), "a").unwrap();
+    std::fs::write(dir.join("b.txt"), "b").unwrap();
+    let two = client.call(
+        "act",
+        json!({"kind": "upload", "target": "css:#doc", "files": [
+            dir.join("a.txt").to_str().unwrap(), dir.join("b.txt").to_str().unwrap()
+        ]}),
+    );
+    assert!(
+        two.starts_with("error BadArgument e") && two.contains("takes one file"),
+        "{two}"
+    );
+    let link = client.key_file.parent().unwrap().join("innocent.txt");
+    std::fs::hard_link(&client.key_file, &link).unwrap();
+    for file in [client.key_file.clone(), link] {
+        let refused = client.call(
+            "act",
+            json!({"kind": "upload", "target": "css:#doc", "files": [file.to_str().unwrap()]}),
+        );
+        assert!(
+            refused.starts_with("error BadArgument that file is CatPaw's approval key"),
+            "{refused}"
+        );
+    }
 }

@@ -138,3 +138,35 @@ fn an_open_popup_can_be_addressed() {
     })
     .unwrap();
 }
+
+#[test]
+fn a_busy_popup_does_not_keep_its_opener_busy() {
+    let port = serve(HashMap::from([
+        (
+            "/",
+            r#"<!doctype html><title>Main</title>
+<button id="go" onclick="window.open('/busy')">open</button>"#,
+        ),
+        (
+            "/busy",
+            r#"<!doctype html><title>Busy</title><p id=n>0</p>
+<script>setInterval(() => { const n = document.getElementById('n'); n.textContent = +n.textContent + 1; }, 20);</script>"#,
+        ),
+    ]));
+    let url = Url::parse(&format!("http://127.0.0.1:{port}/")).unwrap();
+    let mut options = options();
+    options.limits.settle = Some(Default::default());
+    options.limits.virtual_ms = 1_000.0;
+    with_page(url, options, |page| {
+        page.click("#go").unwrap();
+        let popup = page.select_latest_popup().unwrap();
+        page.select_top_frame();
+        assert!(!page.is_settled(), "the popup keeps changing");
+        assert!(!page.is_settled_in(popup));
+        assert!(
+            page.is_settled_in(catpaw_engine::FrameId(0)),
+            "the opener is done"
+        );
+    })
+    .unwrap();
+}

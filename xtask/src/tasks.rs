@@ -274,6 +274,7 @@ fn run(task: &Task, recording: Recording) -> Result<Run> {
         .join(format!("catpaw-tasks-{}", std::process::id()))
         .join("approval-key");
     config.approval.key_file = Some(key_file.clone());
+    config.approval.port = Some(0);
     let session = Session::new(config).context("starting a session")?;
     let mut server = McpServer::new(session);
     let mut id = 0;

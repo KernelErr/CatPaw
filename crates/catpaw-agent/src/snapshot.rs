@@ -432,6 +432,10 @@ struct AxNode {
     children: Vec<AxNode>,
     /// Set for text leaves.
     text: Option<String>,
+    /// For a text leaf: a block starts before it, or ends after it, so it
+    /// is not joined with the text on that side.
+    breaks_before: bool,
+    breaks_after: bool,
 }
 
 impl AxNode {
@@ -444,6 +448,8 @@ impl AxNode {
             interactive: false,
             children: Vec::new(),
             text: Some(text),
+            breaks_before: false,
+            breaks_after: false,
         }
     }
 
@@ -594,10 +600,15 @@ impl<'a> Snapshotter<'a> {
         // Adjacent text nodes render as one text (`$<!-- -->29.99` is
         // `$29.99`): they are joined before whitespace is collapsed.
         let mut run = String::new();
-        let flush = |run: &mut String, out: &mut Vec<AxNode>| {
+        // A block (even an empty one) ends the text before it and starts
+        // the text after it on a line of its own.
+        let mut after_block = false;
+        let flush = |run: &mut String, out: &mut Vec<AxNode>, after_block: &mut bool| {
             let t = collapse_whitespace(run);
             if !t.is_empty() {
-                out.push(AxNode::text_leaf(t));
+                let mut leaf = AxNode::text_leaf(t);
+                leaf.breaks_before = std::mem::take(after_block);
+                out.push(leaf);
             }
             run.clear();
         };
@@ -608,14 +619,34 @@ impl<'a> Snapshotter<'a> {
                     if is_hidden(self.dom, child, self.oracle) {
                         continue;
                     }
-                    flush(&mut run, &mut out);
-                    out.push(self.build_element(child, el, options));
+                    flush(&mut run, &mut out, &mut after_block);
+                    let block = self.is_block(child, el);
+                    if block {
+                        if let Some(last) = out.last_mut().filter(|n| n.text.is_some()) {
+                            last.breaks_after = true;
+                        }
+                        after_block = true;
+                    } else {
+                        after_block = false;
+                    }
+                    let mut node = self.build_element(child, el, options);
+                    if block {
+                        mark_block_edges(&mut node.children);
+                    }
+                    out.push(node);
                 }
                 _ => {}
             }
         }
-        flush(&mut run, &mut out);
+        flush(&mut run, &mut out, &mut after_block);
         out
+    }
+
+    /// Whether an element is laid out as a block of its own.
+    fn is_block(&self, id: NodeId, el: &ElementData) -> bool {
+        self.oracle
+            .is_block_level(self.dom, id)
+            .unwrap_or_else(|| el.is_html() && is_block_element(&el.name.local))
     }
 
     fn build_element(&self, id: NodeId, el: &ElementData, options: &SnapshotOptions) -> AxNode {
@@ -661,7 +692,14 @@ impl<'a> Snapshotter<'a> {
             let node_children_interactive = children
                 .iter()
                 .any(|c| c.interactive || c.has_interactive());
-            if (pointer || listens) && !node_children_interactive {
+            // A label hands its clicks to its control, which is shown in
+            // its own right: it is not one more thing to click (and its
+            // text would read as a second target).
+            let label_of_shown_control = el.is_html()
+                && &*el.name.local == "label"
+                && label_control(self.dom, id)
+                    .is_some_and(|control| !is_hidden(self.dom, control, self.oracle));
+            if (pointer || listens) && !node_children_interactive && !label_of_shown_control {
                 interactive = true;
                 attrs.push(("clickable", String::new()));
                 attrs.sort_by_key(|(k, _)| attr_rank(k));
@@ -676,6 +714,8 @@ impl<'a> Snapshotter<'a> {
             interactive,
             children,
             text: None,
+            breaks_before: false,
+            breaks_after: false,
         }
     }
 
@@ -1026,7 +1066,133 @@ pub fn tidy_text(text: &str) -> Option<String> {
     if s.is_empty() {
         return None;
     }
-    Some(truncate(s, MAX_TEXT_LEN))
+    Some(s.to_string())
+}
+
+/// A long text as a snapshot over its budget shows it: its start, and how
+/// much more there is (`… [+1830 chars]`). `None` when it is short.
+pub fn cap_text(text: &str) -> Option<String> {
+    let count = text.chars().count();
+    (count > MAX_TEXT_LEN).then(|| {
+        let shown = MAX_TEXT_LEN - 1;
+        let mut out: String = text.chars().take(shown).collect();
+        out.push_str(&format!("… [+{} chars]", count - shown));
+        out
+    })
+}
+
+/// The control a `<label>` is for: the element its `for` names, else the
+/// first form control inside it.
+fn label_control(dom: &Dom, label: NodeId) -> Option<NodeId> {
+    let labelable = |n: NodeId| match dom.kind(n) {
+        NodeKind::Element(el) if el.is_html() => match &*el.name.local {
+            "input" => !el
+                .attr("type")
+                .is_some_and(|t| t.trim().eq_ignore_ascii_case("hidden")),
+            "select" | "textarea" | "button" | "meter" | "output" | "progress" => true,
+            _ => false,
+        },
+        _ => false,
+    };
+    match dom.attr(label, "for") {
+        Some(target) => dom
+            .descendants(dom.document())
+            .find(|&n| dom.attr(n, "id") == Some(target) && labelable(n)),
+        None => dom.descendants(label).find(|&n| labelable(n)),
+    }
+}
+
+/// HTML elements laid out as blocks by default (for pages whose styles
+/// are not known).
+fn is_block_element(local: &str) -> bool {
+    matches!(
+        local,
+        "address"
+            | "article"
+            | "aside"
+            | "blockquote"
+            | "body"
+            | "caption"
+            | "center"
+            | "dd"
+            | "details"
+            | "dialog"
+            | "dir"
+            | "div"
+            | "dl"
+            | "dt"
+            | "fieldset"
+            | "figcaption"
+            | "figure"
+            | "footer"
+            | "form"
+            | "h1"
+            | "h2"
+            | "h3"
+            | "h4"
+            | "h5"
+            | "h6"
+            | "header"
+            | "hgroup"
+            | "hr"
+            | "html"
+            | "legend"
+            | "li"
+            | "listing"
+            | "main"
+            | "menu"
+            | "nav"
+            | "ol"
+            | "p"
+            | "plaintext"
+            | "pre"
+            | "search"
+            | "section"
+            | "summary"
+            | "table"
+            | "tbody"
+            | "td"
+            | "tfoot"
+            | "th"
+            | "thead"
+            | "tr"
+            | "ul"
+            | "xmp"
+    )
+}
+
+/// Marks the first and last texts of a block's content, so that they are
+/// not joined with the texts around the block once wrappers are gone.
+fn mark_block_edges(children: &mut [AxNode]) {
+    if let Some(first) = edge_text(children, false) {
+        first.breaks_before = true;
+    }
+    if let Some(last) = edge_text(children, true) {
+        last.breaks_after = true;
+    }
+}
+
+/// The first (or last) text leaf among `nodes` and their descendants.
+fn edge_text(nodes: &mut [AxNode], last: bool) -> Option<&mut AxNode> {
+    let order: Vec<usize> = if last {
+        (0..nodes.len()).rev().collect()
+    } else {
+        (0..nodes.len()).collect()
+    };
+    let at = order
+        .into_iter()
+        .find(|&i| nodes[i].text.is_some() || has_text(&nodes[i].children))?;
+    let node = &mut nodes[at];
+    if node.text.is_some() {
+        return Some(node);
+    }
+    edge_text(&mut node.children, last)
+}
+
+fn has_text(nodes: &[AxNode]) -> bool {
+    nodes
+        .iter()
+        .any(|n| n.text.is_some() || has_text(&n.children))
 }
 
 /// Merges adjacent text leaves and tidies them, at every level.
@@ -1172,12 +1338,14 @@ fn elide_generic(node: AxNode) -> Vec<AxNode> {
     vec![node]
 }
 
-/// Joins adjacent text leaves with a space.
+/// Joins adjacent text leaves with a space, within a block.
 fn merge_text(nodes: &mut Vec<AxNode>) {
     let mut merged: Vec<AxNode> = Vec::with_capacity(nodes.len());
     for node in nodes.drain(..) {
         if let Some(t) = &node.text
+            && !node.breaks_before
             && let Some(last) = merged.last_mut()
+            && !last.breaks_after
             && let Some(prev) = &mut last.text
         {
             // Texts split by inline markup: no space before closing
@@ -1188,6 +1356,7 @@ fn merge_text(nodes: &mut Vec<AxNode>) {
                 prev.push(' ');
             }
             prev.push_str(t);
+            last.breaks_after = node.breaks_after;
             continue;
         }
         merged.push(node);
@@ -1513,6 +1682,66 @@ e5 main
         assert!(
             text.contains("e2 textbox \"Email\" [placeholder=you@example.com]\n"),
             "{text}"
+        );
+    }
+
+    #[test]
+    fn texts_join_within_a_block_and_not_across_blocks() {
+        let text = snap(
+            "<div>First block</div><div>Second <b>part</b></div>text after<div></div>text below              <span>$</span><span>29.99</span>",
+            Filter::Interesting,
+        );
+        let body: Vec<&str> = text.lines().skip(1).collect();
+        assert_eq!(
+            body,
+            [
+                "text: First block",
+                "text: Second part",
+                "text: text after",
+                "text: text below $29.99",
+            ],
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn a_label_is_not_one_more_thing_to_click() {
+        let r = parse_html(
+            "<label><input type=checkbox> Remember me</label>",
+            &Default::default(),
+        );
+        let label = r
+            .dom
+            .descendants(r.dom.document())
+            .find(|&n| r.dom.is_html_element(n, "label"))
+            .unwrap();
+        let oracle = LiveOracle {
+            value: NodeId::default(),
+            pointer: label,
+        };
+        let mut refs = RefTable::new();
+        let text = Snapshotter::new(&r.dom, &oracle, &mut refs)
+            .snapshot(&SnapshotOptions::default())
+            .text;
+        let body: Vec<&str> = text.lines().skip(1).collect();
+        assert_eq!(body, ["e1 checkbox \"Remember me\""], "{text}");
+    }
+
+    #[test]
+    fn long_texts_stay_whole_in_the_model() {
+        let long = "word ".repeat(100);
+        let r = parse_html(&format!("<p>{long}</p>"), &Default::default());
+        let oracle = AttributeOracle;
+        let mut refs = RefTable::new();
+        let snapshot =
+            Snapshotter::new(&r.dom, &oracle, &mut refs).snapshot(&SnapshotOptions::default());
+        assert!(snapshot.text.contains(long.trim()), "{}", snapshot.text);
+        assert_eq!(cap_text("short"), None);
+        let capped = cap_text(long.trim()).unwrap();
+        assert!(capped.ends_with("… [+300 chars]"), "{capped}");
+        assert_eq!(
+            capped.chars().count(),
+            199 + "… [+300 chars]".chars().count()
         );
     }
 

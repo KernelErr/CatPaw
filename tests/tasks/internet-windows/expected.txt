@@ -8,12 +8,13 @@ text: Powered by
 e4 link "Elemental Selenium"
 
 > click {"target":"link \"Click Here\""}
-ok click e3 link "Click Here" → https://the-internet.herokuapp.com/windows/new (200)
-# s2 tab=t1 doc=d2 navigated-from=d1 url=https://the-internet.herokuapp.com/windows/new title="New Window" vp=1280x720 scroll=0,0 filter=interesting nodes=1/6 settled=yes full=navigated
-e5 heading "New Window" [level=3]
+ok click e3 link "Click Here"
+! popup t2 https://the-internet.herokuapp.com/windows/new (switch with tabs)
+# s2 diff-from=s1 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e3 settled=yes no changes
 
 > tabs {"op":"switch","tab":"t2"}
-error NoTab t2 is not open
-open tabs: t1
+ok switch t2
+# s1 tab=t2 doc=d1 url=https://the-internet.herokuapp.com/windows/new title="New Window" vp=1280x720 scroll=0,0 filter=interesting nodes=1/6 settled=yes
+e1 heading "New Window" [level=3]
 
 ? text_contains "New Window" → yes

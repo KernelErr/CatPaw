@@ -43,6 +43,10 @@ pub struct NetRequest {
     pub follow_redirects: bool,
     /// Where script started the request (`fetch`, `XMLHttpRequest.send`).
     pub site: Option<catpaw_js::SourceSite>,
+    /// The fetch the request belongs to: its CORS preflight, the request
+    /// itself and each redirect hop share this number (0 when no script
+    /// made the request).
+    pub chain: u64,
 }
 
 impl NetRequest {
@@ -57,6 +61,7 @@ impl NetRequest {
             credentials: true,
             follow_redirects: true,
             site: None,
+            chain: 0,
         }
     }
 }
@@ -322,11 +327,18 @@ pub fn abort_request(page: &PageState, token: u64) {
 /// Number of requests whose results are still awaited, not counting
 /// background ones such as beacons or those the embedder holds.
 pub fn inflight(page: &PageState) -> usize {
+    // Held beacons are already left out as background requests.
+    let started = page.net_started.borrow();
     let held = page
         .net_callbacks
         .borrow()
         .keys()
         .filter(|&&token| crate::settle::is_held(page, token))
+        .filter(|token| {
+            started
+                .get(token)
+                .is_none_or(|info| info.kind != RequestKind::Beacon)
+        })
         .count();
     page.net_callbacks
         .borrow()

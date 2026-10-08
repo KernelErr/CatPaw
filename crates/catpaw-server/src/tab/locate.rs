@@ -118,6 +118,35 @@ impl GroupState {
             }
         }
         if found.is_empty() {
+            // The name under another role is likely what was meant: say
+            // so rather than leave the agent guessing.
+            let elsewhere: Vec<u32> = match role {
+                Some(_) => model
+                    .lines
+                    .iter()
+                    .filter_map(|line| match &line.kind {
+                        LineKind::Element { r, name, .. } if normalize(name) == needle => Some(*r),
+                        _ => None,
+                    })
+                    .collect(),
+                None => Vec::new(),
+            };
+            if !elsewhere.is_empty() {
+                let listed: Vec<String> = elsewhere
+                    .iter()
+                    .take(5)
+                    .map(|&r| self.describe_in_context(tab, r))
+                    .collect();
+                let more = if elsewhere.len() > 5 { ", …" } else { "" };
+                return Err(Failure::new(
+                    ErrorCode::NotFound,
+                    format!(
+                        "{what} matches nothing; with that name: {}{more}",
+                        listed.join(", ")
+                    ),
+                )
+                .with(advice::OTHER_ROLE));
+            }
             return Err(
                 Failure::new(ErrorCode::NotFound, format!("{what} matches nothing"))
                     .with(advice::UNKNOWN_REF),
@@ -149,7 +178,7 @@ impl GroupState {
             let listed: Vec<String> = found
                 .iter()
                 .take(5)
-                .map(|c| self.describe(tab, c.r))
+                .map(|c| self.describe_in_context(tab, c.r))
                 .collect();
             let mut message = format!(
                 "{what} matches {} elements: {}",

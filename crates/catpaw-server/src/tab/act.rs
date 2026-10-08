@@ -19,7 +19,7 @@ use super::{
     Aim, CONSOLE_LINES, EVAL_CHARS, GroupState, Tab, View, floor_char_boundary, is_live, parse_url,
     png_size,
 };
-use crate::output::{CallResult, Failure, ToolOutput};
+use crate::output::{CallResult, Failure, Held, ToolOutput};
 
 /// What a tab's root document looked like before an action.
 pub(super) struct Baseline {
@@ -28,6 +28,8 @@ pub(super) struct Baseline {
     pub dialogs: usize,
     pub url: Option<Url>,
     pub requests: usize,
+    /// Holds numbered from here on are the action's.
+    pub watermark: u64,
 }
 
 /// What an action led to.
@@ -39,8 +41,11 @@ pub(super) struct Report {
     /// (`pushState`, a fragment).
     pub same_document: Option<Url>,
     pub lines: Vec<String>,
-    /// What the policy holds for the user's approval.
-    pub held: Option<String>,
+    /// What the policy holds for the user's approval: the hold numbers
+    /// and what they would do.
+    pub held: Option<Held>,
+    /// Holds that went unsent during the action.
+    pub dropped: Vec<u64>,
     /// A navigation the policy refused: where to, and why.
     pub blocked: Option<(Url, String)>,
 }
@@ -176,6 +181,7 @@ impl GroupState {
             .get(&tab)
             .and_then(|t| self.page.frame_state(t.root));
         let requests = self.page.net().requests_len();
+        let watermark = self.page.hold_watermark();
         match state {
             Some(state) => Baseline {
                 epoch: state.epoch,
@@ -183,6 +189,7 @@ impl GroupState {
                 dialogs: state.dialogs.borrow().len(),
                 url: Some(state.url.borrow().clone()),
                 requests,
+                watermark,
             },
             None => Baseline {
                 epoch: 0,
@@ -190,6 +197,7 @@ impl GroupState {
                 dialogs: 0,
                 url: None,
                 requests,
+                watermark,
             },
         }
     }
@@ -201,6 +209,8 @@ impl GroupState {
         let mut report = Report::default();
         let root = self.tabs.get(&tab).map(|t| t.root);
         let mut events = Vec::new();
+        let mut held_ids = Vec::new();
+        let mut held_what = Vec::new();
         for event in self.page.take_events() {
             match event {
                 PageEvent::Navigated {
@@ -212,9 +222,28 @@ impl GroupState {
                     events.push(format!("navigated {method} {url} {status}"));
                     report.navigated = Some((method, url, status));
                 }
-                PageEvent::NavigationHeld { method, url, .. } => {
+                PageEvent::NavigationHeld {
+                    id, method, url, ..
+                } => {
                     events.push(format!("held {method} {url}"));
-                    report.held = self.page.held().map(describe_held);
+                    // One the page replaced before the action ended is gone.
+                    if let Some(held) = self.page.held_navigations().iter().find(|h| h.id == id) {
+                        held_ids.push(id);
+                        held_what.push(describe_held(held));
+                    }
+                }
+                PageEvent::HoldDropped { id } => report.dropped.push(id),
+                PageEvent::RequestBlocked {
+                    method,
+                    url,
+                    reason,
+                } => {
+                    events.push(format!("blocked {method} {url}: {reason}"));
+                    report.lines.push(format!(
+                        "! {} {method} {} ({reason})",
+                        consequence::BLOCKED,
+                        truncate(url.as_str(), 160)
+                    ));
                 }
                 PageEvent::NavigationBlocked { url, reason, .. } => {
                     events.push(format!("blocked {url}: {reason}"));
@@ -334,20 +363,30 @@ impl GroupState {
                 ));
             }
         }
-        let requests = self.page.held_requests();
+        // The requests the action left held (older ones belong to earlier
+        // confirmations).
+        let requests: Vec<_> = self
+            .page
+            .held_requests()
+            .into_iter()
+            .filter(|r| r.id >= base.watermark)
+            .collect();
         if !requests.is_empty() {
             let mut sent: Vec<String> = requests
                 .iter()
                 .take(3)
-                .map(|(method, url)| format!("{method} {}", truncate(url.as_str(), 120)))
+                .map(|r| format!("{} {}", r.method, truncate(r.url.as_str(), 120)))
                 .collect();
             if requests.len() > 3 {
                 sent.push(format!("+{} more", requests.len() - 3));
             }
-            let what = format!("send → {}", sent.join(", "));
-            report.held = Some(match report.held.take() {
-                Some(navigation) => format!("{navigation}, and {what}"),
-                None => what,
+            held_ids.extend(requests.iter().map(|r| r.id));
+            held_what.push(format!("send → {}", sent.join(", ")));
+        }
+        if !held_ids.is_empty() {
+            report.held = Some(Held {
+                ids: held_ids,
+                what: held_what.join(", and "),
             });
         }
         if let Some(root) = root {
@@ -386,6 +425,7 @@ impl GroupState {
             return Ok(ToolOutput::ok(text));
         }
         let held = report.held.clone();
+        let dropped = report.dropped.clone();
         let mut text = status;
         text.push_str(&report.suffix());
         for line in &report.lines {
@@ -399,38 +439,66 @@ impl GroupState {
         }
         Ok(ToolOutput {
             held,
+            dropped_holds: dropped,
             ..ToolOutput::ok(text)
         })
     }
 
-    /// Lets what the policy held go (a navigation, requests), as though
-    /// the action had not been stopped, and reports like that action.
-    pub(crate) fn release_held(&mut self, tab: u32, status: String, view: View) -> CallResult {
+    /// Lets the holds `ids` go (navigations, requests), as though the
+    /// action had not been stopped, and reports like that action. `None`
+    /// when none of them is held any more (the page replaced or dropped
+    /// them).
+    pub(crate) fn release_holds(
+        &mut self,
+        tab: u32,
+        ids: &[u64],
+        status: String,
+        view: View,
+    ) -> Result<Option<ToolOutput>, Failure> {
         let base = self.baseline(tab);
-        let navigation = self.page.held().is_some();
-        let requests = !self.page.held_requests().is_empty();
-        if !navigation && !requests {
-            return Err(Failure::new(
-                ErrorCode::BadArgument,
-                "nothing is held any more: the page moved on",
-            ));
+        let navigations: Vec<u64> = self
+            .page
+            .held_navigations()
+            .iter()
+            .filter(|h| ids.contains(&h.id))
+            .map(|h| h.id)
+            .collect();
+        let mut released = self.page.release_held_requests(ids);
+        let mut result = Ok(());
+        for id in navigations {
+            match self.page.release_held(id) {
+                Ok(true) => released += 1,
+                Ok(false) => {}
+                Err(e) => {
+                    released += 1;
+                    result = Err(e);
+                    break;
+                }
+            }
         }
-        self.page.release_held_requests();
-        let result = self.page.release_held();
+        if released == 0 {
+            return Ok(None);
+        }
         // Let the page take in what came back.
         self.page.settle(&super::action_limits());
         let report = self.finish(tab, &base);
         if let Err(e) = result {
-            return Err(Failure::new(ErrorCode::NavigationFailed, e.to_string()));
+            let mut failure = Failure::new(ErrorCode::NavigationFailed, e.to_string());
+            for line in report.lines {
+                failure = failure.with(line);
+            }
+            return Err(failure);
         }
-        self.page_result(tab, status, report, None, view)
+        self.page_result(tab, status, report, None, view).map(Some)
     }
 
-    /// Drops what the policy held: the navigation does not happen, and the
-    /// requests fail for the page.
-    pub(crate) fn drop_held(&mut self) {
-        self.page.drop_held();
-        self.page.drop_held_requests();
+    /// Drops the holds `ids`: a navigation does not happen, requests fail
+    /// for the page.
+    pub(crate) fn drop_holds(&mut self, ids: &[u64]) {
+        for &id in ids {
+            self.page.drop_held(id);
+        }
+        self.page.drop_held_requests(ids);
     }
 
     /// Runs `f` with dialogs answered as `options` say, then back to
@@ -655,7 +723,9 @@ impl GroupState {
                     }
                     .map_err(ActionError::from)
                 } else if go == params::Go::Reload {
-                    let url = self.page.url_of(root).expect("the tab's frame is open");
+                    let url = self.page.url_of(root).ok_or_else(|| {
+                        Failure::new(ErrorCode::NoTab, format!("t{tab} is closed"))
+                    })?;
                     self.page.goto_in(root, url)
                 } else {
                     return Err(Failure::new(
@@ -750,6 +820,9 @@ impl GroupState {
         });
         let text = p.text;
         let (append, submit) = (p.append, p.submit);
+        if let Some(state) = self.page.frame_state(aim.frame) {
+            agent::unmask_value(state, aim.node);
+        }
         let mut output = self.act_on(tab, aim, status, &options, view, move |cx, aim| {
             if append {
                 input::focus(cx, aim.node)?;
@@ -770,10 +843,7 @@ impl GroupState {
 
     pub(crate) fn press(&mut self, tab: u32, p: params::Press, view: View) -> CallResult {
         let options = p.options();
-        let key = crate::target::normalize_key(&p.key);
-        if key.is_empty() {
-            return Err(Failure::bad_argument("key is empty"));
-        }
+        let key = crate::target::normalize_key(&p.key).map_err(Failure::bad_argument)?;
         let repeat = p.repeat.unwrap_or(1).clamp(1, 50);
         let times = if repeat > 1 {
             format!(" x{repeat}")
@@ -948,9 +1018,8 @@ impl GroupState {
                     agent::scroll_into_view(cx, aim.node);
                     Ok(())
                 }
-                params::ActKind::Upload | params::ActKind::Drag => {
-                    unreachable!("uploads and drags are handled above")
-                }
+                // Uploads and drags went their own ways above.
+                params::ActKind::Upload | params::ActKind::Drag => Ok(()),
             },
         )
     }
@@ -1000,6 +1069,15 @@ impl GroupState {
         let files = crate::files::read(self.files_root.as_deref(), &paths)?;
         let aim = self.aim(tab, target)?;
         let what = self.aimed(tab, &aim);
+        let one_only = self
+            .page
+            .frame_state(aim.frame)
+            .is_some_and(|state| state.dom.borrow().attr(aim.node, "multiple").is_none());
+        if files.len() > 1 && one_only {
+            return Err(Failure::bad_argument(format!(
+                "{what} takes one file (it has no multiple attribute)"
+            )));
+        }
         let status = format!("ok upload {what} ← {names}");
         self.act_on(tab, aim, status, &options, view, move |cx, aim| {
             input::choose_files(cx, aim.node, files)
@@ -1064,21 +1142,16 @@ impl GroupState {
         let as_body = format!("{prelude}{}", p.script);
         let base = self.baseline(tab);
         let params = ["el", "__catpaw_refs"];
-        let args = vec![el.clone(), Value::Record(table.clone())];
-        let mut result = self
-            .page
-            .call_in(frame, &params, &as_expression, args, limits);
-        if let Err(e) = &result
-            && e.starts_with("SyntaxError")
-        {
-            result = self.page.call_in(
-                frame,
-                &params,
-                &as_body,
-                vec![el, Value::Record(table)],
-                limits,
-            );
-        }
+        let args = vec![el, Value::Record(table)];
+        // An expression is run as one (its value is the result), anything
+        // else as a function body; which, is settled before anything runs,
+        // so that the script runs once.
+        let source = if self.page.compiles_in(frame, &params, &as_expression) {
+            &as_expression
+        } else {
+            &as_body
+        };
+        let result = self.page.call_in(frame, &params, source, args, limits);
         let _ = self.page.follow_navigations();
         let report = self.finish(tab, &base);
         match result {

@@ -379,6 +379,8 @@ impl GroupState {
             .get(&tab)
             .map(|t| t.root)
             .ok_or("the tab is closed")?;
+        let mark = self.page.hold_watermark();
+        let typing = matches!(input, Input::Text(_) | Input::Key(_));
         self.page
             .input_in(root, move |cx| match input {
                 Input::Click { x, y } => {
@@ -393,11 +395,36 @@ impl GroupState {
                 }
             })
             .map_err(|e| e.to_string())?;
+        // What the user types stays theirs: the field's value is masked in
+        // what the agent reads until the agent sets it itself.
+        if typing
+            && let Some(state) = self.page.frame_state(root)
+            && let Some(node) = agent::focused(state)
+        {
+            agent::mask_value(state, node);
+        }
         // What the user does is theirs to decide: what the policy held
-        // goes (what it refused stays refused).
-        if self.page.held().is_some() || !self.page.held_requests().is_empty() {
-            self.page.release_held_requests();
-            self.page.release_held().map_err(|e| e.to_string())?;
+        // because of this input goes (what it refused stays refused, and
+        // what the agent left held waits for its own confirmation).
+        let navigations: Vec<u64> = self
+            .page
+            .held_navigations()
+            .iter()
+            .filter(|h| h.id >= mark)
+            .map(|h| h.id)
+            .collect();
+        let requests: Vec<u64> = self
+            .page
+            .held_requests()
+            .iter()
+            .filter(|r| r.id >= mark)
+            .map(|r| r.id)
+            .collect();
+        if !navigations.is_empty() || !requests.is_empty() {
+            self.page.release_held_requests(&requests);
+            for id in navigations {
+                self.page.release_held(id).map_err(|e| e.to_string())?;
+            }
             self.page.settle(&action_limits());
         }
         let state = self.page.frame_state(root).ok_or("the tab is closed")?;
@@ -506,25 +533,65 @@ impl GroupState {
                 }
             }
             Target::Css(selector) => {
+                // Like a strict locator: one element, the shown ones
+                // counting first (a hidden template or closed menu is not
+                // the one meant); more than that is for the agent to tell
+                // apart.
+                let mut all: Vec<(FrameId, NodeId, bool)> = Vec::new();
                 for frame in &allowed {
                     let Some(state) = self.page.frame_state(*frame).cloned() else {
                         continue;
                     };
-                    if let Some(node) = query(&state, &selector)? {
-                        let r = self.ref_for(tab, *frame, node).unwrap_or(0);
-                        return Ok(Aim {
+                    for node in query_all(&state, &selector)? {
+                        all.push((*frame, node, is_shown(&state, node)));
+                    }
+                }
+                let shown: Vec<(FrameId, NodeId)> = all
+                    .iter()
+                    .filter(|m| m.2)
+                    .map(|&(f, n, _)| (f, n))
+                    .collect();
+                let candidates: Vec<(FrameId, NodeId)> = if shown.is_empty() {
+                    all.iter().map(|&(f, n, _)| (f, n)).collect()
+                } else {
+                    shown
+                };
+                match candidates.as_slice() {
+                    [] => Err(Failure::new(
+                        ErrorCode::NotFound,
+                        format!("css:{selector} matches nothing"),
+                    )),
+                    [(frame, node)] => {
+                        let r = self.ref_for(tab, *frame, *node).unwrap_or(0);
+                        Ok(Aim {
                             frame: *frame,
-                            node,
+                            node: *node,
                             r,
                             point: None,
                             retargeted: None,
-                        });
+                        })
+                    }
+                    many => {
+                        let listed: Vec<String> = many
+                            .iter()
+                            .take(5)
+                            .map(|&(frame, node)| {
+                                let r = self.ref_for(tab, frame, node).unwrap_or(0);
+                                self.describe_in_context(tab, r)
+                            })
+                            .collect();
+                        let more = if many.len() > 5 { ", …" } else { "" };
+                        Err(Failure::new(
+                            ErrorCode::AmbiguousTarget,
+                            format!(
+                                "css:{selector} matches {} elements: {}{more}",
+                                many.len(),
+                                listed.join(", ")
+                            ),
+                        )
+                        .with(advice::AMBIGUOUS))
                     }
                 }
-                Err(Failure::new(
-                    ErrorCode::NotFound,
-                    format!("css:{selector} matches nothing"),
-                ))
             }
             Target::Named(role, name) => self.locate(tab, Some(&role), &name),
             Target::Text(text) => self.locate(tab, None, &text),
@@ -593,9 +660,16 @@ impl GroupState {
         })
     }
 
+    /// The element a target names (`e5 button "Choose file"`), for a
+    /// confirmation to show.
+    pub(crate) fn describe_target(&mut self, tab: u32, target: &str) -> Result<String, Failure> {
+        let aim = self.aim(tab, target)?;
+        Ok(self.aimed(tab, &aim))
+    }
+
     /// An aimed-at element for a status line, with a re-render noted.
     fn aimed(&self, tab: u32, aim: &Aim) -> String {
-        let mut text = self.describe(tab, aim.r);
+        let mut text = self.describe_in_context(tab, aim.r);
         if let Some(old) = aim.retargeted {
             text.push_str(&format!(" (e{old} re-rendered → e{})", aim.r));
         }
@@ -607,6 +681,23 @@ impl GroupState {
             .get(&tab)
             .map(|t| describe(&t.refs, r))
             .unwrap_or_else(|| format!("e{r}"))
+    }
+
+    /// An element as [`GroupState::describe`] names it, with where it is
+    /// when another element the page shows has the same role and name
+    /// (`e14 button "Add to cart" (in e12 listitem "Socks")`).
+    pub(super) fn describe_in_context(&self, tab: u32, r: u32) -> String {
+        let mut text = self.describe(tab, r);
+        let Some(refs) = self.tabs.get(&tab).map(|t| &t.refs) else {
+            return text;
+        };
+        let alike = refs
+            .namesakes(r)
+            .any(|other| is_live(&self.page, &other.key));
+        if alike && let Some(around) = refs.context_of(r) {
+            text.push_str(&format!(" (in {})", describe(refs, around)));
+        }
+        text
     }
 
     /// The ref of a node of a frame of the tab, assigning one if needed.
@@ -629,16 +720,25 @@ impl GroupState {
     }
 }
 
-/// The first element matching a CSS selector in a page, shadow trees
-/// included.
-fn query(state: &PageState, selector: &str) -> Result<Option<NodeId>, Failure> {
+/// The elements matching a CSS selector in a page, shadow trees included,
+/// in document order.
+fn query_all(state: &PageState, selector: &str) -> Result<Vec<NodeId>, Failure> {
     let selectors = catpaw_style::Selectors::parse(selector)
         .ok_or_else(|| Failure::bad_argument(format!("{selector:?} is not a valid selector")))?;
     let dom = state.dom.borrow();
     Ok(dom
         .shadow_including_descendants(dom.document())
         .into_iter()
-        .find(|&n| dom.is_element(n) && catpaw_style::query::matches(&dom, n, &selectors)))
+        .filter(|&n| dom.is_element(n) && catpaw_style::query::matches(&dom, n, &selectors))
+        .collect())
+}
+
+/// Whether an element is rendered and visible (not `display: none`, in
+/// itself or an ancestor, nor `visibility: hidden`).
+fn is_shown(state: &PageState, node: NodeId) -> bool {
+    agent::with_styles(state, |engine, dom| {
+        !engine.is_display_none(dom, node) && !engine.is_visibility_hidden(node)
+    })
 }
 
 /// The ref of `node`, named from what it shows.

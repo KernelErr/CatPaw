@@ -80,37 +80,84 @@ pub(crate) fn parse(text: &str) -> Result<Target, Failure> {
 
 /// Canonical key names for the aliases models use (`enter`, `Return`,
 /// `esc`, `Up`); chords keep their modifiers.
-pub(crate) fn normalize_key(spec: &str) -> String {
+/// The keys `press` knows by name, besides single characters.
+const KEY_NAMES: &str = "Enter, Tab, Escape, Backspace, Delete, Space, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, End, PageUp, PageDown, F1-F12";
+
+/// A key as `press` takes it, names and modifiers spelled the standard way
+/// (`ctrl+enter` is `Control+Enter`); an error names what is not a key.
+pub(crate) fn normalize_key(spec: &str) -> Result<String, String> {
     let spec = spec.trim();
-    if spec.chars().count() <= 1 {
-        return spec.to_string();
+    if spec.is_empty() {
+        return Err("key is empty".to_string());
     }
-    let mut parts: Vec<String> = spec.split('+').map(str::to_string).collect();
-    if let Some(name) = parts.last_mut()
-        && name.chars().count() > 1
+    if spec.chars().count() == 1 {
+        return Ok(spec.to_string());
+    }
+    // `Control++` is Control with the plus key.
+    let (mods, name) = match spec.strip_suffix("++") {
+        Some(mods) => (mods, "+"),
+        None => match spec.rsplit_once('+') {
+            Some((mods, name)) => (mods, name),
+            None => ("", spec),
+        },
+    };
+    let mut out = Vec::new();
+    for m in mods
+        .split('+')
+        .filter(|m| !mods.is_empty() || !m.is_empty())
     {
-        let canonical = match name.to_ascii_lowercase().as_str() {
-            "enter" | "return" => "Enter",
-            "tab" => "Tab",
-            "esc" | "escape" => "Escape",
-            "backspace" => "Backspace",
-            "delete" | "del" => "Delete",
-            "space" | "spacebar" => "Space",
-            "up" | "arrowup" => "ArrowUp",
-            "down" | "arrowdown" => "ArrowDown",
-            "left" | "arrowleft" => "ArrowLeft",
-            "right" | "arrowright" => "ArrowRight",
-            "home" => "Home",
-            "end" => "End",
-            "pageup" => "PageUp",
-            "pagedown" => "PageDown",
-            _ => "",
+        let canonical = match m.trim().to_ascii_lowercase().as_str() {
+            "control" | "ctrl" => "Control",
+            "shift" => "Shift",
+            "alt" | "option" => "Alt",
+            "meta" | "cmd" | "command" | "super" | "win" => "Meta",
+            _ => {
+                return Err(format!(
+                    "{m:?} in {spec:?} is not a modifier (Control, Shift, Alt, Meta)"
+                ));
+            }
         };
-        if !canonical.is_empty() {
-            *name = canonical.to_string();
-        }
+        out.push(canonical.to_string());
     }
-    parts.join("+")
+    let name = name.trim();
+    let canonical = if name.chars().count() == 1 {
+        name.to_string()
+    } else {
+        let lower = name.to_ascii_lowercase();
+        match lower.as_str() {
+            "enter" | "return" => "Enter".to_string(),
+            "tab" => "Tab".to_string(),
+            "esc" | "escape" => "Escape".to_string(),
+            "backspace" => "Backspace".to_string(),
+            "delete" | "del" => "Delete".to_string(),
+            "space" | "spacebar" => "Space".to_string(),
+            "up" | "arrowup" => "ArrowUp".to_string(),
+            "down" | "arrowdown" => "ArrowDown".to_string(),
+            "left" | "arrowleft" => "ArrowLeft".to_string(),
+            "right" | "arrowright" => "ArrowRight".to_string(),
+            "home" => "Home".to_string(),
+            "end" => "End".to_string(),
+            "pageup" => "PageUp".to_string(),
+            "pagedown" => "PageDown".to_string(),
+            "insert" => "Insert".to_string(),
+            "control" | "ctrl" => "Control".to_string(),
+            "shift" => "Shift".to_string(),
+            "alt" => "Alt".to_string(),
+            "meta" => "Meta".to_string(),
+            f if f.starts_with('f')
+                && f[1..].parse::<u8>().is_ok_and(|n| (1..=12).contains(&n)) =>
+            {
+                f.to_ascii_uppercase()
+            }
+            _ => {
+                return Err(format!(
+                    "{name:?} is not a key: use one character or {KEY_NAMES}, with Control+, Shift+, Alt+ or Meta+ in front"
+                ));
+            }
+        }
+    };
+    out.push(canonical);
+    Ok(out.join("+"))
 }
 
 #[cfg(test)]
@@ -148,11 +195,21 @@ mod tests {
 
     #[test]
     fn keys_normalize() {
-        assert_eq!(normalize_key("enter"), "Enter");
-        assert_eq!(normalize_key("Return"), "Enter");
-        assert_eq!(normalize_key("ctrl+a"), "ctrl+a");
-        assert_eq!(normalize_key("Shift+tab"), "Shift+Tab");
-        assert_eq!(normalize_key("a"), "a");
-        assert_eq!(normalize_key("PageDown"), "PageDown");
+        let key = |spec: &str| normalize_key(spec).unwrap();
+        assert_eq!(key("enter"), "Enter");
+        assert_eq!(key("Return"), "Enter");
+        assert_eq!(key("ctrl+a"), "Control+a");
+        assert_eq!(key("cmd+A"), "Meta+A");
+        assert_eq!(key("Shift+tab"), "Shift+Tab");
+        assert_eq!(key("a"), "a");
+        assert_eq!(key("+"), "+");
+        assert_eq!(key("Control++"), "Control++");
+        assert_eq!(key("PageDown"), "PageDown");
+        assert_eq!(key("f5"), "F5");
+        let wrong = normalize_key("Enterr").unwrap_err();
+        assert!(wrong.starts_with("\"Enterr\" is not a key"), "{wrong}");
+        let wrong = normalize_key("Hyper+a").unwrap_err();
+        assert!(wrong.contains("is not a modifier"), "{wrong}");
+        assert!(normalize_key("  ").is_err());
     }
 }

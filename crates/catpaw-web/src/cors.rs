@@ -295,7 +295,12 @@ enum Tainting {
 }
 
 /// A request on its way, through any redirects: what every hop shares.
+/// Numbers fetches, so that a preflight, the request and its redirect
+/// hops can be told to belong together (see `NetRequest::chain`).
+static NEXT_CHAIN: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+
 struct Transfer {
+    chain: u64,
     page_origin: Origin,
     page_url: Url,
     mode: Mode,
@@ -340,6 +345,7 @@ impl Transfer {
             });
         }
         let mut transfer = Self {
+            chain: NEXT_CHAIN.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
             page_origin: page_url.origin(),
             page_url,
             mode: out.mode,
@@ -500,6 +506,7 @@ impl Transfer {
             credentials: self.with_credentials(),
             follow_redirects: false,
             site: self.site.clone(),
+            chain: self.chain,
         };
         let preflight = self.needs_preflight().then(|| {
             let mut headers = vec![
@@ -526,6 +533,7 @@ impl Transfer {
                 credentials: false,
                 follow_redirects: false,
                 site: self.site.clone(),
+                chain: self.chain,
             }
         });
         (request, preflight)

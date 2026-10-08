@@ -4,7 +4,7 @@
 //! needs to retrace a session, and never cookies, the bodies of held
 //! requests, or what was typed into a password field (only its length).
 
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -24,6 +24,9 @@ pub struct Journal {
     out: BufWriter<File>,
     seq: u64,
     screens: bool,
+    /// The first write that failed, until reported.
+    failed: Option<String>,
+    reported: bool,
 }
 
 fn now_ms() -> u64 {
@@ -34,21 +37,58 @@ fn now_ms() -> u64 {
 }
 
 impl Journal {
-    /// Starts a journal in a new directory under `config.dir`.
+    /// Starts a journal in a new directory under `config.dir` (only its
+    /// owner can read it); fails when it cannot be written.
     pub fn open(config: &JournalConfig, start: Value) -> std::io::Result<Self> {
-        let dir = config
-            .dir
-            .join(format!("session-{}-{}", now_ms(), std::process::id()));
-        std::fs::create_dir_all(&dir)?;
-        let out = BufWriter::new(File::create(dir.join("journal.jsonl"))?);
+        std::fs::create_dir_all(&config.dir)?;
+        let stem = format!("session-{}-{}", now_ms(), std::process::id());
+        let mut n = 1;
+        let dir = loop {
+            let dir = match n {
+                1 => config.dir.join(&stem),
+                n => config.dir.join(format!("{stem}-{n}")),
+            };
+            match crate::profile::private_dir(&dir) {
+                Ok(()) => break dir,
+                Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists && n < 100 => n += 1,
+                Err(e) => return Err(e),
+            }
+        };
+        let mut options = OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        let out = BufWriter::new(options.open(dir.join("journal.jsonl"))?);
         let mut journal = Self {
             dir,
             out,
             seq: 0,
             screens: config.screens,
+            failed: None,
+            reported: false,
         };
         journal.write("start", start);
-        Ok(journal)
+        match journal.failed.take() {
+            Some(e) => Err(std::io::Error::other(e)),
+            None => Ok(journal),
+        }
+    }
+
+    /// Why writing failed, the first time it did; said once.
+    pub fn take_error(&mut self) -> Option<String> {
+        if self.reported {
+            return None;
+        }
+        let failed = self.failed.take();
+        self.reported = failed.is_some();
+        failed
+    }
+
+    fn failed(&mut self, e: std::io::Error) {
+        self.failed.get_or_insert_with(|| e.to_string());
     }
 
     /// The directory the journal writes to.
@@ -68,16 +108,19 @@ impl Journal {
         if let (Some(record), Value::Object(fields)) = (record.as_object_mut(), fields) {
             record.extend(fields);
         }
-        let _ = writeln!(self.out, "{record}");
-        let _ = self.out.flush();
+        if let Err(e) = writeln!(self.out, "{record}").and_then(|()| self.out.flush()) {
+            self.failed(e);
+        }
         self.seq
     }
 
     /// Keeps a screenshot under the record `seq`.
     pub fn screen(&mut self, seq: u64, png: &[u8]) {
         let dir = self.dir.join("screens");
-        if std::fs::create_dir_all(&dir).is_ok() {
-            let _ = std::fs::write(dir.join(format!("{seq:05}.png")), png);
+        if let Err(e) = std::fs::create_dir_all(&dir)
+            .and_then(|()| std::fs::write(dir.join(format!("{seq:05}.png")), png))
+        {
+            self.failed(e);
         }
     }
 }

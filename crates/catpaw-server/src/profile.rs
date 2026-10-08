@@ -4,7 +4,9 @@
 //! recorder's journals).
 
 use std::collections::HashMap;
+use std::fs::{File, OpenOptions, TryLockError};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use serde_json::Value;
 
@@ -44,25 +46,88 @@ pub fn storage_json(storage: &Storage) -> String {
     serde_json::to_string_pretty(&Value::Object(out)).unwrap_or_default()
 }
 
+/// Creates (or empties) a file only its owner can read: cookies,
+/// storage, keys and journals are as sensitive as the sessions they hold.
+pub(crate) fn private_file(path: &Path) -> std::io::Result<std::fs::File> {
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    options.open(path)
+}
+
+/// Creates a directory only its owner can enter; `AlreadyExists` when it
+/// is there.
+pub(crate) fn private_dir(path: &Path) -> std::io::Result<()> {
+    let mut builder = std::fs::DirBuilder::new();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::DirBuilderExt;
+        builder.mode(0o700);
+    }
+    builder.create(path)
+}
+
+/// Where a profile in `dir` keeps its journals.
+pub fn journal_dir(dir: &Path) -> PathBuf {
+    dir.join("journal")
+}
+
 /// Writes `text` to `path` through a file beside it, so that a crash
-/// never leaves half a file.
+/// never leaves half a file; only its owner can read it.
 pub(crate) fn write_whole(path: &Path, text: &str) -> std::io::Result<()> {
+    use std::io::Write;
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)?;
     }
     let partial = path.with_extension("partial");
-    std::fs::write(&partial, text)?;
+    private_file(&partial)?.write_all(text.as_bytes())?;
     std::fs::rename(&partial, path)
 }
 
 #[derive(Clone, Debug)]
 pub struct Profile {
     dir: PathBuf,
+    /// Locked while a session uses the profile: two at once would write
+    /// over each other's cookies and storage.
+    _lock: Arc<File>,
 }
 
 impl Profile {
-    pub fn new(dir: PathBuf) -> Self {
-        Self { dir }
+    /// Takes the profile in `dir` (made when missing) for this session;
+    /// refused while another session has it.
+    pub fn open(dir: PathBuf) -> Result<Self, String> {
+        match private_dir(&dir) {
+            Ok(()) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {}
+            Err(_) => std::fs::create_dir_all(&dir)
+                .map_err(|e| format!("cannot make {}: {e}", dir.display()))?,
+        }
+        let lock = OpenOptions::new()
+            .create(true)
+            .truncate(false)
+            .write(true)
+            .open(dir.join("lock"))
+            .map_err(|e| format!("cannot lock {}: {e}", dir.display()))?;
+        match lock.try_lock() {
+            Ok(()) => {}
+            Err(TryLockError::WouldBlock) => {
+                return Err(format!(
+                    "{} is in use by another session (one profile serves one session at a time)",
+                    dir.display()
+                ));
+            }
+            Err(TryLockError::Error(e)) => {
+                return Err(format!("cannot lock {}: {e}", dir.display()));
+            }
+        }
+        Ok(Self {
+            dir,
+            _lock: Arc::new(lock),
+        })
     }
 
     pub fn dir(&self) -> &Path {
@@ -70,7 +135,7 @@ impl Profile {
     }
 
     pub fn journal_dir(&self) -> PathBuf {
-        self.dir.join("journal")
+        journal_dir(&self.dir)
     }
 
     pub fn checkpoints_dir(&self) -> PathBuf {

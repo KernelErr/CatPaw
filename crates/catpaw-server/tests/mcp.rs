@@ -62,6 +62,17 @@ function rerender() {
 }
 </script>"#;
 
+/// Elements alike: buttons of one name in different rows, matches of one
+/// selector shown and hidden.
+const ALIKE: &str = r#"<!doctype html><title>Alike</title>
+<ul><li aria-label=Socks>Socks <button onclick="document.title='socks'">Add to cart</button></li>
+<li aria-label=Hats>Hats <button onclick="document.title='hats'">Add to cart</button></li></ul>
+<a href="/next">Log in</a>
+<a href="/next" target=_blank>Terms</a>
+<div hidden><button class=buy>Buy</button></div>
+<button class=buy onclick="document.title='bought'">Buy</button>
+<button class=two>Two</button><button class=two>Two</button>"#;
+
 /// A long page.
 const LONG: &str = r##"<!doctype html><title>Long</title><main>
 <section><h2>Prose</h2>
@@ -161,6 +172,7 @@ impl Client {
             ("/host", HOST),
             ("/inner", INNER),
             ("/p2", P2),
+            ("/alike", ALIKE),
             ("/long", LONG),
             ("/drag", DRAG),
         ]));
@@ -273,6 +285,23 @@ fn a_form_is_filled_and_submitted_by_ref() {
         typed.contains("~ e3 textbox \"Search\" [value=- → \"wool socks\"]"),
         "{typed}"
     );
+
+    // Control+A selects what is there: typing replaces it.
+    client.ok("press", json!({"key": "ctrl+a", "target": search}));
+    let replaced = client.ok(
+        "type",
+        json!({"target": search, "text": "hats", "append": true}),
+    );
+    assert!(
+        replaced.contains("[value=\"wool socks\" → hats]"),
+        "{replaced}"
+    );
+    let wrong = client.error("press", json!({"key": "Enterr"}));
+    assert!(
+        wrong.starts_with("error BadArgument \"Enterr\" is not a key"),
+        "{wrong}"
+    );
+    client.ok("type", json!({"target": search, "text": "wool socks"}));
 
     let sort = ref_of(&page, "combobox \"Sort\"");
     let chosen = client.ok(
@@ -399,6 +428,15 @@ fn evaluate_binds_refs_and_screenshot_returns_an_image() {
     assert_eq!(awaited, "ok evaluate\n42");
     let thrown = client.error("evaluate", json!({"script": "null.x"}));
     assert!(thrown.contains("ScriptError TypeError"), "{thrown}");
+    // A SyntaxError the script throws as it runs is its result; the
+    // script is not run again in another form.
+    let parsed = client.error(
+        "evaluate",
+        json!({"script": "(window.runs = (window.runs || 0) + 1, JSON.parse('{'))"}),
+    );
+    assert!(parsed.contains("ScriptError SyntaxError"), "{parsed}");
+    let runs = client.ok("evaluate", json!({"script": "window.runs"}));
+    assert_eq!(runs, "ok evaluate\n1", "the script ran once");
 
     let reply = client.request("tools/call", json!({"name": "screenshot", "arguments": {}}));
     let content = &reply["result"]["content"];
@@ -601,6 +639,23 @@ fn frames_show_inside_their_host_and_take_actions() {
     );
     let paid = client.ok("click", json!({"target": pay}));
     assert!(paid.contains("button \"Pay now\" → \"Paid\""), "{paid}");
+    // Reading and waiting see into the frame too.
+    let text = client.ok("read", json!({"view": "text"}));
+    assert!(text.contains("Checkout"), "{text}");
+    assert!(
+        text.contains(&format!("--- frame {host} iframe \"Payment\"\n[Paid]")),
+        "{text}"
+    );
+    let found = client.ok("read", json!({"view": "find", "query": "paid"}));
+    assert!(
+        found.starts_with("ok read find \"paid\" (1 match)"),
+        "{found}"
+    );
+    let waited = client.ok(
+        "wait",
+        json!({"for": "text", "text": "Paid", "timeoutMs": 500}),
+    );
+    assert!(waited.starts_with("ok wait"), "{waited}");
 }
 
 #[test]
@@ -633,6 +688,54 @@ fn targets_by_text_and_role_never_guess() {
         missing.contains("NotFound text:Checkout matches nothing"),
         "{missing}"
     );
+}
+
+#[test]
+fn elements_alike_are_told_apart() {
+    let mut client = Client::new();
+    let url = format!("{}/alike", client.base);
+    client.ok("navigate", json!({ "url": url }));
+    // A selector counts the shown matches: the hidden one is not meant.
+    let bought = client.ok("click", json!({"target": "css:.buy"}));
+    assert!(bought.starts_with("ok click e"), "{bought}");
+    let title = client.ok("evaluate", json!({"script": "document.title"}));
+    assert_eq!(title, "ok evaluate\nbought");
+    let two = client.error("click", json!({"target": "css:.two"}));
+    assert!(
+        two.starts_with("error AmbiguousTarget css:.two matches 2 elements: e"),
+        "{two}"
+    );
+    // Buttons of one name say where they are.
+    let add = client.error("click", json!({"target": "text:Add to cart"}));
+    assert!(
+        add.contains("button \"Add to cart\" (in e") && add.contains("listitem \"Hats\")"),
+        "{add}"
+    );
+    let page = client.ok("snapshot", json!({}));
+    let hats = page
+        .lines()
+        .skip_while(|l| !l.contains("listitem \"Hats\""))
+        .find(|l| l.contains("button \"Add to cart\""))
+        .and_then(|l| l.split_whitespace().next())
+        .unwrap()
+        .to_string();
+    let clicked = client.ok("click", json!({ "target": hats }));
+    assert!(
+        clicked.contains("button \"Add to cart\" (in e") && clicked.contains("listitem \"Hats\")"),
+        "{clicked}"
+    );
+    // A link to a new window opens a tab.
+    let terms = client.ok("click", json!({"target": "link \"Terms\""}));
+    assert!(terms.contains("! popup t2 "), "{terms}");
+    let title = client.ok("evaluate", json!({"script": "document.title"}));
+    assert_eq!(title, "ok evaluate\nhats", "the first tab stays");
+    // The name under another role is offered.
+    let login = client.error("click", json!({"target": "button \"Log in\""}));
+    assert!(
+        login.starts_with("error NotFound button \"Log in\" matches nothing; with that name: e"),
+        "{login}"
+    );
+    assert!(login.contains("link \"Log in\""), "{login}");
 }
 
 #[test]
@@ -675,7 +778,9 @@ fn a_page_over_budget_folds_and_opens_again() {
     client.ok("navigate", json!({ "url": url, "snapshot": "none" }));
     let small = client.ok("snapshot", json!({"maxTokens": 200}));
     assert!(small.contains("budget=hit"), "{small}");
-    assert!(small.contains("[more=50 nodes after e"), "{small}");
+    // The list keeps as many items as fit.
+    assert!(small.contains("link \"Item 13\""), "{small}");
+    assert!(small.contains("[more=46 nodes after e"), "{small}");
     let list_ref = small
         .lines()
         .find(|l| l.trim_start().contains(" list"))
@@ -692,8 +797,18 @@ fn a_page_over_budget_folds_and_opens_again() {
         "snapshot",
         json!({"root": list_ref, "after": after, "maxTokens": 2000}),
     );
-    assert!(rest.contains("link \"Item 10\""), "{rest}");
-    assert!(!rest.contains("link \"Item 9\""), "{rest}");
+    assert!(rest.contains("link \"Item 14\""), "{rest}");
+    assert!(!rest.contains("link \"Item 13\""), "{rest}");
+    // Without the root, the item's own list goes on.
+    let same = client.ok("snapshot", json!({"after": after, "maxTokens": 2000}));
+    let items = |text: &str| -> Vec<String> {
+        text.lines()
+            .filter(|l| l.contains("link \"Item"))
+            .map(|l| l.trim().to_string())
+            .collect()
+    };
+    assert_eq!(items(&same), items(&rest), "{same}");
+    assert!(!same.contains("paragraph"), "{same}");
 }
 
 #[test]

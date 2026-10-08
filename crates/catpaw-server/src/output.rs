@@ -10,10 +10,21 @@ pub struct ToolOutput {
     pub image: Option<Vec<u8>>,
     pub is_error: bool,
     /// What the call started that the policy holds for the user's
-    /// approval (`submit → POST https://…`); the session asks for it.
-    pub held: Option<String>,
+    /// approval; the session asks for it.
+    pub(crate) held: Option<Held>,
+    /// Holds that went unsent during the call (replaced by newer ones, or
+    /// gone with their document).
+    pub(crate) dropped_holds: Vec<u64>,
     /// The call typed into a password field (journals keep the length).
-    pub secret_input: bool,
+    pub(crate) secret_input: bool,
+}
+
+/// What a call left held: the hold numbers (navigations and requests of
+/// the tab's page) and what they would do (`submit → POST https://…`).
+#[derive(Debug, Clone)]
+pub(crate) struct Held {
+    pub ids: Vec<u64>,
+    pub what: String,
 }
 
 impl ToolOutput {

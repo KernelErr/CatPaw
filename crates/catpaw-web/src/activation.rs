@@ -249,8 +249,22 @@ fn run_behavior(cx: &mut Cx<'_>, el: NodeId, control: NodeId, behavior: Behavior
     }
 }
 
-/// Follows a hyperlink: its `href` against the document base, in this
-/// page (targets that would open a window open here instead).
+/// The browsing context a link names: its `target`, else the document's
+/// `<base target>`.
+fn link_target(cx: &Cx<'_>, link: NodeId) -> Option<String> {
+    let dom = cx.dom();
+    dom.attr(link, "target")
+        .or_else(|| {
+            dom.descendants(dom.document())
+                .find(|&n| dom.is_html_element(n, "base") && dom.attr(n, "target").is_some())
+                .and_then(|base| dom.attr(base, "target"))
+        })
+        .map(|t| t.trim().to_ascii_lowercase())
+}
+
+/// Follows a hyperlink: its `href` against the document base, in a new
+/// window (a popup) when its target is `_blank`, else in this page (other
+/// targets that would open a window open here instead).
 fn follow_link(cx: &mut Cx<'_>, link: NodeId) {
     let href = cx.dom().attr(link, "href").map(str::to_string);
     let Some(href) = href else {
@@ -269,6 +283,11 @@ fn follow_link(cx: &mut Cx<'_>, link: NodeId) {
         if let Err(e) = cx.script.eval_script(&source, "javascript:", 1) {
             cx.report_exception(&e);
         }
+        return;
+    }
+    if link_target(cx, link).as_deref() == Some("_blank") {
+        // Opened as a popup, which needs the user's action as any does.
+        let _ = crate::frames::open_popup(cx, Some(url));
         return;
     }
     crate::window::navigate(cx, url, false);

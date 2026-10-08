@@ -238,13 +238,16 @@ struct McpArgs {
     /// directory).
     #[arg(long)]
     approval_key_file: Option<PathBuf>,
-    /// The port of the local approval page (any free one by default).
-    #[arg(long, default_value_t = 0)]
-    approval_port: u16,
+    /// The port of the local approval and hand-off pages (by default
+    /// 47115 while it is free, so that the browser keeps the key; 0 for
+    /// any free one).
+    #[arg(long)]
+    approval_port: Option<u16>,
     /// Keep a journal of every call (and confirmation) in this directory.
     #[arg(long)]
     flight_log: Option<PathBuf>,
-    /// With a journal: keep a screenshot after each page action.
+    /// With a journal (--flight-log, or a profile's): keep a screenshot
+    /// after each page action.
     #[arg(long)]
     flight_screens: bool,
     /// A directory that keeps cookies, localStorage, checkpoints and the
@@ -324,14 +327,22 @@ fn mcp(args: McpArgs) -> Result<()> {
     config.approval = catpaw_server::ApprovalConfig {
         key_file: args.approval_key_file.clone(),
         port: args.approval_port,
+        ..catpaw_server::ApprovalConfig::default()
     };
-    config.journal = args
-        .flight_log
-        .clone()
-        .map(|dir| catpaw_server::JournalConfig {
-            dir,
-            screens: args.flight_screens,
-        });
+    // A profile keeps a journal of its own; screenshots go with whichever
+    // journal there is.
+    let journal_dir = args.flight_log.clone().or_else(|| {
+        args.profile
+            .as_deref()
+            .map(catpaw_server::profile::journal_dir)
+    });
+    if args.flight_screens && journal_dir.is_none() {
+        bail!("--flight-screens keeps screenshots in a journal: pass --flight-log or --profile");
+    }
+    config.journal = journal_dir.map(|dir| catpaw_server::JournalConfig {
+        dir,
+        screens: args.flight_screens,
+    });
     config.profile = args.profile.clone();
     for tool in &args.tools {
         if !catpaw_server::OPTIONAL_TOOLS.iter().any(|t| t.name == tool) {
@@ -390,6 +401,10 @@ impl StyleOracle for EngineOracle {
 
     fn is_visibility_hidden(&self, _dom: &Dom, id: NodeId) -> bool {
         self.0.is_visibility_hidden(id)
+    }
+
+    fn is_block_level(&self, _dom: &Dom, id: NodeId) -> Option<bool> {
+        self.0.is_block_level(id)
     }
 }
 

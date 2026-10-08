@@ -1,45 +1,42 @@
 > navigate {"url":"https://the-internet.herokuapp.com/login"}
 ok navigate → https://the-internet.herokuapp.com/login (200)
-# s1 tab=t1 doc=d1 url=https://the-internet.herokuapp.com/login title="The Internet" vp=1280x720 scroll=0,0 filter=interesting nodes=10/45 settled=yes
+# s1 tab=t1 doc=d1 url=https://the-internet.herokuapp.com/login title="The Internet" vp=1280x720 scroll=0,0 filter=interesting nodes=8/45 settled=yes
 e1 link "Fork me on GitHub"
 e2 heading "Login Page" [level=2]
 e3 heading "This is where you can log into the secure area. Enter tomsmith for the username and SuperSecretPass…" [level=4]
-e4 generic [clickable]: Username
-e5 textbox "Username"
-e6 generic [clickable]: Password
-e7 textbox "Password"
-e8 button "Login"
+e4 textbox "Username"
+e5 textbox "Password"
+e6 button "Login"
 text: Powered by
-e9 link "Elemental Selenium"
+e7 link "Elemental Selenium"
 
 > type {"target":"textbox \"Username\"","text":"tomsmith"}
-ok type e5 textbox "Username"
-# s2 diff-from=s1 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e5 settled=yes changed=1 added=0 removed=0 unchanged=8
-~ e5 textbox "Username" [value=- → tomsmith]
+ok type e4 textbox "Username"
+# s2 diff-from=s1 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e4 settled=yes changed=1 added=0 removed=0 unchanged=6
+~ e4 textbox "Username" [value=- → tomsmith]
 
 > type {"target":"textbox \"Password\"","text":"SuperSecretPassword!"}
-ok type e7 textbox "Password"
-# s3 diff-from=s2 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e7 settled=yes changed=1 added=0 removed=0 unchanged=8
-~ e7 textbox "Password" [value=- → ***]
+ok type e5 textbox "Password"
+# s3 diff-from=s2 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e5 settled=yes changed=1 added=0 removed=0 unchanged=6
+~ e5 textbox "Password" [value=- → ***]
 
 > click {"target":"button \"Login\""}
-needs_confirmation c1: click e8 button "Login" would submit → POST https://the-internet.herokuapp.com/authenticate (fields: username=tomsmith, password=***)
-  ask the user to approve at http://127.0.0.1:PORT/confirm/c1 (expires in 10m), then repeat the same call with confirmation:"c1"
-# s4 diff-from=s3 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e8 settled=yes no changes
+needs_confirmation c1: click e6 button "Login" would submit → POST https://the-internet.herokuapp.com/authenticate (fields: username=tomsmith, password=***)
+  ask the user to approve at http://127.0.0.1:PORT/confirm/c1 (expires in 10m); once they approve, repeat: click {"confirmation":"c1","target":"button \"Login\""}
 
 > (user) approve c1
 approved
 
 > click {"confirmation":"c1","target":"button \"Login\""}
-ok click e8 button "Login" (confirmed c1) → https://the-internet.herokuapp.com/secure (POST, 200)
+ok click e6 button "Login" (confirmed c1) → https://the-internet.herokuapp.com/secure (POST, 200)
 # s5 tab=t1 doc=d2 navigated-from=d1 url=https://the-internet.herokuapp.com/secure title="The Internet" vp=1280x720 scroll=0,0 filter=interesting nodes=8/37 settled=yes full=navigated
 text: You logged into a secure area!
-e10 link "×"
-e11 link "Fork me on GitHub"
-e12 heading "Secure Area" [level=2]
-e13 heading "Welcome to the Secure Area. When you are done click logout below." [level=4]
-e14 link "Logout"
+e8 link "×"
+e9 link "Fork me on GitHub"
+e10 heading "Secure Area" [level=2]
+e11 heading "Welcome to the Secure Area. When you are done click logout below." [level=4]
+e12 link "Logout"
 text: Powered by
-e15 link "Elemental Selenium"
+e13 link "Elemental Selenium"
 
 ? text_contains "You logged into a secure area!" → yes

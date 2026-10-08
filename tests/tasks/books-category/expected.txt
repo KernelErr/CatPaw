@@ -358,7 +358,7 @@ e270 list
     e347 button "Add to basket"
 
 > click {"target":"css:h3 a[title=\"It's Only the Himalayas\"]"}
-ok click e274 link "It's Only the Himalayas" → https://books.toscrape.com/catalogue/its-only-the-himalayas_981/index.html (200)
+ok click e274 link "It's Only the Himalayas" (in e273 heading) → https://books.toscrape.com/catalogue/its-only-the-himalayas_981/index.html (200)
 # s3 tab=t1 doc=d3 navigated-from=d2 url=https://books.toscrape.com/catalogue/its-only-the-himalayas_981/index.html title="It's Only the Himalayas | Books to Scrape - Sandbox" vp=1280x720 scroll=0,0 filter=interesting nodes=83/210 settled=yes full=navigated
 e348 banner
   e349 link "Books to Scrape"
@@ -375,7 +375,7 @@ e355 article
   e359 paragraph: In stock (19 available)
   e360 alert: Warning! This is a demo website for web scraping purposes. Prices and ratings here were randomly assigned and have no real meaning.
   e361 heading "Product Description" [level=2]
-  e362 paragraph: “Wherever you go, whatever you do, just . . . don’t do anything stupid.” —My MotherDuring her yearlong adventure backpacking from South Africa to Singapore, S. Bedford definitely did a few things her…
+  e362 paragraph: “Wherever you go, whatever you do, just . . . don’t do anything stupid.” —My MotherDuring her yearlong adventure backpacking from South Africa to Singapore, S. Bedford definitely did a few things her mother might classify as "stupid." She swam with great white sharks in South Africa, ran from lions in Zimbabwe, climbed a Himalayan mountain without training in Nepal, and wa “Wherever you go, whatever you do, just . . . don’t do anything stupid.” —My MotherDuring her yearlong adventure backpacking from South Africa to Singapore, S. Bedford definitely did a few things her mother might classify as "stupid." She swam with great white sharks in South Africa, ran from lions in Zimbabwe, climbed a Himalayan mountain without training in Nepal, and watched as her friend was attacked by a monkey in Indonesia.But interspersed in those slightly more crazy moments, Sue Bedfored and her friend "Sara the Stoic" experienced the sights, sounds, life, and culture of fifteen countries. Joined along the way by a few friends and their aging fathers here and there, Sue and Sara experience the trip of a lifetime. They fall in love with the world, cultivate an appreciation for home, and discover who, or what, they want to become.It's Only the Himalayas is the incredibly funny, sometimes outlandish, always entertaining confession of a young backpacker that will inspire you to take your own adventure. ...more
   e363 heading "Product Information" [level=2]
   e364 table
     e365 row

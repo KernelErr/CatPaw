@@ -113,6 +113,45 @@ fn polling_and_far_timers_do_not_hold_a_page_up() {
     .unwrap();
 }
 
+const DEBOUNCE: &str = r#"<!doctype html><title>idle</title><input id=q>
+<script>
+let timer;
+document.getElementById('q').addEventListener('input', () => {
+  clearTimeout(timer);
+  timer = setTimeout(() => { document.title = 'searched ' + document.getElementById('q').value; }, 300);
+});
+function poll() { window.polls = (window.polls || 0) + 1; setTimeout(poll, 200); }
+poll();
+</script>"#;
+
+#[test]
+fn a_debounce_is_waited_for_and_a_poll_chain_is_not() {
+    let port = serve(HashMap::from([("/", DEBOUNCE)]));
+    let url = Url::parse(&format!("http://127.0.0.1:{port}/")).unwrap();
+    let limits = options(Some(SettlePolicy::default())).limits;
+    with_page(url, options(Some(SettlePolicy::default())), move |page| {
+        assert!(page.is_settled(), "{:?}", page.report());
+        // Keys, each setting the debounce again from the input handler:
+        // however often, it is work still to come.
+        page.eval(
+            "const q = document.getElementById('q'); for (const c of 'wool socks') { q.value += c; q.dispatchEvent(new Event('input')); } 'typed'",
+        )
+        .unwrap();
+        page.settle(&limits);
+        assert!(page.is_settled(), "{:?}", page.report());
+        assert_eq!(page.eval("document.title").unwrap(), "searched wool socks");
+        // A timer that sets itself again from its own callback is polling.
+        let pending = page.pending_of(FrameId(0)).unwrap();
+        let chain = pending
+            .timers
+            .iter()
+            .find(|t| !t.repeat)
+            .expect("the poll chain");
+        assert_eq!(chain.class, TimerClass::Polling, "{chain:?}");
+    })
+    .unwrap();
+}
+
 #[test]
 fn without_a_policy_the_loop_runs_to_its_budget() {
     let port = serve(HashMap::from([("/", POLLING)]));

@@ -18,5 +18,8 @@ catpaw-web = { path = "../catpaw-web", version = "0.0.1" }
 base64.workspace = true
 getrandom.workspace = true
 regex.workspace = true
+serde.workspace = true
 serde_json.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["signal"] }
 url.workspace = true

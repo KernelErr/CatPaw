@@ -239,11 +239,14 @@ impl web::BroadcastChannelImpl for Web {
         for target in targets {
             let data = data.clone();
             event_loop::queue_task(cx.page, "broadcast message", move |cx| {
+                // Not inside the call: listeners may change the URL
+                // (pushState), which must not find it borrowed.
+                let origin = frames::origin_of(&cx.page.url.borrow());
                 frames::dispatch_message(
                     cx,
                     EventTargetRef::Object(target),
                     MessageData::Value(data),
-                    frames::origin_of(&cx.page.url.borrow()),
+                    origin,
                     None,
                 );
             });

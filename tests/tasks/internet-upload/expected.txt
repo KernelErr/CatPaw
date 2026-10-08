@@ -11,8 +11,8 @@ text: Powered by
 e7 link "Elemental Selenium"
 
 > act {"files":["hello.txt"],"kind":"upload","target":"css:#file-upload"}
-needs_confirmation c1: upload hello.txt (19 B) into css:#file-upload
-  ask the user to approve at http://127.0.0.1:PORT/confirm/c1 (expires in 10m), then repeat the same call with confirmation:"c1"
+needs_confirmation c1: upload hello.txt (19 B) into e4 button
+  ask the user to approve at http://127.0.0.1:PORT/confirm/c1 (expires in 10m); once they approve, repeat: act {"confirmation":"c1","files":["hello.txt"],"kind":"upload","target":"css:#file-upload"}
 
 > (user) approve c1
 approved
@@ -23,18 +23,18 @@ ok upload e4 button ← hello.txt (19 B)
 
 > click {"target":"button \"Upload\""}
 needs_confirmation c2: click e5 button "Upload" would submit → POST https://the-internet.herokuapp.com/upload (fields: file=(file hello.txt))
-  ask the user to approve at http://127.0.0.1:PORT/confirm/c2 (expires in 10m), then repeat the same call with confirmation:"c2"
-# s3 diff-from=s2 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e5 settled=yes no changes
+  ask the user to approve at http://127.0.0.1:PORT/confirm/c2 (expires in 10m); once they approve, repeat: click {"confirmation":"c2","target":"button \"Upload\""}
 
 > (user) approve c2
 approved
 
 > click {"confirmation":"c2","target":"button \"Upload\""}
 ok click e5 button "Upload" (confirmed c2) → https://the-internet.herokuapp.com/upload (POST, 200)
-# s4 tab=t1 doc=d2 navigated-from=d1 url=https://the-internet.herokuapp.com/upload title="The Internet" vp=1280x720 scroll=0,0 filter=interesting nodes=4/32 settled=yes full=navigated
+# s4 tab=t1 doc=d2 navigated-from=d1 url=https://the-internet.herokuapp.com/upload title="The Internet" vp=1280x720 scroll=0,0 filter=interesting nodes=5/32 settled=yes full=navigated
 e8 link "Fork me on GitHub"
 e9 heading "File Uploaded!" [level=3]
-text: hello.txt Powered by
+text: hello.txt
+text: Powered by
 e10 link "Elemental Selenium"
 
 ? text_contains "File Uploaded!" → yes

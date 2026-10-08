@@ -67,6 +67,10 @@ pub struct RefEntry {
     pub stale: Option<StaleReason>,
     /// The ref that took this one's place when the page re-rendered it.
     pub replaced_by: Option<u32>,
+    /// The pass (see [`RefTable::begin_pass`]) that first showed the node.
+    pub born: u64,
+    /// The last pass that showed it.
+    pub seen: u64,
 }
 
 /// Why a ref could not be used.
@@ -91,11 +95,20 @@ pub struct RefTable {
     next: u32,
     by_key: HashMap<RefKey, u32>,
     entries: HashMap<u32, RefEntry>,
+    /// The current pass over the page.
+    pass: u64,
 }
 
 impl RefTable {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Starts a pass over the page (a snapshot, or a model of it): refs
+    /// first handed out from here on are younger than every node the
+    /// passes before saw.
+    pub fn begin_pass(&mut self) {
+        self.pass += 1;
     }
 
     /// The ref of `key`, allocating one the first time. Role, name and
@@ -115,6 +128,7 @@ impl RefTable {
                     entry.name = name.to_string();
                 }
                 entry.parent = parent;
+                entry.seen = self.pass;
             }
             return r;
         }
@@ -130,6 +144,8 @@ impl RefTable {
                 parent,
                 stale: None,
                 replaced_by: None,
+                born: self.pass,
+                seen: self.pass,
             },
         );
         r
@@ -186,38 +202,18 @@ impl RefTable {
         })
     }
 
-    /// The live ref that most likely took a stale one's place: the one it
-    /// was replaced by, else the newest live ref of the same frame with the
-    /// same role and name whose parent has the same role and name.
+    /// The live ref that took a stale one's place, for an error to
+    /// suggest: as [`RefTable::replacement`] finds it.
     pub fn suggest(&self, r: u32, is_live: impl Fn(&RefKey) -> bool) -> Option<u32> {
-        let entry = self.entries.get(&r)?;
-        if let Some(next) = entry.replaced_by
-            && let Some(e) = self.entries.get(&next)
-            && e.stale.is_none()
-            && is_live(&e.key)
-        {
-            return Some(next);
-        }
-        let parent_sig = self.parent_signature(entry.parent);
-        self.entries
-            .iter()
-            .filter(|&(&other, e)| {
-                other != r
-                    && e.stale.is_none()
-                    && e.key.frame == entry.key.frame
-                    && e.role == entry.role
-                    && e.name == entry.name
-                    && self.parent_signature(e.parent) == parent_sig
-                    && is_live(&e.key)
-            })
-            .map(|(&other, _)| other)
-            .max()
+        self.replacement(r, is_live)
     }
 
     /// The live ref that took a removed one's place, when there is no
-    /// doubt about it: the one the page rendered in its place, or the only
-    /// live ref of the same frame, role and name under a parent of the same
-    /// role and name. Refs gone with their document have no replacement.
+    /// doubt about it: the one a diff saw the page render in its place, or
+    /// else the only node first shown after the removed one was last seen
+    /// with the same frame, role and name, under a parent of the same role
+    /// and name. A node the page showed alongside it (a row alike) is
+    /// never one. Refs gone with their document have no replacement.
     pub fn replacement(&self, r: u32, is_live: impl Fn(&RefKey) -> bool) -> Option<u32> {
         let entry = self.entries.get(&r)?;
         if entry
@@ -236,6 +232,7 @@ impl RefTable {
         let parent_sig = self.parent_signature(entry.parent);
         let mut found = self.entries.iter().filter(|&(&other, e)| {
             other != r
+                && e.born > entry.seen
                 && e.stale.is_none()
                 && e.key.frame == entry.key.frame
                 && e.role == entry.role
@@ -245,6 +242,37 @@ impl RefTable {
         });
         let first = found.next().map(|(&other, _)| other);
         if found.next().is_some() { None } else { first }
+    }
+
+    /// The other live-looking refs with the same frame, role and name.
+    pub fn namesakes(&self, r: u32) -> impl Iterator<Item = &RefEntry> + '_ {
+        let entry = self.entries.get(&r);
+        self.entries.iter().filter_map(move |(&other, e)| {
+            let entry = entry?;
+            (other != r
+                && e.stale.is_none()
+                && e.key.frame == entry.key.frame
+                && e.role == entry.role
+                && e.name == entry.name)
+                .then_some(e)
+        })
+    }
+
+    /// The nearest shown ancestor of a ref that has a name, else its
+    /// nearest shown ancestor: where it is, for telling namesakes apart.
+    pub fn context_of(&self, r: u32) -> Option<u32> {
+        let first = self.entries.get(&r)?.parent?;
+        let mut at = Some(first);
+        for _ in 0..8 {
+            let Some(entry) = at.and_then(|p| self.entries.get(&p)) else {
+                break;
+            };
+            if !entry.name.is_empty() {
+                return at;
+            }
+            at = entry.parent;
+        }
+        Some(first)
     }
 
     /// The role and name of a parent ref, for matching replacements.
@@ -396,36 +424,44 @@ mod tests {
             .descendants(doc.dom.document())
             .filter(|&n| doc.dom.is_html_element(n, "li") || doc.dom.is_html_element(n, "button"))
             .collect();
-        let mut refs = RefTable::new();
         let k = |n| RefKey::plain(n);
+        let removed = nodes[1];
+        let live = |key: &RefKey| key.node != removed;
+        // Two rows alike, shown together: removing one leaves the other
+        // standing, not taking its place.
+        let mut refs = RefTable::new();
+        refs.begin_pass();
         let row1 = refs.get_or_assign(k(nodes[0]), "listitem", "Socks", None);
         let old = refs.get_or_assign(k(nodes[1]), "button", "Remove", Some(row1));
         let row2 = refs.get_or_assign(k(nodes[2]), "listitem", "Socks", None);
-        let new = refs.get_or_assign(k(nodes[3]), "button", "Remove", Some(row2));
-        let removed = nodes[1];
-        let live = |key: &RefKey| key.node != removed;
+        let other = refs.get_or_assign(k(nodes[3]), "button", "Remove", Some(row2));
         match refs.lookup(&format!("e{old}"), live) {
             Err(RefError::Stale {
                 reason, suggestion, ..
             }) => {
                 assert_eq!(reason, StaleReason::Removed);
-                assert_eq!(suggestion, Some(new));
+                assert_eq!(suggestion, None, "the row alike is not its replacement");
             }
             other => panic!("{other:?}"),
         }
-        refs.set_replaced(old, new);
-        assert_eq!(refs.suggest(old, live), Some(new));
-        assert_eq!(refs.replacement(old, live), Some(new));
-        // Without the record, two rows alike leave room for doubt.
-        let mut doubt = RefTable::new();
-        let a = doubt.get_or_assign(k(nodes[0]), "listitem", "Socks", None);
-        let b = doubt.get_or_assign(k(nodes[1]), "button", "Remove", Some(a));
-        let c = doubt.get_or_assign(k(nodes[2]), "listitem", "Socks", None);
-        doubt.get_or_assign(k(nodes[3]), "button", "Remove", Some(c));
-        let all_live = |_: &RefKey| true;
-        let _ = doubt.lookup(&format!("e{b}"), |key| key.node != removed);
-        assert_eq!(doubt.replacement(b, all_live), Some(4));
-        doubt.document_replaced(0, 9);
-        assert_eq!(doubt.replacement(b, all_live), None);
+        assert_eq!(refs.replacement(old, live), None);
+        // A diff that saw the page render one in its place says so.
+        refs.set_replaced(old, other);
+        assert_eq!(refs.suggest(old, live), Some(other));
+        assert_eq!(refs.replacement(old, live), Some(other));
+
+        // A node first shown after the removed one was last seen, alike
+        // and alone, is its re-rendering.
+        let mut rerender = RefTable::new();
+        rerender.begin_pass();
+        let row = rerender.get_or_assign(k(nodes[0]), "listitem", "Socks", None);
+        let old = rerender.get_or_assign(k(nodes[1]), "button", "Remove", Some(row));
+        rerender.begin_pass();
+        let row = rerender.get_or_assign(k(nodes[0]), "listitem", "Socks", None);
+        let new = rerender.get_or_assign(k(nodes[3]), "button", "Remove", Some(row));
+        let _ = rerender.lookup(&format!("e{old}"), live);
+        assert_eq!(rerender.replacement(old, live), Some(new));
+        rerender.document_replaced(0, 9);
+        assert_eq!(rerender.replacement(old, live), None);
     }
 }

@@ -286,7 +286,8 @@ fn control_is_valid(cx: &mut Cx<'_>, control: NodeId) -> bool {
                 };
                 group.iter().any(|&n| element::is_checked(cx, n))
             }
-            "submit" | "button" | "reset" | "image" | "hidden" | "file" => true,
+            "file" => !required || !crate::file_api::chosen_files(cx, control).is_empty(),
+            "submit" | "button" | "reset" | "image" | "hidden" => true,
             _ => {
                 let value =
                     <Web as web::HTMLInputElementImpl>::value(cx, control).unwrap_or_default();
@@ -466,9 +467,27 @@ pub(crate) fn reset(cx: &mut Cx<'_>, form: NodeId) {
         }
         controls
     };
-    let mut state = cx.page.form_state.borrow_mut();
-    for control in controls {
-        state.remove(&control);
+    {
+        let mut state = cx.page.form_state.borrow_mut();
+        for control in &controls {
+            state.remove(control);
+        }
+    }
+    // File inputs go back to choosing nothing.
+    let files: Vec<NodeId> = {
+        let dom = cx.dom();
+        controls
+            .into_iter()
+            .filter(|&c| {
+                is_html(&dom, c, "input")
+                    && dom
+                        .attr(c, "type")
+                        .is_some_and(|t| t.trim().eq_ignore_ascii_case("file"))
+            })
+            .collect()
+    };
+    for input in files {
+        crate::file_api::set_file_list(cx, input, None);
     }
 }
 

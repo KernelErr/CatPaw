@@ -101,3 +101,19 @@ fn broadcast_channels_reach_the_others_of_their_name() {
     );
     assert_eq!(eval(&mut page, "name_"), "chat");
 }
+
+#[test]
+fn a_broadcast_listener_may_change_the_url() {
+    let mut page = load(
+        r#"<script>
+      const a = new BroadcastChannel('nav');
+      const b = new BroadcastChannel('nav');
+      b.onmessage = e => { history.pushState({}, '', '/moved'); window.heard = e.data + ' ' + e.origin; };
+      a.postMessage('go');
+    </script>"#,
+    );
+    assert_eq!(
+        eval(&mut page, "heard + ' ' + location.pathname"),
+        "go https://example.test /moved"
+    );
+}

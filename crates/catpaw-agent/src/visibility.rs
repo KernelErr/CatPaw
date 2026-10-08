@@ -34,6 +34,11 @@ pub trait StyleOracle {
     fn is_pointer_cursor(&self, _dom: &Dom, _id: NodeId) -> bool {
         false
     }
+    /// Whether the element's box is block-level (its text does not run on
+    /// with the text around it). `None`: go by the element's kind.
+    fn is_block_level(&self, _dom: &Dom, _id: NodeId) -> Option<bool> {
+        None
+    }
     /// Whether the element itself listens for clicks.
     fn has_activation_listener(&self, _dom: &Dom, _id: NodeId) -> bool {
         false

@@ -125,3 +125,45 @@ fn chosen_files_reach_script_and_the_server() {
     })
     .unwrap();
 }
+
+#[test]
+fn a_required_file_is_needed_and_reset_clears_the_choice() {
+    let port = serve();
+    let url = Url::parse(&format!("http://127.0.0.1:{port}/required")).unwrap();
+    let html = "<!doctype html><form id=form method=post enctype=multipart/form-data action=/up><input type=file name=doc id=f required><button id=go>Go</button></form>".to_string();
+    let options = PageOptions {
+        net: NetConfig {
+            allow_private_network: true,
+            ..NetConfig::default()
+        },
+        ..PageOptions::default()
+    };
+    catpaw_engine::with_html(url, html, options, |page| {
+        let valid = "document.getElementById('form').checkValidity()";
+        assert_eq!(page.eval(valid).unwrap(), "false");
+        page.click("#go").unwrap();
+        assert!(
+            page.url().path().ends_with("/required"),
+            "a required file input with no file stops the submission"
+        );
+        let input = page.find("#f").unwrap();
+        page.input_in(FrameId(0), |cx| {
+            catpaw_web::input::choose_files(
+                cx,
+                input,
+                vec![("a.txt".to_string(), "text/plain".to_string(), b"a".to_vec())],
+            )
+        })
+        .unwrap();
+        assert_eq!(page.eval(valid).unwrap(), "true");
+        page.eval("document.getElementById('form').reset()")
+            .unwrap();
+        assert_eq!(
+            page.eval("document.getElementById('f').files.length")
+                .unwrap(),
+            "0"
+        );
+        assert_eq!(page.eval(valid).unwrap(), "false");
+    })
+    .unwrap();
+}
