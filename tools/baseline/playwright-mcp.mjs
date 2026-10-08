@@ -7,11 +7,11 @@
 // result whenever the page changed; the agent reads that snapshot to see
 // the page, so its bytes count, as one more call. A step whose target is
 // `role "name"` takes the ref from the last snapshot; `css:` and `text:`
-// targets pass as selectors (text exactly, as CatPaw prefers it). A
-// `read` step takes no call, since the last snapshot already shows what
-// it reads, and neither does the user's approval of a confirmation or the
-// call CatPaw repeats once it is given. The checks run after the steps and are not counted. Each
-// task runs three times, and the median run counts.
+// targets pass as selectors (text matched exactly). A `read` step takes
+// no call, since the last snapshot already shows what it reads, and
+// neither does the user's approval of a confirmation or the call CatPaw
+// repeats once it is given. The checks run after the steps and are not
+// counted. Each task runs three times, and the median run counts.
 //
 //   npm install --prefix <dir> @playwright/mcp@<version>
 //   node tools/baseline/playwright-mcp.mjs <dir>/node_modules/.bin/playwright-mcp [--local] [task ids]

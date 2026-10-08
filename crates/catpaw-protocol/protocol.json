@@ -640,7 +640,7 @@
             "type": "string"
           },
           "target": {
-            "description": "For visible and gone: ref or css:<selector>",
+            "description": "For visible and gone: a target, as for click",
             "type": "string"
           },
           "text": {
@@ -648,7 +648,7 @@
             "type": "string"
           },
           "timeoutMs": {
-            "description": "Default 10000; for handoff 600000",
+            "description": "Default 10000, at most 120000; for handoff 50000 (wait again if need be), at most 1800000",
             "minimum": 1,
             "type": "integer"
           },

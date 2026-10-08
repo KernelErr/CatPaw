@@ -228,10 +228,10 @@ pub static TOOLS: &[ToolDef] = &[
         schema: r#"{"type":"object","properties":{
 "for":{"type":"string","enum":["settled","text","gone","visible","url","time","handoff"]},
 "text":{"type":"string","description":"For text and gone"},
-"target":{"type":"string","description":"For visible and gone: ref or css:<selector>"},
+"target":{"type":"string","description":"For visible and gone: a target, as for click"},
 "url":{"type":"string","description":"For url: part of the URL"},
 "ms":{"type":"integer","minimum":1,"description":"For time"},
-"timeoutMs":{"type":"integer","minimum":1,"description":"Default 10000; for handoff 600000"},
+"timeoutMs":{"type":"integer","minimum":1,"description":"Default 10000, at most 120000; for handoff 50000 (wait again if need be), at most 1800000"},
 "snapshot":{"type":"string","enum":["diff","full","none"]}
 },"required":["for"],"additionalProperties":false}"#,
         read_only: false,

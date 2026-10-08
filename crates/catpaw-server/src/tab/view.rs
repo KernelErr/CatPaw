@@ -291,11 +291,15 @@ impl GroupState {
 
     /// Keeps a whole-page model to diff later snapshots against.
     fn remember(&mut self, tab: u32, filter: Filter, model: Model) {
+        let version = self.shown_versions(tab);
         let Some(entry) = self.tabs.get_mut(&tab) else {
             return;
         };
-        // The latest of each filter is all a diff compares with.
-        entry.history.retain(|stored| stored.filter != filter);
+        // The latest of each filter is all a diff compares with, and those
+        // of a document the tab left are of no use.
+        entry
+            .history
+            .retain(|stored| stored.filter != filter && stored.epoch == model.epoch);
         entry.history.push_back(Stored {
             filter,
             epoch: model.epoch,
@@ -304,6 +308,7 @@ impl GroupState {
             scroll: model.scroll,
             focus: model.focus,
             lines: model.lines,
+            version,
         });
     }
 

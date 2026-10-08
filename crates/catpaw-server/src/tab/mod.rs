@@ -108,6 +108,8 @@ struct Stored {
     scroll: (i64, i64),
     focus: Option<u32>,
     lines: Vec<SnapLine>,
+    /// What the tab showed then (see `shown_versions`).
+    version: Vec<u64>,
 }
 
 /// Where the logs stood when a snapshot was taken.
@@ -750,6 +752,29 @@ impl GroupState {
         text
     }
 
+    /// The versions of what each of the tab's documents shows: equal, the
+    /// tab shows what it did.
+    pub(super) fn shown_versions(&self, tab: u32) -> Vec<u64> {
+        self.frames_of(tab)
+            .iter()
+            .filter_map(|f| self.page.frame_state(f.id))
+            .map(|state| state.epoch ^ agent::shown_version(state).rotate_left(1))
+            .collect()
+    }
+
+    /// The lines of the tab's latest snapshot (default filter), when the
+    /// page has not changed since it was taken.
+    pub(super) fn fresh_lines(&self, tab: u32) -> Option<Vec<SnapLine>> {
+        let stored = self
+            .tabs
+            .get(&tab)?
+            .history
+            .iter()
+            .rev()
+            .find(|s| s.filter == catpaw_agent::Filter::Interesting)?;
+        (stored.version == self.shown_versions(tab)).then(|| stored.lines.clone())
+    }
+
     /// The ref of a node of a frame of the tab, assigning one if needed.
     fn ref_for(&mut self, tab: u32, frame: FrameId, node: NodeId) -> Option<u32> {
         let state = self.page.frame_state(frame)?.clone();
@@ -825,6 +850,11 @@ fn resolve_ref(
             format!("e{r} was never shown in this tab"),
         )
         .with(advice::UNKNOWN_REF)),
+        Err(RefError::Forgotten(r)) => Err(Failure::new(
+            ErrorCode::StaleRef,
+            format!("e{r} (from a page this tab left long ago)"),
+        )
+        .with(advice::STALE_GONE)),
         Err(RefError::Stale {
             r,
             reason,

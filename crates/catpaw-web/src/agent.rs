@@ -141,6 +141,11 @@ pub fn shown_version(page: &PageState) -> u64 {
     crate::layout::geometry_version(page)
 }
 
+/// Lets go of the layout kept for a document that is being replaced.
+pub fn release_layout(page: &PageState) {
+    crate::layout::release(page);
+}
+
 /// The viewport size in CSS pixels.
 pub fn viewport(page: &PageState) -> (u32, u32) {
     (page.config.viewport_width, page.config.viewport_height)

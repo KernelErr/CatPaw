@@ -38,6 +38,13 @@ pub(crate) struct Layouts {
     builds: Cell<u64>,
 }
 
+/// Lets go of the layout kept for a document that is being replaced, so
+/// that it does not stay alive while the next one loads.
+pub(crate) fn release(page: &PageState) {
+    *page.layouts.tree.borrow_mut() = None;
+    page.layouts.current.set(None);
+}
+
 /// Whether `CATPAW_RENDER_STATS` asks for each step of rendering work
 /// (restyles, layouts, index rebuilds) to be logged to stderr with its
 /// duration, for profiling.

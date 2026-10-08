@@ -6,8 +6,9 @@
 //! uploaded; script's own requests go, and show as consequences.
 //! `strict` also asks before script sends data to another site and before
 //! `evaluate`. `open` asks for nothing, for test runs. Trusted hosts need
-//! no approval; allowed domains, when set, are the only ones a tab may
-//! show.
+//! no approval for what is sent to them; uploads ask whatever the host,
+//! since the files are the user's. Allowed domains, when set, are the only
+//! ones a tab may show (every redirect hop included).
 
 use url::Url;
 

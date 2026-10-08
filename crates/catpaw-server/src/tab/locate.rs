@@ -49,11 +49,18 @@ impl GroupState {
             Some(role) => format!("{role} {}", quote(text)),
             None => format!("text:{text}"),
         };
-        let model = self.model(tab, Filter::Interesting, ExtraAttrs::default(), None)?;
+        // The latest snapshot serves when the page has not changed since.
+        let lines = match self.fresh_lines(tab) {
+            Some(lines) => lines,
+            None => {
+                self.model(tab, Filter::Interesting, ExtraAttrs::default(), None)?
+                    .lines
+            }
+        };
         let mut found: Vec<Candidate> = Vec::new();
         let mut text_parents: Vec<(Option<u32>, bool)> = Vec::new();
         let mut parent_stack: Vec<(u16, u32)> = Vec::new();
-        for line in &model.lines {
+        for line in &lines {
             while parent_stack.last().is_some_and(|&(d, _)| d >= line.depth) {
                 parent_stack.pop();
             }
@@ -125,8 +132,7 @@ impl GroupState {
             // The name under another role is likely what was meant: say
             // so rather than leave the agent guessing.
             let elsewhere: Vec<u32> = match role {
-                Some(_) => model
-                    .lines
+                Some(_) => lines
                     .iter()
                     .filter_map(|line| match &line.kind {
                         LineKind::Element { r, name, .. } if normalize(name) == needle => Some(*r),

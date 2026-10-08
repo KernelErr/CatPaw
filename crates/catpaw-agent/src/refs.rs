@@ -71,6 +71,9 @@ pub struct RefEntry {
     pub born: u64,
     /// The last pass that showed it.
     pub seen: u64,
+    /// When it went with its document or frame: the table's count of
+    /// documents left then.
+    gone_at: u64,
 }
 
 /// Why a ref could not be used.
@@ -80,6 +83,8 @@ pub enum RefError {
     BadSyntax(String),
     /// Never handed out.
     Unknown(u32),
+    /// Handed out for a document the tab left long ago, and forgotten.
+    Forgotten(u32),
     Stale {
         r: u32,
         reason: StaleReason,
@@ -97,7 +102,13 @@ pub struct RefTable {
     entries: HashMap<u32, RefEntry>,
     /// The current pass over the page.
     pass: u64,
+    /// Documents and frames left so far.
+    left: u64,
 }
+
+/// Refs of the documents a tab left are kept for this many more, so that
+/// an error can still say what one was; then they are forgotten.
+const KEEP_LEFT: u64 = 2;
 
 impl RefTable {
     pub fn new() -> Self {
@@ -146,6 +157,7 @@ impl RefTable {
                 replaced_by: None,
                 born: self.pass,
                 seen: self.pass,
+                gone_at: 0,
             },
         );
         r
@@ -184,7 +196,11 @@ impl RefTable {
         is_live: impl Fn(&RefKey) -> bool,
     ) -> Result<RefKey, RefError> {
         let r = Self::parse(text).ok_or_else(|| RefError::BadSyntax(text.trim().to_string()))?;
-        let entry = self.entries.get(&r).ok_or(RefError::Unknown(r))?;
+        let entry = self.entries.get(&r).ok_or(if r >= 1 && r <= self.next {
+            RefError::Forgotten(r)
+        } else {
+            RefError::Unknown(r)
+        })?;
         if entry.stale.is_none() && is_live(&entry.key) {
             return Ok(entry.key);
         }
@@ -300,20 +316,47 @@ impl RefTable {
     /// The frame now shows a document of `epoch`: refs into its other
     /// documents are stale.
     pub fn document_replaced(&mut self, frame: u32, epoch: u64) {
+        self.left += 1;
         for entry in self.entries.values_mut() {
             if entry.key.frame == frame && entry.key.epoch != epoch && entry.stale.is_none() {
                 entry.stale = Some(StaleReason::Navigated);
+                entry.gone_at = self.left;
+            }
+        }
+        self.forget_long_gone();
+    }
+
+    /// Forgets the refs of documents left more than [`KEEP_LEFT`] ago.
+    fn forget_long_gone(&mut self) {
+        let left = self.left;
+        let gone: Vec<u32> = self
+            .entries
+            .iter()
+            .filter(|(_, e)| {
+                matches!(
+                    e.stale,
+                    Some(StaleReason::Navigated | StaleReason::FrameClosed)
+                ) && e.gone_at + KEEP_LEFT < left
+            })
+            .map(|(&r, _)| r)
+            .collect();
+        for r in gone {
+            if let Some(entry) = self.entries.remove(&r) {
+                self.by_key.remove(&entry.key);
             }
         }
     }
 
     /// The frame is gone: all its refs are stale.
     pub fn frame_closed(&mut self, frame: u32) {
+        self.left += 1;
         for entry in self.entries.values_mut() {
             if entry.key.frame == frame && entry.stale.is_none() {
                 entry.stale = Some(StaleReason::FrameClosed);
+                entry.gone_at = self.left;
             }
         }
+        self.forget_long_gone();
     }
 
     /// Number of refs ever handed out.
@@ -411,6 +454,36 @@ mod tests {
             }
             other => panic!("{other:?}"),
         }
+    }
+
+    #[test]
+    fn refs_of_documents_left_long_ago_are_forgotten() {
+        let doc = parse_html("<a href=/a>A</a>", &Default::default());
+        let a = doc
+            .dom
+            .descendants(doc.dom.document())
+            .find(|&n| doc.dom.is_html_element(n, "a"))
+            .unwrap();
+        let mut refs = RefTable::new();
+        let key = |epoch| RefKey {
+            frame: 0,
+            epoch,
+            node: a,
+        };
+        let first = refs.get_or_assign(key(1), "link", "A", None);
+        for epoch in 2..=5 {
+            refs.document_replaced(0, epoch);
+            refs.get_or_assign(key(epoch), "link", "A", None);
+        }
+        assert!(matches!(
+            refs.lookup(&format!("e{first}"), |_| true),
+            Err(RefError::Forgotten(r)) if r == first
+        ));
+        assert!(refs.len() < 5, "the oldest went");
+        assert!(matches!(
+            refs.lookup("e999", |_| true),
+            Err(RefError::Unknown(999))
+        ));
     }
 
     #[test]

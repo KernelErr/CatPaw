@@ -55,15 +55,6 @@ impl GroupState {
         Ok(all.join("\n"))
     }
 
-    /// The versions of what each of the tab's documents shows.
-    fn shown_versions(&self, tab: u32) -> Vec<u64> {
-        self.frames_of(tab)
-            .iter()
-            .filter_map(|f| self.page.frame_state(f.id))
-            .map(|state| state.epoch ^ agent::shown_version(state).rotate_left(1))
-            .collect()
-    }
-
     /// Whether a target is in the document and shown.
     fn target_visible(&mut self, tab: u32, text: &str) -> Result<bool, Failure> {
         let aim = match self.aim(tab, text) {

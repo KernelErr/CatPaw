@@ -935,7 +935,8 @@ impl Page {
             return Ok(false);
         }
         // The new document comes: what the old one held, had on its way
-        // or kept open goes.
+        // or kept open goes, and so does its layout.
+        catpaw_web::agent::release_layout(self.boa.page());
         self.unhold(FrameId(0));
         let net = self.net.clone();
         self.retire(&net);
