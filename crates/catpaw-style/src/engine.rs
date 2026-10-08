@@ -237,8 +237,13 @@ impl StyleEngine {
     /// Replaces the author stylesheets with `sheets`, given in cascade
     /// order. Each comes with a key standing for its text: a sheet whose
     /// key is already in use is kept as it is rather than parsed again.
-    /// Keys must be unique. Returns whether anything changed, in which
-    /// case the whole document is restyled.
+    /// Keys must be unique. Returns whether anything changed.
+    ///
+    /// When the sheets that stay keep their order, the others are removed
+    /// and inserted around them, and the next restyle restyles what Stylo
+    /// finds their rules can match (often everything, for a sheet with
+    /// rules it cannot narrow down to an id, class or element name).
+    /// Otherwise the whole document is restyled from scratch.
     pub fn set_author_stylesheets(&mut self, sheets: &[(u64, &str)]) -> bool {
         let unchanged = sheets.len() == self.author_sheets.len()
             && sheets
@@ -250,20 +255,73 @@ impl StyleEngine {
         }
         let lock = self.table.lock().clone();
         let guard = lock.read();
-        let mut old: std::collections::HashMap<u64, DocumentStyleSheet> =
-            self.author_sheets.drain(..).collect();
-        for sheet in old.values() {
-            self.stylist.remove_stylesheet(sheet.clone(), &guard);
+        let stays = |key: &u64| sheets.iter().any(|(k, _)| k == key);
+        // The sheets that stay, in their old order and in their new one.
+        let kept_before: Vec<u64> = self
+            .author_sheets
+            .iter()
+            .map(|(key, _)| *key)
+            .filter(stays)
+            .collect();
+        let kept_after: Vec<u64> = sheets
+            .iter()
+            .map(|(key, _)| *key)
+            .filter(|key| self.author_sheets.iter().any(|(k, _)| k == key))
+            .collect();
+        let in_place = kept_before == kept_after;
+        let mut old: HashMap<u64, DocumentStyleSheet> = self.author_sheets.drain(..).collect();
+        if !in_place {
+            for sheet in old.values() {
+                self.stylist.remove_stylesheet(sheet.clone(), &guard);
+            }
+            for &(key, css) in sheets {
+                let sheet = old.remove(&key).unwrap_or_else(|| {
+                    make_stylesheet(css, Origin::Author, &lock, &self.url_data, self.quirks_mode)
+                });
+                self.stylist.append_stylesheet(sheet.clone(), &guard);
+                self.author_sheets.push((key, sheet));
+            }
+            drop(guard);
+            self.invalidate();
+            return true;
         }
-        for &(key, css) in sheets {
-            let sheet = old.remove(&key).unwrap_or_else(|| {
-                make_stylesheet(css, Origin::Author, &lock, &self.url_data, self.quirks_mode)
-            });
-            self.stylist.append_stylesheet(sheet.clone(), &guard);
+        for (key, sheet) in &old {
+            if !stays(key) {
+                self.stylist.remove_stylesheet(sheet.clone(), &guard);
+            }
+        }
+        for (i, &(key, css)) in sheets.iter().enumerate() {
+            let sheet = match old.get(&key) {
+                Some(sheet) => sheet.clone(),
+                None => {
+                    let sheet = make_stylesheet(
+                        css,
+                        Origin::Author,
+                        &lock,
+                        &self.url_data,
+                        self.quirks_mode,
+                    );
+                    // Before the next sheet that stays, if there is one.
+                    let before = sheets[i + 1..].iter().find_map(|(k, _)| old.get(k));
+                    match before {
+                        Some(before) => self.stylist.insert_stylesheet_before(
+                            sheet.clone(),
+                            before.clone(),
+                            &guard,
+                        ),
+                        None => self.stylist.append_stylesheet(sheet.clone(), &guard),
+                    }
+                    sheet
+                }
+            };
             self.author_sheets.push((key, sheet));
         }
         drop(guard);
-        self.invalidate();
+        self.resolved.clear();
+        if self.styled {
+            // The traversal flushes the stylist, which says what to restyle.
+            self.pending = true;
+        }
         true
     }
 
@@ -941,9 +999,14 @@ mod tests {
 
     /// A style engine over `dom` with [`SHEET`], styled from scratch.
     fn fresh_engine(dom: &Dom) -> StyleEngine {
+        fresh_engine_with(dom, &[(1, SHEET)])
+    }
+
+    /// A style engine over `dom` with these sheets, styled from scratch.
+    fn fresh_engine_with(dom: &Dom, sheets: &[(u64, &str)]) -> StyleEngine {
         let mut engine = StyleEngine::new(&StyleOptions::default());
         engine.set_quirks_mode(dom.quirks_mode());
-        engine.set_author_stylesheets(&[(1, SHEET)]);
+        engine.set_author_stylesheets(sheets);
         engine.restyle(dom);
         engine
     }
@@ -1235,6 +1298,69 @@ mod tests {
         engine.restyle(&dom);
         check(&engine, false);
         assert_eq!(engine.restyle_counts().0, 1, "styled from scratch once");
+    }
+
+    /// Sheets that come and go in [`sheets_coming_and_going_restyle_what_they_match`].
+    const EXTRA_SHEETS: &[&str] = &[
+        ".a { color: rgb(9, 1, 1) }",
+        "#x { width: 33px }",
+        "li { margin-left: 2px }",
+        "* { letter-spacing: 2px }",
+        "@media (min-width: 100px) { .b { margin-top: 9px } }",
+        "p::before { content: \"y\"; color: rgb(3, 3, 3) }",
+        ".s ~ span { background-color: rgb(4, 4, 4) }",
+        ":root { --v: 5px } .c { padding-left: var(--v) }",
+        "div:empty { height: 9px }",
+        "dt:first-child { opacity: 0.75 }",
+    ];
+
+    #[test]
+    fn sheets_coming_and_going_restyle_what_they_match() {
+        let mut full_restyles = 0;
+        for seed in 1..=10u64 {
+            let mut dom = parse_html(BODY, &Default::default()).dom;
+            let mut sheets: Vec<(u64, &str)> = vec![(1, SHEET)];
+            let mut engine = fresh_engine_with(&dom, &sheets);
+            let mut rng = Lcg(seed);
+            let fixed = [find(&dom, "root"), find(&dom, "list"), find(&dom, "terms")];
+            for step in 0..30 {
+                let pick = rng.next(EXTRA_SHEETS.len());
+                let sheet = (pick as u64 + 10, EXTRA_SHEETS[pick]);
+                let what = match rng.next(5) {
+                    // A sheet comes, at the end or somewhere in between.
+                    0 | 1 if !sheets.contains(&sheet) => {
+                        let at = rng.next(sheets.len() + 1);
+                        sheets.insert(at, sheet);
+                        format!("insert {} at {at}", sheet.1)
+                    }
+                    // One goes.
+                    2 if sheets.len() > 1 => {
+                        let gone = sheets.remove(rng.next(sheets.len()));
+                        format!("remove {}", gone.1)
+                    }
+                    // Two swap places: the order of the sheets that stay
+                    // changes.
+                    3 if sheets.len() > 2 => {
+                        let i = rng.next(sheets.len() - 1);
+                        sheets.swap(i, i + 1);
+                        "swap".to_string()
+                    }
+                    _ => format!("document: {}", mutate(&mut dom, &mut rng, fixed)),
+                };
+                let before = engine.restyle_counts().0;
+                engine.set_author_stylesheets(&sheets);
+                engine.restyle(&dom);
+                full_restyles += engine.restyle_counts().0 - before;
+                let expected = styles_of(&fresh_engine_with(&dom, &sheets), &dom);
+                let actual = styles_of(&engine, &dom);
+                assert_eq!(actual.len(), expected.len());
+                for (a, e) in actual.iter().zip(&expected) {
+                    assert_eq!(a, e, "seed {seed} step {step} ({what})");
+                }
+            }
+        }
+        // Only reordered sheets restyle from scratch.
+        assert!(full_restyles < 60, "{full_restyles} restyles from scratch");
     }
 
     #[test]
