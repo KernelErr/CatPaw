@@ -309,10 +309,11 @@ impl RefTable {
         if found.next().is_some() { None } else { first }
     }
 
-    /// The live ref shown since where a removed one was (under its parent,
-    /// or what is in the parent's place, at its place among the elements
-    /// there), with its role: what an error can name when there is no
-    /// replacement, as another element that only took its place.
+    /// The live ref with a removed one's role that a later pass showed
+    /// where it was (under its parent, or what is now in the parent's
+    /// place, at its place among the elements there): what an error can
+    /// name when there is no replacement, as another element that only
+    /// took its place.
     pub fn occupant(&self, r: u32, is_live: impl Fn(&RefKey) -> bool) -> Option<u32> {
         self.occupant_with(r, &is_live)
     }

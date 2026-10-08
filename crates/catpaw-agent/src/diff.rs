@@ -36,6 +36,8 @@ struct Tree<'a> {
     by_ref: HashMap<u32, usize>,
     /// The children (line indexes) of each element, and of the top (`None`).
     children: HashMap<Option<usize>, Vec<usize>>,
+    /// The place of each element among the elements its parent shows.
+    index: Vec<usize>,
 }
 
 impl<'a> Tree<'a> {
@@ -43,6 +45,9 @@ impl<'a> Tree<'a> {
         let mut parent = vec![None; lines.len()];
         let mut by_ref = HashMap::new();
         let mut children: HashMap<Option<usize>, Vec<usize>> = HashMap::new();
+        let mut index = vec![0; lines.len()];
+        // The elements seen so far under each line, and (last) the top.
+        let mut elements = vec![0; lines.len() + 1];
         let mut stack: Vec<(u16, usize)> = Vec::new();
         for (i, line) in lines.iter().enumerate() {
             if matches!(line.kind, LineKind::Truncated(_) | LineKind::More { .. }) {
@@ -55,6 +60,9 @@ impl<'a> Tree<'a> {
             parent[i] = p;
             children.entry(p).or_default().push(i);
             if let LineKind::Element { r, .. } = line.kind {
+                let seen = &mut elements[p.unwrap_or(lines.len())];
+                index[i] = *seen;
+                *seen += 1;
                 by_ref.insert(r, i);
                 stack.push((line.depth, i));
             }
@@ -64,6 +72,7 @@ impl<'a> Tree<'a> {
             parent,
             by_ref,
             children,
+            index,
         }
     }
 
@@ -80,15 +89,6 @@ impl<'a> Tree<'a> {
 
     fn kids(&self, i: Option<usize>) -> &[usize] {
         self.children.get(&i).map(Vec::as_slice).unwrap_or(&[])
-    }
-
-    /// The place of `i` among the elements its parent shows.
-    fn element_index(&self, i: usize) -> usize {
-        self.kids(self.parent[i])
-            .iter()
-            .take_while(|&&s| s != i)
-            .filter(|&&s| self.r(s).is_some())
-            .count()
     }
 
     /// What `i` and the lines under it show (see [`Fingerprint`]).
@@ -373,7 +373,7 @@ fn compare(old: &[SnapLine], new: &[SnapLine], cap: bool) -> Diff {
     // their descendants' too). A row that slid into a deleted row's place
     // shows other texts or sits elsewhere among its siblings; the next
     // page's row in the same place shows other texts.
-    let place = |t: &Tree, i: usize| (t.parent_ref(i), t.element_index(i), t.content(i));
+    let place = |t: &Tree, i: usize| (t.parent_ref(i), t.index[i], t.content(i));
     let olds: HashMap<_, usize> = removed.iter().map(|&i| (place(&a, i), i)).collect();
     let mut replaces: HashMap<usize, usize> = HashMap::new();
     let mut replaced_old: HashSet<usize> = HashSet::new();
