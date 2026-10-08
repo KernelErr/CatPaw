@@ -1,12 +1,15 @@
-//! Session history across documents and `localStorage` across runs,
-//! against a small local HTTP server.
+//! Session history across documents, `localStorage` across runs, and the
+//! documents a navigation leaves, against a small local HTTP server.
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::TcpListener;
+use std::rc::Rc;
 
-use catpaw_engine::{LoopLimits, PageOptions, with_page};
+use catpaw_engine::{FrameId, Gate, LoopLimits, PageOptions, with_page};
 use catpaw_net::NetConfig;
+use catpaw_web::net::NetRequest;
 use url::Url;
 
 /// Serves `pages` (path to HTML) one request per connection.
@@ -191,6 +194,50 @@ document.querySelector("form").addEventListener("submit", e => {
         assert_eq!(page.url().path(), "/inventory.html");
         let text = page.eval("document.body.textContent").unwrap();
         assert!(text.contains("routed"), "{text}");
+    })
+    .unwrap();
+}
+
+#[test]
+fn the_document_left_goes_before_the_next_is_built() {
+    let port = serve(HashMap::from([
+        ("/first", "<!doctype html><iframe src=/frame1></iframe>"),
+        (
+            "/frame1",
+            "<!doctype html><script>onmessage = () => { location.href = '/frame2'; };</script>",
+        ),
+        (
+            "/frame2",
+            "<!doctype html><script>fetch('/ping?frame');</script>",
+        ),
+        (
+            "/second",
+            "<!doctype html><script>fetch('/ping?top');</script>",
+        ),
+        ("/ping", "ok"),
+    ]));
+    let url = |path: &str| Url::parse(&format!("http://127.0.0.1:{port}{path}")).unwrap();
+    let second = url("/second");
+    with_page(url("/first"), options(HashMap::new()), move |page| {
+        // When the next document's script asks for something, the one it
+        // replaced is gone already.
+        let left = [FrameId(0), FrameId(1)]
+            .map(|frame| Rc::downgrade(page.frame_state(frame).expect("the frame is open")));
+        let seen: Rc<RefCell<Vec<String>>> = Rc::default();
+        let log = seen.clone();
+        let gate = move |request: &NetRequest| {
+            if let Some(which) = request.url.query() {
+                let gone = left[usize::from(which == "frame")].upgrade().is_none();
+                log.borrow_mut().push(format!("{which} gone={gone}"));
+            }
+            Gate::Allow
+        };
+        page.set_request_gate(Some(Rc::new(gate)));
+        page.eval("document.querySelector('iframe').contentWindow.postMessage('go', '*')")
+            .unwrap();
+        page.settle(&LoopLimits::default());
+        page.goto(second).unwrap();
+        assert_eq!(*seen.borrow(), ["frame gone=true", "top gone=true"]);
     })
     .unwrap();
 }

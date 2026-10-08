@@ -516,6 +516,16 @@ fn load(
     Ok(boa)
 }
 
+/// An empty document that holds a frame's place while its next document
+/// is built, so that the one before can go first: the two are never in
+/// memory at once. No script runs in it, and it is outside the frame tree
+/// (and the run's random seeds).
+fn stand_in() -> Result<BoaPage, EngineError> {
+    let url = Url::parse("about:blank").expect("about:blank parses");
+    let state = Rc::new(PageState::new(url, PageConfig::default()));
+    BoaPage::new(state).map_err(EngineError::Script)
+}
+
 fn idle_report() -> LoopReport {
     LoopReport {
         stop: StopReason::Idle,
@@ -1010,6 +1020,9 @@ impl Page {
         if self.frame(self.current).is_none_or(|f| f.element.is_some()) {
             self.current = FrameId(0);
         }
+        // The old document itself (its tree, styles and script heap) goes
+        // before the new one is built.
+        self.boa = stand_in()?;
         let boa = load(
             &self.net,
             &info,
@@ -1801,7 +1814,20 @@ impl Page {
             viewport: element.map(|element| frames::frame_viewport(&referrer_page, element)),
             history: (0, 0),
         };
+        let blank = match stand_in() {
+            Ok(blank) => blank,
+            Err(e) => {
+                parent_page.log(ConsoleLevel::Error, format!("Failed to open frame: {e}"));
+                return;
+            }
+        };
+        // The frame's old document goes, with its requests and workers,
+        // before the new one is built.
         let net = Rc::new(self.net.child());
+        let old = std::mem::replace(&mut self.frames[index].net, net.clone());
+        self.retire(&old);
+        self.drop_workers_of(ScopeId::Frame(id));
+        self.frames[index].boa = blank;
         match load(
             &net,
             &info,
@@ -1812,11 +1838,6 @@ impl Page {
             placement,
         ) {
             Ok(boa) => {
-                // The frame's old document goes, with its requests and
-                // workers.
-                let old = std::mem::replace(&mut self.frames[index].net, net);
-                self.retire(&old);
-                self.drop_workers_of(ScopeId::Frame(id));
                 let frame = &mut self.frames[index];
                 frame.boa = boa;
                 frame.origin = frames::origin_of(&info.url);
@@ -1877,12 +1898,14 @@ impl Page {
             }
             // A frame that navigates loads another document in place. (The
             // request is taken in a statement of its own: the borrow must
-            // not last while the frame navigates.)
+            // not last while the frame navigates. Nor may this hold on to
+            // the document the frame leaves, which goes first.)
             let request = if id != FrameId(0) {
                 page.navigation.borrow_mut().take()
             } else {
                 None
             };
+            drop(page);
             if let Some(request) = request {
                 did = true;
                 if !request.reload {
