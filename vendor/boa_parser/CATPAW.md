@@ -65,6 +65,18 @@ recently seen names (validated against the interned text, so the symbol
 is always the interner's). `next_char` shifts its look-ahead without a
 rotate.
 
+`src/parser/expression/mod.rs`: the binary operators from `|` to `*` were
+parsed by one function per precedence level (`BitwiseORExpression` down
+to `MultiplicativeExpression`), eight nested calls, each moving a large
+result, for every operand of every expression. They are now parsed by
+precedence climbing in one function, which builds the same left-leaning
+trees and keeps the quirks of the old code: the lexer goal is set to `Div`
+before each operand that used to start a `MultiplicativeExpression`, a
+relational expression starting with `#x in` is not continued by
+relational or tighter operators, and an escaped `in` or `instanceof`
+fails where the relational level would have looked at it. `||`, `&&` and
+`??` keep their own parser (`a || b || c` nests to the right there).
+
 `src/parser/cursor/`: `peek(0)` of an already buffered token returns
 without entering the general look-ahead loop; line terminators and other
 token kinds are recognised with `matches!` rather than the derived
