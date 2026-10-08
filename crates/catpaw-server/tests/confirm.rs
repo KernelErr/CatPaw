@@ -447,6 +447,7 @@ fn uploads_ask_first_and_reach_the_server() {
     let chosen = client.call("act", confirmed);
     assert!(chosen.starts_with("ok upload e"), "{chosen}");
     assert!(chosen.contains("← hello.txt (12 B)"), "{chosen}");
+    assert!(chosen.contains("(confirmed c1)"), "{chosen}");
     // The host is trusted: the submission itself needs no approval.
     let sent = client.call("click", json!({"target": "button \"Send file\""}));
     assert!(sent.contains("(POST, 200)"), "{sent}");
@@ -918,7 +919,7 @@ fn strict_asks_before_a_script_runs() {
         "evaluate",
         json!({"script": "document.title", "confirmation": "c1"}),
     );
-    assert_eq!(ran, "ok evaluate\nOrder");
+    assert_eq!(ran, "ok evaluate (confirmed c1)\nOrder");
 }
 
 #[test]
@@ -938,7 +939,7 @@ fn a_confirmed_call_runs_where_it_was_asked() {
         "evaluate",
         json!({"script": "document.title", "confirmation": "c1"}),
     );
-    assert_eq!(ran, "ok evaluate\nOrder");
+    assert_eq!(ran, "ok evaluate (confirmed c1)\nOrder");
     // One asked on a tab that closed since does not run elsewhere.
     let asked = client.call("evaluate", json!({"script": "document.title"}));
     assert!(asked.starts_with("needs_confirmation c2"), "{asked}");

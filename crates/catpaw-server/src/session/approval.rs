@@ -59,6 +59,16 @@ struct CallRef<'a> {
     fingerprint: &'a str,
 }
 
+/// Says on a call's first line that it ran because confirmation `id` was
+/// approved (`ok upload … (confirmed c3)`), as released holds say it.
+fn confirmed(mut output: ToolOutput, id: u32) -> ToolOutput {
+    if !output.is_error && output.text.starts_with("ok ") {
+        let end = output.text.find('\n').unwrap_or(output.text.len());
+        output.text.insert_str(end, &format!(" (confirmed c{id})"));
+    }
+    output
+}
+
 /// `blocked <reason> cN`: final; retrying will not help.
 fn blocked(reason: &str, id: u32) -> ToolOutput {
     ToolOutput::ok(format!("{} {reason} c{id}", outcome::BLOCKED))
@@ -81,6 +91,7 @@ impl Session {
         }
         self.refuse_handed_over(&call)?;
         self.refuse_key_upload(&call)?;
+        let mut approved = None;
         if let Some(what) = self.ask_first(&call)? {
             let tab = self.router.current_tab()?;
             let (id, repeat) = self.open_confirmation(
@@ -97,7 +108,7 @@ impl Session {
                 arguments,
             );
             match self.ask(id, &what, host) {
-                Approval::Approved => {}
+                Approval::Approved => approved = Some(id),
                 Approval::Declined => return Ok(blocked(outcome::DECLINED, id)),
                 Approval::Cancelled => return Ok(blocked(outcome::CANCELLED, id)),
                 Approval::Unavailable => {
@@ -110,6 +121,10 @@ impl Session {
             // A failed call that left something held is asked about too.
             Err(failure) if failure.holds() => failure.render(),
             Err(failure) => return Err(failure),
+        };
+        let output = match approved {
+            Some(id) => confirmed(output, id),
+            None => output,
         };
         self.after_action(name, arguments, output, fingerprint, host)
     }
@@ -461,6 +476,7 @@ impl Session {
                         }
                         let previous = self.router.current.replace(confirmation.tab);
                         let result = self.dispatch(call, host).and_then(|output| {
+                            let output = confirmed(output, id);
                             self.after_action(name, arguments, output, fingerprint, host)
                         });
                         if let Some(previous) = previous

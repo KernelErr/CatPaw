@@ -86,7 +86,7 @@ isolated contexts.
 > against recorded expectations, served by an in-process stand-in for WPT's
 > server and the Python handlers its fetch and XHR tests use: `dom` 3019 of
 > 4246 subtests pass, `html/dom` 582 of 1066, `fetch/api` 1908 of 2237,
-> `xhr` 868 of 1203, `css/cssom-view` 478 of 1198 (much of the rest needs
+> `xhr` 868 of 1203, `css/cssom-view` 485 of 1198 (much of the rest needs
 > frames or workers the test harness does not run, layout, or server
 > behaviour the stand-in does not emulate). Not there yet: images,
 > gradients and rounded corners in screenshots, tables as a grid, images' intrinsic sizes, media,
@@ -231,7 +231,7 @@ reads over each task, against Playwright MCP taking the same steps:
 | internet-login | 5 | 1309 (~374) | 6 | 2940 (~840) |
 | internet-login-declined | 5 | 1136 (~325) | - | - |
 | internet-prompt | 2 | 622 (~178) | 5 | 1968 (~562) |
-| internet-upload | 5 | 1303 (~372) | 8 | 3239 (~925) |
+| internet-upload | 5 | 1318 (~377) | 8 | 3239 (~925) |
 | internet-windows | 3 | 479 (~137) | 5 | 2217 (~633) |
 | quotes-js-pagination | 2 | 5768 (~1648) | 4 | 9394 (~2684) |
 | quotes-login | 5 | 3849 (~1100) | 6 | 12497 (~3571) |
@@ -240,7 +240,7 @@ reads over each task, against Playwright MCP taking the same steps:
 | saucedemo-checkout | 11 | 6253 (~1787) | 18 | 20992 (~5998) |
 | saucedemo-sort | 4 | 5418 (~1548) | 7 | 12814 (~3661) |
 | todomvc | 5 | 1306 (~373) | 10 | 9128 (~2608) |
-| all | 71 | 68027 (~19436) | 118 | 243282 (~69509) |
+| all | 71 | 68042 (~19441) | 118 | 243282 (~69509) |
 
 Bytes are all the tool results an agent receives over a task (tokens
 estimated at 3.5 bytes each). CatPaw's numbers come from the recordings;

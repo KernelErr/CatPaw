@@ -18,7 +18,7 @@ agent 真正需要的东西——带稳定引用的紧凑语义快照、精确�
 > `fetch`/`XMLHttpRequest`（CORS、预检、重定向与 referrer policy 均按 Fetch 标准由页面处理）、Streams、`data:` URL、`sendBeacon`、storage、编码、`crypto` 随机数与摘要、
 > 无布局形态的字体加载 API，以及 console 等 API 的绑定由 Web IDL 生成；事件循环支持虚拟时间；墙钟脚本预算（`--script-budget`，默认 10 秒）会终止失控的脚本。
 > React、Vue、Svelte、Lit、htmx、Alpine 站点均可运行；Boa 引擎以附带修复的形式 vendor 在 `vendor/` 下（见其中说明）。
-> web-platform-tests 在 CI 中按记录的预期运行，由进程内的 WPT 服务器替身提供服务（含 fetch/XHR 测试依赖的 Python 处理器的等价实现）：`dom` 4246 个子测试通过 3019，`html/dom` 1066 通过 582，`fetch/api` 2237 通过 1908，`xhr` 1203 通过 868，`css/cssom-view` 1198 通过 478（其余大多需要测试替身不运行的框架或 worker、布局，或替身尚未模拟的服务器行为）。
+> web-platform-tests 在 CI 中按记录的预期运行，由进程内的 WPT 服务器替身提供服务（含 fetch/XHR 测试依赖的 Python 处理器的等价实现）：`dom` 4246 个子测试通过 3019，`html/dom` 1066 通过 582，`fetch/api` 2237 通过 1908，`xhr` 1203 通过 868，`css/cssom-view` 1198 通过 485（其余大多需要测试替身不运行的框架或 worker、布局，或替身尚未模拟的服务器行为）。
 > 尚未支持：截图中的图片、渐变与圆角，表格的网格布局、图片的固有尺寸、媒体、WebAssembly，以及 HTML 元素中超出属性反射的成员。
 >
 > 不依赖 JavaScript 即可用的部分：基于 rustls 的 HTTP/1.1 与 HTTP/2、重定向、cookie、
@@ -104,7 +104,7 @@ ok click e16 button "Add to cart"
 | internet-login | 5 | 1309 (~374) | 6 | 2940 (~840) |
 | internet-login-declined | 5 | 1136 (~325) | - | - |
 | internet-prompt | 2 | 622 (~178) | 5 | 1968 (~562) |
-| internet-upload | 5 | 1303 (~372) | 8 | 3239 (~925) |
+| internet-upload | 5 | 1318 (~377) | 8 | 3239 (~925) |
 | internet-windows | 3 | 479 (~137) | 5 | 2217 (~633) |
 | quotes-js-pagination | 2 | 5768 (~1648) | 4 | 9394 (~2684) |
 | quotes-login | 5 | 3849 (~1100) | 6 | 12497 (~3571) |
@@ -113,7 +113,7 @@ ok click e16 button "Add to cart"
 | saucedemo-checkout | 11 | 6253 (~1787) | 18 | 20992 (~5998) |
 | saucedemo-sort | 4 | 5418 (~1548) | 7 | 12814 (~3661) |
 | todomvc | 5 | 1306 (~373) | 10 | 9128 (~2608) |
-| 合计 | 71 | 68027 (~19436) | 118 | 243282 (~69509) |
+| 合计 | 71 | 68042 (~19441) | 118 | 243282 (~69509) |
 
 字节数是 agent 在一个任务中收到的全部工具结果（token 按每 3.5 字节一个估算）。CatPaw 的数字来自录制的回放；`@playwright/mcp` 0.0.83 搭配 headless Chrome 于 2026-10-08 实网走了同样的步骤（取三次运行的中位数）。Playwright MCP 把页面快照存进文件，页面变化时在结果里给出链接；agent 要看页面、找下一个目标就得读它，所以这个文件也计入，并算作一次调用。CatPaw 对动作只返回变化的部分，整份快照默认上限 4000 token，其余折叠起来由 agent 按需展开；CatPaw 的数字里还包含了等待用户批准的调用（登录、表单提交、上传），Playwright MCP 没有这一步。用户拒绝确认的任务在 Playwright MCP 一侧没有对应的步骤，合计不计入。每轮对话都要付出的工具列表，CatPaw 为 12.1 KB，Playwright MCP 为 20.3 KB。
 

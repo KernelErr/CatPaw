@@ -18,7 +18,7 @@ needs_confirmation c1: upload hello.txt (19 B) into e4 button
 approved
 
 > act {"confirmation":"c1","files":["hello.txt"],"kind":"upload","target":"css:#file-upload"}
-ok upload e4 button ← hello.txt (19 B)
+ok upload e4 button ← hello.txt (19 B) (confirmed c1)
 # s2 no changes
 
 > click {"target":"button \"Upload\""}
