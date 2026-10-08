@@ -50,8 +50,8 @@ deduplicated with a hash set instead of a list.
 `src/operations/mod.rs`: `var_scoped_declarations` returns copies of the
 declarations, which means copying every function declaration and every
 variable initializer (whole function bodies) at each level of nesting. The
-new `var_scoped_declarations_ref` borrows them; the scope analyzer uses it,
-and the copying version is now built on it.
+new `var_scoped_declarations_ref` borrows them; the scope analyzer and the
+bytecode compiler use it, and the copying version is now built on it.
 
 `src/lib.rs`: `Sym::to_js_string` narrows short Latin-1 names on the stack
 instead of in a temporary `Vec`.

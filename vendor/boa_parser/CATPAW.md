@@ -29,12 +29,13 @@ identifier reference is.
 ## Parsing speed
 
 Parsing was 55–70% of the CPU time of loading a single-page app. The
-changes below, with those in `vendor/boa_ast`, make it about twice as
-fast without changing any result: for the scripts of the recorded tasks
-(jQuery, jQuery UI, Bootstrap, the Sauce Demo and TodoMVC bundles), the
-bytecode, source maps and function source spans compiled from the parse
-are identical, and so are the parse errors (message and position) of
-thousands of randomly mutated variants of those scripts.
+changes below, with those in `vendor/boa_ast` and `vendor/boa_engine`,
+make it about three times as fast without changing any result: for the
+scripts of the recorded tasks (jQuery, jQuery UI, Bootstrap, the Sauce
+Demo and TodoMVC bundles) and a syntax sample, the bytecode, source maps
+and function source spans compiled from the parse are identical, and so
+are the results (bytecode, or error message and position) of thousands of
+randomly mutated variants of those scripts and of generated expressions.
 
 `src/parser/expression/primary/mod.rs`: a parenthesized expression was
 parsed and then cloned into its `Parenthesized` node, so an IIFE
@@ -98,13 +99,18 @@ token kinds are recognised with `matches!` rather than the derived
 `PartialEq`; `or_abrupt` no longer builds (and drops) an error for every
 successful peek.
 
-Measured on an Apple M5 (release build, CPU cycles of the parse, median
-of repeated runs; wall times on the shared machine are noisier but agree):
+Measured on an Apple M5 (release build; `Script::parse` or `Module::parse`,
+then compiling to bytecode; best of repeated runs, alternating between the
+two builds on a shared machine):
 
-| script | before | after |
+| script | parse, MB/s | parse + compile, MB/s |
 | --- | --- | --- |
-| Sauce Demo bundle (541 KB, module) | 329 Mcycles | 162 Mcycles |
-| jQuery UI 1.11.4 (460 KB) | 137 Mcycles | 76 Mcycles |
-| TodoMVC bundle (959 KB) | 264 Mcycles | 148 Mcycles |
-| jQuery 1.11.3 (94 KB, minified) | 54 Mcycles | 34 Mcycles |
-| all 15 scripts (2.6 MB) | 1034 Mcycles | 569 Mcycles |
+| Sauce Demo bundle (541 KB, module) | 5.3 → 22.0 | 3.5 → 14.6 |
+| jQuery UI 1.11.4 (460 KB) | 14.6 → 37.9 | 12.0 → 26.6 |
+| TodoMVC bundle (959 KB) | 14.3 → 43.0 | 9.9 → 29.8 |
+| jQuery 1.11.3 (94 KB, minified) | 6.7 → 16.1 | 5.2 → 11.1 |
+| all 15 scripts of the recorded tasks (2.6 MB) | 9.4 → 29.2 | 6.7 → 20.1 |
+
+CPU cycles for all 15 go from 993 to 346 million to parse and from 1390 to
+503 million to parse and compile; instructions from 3287 to 1289 million
+to parse.
