@@ -190,10 +190,11 @@ Painting goes through tiny-skia on the blocking pool with a bundled
 deterministic font set. Canvas 2D is backed by the same rasterizer. WebGL
 returns a null context.
 
-*Where M1 stands:* there is no layout yet. Geometry reads as empty boxes at
-the origin, and the observers of rendering follow from that by their own
-rules: an `IntersectionObserver` sees a target as intersecting whenever it
-is in its root's tree, and a `ResizeObserver` never has a size to report.
+*Where it stands:* layout and painting are in place (M2); restyles and
+layouts reuse what did not change. Not drawn yet: images, gradients,
+shadows, rounded corners, transforms and opacity. Form controls show what
+they hold (the page tells the painter their values, checkedness and
+chosen options), and the focused field gets a ring and a caret.
 
 **Network and identity (ADR 0003).** A Fetch-spec implementation over hyper +
 rustls with per-context cookie jars (including partitioned cookies), caches
@@ -206,6 +207,38 @@ real event sequences and reported consequences; a settledness predicate
 evaluated by the scheduler itself; contexts with identity, proxy, time mode,
 resource policy, URL policy and confirm-before hooks; checkpoints and HAR
 record/replay.
+
+## Known gaps
+
+What does not work as a browser's would yet, besides the web features the
+README lists as missing:
+
+- **Scripts are compiled anew on every navigation.** Nothing keeps compiled
+  scripts across documents, and function bodies are compiled up front
+  rather than on their first call.
+- **Detached nodes live until the page goes away** (see the DOM ownership
+  notes above).
+- **Downloads stay in memory.** A file a navigation brings is kept for
+  `read` (the download view), not written to disk.
+- **`Intl` falls back to UTC for offsets no time zone has** (beyond 18
+  hours); `Date` keeps the offset.
+- **Recordings redact secrets in requests, cookies, credential headers and
+  JSON answers, not in HTML or other text bodies.** A page that prints a
+  token into its markup keeps it in a recording.
+- **There is no JIT.** Boa interprets, so a single-page app's own scripts
+  run many times slower than in Chrome.
+- **Runtime element state does not reach the style sheets.** `:focus`,
+  `:hover`, and `:checked` after a click are not matched (a `checked`
+  attribute is); screenshots draw the focused control's ring and the
+  controls' state themselves.
+- **Form controls sit on the line by their bottom edge**, where browsers
+  align the text inside them with the text around them.
+- **An action approved through the host's own prompt skips a snapshot
+  number**, and the diff that follows the approval starts from the
+  snapshot taken while the action waited, which the agent did not see.
+- **A host whose HTTP/2 connections leave streams unanswered** costs the
+  requests it leaves about two seconds before they go again over
+  HTTP/1.1 (see `HTTP2_STALL` in `catpaw-net`).
 
 ## Roadmap
 
