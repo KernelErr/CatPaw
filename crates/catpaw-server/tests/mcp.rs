@@ -584,7 +584,9 @@ fn dialogs_follow_the_action_options() {
 #[test]
 fn requests_are_reported_and_a_busy_page_says_why() {
     let mut client = Client::with(|config| {
-        config.options.limits.wall = std::time::Duration::from_millis(800);
+        // Room for the slow answer (300 ms) on a busy machine, not for the
+        // hanging one (3 s).
+        config.options.limits.wall = std::time::Duration::from_millis(1500);
     });
     let page = lab(&mut client);
     let fetch = ref_of(&page, "button \"Fetch\"");

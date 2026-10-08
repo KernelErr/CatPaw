@@ -14,7 +14,7 @@ use catpaw_net::NetConfig;
 use url::Url;
 
 /// Serves `pages` by path; a path starting with `/slow` is answered after
-/// 300 ms, and `/hang` after 3 s. One thread per connection.
+/// 300 ms, and `/hang` after 10 s. One thread per connection.
 fn serve(pages: HashMap<&'static str, &'static str>) -> u16 {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let port = listener.local_addr().unwrap().port();
@@ -28,9 +28,28 @@ fn serve_on(listener: TcpListener, pages: HashMap<&'static str, &'static str>) {
             let Ok(mut stream) = stream else { return };
             let pages = pages.clone();
             std::thread::spawn(move || {
+                // The head and any body it announces, however they arrive.
+                let mut data = Vec::new();
                 let mut buf = vec![0u8; 8192];
-                let n = stream.read(&mut buf).unwrap_or(0);
-                let request = String::from_utf8_lossy(&buf[..n]);
+                loop {
+                    if let Some(end) = data.windows(4).position(|w| w == b"\r\n\r\n") {
+                        let head = String::from_utf8_lossy(&data[..end]).to_ascii_lowercase();
+                        let length = head
+                            .lines()
+                            .find_map(|l| l.strip_prefix("content-length:"))
+                            .and_then(|v| v.trim().parse::<usize>().ok())
+                            .unwrap_or(0);
+                        if data.len() >= end + 4 + length {
+                            break;
+                        }
+                    }
+                    let n = stream.read(&mut buf).unwrap_or(0);
+                    if n == 0 {
+                        break;
+                    }
+                    data.extend_from_slice(&buf[..n]);
+                }
+                let request = String::from_utf8_lossy(&data);
                 let target = request
                     .lines()
                     .next()
@@ -42,7 +61,7 @@ fn serve_on(listener: TcpListener, pages: HashMap<&'static str, &'static str>) {
                     std::thread::sleep(Duration::from_millis(300));
                 }
                 if path.starts_with("/hang") {
-                    std::thread::sleep(Duration::from_secs(3));
+                    std::thread::sleep(Duration::from_secs(10));
                 }
                 let body = pages.get(path.as_str()).copied().unwrap_or("ok");
                 let head = format!(
@@ -205,9 +224,10 @@ fetch("http://localhost:{port}/hang/collect", {{mode: "no-cors"}});
         assert_eq!(site.line, 6, "{site:?}");
     })
     .unwrap();
-    // The page did not wait the three seconds the analytics host takes.
+    // The page did not wait the ten seconds the analytics host takes
+    // (with room for a busy machine).
     assert!(
-        started.elapsed() < Duration::from_secs(3),
+        started.elapsed() < Duration::from_secs(8),
         "{:?}",
         started.elapsed()
     );
