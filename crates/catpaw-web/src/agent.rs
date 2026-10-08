@@ -135,6 +135,12 @@ pub fn with_styles<R>(page: &PageState, f: impl FnOnce(&StyleEngine, &Dom) -> R)
     crate::stylesheets::with_styles(page, f)
 }
 
+/// A number that changes whenever what the page shows may have: its
+/// document, its style sheets, a scroll position.
+pub fn shown_version(page: &PageState) -> u64 {
+    crate::layout::geometry_version(page)
+}
+
 /// The viewport size in CSS pixels.
 pub fn viewport(page: &PageState) -> (u32, u32) {
     (page.config.viewport_width, page.config.viewport_height)

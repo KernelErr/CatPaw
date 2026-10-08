@@ -894,9 +894,12 @@ fn the_approval_key_is_never_uploaded() {
         two.starts_with("error BadArgument e") && two.contains("takes one file"),
         "{two}"
     );
-    let link = client.key_file.parent().unwrap().join("innocent.txt");
+    let dir = client.key_file.parent().unwrap().to_path_buf();
+    let link = dir.join("innocent.txt");
     std::fs::hard_link(&client.key_file, &link).unwrap();
-    for file in [client.key_file.clone(), link] {
+    let copy = dir.join("notes.txt");
+    std::fs::copy(&client.key_file, &copy).unwrap();
+    for file in [client.key_file.clone(), link, copy] {
         let refused = client.call(
             "act",
             json!({"kind": "upload", "target": "css:#doc", "files": [file.to_str().unwrap()]}),

@@ -41,8 +41,6 @@ const READ_TOKENS: u32 = 6000;
 const EVAL_CHARS: usize = 4000;
 /// Console errors listed after an action; the rest are counted.
 const CONSOLE_LINES: usize = 3;
-/// Snapshots a tab keeps to diff against.
-const HISTORY: usize = 8;
 /// Snapshot ids a tab remembers log positions for (`logs({since})`).
 const MARKS: usize = 32;
 /// Events a tab keeps for `logs({kind: "events"})`.

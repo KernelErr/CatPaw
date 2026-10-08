@@ -12,8 +12,7 @@ use catpaw_protocol::wording::advice;
 use catpaw_web::agent;
 
 use super::{
-    GroupState, HISTORY, MARKS, Mark, SNAPSHOT_TOKENS, SnapRequest, Stored, View, resolve_ref,
-    token_bytes,
+    GroupState, MARKS, Mark, SNAPSHOT_TOKENS, SnapRequest, Stored, View, resolve_ref, token_bytes,
 };
 use crate::oracle::EngineOracle;
 use crate::output::{CallResult, Failure, ToolOutput};
@@ -295,6 +294,8 @@ impl GroupState {
         let Some(entry) = self.tabs.get_mut(&tab) else {
             return;
         };
+        // The latest of each filter is all a diff compares with.
+        entry.history.retain(|stored| stored.filter != filter);
         entry.history.push_back(Stored {
             filter,
             epoch: model.epoch,
@@ -304,9 +305,6 @@ impl GroupState {
             focus: model.focus,
             lines: model.lines,
         });
-        while entry.history.len() > HISTORY {
-            entry.history.pop_front();
-        }
     }
 
     /// The `settled=` and `pending=` of a header.

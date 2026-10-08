@@ -62,6 +62,7 @@ pub(crate) fn private_file(path: &Path) -> std::io::Result<std::fs::File> {
 /// Creates a directory only its owner can enter; `AlreadyExists` when it
 /// is there.
 pub(crate) fn private_dir(path: &Path) -> std::io::Result<()> {
+    #[cfg_attr(not(unix), allow(unused_mut))]
     let mut builder = std::fs::DirBuilder::new();
     #[cfg(unix)]
     {

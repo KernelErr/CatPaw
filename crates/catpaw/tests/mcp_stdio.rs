@@ -6,11 +6,10 @@
 
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::path::PathBuf;
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::mpsc::{Receiver, channel};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use serde_json::{Value, json};
 
@@ -260,7 +259,7 @@ fn a_line_that_is_not_utf8_gets_a_parse_error() {
 #[test]
 fn a_terminated_server_saves_its_profile() {
     let (port, _log) = serve();
-    let profile: PathBuf =
+    let profile: std::path::PathBuf =
         std::env::temp_dir().join(format!("catpaw-stdio-profile-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&profile);
     let mut server = Server::start_with(&["--profile", profile.to_str().unwrap()]);
@@ -290,7 +289,7 @@ fn a_terminated_server_saves_its_profile() {
             .unwrap()
             .success()
     );
-    let started = Instant::now();
+    let started = std::time::Instant::now();
     loop {
         if let Some(status) = server.child.try_wait().unwrap() {
             assert_eq!(status.code(), Some(0), "a clean stop");

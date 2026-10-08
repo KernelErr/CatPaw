@@ -84,27 +84,36 @@ fn check(root: Option<&Path>, paths: &[String]) -> Result<Vec<(PathBuf, u64)>, F
     Ok(out)
 }
 
-/// Whether any of `paths` is the file at `secret` (the same file, under
-/// whatever name or link).
+/// Whether any of `paths` is the file at `secret`: the same file under
+/// whatever name or link, or a copy of it (a small file with the same
+/// bytes).
 pub(crate) fn names_file(root: Option<&Path>, paths: &[String], secret: &Path) -> bool {
     let Ok(secret_meta) = std::fs::metadata(secret) else {
         return false;
     };
-    let secret = std::fs::canonicalize(secret).ok();
+    let real_secret = std::fs::canonicalize(secret).ok();
+    let secret_bytes = (secret_meta.len() <= 4096)
+        .then(|| std::fs::read(secret).ok())
+        .flatten();
     paths.iter().any(|path| {
         let full = resolve(root, path);
-        if secret.is_some() && std::fs::canonicalize(&full).ok() == secret {
+        if real_secret.is_some() && std::fs::canonicalize(&full).ok() == real_secret {
             return true;
         }
+        let Ok(meta) = std::fs::metadata(&full) else {
+            return false;
+        };
         #[cfg(unix)]
         {
             use std::os::unix::fs::MetadataExt;
-            if let Ok(meta) = std::fs::metadata(&full) {
-                return meta.dev() == secret_meta.dev() && meta.ino() == secret_meta.ino();
+            if meta.dev() == secret_meta.dev() && meta.ino() == secret_meta.ino() {
+                return true;
             }
         }
-        let _ = &secret_meta;
-        false
+        meta.len() == secret_meta.len()
+            && secret_bytes
+                .as_ref()
+                .is_some_and(|bytes| std::fs::read(&full).ok().as_ref() == Some(bytes))
     })
 }
 

@@ -55,6 +55,15 @@ impl GroupState {
         Ok(all.join("\n"))
     }
 
+    /// The versions of what each of the tab's documents shows.
+    fn shown_versions(&self, tab: u32) -> Vec<u64> {
+        self.frames_of(tab)
+            .iter()
+            .filter_map(|f| self.page.frame_state(f.id))
+            .map(|state| state.epoch ^ agent::shown_version(state).rotate_left(1))
+            .collect()
+    }
+
     /// Whether a target is in the document and shown.
     fn target_visible(&mut self, tab: u32, text: &str) -> Result<bool, Failure> {
         let aim = match self.aim(tab, text) {
@@ -139,29 +148,48 @@ impl GroupState {
         let mut clock = self.page_time(root);
         let needle = p.text.as_deref().map(|t| collapse(t).to_lowercase());
         let mut ran = false;
+        // What the page shows, as of the last check: a page that did not
+        // change gives the same answer without working it out again.
+        let mut checked: Option<(Vec<u64>, bool)> = None;
         let outcome: Result<(), bool> = loop {
-            let met = match p.until {
-                WaitFor::Handoff => true,
-                WaitFor::Settled => self.page.is_settled_in(root) && waited > 0.0,
-                WaitFor::Text => self
+            let shown = matches!(p.until, WaitFor::Text | WaitFor::Gone | WaitFor::Visible);
+            let version = if shown {
+                self.shown_versions(tab)
+            } else {
+                Vec::new()
+            };
+            let known = checked
+                .as_ref()
+                .filter(|(v, _)| shown && *v == version)
+                .map(|(_, met)| *met);
+            let met = match (known, p.until) {
+                (Some(met), _) => met,
+                (None, WaitFor::Handoff) => true,
+                (None, WaitFor::Settled) => self.page.is_settled_in(root) && waited > 0.0,
+                (None, WaitFor::Text) => self
                     .visible_text(tab)?
                     .contains(needle.as_deref().unwrap_or("")),
-                WaitFor::Gone => match (&needle, &p.target) {
+                (None, WaitFor::Gone) => match (&needle, &p.target) {
                     (Some(needle), _) => !self.visible_text(tab)?.contains(needle.as_str()),
                     (None, Some(target)) => !self.target_visible(tab, target)?,
                     (None, None) => true,
                 },
-                WaitFor::Visible => self.target_visible(tab, p.target.as_deref().unwrap_or(""))?,
-                WaitFor::Url => self
+                (None, WaitFor::Visible) => {
+                    self.target_visible(tab, p.target.as_deref().unwrap_or(""))?
+                }
+                (None, WaitFor::Url) => self
                     .page
                     .url_of(root)
                     .is_some_and(|u| u.as_str().contains(p.url.as_deref().unwrap_or(""))),
                 // An idle page has nothing for time to bring.
-                WaitFor::Time => {
+                (None, WaitFor::Time) => {
                     waited.max(started.elapsed().as_secs_f64() * 1000.0) >= timeout_ms
                         || (ran && !self.page.last_run_progressed())
                 }
             };
+            if shown {
+                checked = Some((version, met));
+            }
             if met {
                 break Ok(());
             }

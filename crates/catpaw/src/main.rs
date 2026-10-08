@@ -278,6 +278,10 @@ struct KeygenArgs {
     force: bool,
 }
 
+#[cfg(feature = "mimalloc")]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.cmd {

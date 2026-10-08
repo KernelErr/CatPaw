@@ -46,6 +46,37 @@ pub struct RequestRecord {
     pub polling: bool,
 }
 
+/// The requests a page and its frames made, the oldest dropped past
+/// [`LOG_KEPT`].
+#[derive(Default)]
+struct RequestLog {
+    records: Vec<RequestRecord>,
+    /// How many of the oldest went: indexes count from the first request.
+    dropped: usize,
+}
+
+/// Requests a log keeps;
+const LOG_KEPT: usize = 5000;
+/// past that, the oldest go this many at a time.
+const LOG_DROP: usize = 1000;
+
+impl RequestLog {
+    /// Adds a record; its index.
+    fn push(&mut self, record: RequestRecord) -> usize {
+        self.records.push(record);
+        if self.records.len() > LOG_KEPT {
+            self.records.drain(..LOG_DROP);
+            self.dropped += LOG_DROP;
+        }
+        self.dropped + self.records.len() - 1
+    }
+
+    fn get_mut(&mut self, index: usize) -> Option<&mut RequestRecord> {
+        let at = index.checked_sub(self.dropped)?;
+        self.records.get_mut(at)
+    }
+}
+
 /// How much of a request body a record keeps.
 const BODY_PREVIEW_BYTES: usize = 4096;
 
@@ -131,7 +162,7 @@ pub struct EngineNet {
     /// Socket events taken from the channel while polling for responses.
     socket_events: RefCell<Vec<(u64, WsEvent)>>,
     /// Shared with the hosts of the page's frames: one log per page.
-    log: Rc<RefCell<Vec<RequestRecord>>>,
+    log: Rc<RefCell<RequestLog>>,
     /// Answers already there (from a recording), delivered at the next
     /// poll in the order the requests were made: a replay interleaves
     /// the same way every time.
@@ -279,7 +310,7 @@ impl EngineNet {
             inflight: RefCell::new(HashMap::new()),
             sockets: RefCell::new(HashMap::new()),
             socket_events: RefCell::new(Vec::new()),
-            log: Rc::new(RefCell::new(Vec::new())),
+            log: Rc::new(RefCell::new(RequestLog::default())),
             ready: RefCell::new(std::collections::VecDeque::new()),
             gate: Rc::new(RefCell::new(None)),
             held: RefCell::new(Vec::new()),
@@ -585,17 +616,24 @@ impl EngineNet {
 
     /// Every request made through this host so far.
     pub fn requests(&self) -> Vec<RequestRecord> {
-        self.log.borrow().clone()
+        self.log.borrow().records.clone()
     }
 
-    /// How many requests the log holds.
+    /// How many requests were made so far (the log keeps the latest).
     pub fn requests_len(&self) -> usize {
-        self.log.borrow().len()
+        let log = self.log.borrow();
+        log.dropped + log.records.len()
     }
 
-    /// The requests from index `from` on.
+    /// The requests from index `from` (counted from the first) on, those
+    /// the log still keeps.
     pub fn requests_since(&self, from: usize) -> Vec<RequestRecord> {
-        self.log.borrow().iter().skip(from).cloned().collect()
+        let log = self.log.borrow();
+        log.records
+            .iter()
+            .skip(from.saturating_sub(log.dropped))
+            .cloned()
+            .collect()
     }
 
     /// Logs a document fetch made outside the host (a frame's document).
@@ -613,8 +651,7 @@ impl EngineNet {
     }
 
     fn record(&self, request: &NetRequest) -> usize {
-        let mut log = self.log.borrow_mut();
-        log.push(RequestRecord {
+        self.log.borrow_mut().push(RequestRecord {
             method: request.method.clone(),
             url: request.url.clone(),
             kind: request.kind,
@@ -626,8 +663,7 @@ impl EngineNet {
             finished: false,
             error: None,
             polling: request.polling,
-        });
-        log.len() - 1
+        })
     }
 
     fn finish(&self, index: usize, result: &NetResult) {
@@ -903,5 +939,33 @@ impl NetHost for EngineNet {
 
     fn set_cookie(&self, url: &Url, cookie: &str) {
         self.client.cookies().store_from_script(url, cookie);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_request_log_keeps_the_latest_under_lasting_indexes() {
+        let record = |n: usize| RequestRecord {
+            method: "GET".to_string(),
+            url: Url::parse(&format!("https://a.test/{n}")).unwrap(),
+            kind: RequestKind::Fetch,
+            status: None,
+            body_preview: None,
+            finished: false,
+            error: None,
+            polling: false,
+        };
+        let mut log = RequestLog::default();
+        let mut last = 0;
+        for n in 0..LOG_KEPT + 10 {
+            last = log.push(record(n));
+        }
+        assert_eq!(last, LOG_KEPT + 9);
+        assert_eq!(log.dropped, LOG_DROP);
+        assert!(log.get_mut(5).is_none(), "dropped");
+        assert_eq!(log.get_mut(last).unwrap().url.path(), format!("/{last}"));
     }
 }
