@@ -680,7 +680,7 @@ pub fn is_block_level(local: &str) -> bool {
 
 /// The first element in tree order with this id; within a pass, from an
 /// index made once per document.
-fn by_id(dom: &Dom, id: &str) -> Option<NodeId> {
+pub(crate) fn by_id(dom: &Dom, id: &str) -> Option<NodeId> {
     let indexed = PASS.with(|pass| {
         let mut pass = pass.borrow_mut();
         let cache = pass.as_mut()?;

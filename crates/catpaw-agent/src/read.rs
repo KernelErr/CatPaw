@@ -715,7 +715,13 @@ pub struct FormInfo {
 
 /// Forms and their controls (plus controls outside any form, grouped as a
 /// final form with no action).
-pub fn forms(dom: &Dom, oracle: &dyn StyleOracle, mut refs: Option<RefScope<'_>>) -> Vec<FormInfo> {
+pub fn forms(dom: &Dom, oracle: &dyn StyleOracle, refs: Option<RefScope<'_>>) -> Vec<FormInfo> {
+    // Within one pass, as a snapshot is: the ids labels name are found
+    // from an index made once, not by a walk of the document each.
+    crate::a11y::in_one_pass(|| forms_in(dom, oracle, refs))
+}
+
+fn forms_in(dom: &Dom, oracle: &dyn StyleOracle, mut refs: Option<RefScope<'_>>) -> Vec<FormInfo> {
     let labels = LabelIndex::build(dom);
     let base = dom.url().cloned();
     let mut forms: Vec<(Option<NodeId>, FormInfo)> = Vec::new();
@@ -921,6 +927,17 @@ let y = 2;</code></pre>
         assert_eq!(f[0].fields[2].options, vec!["A", "B"]);
         assert_eq!(f[0].fields[3].kind, "submit");
         assert_eq!(f[1].fields[0].name.as_deref(), Some("loose"));
+    }
+
+    #[test]
+    fn form_labels_named_by_id_are_found() {
+        // The first element with an id names the field, as in a snapshot.
+        let dom = parse(
+            r#"<form><span id=pw>Password</span><span id=pw>Not this</span><span id=hint>(8+)</span>
+<input type=password name=p aria-labelledby="pw hint"></form>"#,
+        );
+        let f = forms(&dom, &AttributeOracle, None);
+        assert_eq!(f[0].fields[0].label, "Password (8+)");
     }
 }
 

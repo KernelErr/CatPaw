@@ -22,7 +22,7 @@ use catpaw_dom::{Dom, ElementData, NodeId, NodeKind};
 use url::Url;
 
 use crate::a11y::{
-    LabelIndex, collapse_whitespace, heading_level, is_interactive, is_landmark, name_for,
+    LabelIndex, by_id, collapse_whitespace, heading_level, is_interactive, is_landmark, name_for,
     names_from_content, role_for, subtree_text,
 };
 use crate::refs::{RefKey, RefTable};
@@ -953,11 +953,7 @@ impl<'a> Snapshotter<'a> {
         if let Some(ids) = el.attr("aria-describedby") {
             let text: Vec<String> = ids
                 .split_ascii_whitespace()
-                .filter_map(|target| {
-                    self.dom
-                        .descendants(self.dom.document())
-                        .find(|&n| self.dom.attr(n, "id") == Some(target))
-                })
+                .filter_map(|target| by_id(self.dom, target))
                 .map(|n| subtree_text(self.dom, n, self.oracle))
                 .filter(|s| !s.is_empty())
                 .collect();
@@ -1121,8 +1117,8 @@ pub fn cap_text(text: &str) -> Option<String> {
     })
 }
 
-/// The control a `<label>` is for: the element its `for` names, else the
-/// first form control inside it.
+/// The control a `<label>` is for: the element its `for` names (when that
+/// is a control), else the first form control inside it.
 fn label_control(dom: &Dom, label: NodeId) -> Option<NodeId> {
     let labelable = |n: NodeId| match dom.kind(n) {
         NodeKind::Element(el) if el.is_html() => match &*el.name.local {
@@ -1135,9 +1131,7 @@ fn label_control(dom: &Dom, label: NodeId) -> Option<NodeId> {
         _ => false,
     };
     match dom.attr(label, "for") {
-        Some(target) => dom
-            .descendants(dom.document())
-            .find(|&n| dom.attr(n, "id") == Some(target) && labelable(n)),
+        Some(target) => by_id(dom, target).filter(|&n| labelable(n)),
         None => dom.descendants(label).find(|&n| labelable(n)),
     }
 }
@@ -1820,6 +1814,46 @@ e5 main
             .text;
         let body: Vec<&str> = text.lines().skip(1).collect();
         assert_eq!(body, ["e1 checkbox \"Remember me\""], "{text}");
+    }
+
+    #[test]
+    fn ids_name_the_first_element_with_them() {
+        // `aria-describedby` and `<label for>` go by id, as
+        // `aria-labelledby` does: to the first element with it.
+        let r = parse_html(
+            "<p id=rule>Twelve characters at least</p><p id=rule>Not this one</p><p id=more>No spaces</p>\
+             <input type=password aria-label=Password aria-describedby='rule gone more'>\
+             <label for=keep>Remember me</label><input type=checkbox id=keep>",
+            &Default::default(),
+        );
+        let label = r
+            .dom
+            .descendants(r.dom.document())
+            .find(|&n| r.dom.is_html_element(n, "label"))
+            .unwrap();
+        let oracle = LiveOracle {
+            value: NodeId::default(),
+            pointer: label,
+        };
+        let mut refs = RefTable::new();
+        let text = Snapshotter::new(&r.dom, &oracle, &mut refs)
+            .snapshot(&SnapshotOptions {
+                extra: ExtraAttrs::parse_list("description").unwrap(),
+                ..Default::default()
+            })
+            .text;
+        let body: Vec<&str> = text.lines().skip(1).collect();
+        assert_eq!(
+            body,
+            [
+                "e1 paragraph: Twelve characters at least",
+                "e2 paragraph: Not this one",
+                "e3 paragraph: No spaces",
+                "e4 textbox \"Password\" [description=\"Twelve characters at least No spaces\"]",
+                "e5 checkbox \"Remember me\"",
+            ],
+            "{text}"
+        );
     }
 
     #[test]

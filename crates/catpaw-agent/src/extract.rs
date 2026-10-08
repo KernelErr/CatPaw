@@ -103,6 +103,17 @@ fn cell_content(
 pub fn tables(
     dom: &Dom,
     oracle: &dyn StyleOracle,
+    refs: Option<RefScope<'_>>,
+    root: Option<NodeId>,
+) -> String {
+    // One pass: whether a table is for layout is worked out once, not for
+    // every row given a ref.
+    crate::a11y::in_one_pass(|| tables_in(dom, oracle, refs, root))
+}
+
+fn tables_in(
+    dom: &Dom,
+    oracle: &dyn StyleOracle,
     mut refs: Option<RefScope<'_>>,
     root: Option<NodeId>,
 ) -> String {
@@ -225,6 +236,19 @@ fn is_context(dom: &Dom, id: NodeId) -> bool {
 /// the matches in a text), returning at most `limit` hits and the number
 /// of matches found in all.
 pub fn find(
+    dom: &Dom,
+    oracle: &dyn StyleOracle,
+    refs: Option<RefScope<'_>>,
+    root: Option<NodeId>,
+    matches: &dyn Fn(&str) -> Vec<(usize, usize)>,
+    limit: usize,
+) -> (Vec<FindHit>, usize) {
+    // Within one pass, as a snapshot is: a cell's role (is its table for
+    // layout?) is worked out once per table, not once per hit.
+    crate::a11y::in_one_pass(|| find_in(dom, oracle, refs, root, matches, limit))
+}
+
+fn find_in(
     dom: &Dom,
     oracle: &dyn StyleOracle,
     mut refs: Option<RefScope<'_>>,
@@ -430,6 +454,34 @@ mod tests {
         assert_eq!(hits[0].role, "paragraph");
         assert_eq!(hits[0].context, "Shipping is **free** over $50.");
         assert_eq!(hits[1].role, "listitem");
+    }
+
+    #[test]
+    fn find_reads_a_cell_as_a_snapshot_does() {
+        // A layout table's cells say nothing; a data table's are cells.
+        let d = dom(
+            "<table border=0 cellpadding=0><tr><td>free shipping<td>today</table>\
+             <table><tr><th>Offer<tr><td>free returns<tr><td>free gifts</table>",
+        );
+        let mut refs = RefTable::new();
+        let matcher = |t: &str| -> Vec<(usize, usize)> {
+            t.match_indices("free")
+                .map(|(i, m)| (i, i + m.len()))
+                .collect()
+        };
+        let (hits, total) = find(
+            &d,
+            &AttributeOracle,
+            Some(RefScope::plain(&mut refs)),
+            None,
+            &matcher,
+            20,
+        );
+        assert_eq!(total, 3);
+        let roles: Vec<&str> = hits.iter().map(|h| h.role).collect();
+        assert_eq!(roles, ["generic", "cell", "cell"]);
+        let shown: Vec<&str> = hits.iter().filter_map(|h| h.r#ref.as_deref()).collect();
+        assert_eq!(shown, ["e1", "e2", "e3"]);
     }
 
     #[test]
