@@ -113,10 +113,10 @@ impl LayoutTree {
     /// inline elements, the border box for anything with a box, none for
     /// what is not rendered.
     pub fn node_rects(&self, dom: &Dom, node: NodeId) -> Vec<Rect> {
-        if let Some(id) = self.node_box.get(&node) {
+        if let Some(id) = self.node_box.get(node) {
             return vec![self.border_box(*id)];
         }
-        let Some(&owner) = self.inline_owner.get(&node) else {
+        let Some(&owner) = self.inline_owner.get(node) else {
             return Vec::new();
         };
         self.inline_fragments(dom, owner, node)
@@ -383,9 +383,9 @@ impl LayoutTree {
     pub fn offset_parent(&self, dom: &Dom, node: NodeId) -> Option<NodeId> {
         let id = self
             .node_box
-            .get(&node)
+            .get(node)
             .copied()
-            .or_else(|| self.inline_owner.get(&node).copied())?;
+            .or_else(|| self.inline_owner.get(node).copied())?;
         if self.boxes[id].positioning == Positioning::Fixed {
             return None;
         }
@@ -399,7 +399,7 @@ impl LayoutTree {
         let mut current = self.boxes[id].parent;
         // An inline element's own box is the context it is shaped in; its
         // offset parent search starts from that box.
-        if !self.node_box.contains_key(&node) {
+        if !self.node_box.contains_key(node) {
             current = Some(id);
         }
         while let Some(b) = current {

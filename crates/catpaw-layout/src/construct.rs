@@ -163,7 +163,8 @@ impl Builder<'_> {
         }
         let mut items = Vec::new();
         self.collect_pseudo(container, el, Pseudo::Before, &mut items);
-        for child in self.dom.rendered_children(el) {
+        let dom = self.dom;
+        for child in dom.iter_rendered_children(el) {
             self.collect(container, child, &mut items);
         }
         self.collect_pseudo(container, el, Pseudo::After, &mut items);
@@ -269,7 +270,8 @@ impl Builder<'_> {
                     return;
                 }
                 if display.is_contents() {
-                    for grandchild in self.dom.rendered_children(child) {
+                    let dom = self.dom;
+                    for grandchild in dom.iter_rendered_children(child) {
                         self.collect(container, grandchild, items);
                     }
                     return;
@@ -324,7 +326,7 @@ impl Builder<'_> {
             return None;
         }
         self.dom.ancestors(el).find_map(|ancestor| {
-            let id = *self.tree.node_box.get(&ancestor)?;
+            let id = *self.tree.node_box.get(ancestor)?;
             (self.tree.boxes[id].positioning != Positioning::Static).then_some(id)
         })
     }
@@ -442,16 +444,17 @@ impl Builder<'_> {
     /// boxes of their own) to the context `owner`, after an anonymous block
     /// took over from the container they were collected for.
     fn reown_inline_descendants(&mut self, el: NodeId, owner: BoxId) {
-        for child in self.dom.rendered_children(el) {
+        let dom = self.dom;
+        for child in dom.iter_rendered_children(el) {
             match self.dom.kind(child) {
                 NodeKind::Text(_) => {
                     self.tree.inline_owner.insert(child, owner);
                 }
                 NodeKind::Element(_) => {
-                    if self.tree.node_box.contains_key(&child) {
+                    if self.tree.node_box.contains_key(child) {
                         continue;
                     }
-                    if self.tree.inline_owner.contains_key(&child) {
+                    if self.tree.inline_owner.contains_key(child) {
                         self.tree.inline_owner.insert(child, owner);
                     }
                     self.reown_inline_descendants(child, owner);
@@ -467,7 +470,8 @@ impl Builder<'_> {
     /// of their own, which the inline builder places or which hang off
     /// their containing block.
     fn prepare_inline_descendants(&mut self, el: NodeId, owner: BoxId) {
-        for child in self.dom.rendered_children(el) {
+        let dom = self.dom;
+        for child in dom.iter_rendered_children(el) {
             match self.dom.kind(child) {
                 NodeKind::Text(_) => {
                     self.tree.inline_owner.insert(child, owner);

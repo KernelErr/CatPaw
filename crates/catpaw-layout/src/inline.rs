@@ -9,6 +9,8 @@
 
 use std::borrow::Cow;
 use std::collections::HashMap;
+
+use slotmap::SecondaryMap;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
@@ -153,6 +155,14 @@ impl Ops {
     fn push_text(&mut self, text: &str) {
         self.text.push_str(text);
         self.items.push(Op::Text(self.text.len()));
+    }
+
+    /// Ends text written straight into `self.text` since `start`, if any
+    /// was.
+    fn end_text(&mut self, start: usize) {
+        if self.text.len() > start {
+            self.items.push(Op::Text(self.text.len()));
+        }
     }
 
     fn push_inline_box(&mut self, node: Option<NodeId>) {
@@ -358,8 +368,8 @@ struct Pusher<'a> {
     styles: &'a StyleEngine,
     /// The boxes made so far: an element in here met inside an inline
     /// element is an atomic box to place on the line.
-    node_box: &'a HashMap<NodeId, BoxId>,
-    inline_styles: &'a mut HashMap<NodeId, Arc<ComputedValues>>,
+    node_box: &'a SecondaryMap<NodeId, BoxId>,
+    inline_styles: &'a mut SecondaryMap<NodeId, Arc<ComputedValues>>,
     boxes: &'a mut Vec<BoxId>,
     /// What is pushed to Parley.
     ops: Ops,
@@ -400,24 +410,20 @@ impl Pusher<'_> {
     fn push_item(&mut self, item: InlineItem) {
         match item {
             InlineItem::Text(node) => {
-                let text = self
-                    .dom
-                    .node(node)
-                    .as_text()
-                    .unwrap_or_default()
-                    .to_string();
+                let dom = self.dom;
+                let text = dom.node(node).as_text().unwrap_or_default();
                 let style = text_style_of_text(self.dom, self.styles, node);
                 let brush = brush_for(node);
                 match style {
                     Some(style) => {
                         self.inline_styles.insert(node, style.clone());
                         self.ops.push_span(&style, brush);
-                        self.push_text(&text);
+                        self.push_text(text);
                         self.ops.pop();
                     }
                     None => {
                         self.ops.push_brush_span(brush);
-                        self.push_text(&text);
+                        self.push_text(text);
                         self.ops.pop();
                     }
                 }
@@ -441,7 +447,8 @@ impl Pusher<'_> {
                     if let Some(text) = self.pseudo(node, catpaw_style::Pseudo::Before) {
                         self.push_pseudo(text);
                     }
-                    for child in self.dom.rendered_children(node) {
+                    let dom = self.dom;
+                    for child in dom.iter_rendered_children(node) {
                         match self.dom.kind(child) {
                             NodeKind::Text(_) => self.push_item(InlineItem::Text(child)),
                             NodeKind::Element(_) => self.push_element_child(child),
@@ -471,7 +478,7 @@ impl Pusher<'_> {
     /// anything that generates a box of its own was already given one by
     /// the constructor and is placed as an atomic box.
     fn push_element_child(&mut self, child: NodeId) {
-        if let Some(&id) = self.node_box.get(&child) {
+        if let Some(&id) = self.node_box.get(child) {
             // Out-of-flow boxes were hung off their containing block; the
             // rest are atomic inline boxes.
             let positioning = self
@@ -496,7 +503,8 @@ impl Pusher<'_> {
             return;
         }
         if display.is_contents() {
-            for grandchild in self.dom.rendered_children(child) {
+            let dom = self.dom;
+            for grandchild in dom.iter_rendered_children(child) {
                 match self.dom.kind(grandchild) {
                     NodeKind::Text(_) => self.push_item(InlineItem::Text(grandchild)),
                     NodeKind::Element(_) => self.push_element_child(grandchild),
@@ -531,9 +539,10 @@ impl Pusher<'_> {
     }
 
     fn push_pseudo(&mut self, pseudo: PseudoText) {
-        self.inline_styles
-            .entry(pseudo.owner)
-            .or_insert_with(|| pseudo.style.clone());
+        if !self.inline_styles.contains_key(pseudo.owner) {
+            self.inline_styles
+                .insert(pseudo.owner, pseudo.style.clone());
+        }
         let outer_transform = self.transform;
         let outer_ws = self.ws;
         self.transform = pseudo.style.clone_text_transform();
@@ -559,7 +568,9 @@ impl Pusher<'_> {
                 self.prev_space = transformed.ends_with('\n');
             }
             Ws::Collapse | Ws::PreserveBreaks => {
-                let mut out = String::with_capacity(transformed.len());
+                // Written straight into the record.
+                let start = self.ops.text.len();
+                let out = &mut self.ops.text;
                 for c in transformed.chars() {
                     if self.ws == Ws::PreserveBreaks && c == '\n' {
                         self.pending_space = false;
@@ -579,9 +590,7 @@ impl Pusher<'_> {
                         self.prev_space = false;
                     }
                 }
-                if !out.is_empty() {
-                    self.ops.push_text(&out);
-                }
+                self.ops.end_text(start);
             }
         }
     }

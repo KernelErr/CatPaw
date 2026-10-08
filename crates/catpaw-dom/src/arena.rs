@@ -752,19 +752,24 @@ impl Dom {
     /// assigned (by `slot` attribute, or all the unslotted ones for the
     /// default slot) and falls back to its own; otherwise its own children.
     pub fn rendered_children(&self, id: NodeId) -> Vec<NodeId> {
-        let Some(el) = self.element(id) else {
-            return self.children(id).collect();
-        };
-        if let Some(shadow) = el.shadow_root {
-            return self.children(shadow).collect();
-        }
-        if el.is_html() && &*el.name.local == "slot" {
-            let assigned = self.assigned_nodes(id);
-            if !assigned.is_empty() {
-                return assigned;
+        self.iter_rendered_children(id).collect()
+    }
+
+    /// [`Dom::rendered_children`], without collecting them (most elements
+    /// are rendered with their own children, which need no list).
+    pub fn iter_rendered_children(&self, id: NodeId) -> RenderedChildren<'_> {
+        if let Some(el) = self.element(id) {
+            if let Some(shadow) = el.shadow_root {
+                return RenderedChildren::Children(self.children(shadow));
+            }
+            if el.is_html() && &*el.name.local == "slot" {
+                let assigned = self.assigned_nodes(id);
+                if !assigned.is_empty() {
+                    return RenderedChildren::Assigned(assigned.into_iter());
+                }
             }
         }
-        self.children(id).collect()
+        RenderedChildren::Children(self.children(id))
     }
 
     /// The host's children assigned to a `slot` element in a shadow tree:
@@ -1064,6 +1069,26 @@ impl Iterator for Children<'_> {
         let cur = self.next?;
         self.next = self.dom.nodes[cur].next_sibling;
         Some(cur)
+    }
+}
+
+/// Iterator over the children a node is rendered with
+/// ([`Dom::iter_rendered_children`]).
+pub enum RenderedChildren<'a> {
+    /// Its own children, or those of its shadow root.
+    Children(Children<'a>),
+    /// The nodes assigned to a slot.
+    Assigned(std::vec::IntoIter<NodeId>),
+}
+
+impl Iterator for RenderedChildren<'_> {
+    type Item = NodeId;
+
+    fn next(&mut self) -> Option<NodeId> {
+        match self {
+            RenderedChildren::Children(children) => children.next(),
+            RenderedChildren::Assigned(assigned) => assigned.next(),
+        }
     }
 }
 
