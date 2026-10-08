@@ -72,6 +72,11 @@ struct Inner {
     host_classes: GcRefCell<FxHashMap<TypeId, StandardConstructor>>,
 
     host_defined: GcRefCell<HostDefined>,
+
+    /// CatPaw: the state of this realm's seeded `Math.random`, when one is
+    /// set.
+    #[unsafe_ignore_trace]
+    random: std::cell::Cell<Option<u64>>,
 }
 
 impl Realm {
@@ -100,6 +105,7 @@ impl Realm {
                 loaded_modules: GcRefCell::default(),
                 host_classes: GcRefCell::default(),
                 host_defined: GcRefCell::default(),
+                random: std::cell::Cell::new(None),
             }),
         };
 
@@ -113,6 +119,27 @@ impl Realm {
     #[must_use]
     pub fn intrinsics(&self) -> &Intrinsics {
         &self.inner.intrinsics
+    }
+
+    /// CatPaw: makes this realm's `Math.random` a repeatable SplitMix64
+    /// sequence from `seed`, for recorded runs that must replay byte for
+    /// byte; `None` makes it random again. Other realms keep their own
+    /// sequences.
+    pub fn set_random_seed(&self, seed: Option<u64>) {
+        self.inner.random.set(seed);
+    }
+
+    /// CatPaw: the next number of this realm's seeded sequence, if it has
+    /// one.
+    pub(crate) fn next_seeded_random(&self) -> Option<f64> {
+        let mut x = self.inner.random.get()?;
+        x = x.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        self.inner.random.set(Some(x));
+        let mut z = x;
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^= z >> 31;
+        Some((z >> 11) as f64 / (1u64 << 53) as f64)
     }
 
     /// Returns an immutable reference to the [`ECMAScript specification`][spec] defined

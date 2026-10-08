@@ -292,6 +292,8 @@ pub(crate) fn take_resolvers(promise: &PromiseRef) -> Option<ResolvingFunctions>
 /// Runs `f` with the page context of `ctx`.
 pub fn with_cx<R>(ctx: &mut Context, f: impl FnOnce(&mut Cx<'_>) -> R) -> R {
     let rt = runtime(ctx);
+    // Randomness drawn meanwhile is the page's realm's.
+    let _realm = catpaw_web::crypto::enter_realm(&rt.page);
     let mut host = BoaHost::new(ctx, rt.clone());
     let mut cx = Cx::new(&rt.page, &mut host);
     f(&mut cx)

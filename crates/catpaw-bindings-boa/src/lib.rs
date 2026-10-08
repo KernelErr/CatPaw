@@ -15,6 +15,7 @@ pub mod generated;
 mod host;
 mod modules;
 pub mod rt;
+mod seeds;
 
 use std::rc::Rc;
 
@@ -29,12 +30,11 @@ use catpaw_web::{Cx, PageState};
 
 pub use crate::rt::Realm;
 
-/// Makes `Math.random` on this thread a repeatable sequence from `seed`
-/// (`None`: random again).
-pub fn set_random_seed(seed: Option<u64>) {
-    boa_engine::builtins::math::set_random_seed(seed);
-}
 use crate::rt::{Prelude, Runtime};
+
+/// The locale `Intl` uses when script names none, if the page's languages
+/// offer none that parses.
+const FALLBACK_LOCALE: &str = "en-US";
 
 const PRELUDE: &str = include_str!("prelude.js");
 
@@ -58,9 +58,19 @@ impl Clock for PageClock {
     }
 }
 
-struct Hooks;
+struct Hooks {
+    /// The page's time zone, as seconds east of UTC.
+    utc_offset_seconds: i32,
+}
 
 impl HostHooks for Hooks {
+    /// `Date` shows local time in the page's configured zone, never the
+    /// host's: a run prints the same dates wherever it runs, and sites
+    /// learn nothing of the machine's zone.
+    fn local_timezone_offset_seconds(&self, _unix_time_seconds: i64) -> i32 {
+        self.utc_offset_seconds
+    }
+
     fn promise_rejection_tracker(
         &self,
         promise: &JsObject<Promise>,
@@ -88,7 +98,9 @@ pub struct BoaPage {
 impl BoaPage {
     /// Creates the realm for `page`: the global object becomes its
     /// `Window`, and every window interface in the binding manifest is
-    /// installed.
+    /// installed. Dates show the page's time zone, `Intl` defaults to its
+    /// first language, and in a seeded run (`random_seed`) `Math.random`
+    /// and `crypto` draw from sequences of the realm's own.
     pub fn new(page: Rc<PageState>) -> Result<Self, String> {
         Self::with_realm(page, Realm::Window)
     }
@@ -102,16 +114,41 @@ impl BoaPage {
 
     fn with_realm(page: Rc<PageState>, realm: Realm) -> Result<Self, String> {
         let jobs = Jobs::new();
+        let hooks = Hooks {
+            utc_offset_seconds: page.config.timezone_offset_minutes.saturating_mul(60),
+        };
         let mut context = Context::builder()
             .job_executor(jobs.clone())
             .clock(Rc::new(PageClock(page.clock.clone())))
-            .host_hooks(Rc::new(Hooks))
+            .host_hooks(Rc::new(hooks))
             .module_loader(Rc::new(modules::PageModuleLoader::new(page.clone())))
             .build()
             .map_err(|e| format!("failed to create a script context: {e}"))?;
         let limits = context.runtime_limits_mut();
         limits.set_recursion_limit(RECURSION_LIMIT);
         limits.set_stack_size_limit(STACK_SIZE_LIMIT);
+
+        // The page's languages, not the host's, decide how numbers and
+        // dates are written when script asks for no locale.
+        let language = page
+            .config
+            .languages
+            .iter()
+            .map(String::as_str)
+            .find(|language| !language.trim().is_empty())
+            .unwrap_or(FALLBACK_LOCALE);
+        if context.set_default_locale(Some(language)).is_err() {
+            context
+                .set_default_locale(Some(FALLBACK_LOCALE))
+                .map_err(|e| format!("failed to set the default locale: {e}"))?;
+        }
+
+        // Random sequences of the realm's own (see `seeds`); `crypto`'s is
+        // set up once the realm stands.
+        let seed = seeds::realm_seed(&page, realm);
+        context
+            .realm()
+            .set_random_seed(seed.map(|seed| seed.rotate_left(17)));
 
         // Microtasks the page queues itself run in order with script's.
         let queue = jobs.clone();
@@ -159,6 +196,7 @@ impl BoaPage {
                 )
                 .unwrap_or(false)
         );
+        catpaw_web::crypto::seed_realm(&runtime.page, seed);
         Ok(Self { context, runtime })
     }
 
@@ -211,5 +249,6 @@ impl Drop for BoaPage {
     fn drop(&mut self) {
         // Roots released by the page's teardown are dropped with it.
         rt::release_roots();
+        catpaw_web::crypto::forget_realm(&self.runtime.page);
     }
 }

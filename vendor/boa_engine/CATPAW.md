@@ -37,6 +37,17 @@ offset, and the legacy `Oct 7, 2026`, `7 Oct 2026 10:00:00 GMT` and
 `10/07/2026` forms were `NaN`, where every browser accepts them. Those
 are now rewritten into the strict format and parsed by the same parser.
 
-`src/builtins/math/mod.rs`: `set_random_seed(Some(seed))` makes
-`Math.random` on the calling thread a repeatable SplitMix64 sequence (for
+`src/realm.rs`, `src/builtins/math/mod.rs`: `Realm::set_random_seed(Some(seed))`
+makes that realm's `Math.random` a repeatable SplitMix64 sequence (for
 recorded runs that must replay byte for byte); `None` restores `rand`.
+The state belongs to the realm, so documents, frames and workers each
+keep their own sequence, as the specification asks of distinct realms.
+
+`src/context/icu.rs`, `src/context/mod.rs`, and the `DefaultLocale()`
+callers in `src/builtins/intl/locale/utils.rs`, `src/builtins/array/mod.rs`,
+`src/builtins/typed_array/builtin.rs` and `src/builtins/string/mod.rs`:
+`Context::set_default_locale(Some("en-US"))` gives the locale `Intl` and
+the `toLocale…` methods use when script names none. The published crate
+always takes the host's (`sys_locale`), so the same page printed numbers
+and dates differently from one machine to the next, and told sites what
+the machine was set to.

@@ -569,7 +569,7 @@ mod ec {
     use p256::elliptic_curve::sec1::ToEncodedPoint as _;
 
     pub fn generate(curve: Curve) -> (Vec<u8>, Vec<u8>) {
-        let mut rng = rand::rngs::OsRng;
+        let mut rng = crate::crypto::RealmRng;
         match curve {
             Curve::P256 => {
                 let secret = p256::SecretKey::random(&mut rng);
@@ -770,7 +770,7 @@ mod rsa_ops {
 
     pub fn generate(bits: usize, exponent: &[u8]) -> Result<RsaPrivateKey> {
         let e = BigUint::from_bytes_be(exponent);
-        let mut rng = rand::rngs::OsRng;
+        let mut rng = crate::crypto::RealmRng;
         RsaPrivateKey::new_with_exp(&mut rng, bits, &e)
             .map_err(|e| operation(format!("RSA key generation failed: {e}")))
     }
@@ -813,7 +813,7 @@ mod rsa_ops {
             Hash::Sha384 => Pss::new_with_salt::<Sha384>(salt),
             Hash::Sha512 => Pss::new_with_salt::<Sha512>(salt),
         };
-        let mut rng = rand::rngs::OsRng;
+        let mut rng = crate::crypto::RealmRng;
         key.sign_with_rng(&mut rng, scheme, digest)
             .map_err(|e| operation(format!("signing failed: {e}")))
     }
@@ -855,7 +855,7 @@ mod rsa_ops {
         label: Option<Vec<u8>>,
         data: &[u8],
     ) -> Result<Vec<u8>> {
-        let mut rng = rand::rngs::OsRng;
+        let mut rng = crate::crypto::RealmRng;
         key.encrypt(&mut rng, oaep(hash, label), data)
             .map_err(|e| operation(format!("encryption failed: {e}")))
     }

@@ -77,8 +77,12 @@ pub struct PageConfig {
     /// A fixed time origin (Unix milliseconds) for repeatable runs.
     pub time_origin_unix_ms: Option<f64>,
     /// Seeds `Math.random` and `crypto.getRandomValues` for repeatable runs
-    /// (each document starts the sequence again).
+    /// (each document, frame and worker gets a sequence of its own).
     pub random_seed: Option<u64>,
+    /// The page's time zone, as minutes east of UTC: `Date` shows local
+    /// time in it (`getTimezoneOffset()` is its negation). UTC unless set,
+    /// whatever the host's zone, so that runs agree from host to host.
+    pub timezone_offset_minutes: i32,
     /// How long one run of script (a task with its microtasks, or a script
     /// element) may take before it is stopped with an uncatchable error;
     /// `None` lets it run forever.
@@ -109,6 +113,7 @@ impl Default for PageConfig {
             virtual_time: true,
             time_origin_unix_ms: None,
             random_seed: None,
+            timezone_offset_minutes: 0,
             script_budget: Some(std::time::Duration::from_secs(10)),
             history_before: 0,
             history_after: 0,

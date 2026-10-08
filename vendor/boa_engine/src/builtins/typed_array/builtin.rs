@@ -2508,12 +2508,11 @@ impl BuiltinTypedArray {
         let separator = {
             #[cfg(feature = "intl")]
             {
-                use crate::builtins::intl::locale::default_locale;
                 use icu_list::{
                     ListFormatter, ListFormatterPreferences, options::ListFormatterOptions,
                 };
 
-                let locale = default_locale(context.intl_provider().locale_canonicalizer()?);
+                let locale = context.intl_provider().default_locale()?;
                 let preferences = ListFormatterPreferences::from(&locale);
                 let formatter = ListFormatter::try_new_unit_with_buffer_provider(
                     context.intl_provider().erased_provider(),

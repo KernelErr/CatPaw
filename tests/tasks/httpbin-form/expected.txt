@@ -57,7 +57,7 @@ approved
 > click {"confirmation":"c1","target":"button \"Submit order\""}
 ok click e28 button "Submit order" (confirmed c1) → https://httpbin.org/post (POST, 200)
 # s6 tab=t1 doc=d2 navigated-from=d1 url=https://httpbin.org/post title="" vp=1280x720 scroll=0,0 filter=interesting nodes=1/3 settled=yes full=navigated
-text: { "args": {}, "data": "", "files": {}, "form": { "comments": "", "custemail": "", "custname": "Ada Lovelace", "custtel": "", "delivery": "", "size": "large", "topping": "bacon" }, "headers": { "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Encoding": "gzip, deflate, br, zstd", "Accept-Language": "en-US,en;q=0.9", "Content-Length": "86", "Content-Type": "application/x-www-form-urlencoded", "Host": "httpbin.org", "Referer": "https://httpbin.org/forms/post", "User-Agent": "CatPaw/0.0.1", "X-Amzn-Trace-Id": "Root=1-6ac69ec0-604dd9980db4459854631274" }, "json": null, "origin": "203.0.113.7", "url": "https://httpbin.org/post" }
+text: { "args": {}, "data": "", "files": {}, "form": { "comments": "", "custemail": "", "custname": "Ada Lovelace", "custtel": "", "delivery": "", "size": "large", "topping": "bacon" }, "headers": { "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Encoding": "gzip, deflate, br, zstd", "Accept-Language": "en-US,en;q=0.9", "Content-Length": "86", "Content-Type": "application/x-www-form-urlencoded", "Host": "httpbin.org", "Referer": "https://httpbin.org/forms/post", "User-Agent": "CatPaw/0.0.1", "X-Amzn-Trace-Id": "Root=1-6ac716a8-6966b15072ffd26b1fdebced" }, "json": null, "origin": "203.0.113.7", "url": "https://httpbin.org/post" }
 
 ? text_contains "\"custname\": \"Ada Lovelace\"" → yes
 ? text_contains "\"topping\": \"bacon\"" → yes

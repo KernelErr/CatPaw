@@ -118,6 +118,11 @@ struct FetchArgs {
     /// too).
     #[arg(long, requires = "js")]
     console: bool,
+    /// With --js: the time zone dates show, as an offset from UTC
+    /// (`+08:00`, `-0430`, `+9`) or `UTC`; UTC by default, whatever the
+    /// machine's.
+    #[arg(long, requires = "js", default_value = "UTC", value_parser = parse_timezone, allow_hyphen_values = true)]
+    timezone: i32,
     /// With --js: list the page's frames and workers once it has settled.
     #[arg(long, requires = "js")]
     frames: bool,
@@ -220,6 +225,10 @@ struct McpArgs {
     /// runs).
     #[arg(long)]
     time_origin: Option<f64>,
+    /// The time zone dates show, as an offset from UTC (`+08:00`, `-0430`,
+    /// `+9`) or `UTC`; UTC by default, whatever the machine's.
+    #[arg(long, default_value = "UTC", value_parser = parse_timezone, allow_hyphen_values = true)]
+    timezone: i32,
     /// What needs the user's approval: default (form submissions and
     /// uploads), strict (also script sending data to other sites, and
     /// evaluate) or open (nothing; for test runs).
@@ -314,6 +323,7 @@ fn mcp(args: McpArgs) -> Result<()> {
     };
     config.options.page.random_seed = args.random_seed;
     config.options.page.time_origin_unix_ms = args.time_origin;
+    config.options.page.timezone_offset_minutes = args.timezone;
     config.policy = catpaw_server::Policy {
         preset: catpaw_server::Preset::parse(&args.policy).with_context(|| {
             format!(
@@ -482,6 +492,44 @@ fn parse_url(input: &str) -> Result<Url> {
     Url::parse(input)
         .or_else(|_| Url::parse(&format!("https://{input}")))
         .with_context(|| format!("invalid URL {input}"))
+}
+
+/// `--timezone`: `UTC` (or `GMT`, `Z`), or an offset from it such as
+/// `+08:00`, `-0430`, `+9` or `UTC+8`, as minutes east of UTC.
+fn parse_timezone(input: &str) -> Result<i32, String> {
+    let text = input.trim();
+    let upper = text.to_ascii_uppercase();
+    let offset = ["UTC", "GMT"]
+        .iter()
+        .find_map(|zone| upper.strip_prefix(zone))
+        .unwrap_or(&upper);
+    if offset.is_empty() || offset == "Z" {
+        return Ok(0);
+    }
+    let invalid = || format!("{input:?}: expected UTC or an offset such as +08:00 or -0430");
+    let (sign, digits) = match offset.as_bytes().first() {
+        Some(b'+') => (1, &offset[1..]),
+        Some(b'-') => (-1, &offset[1..]),
+        _ => return Err(invalid()),
+    };
+    let (hours, minutes) = match digits.split_once(':') {
+        Some((hours, minutes)) => (hours, minutes),
+        None if digits.len() > 2 => digits.split_at(digits.len() - 2),
+        None => (digits, "0"),
+    };
+    let all_digits =
+        |s: &str| !s.is_empty() && s.len() <= 2 && s.bytes().all(|b| b.is_ascii_digit());
+    if !all_digits(hours) || !all_digits(minutes) {
+        return Err(invalid());
+    }
+    let (hours, minutes): (i32, i32) = (
+        hours.parse().map_err(|_| invalid())?,
+        minutes.parse().map_err(|_| invalid())?,
+    );
+    if hours > 23 || minutes > 59 {
+        return Err(invalid());
+    }
+    Ok(sign * (hours * 60 + minutes))
 }
 
 fn net_config(args: &NetArgs) -> Result<NetConfig> {
@@ -810,6 +858,7 @@ fn fetch_with_scripts(args: FetchArgs) -> Result<()> {
         page: PageConfig {
             script_budget: (args.script_budget > 0)
                 .then(|| Duration::from_millis(args.script_budget)),
+            timezone_offset_minutes: args.timezone,
             ..PageConfig::default()
         },
         limits: LoopLimits {
@@ -1015,4 +1064,38 @@ fn save_cookie_jar(args: &NetArgs, jar: &catpaw_net::CookieJar) -> Result<()> {
             .with_context(|| format!("writing the cookie file {}", path.display()))?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_timezone;
+
+    #[test]
+    fn time_zones_are_utc_or_an_offset() {
+        for (input, minutes) in [
+            ("UTC", 0),
+            ("gmt", 0),
+            ("Z", 0),
+            ("+08:00", 480),
+            ("-04:00", -240),
+            ("+0530", 330),
+            ("-0430", -270),
+            ("+9", 540),
+            ("UTC+8", 480),
+            ("GMT-03:30", -210),
+        ] {
+            assert_eq!(parse_timezone(input), Ok(minutes), "{input}");
+        }
+        for input in [
+            "Asia/Shanghai",
+            "8",
+            "+24:00",
+            "+08:60",
+            "+",
+            "UTC+x",
+            "+123:00",
+        ] {
+            assert!(parse_timezone(input).is_err(), "{input}");
+        }
+    }
 }

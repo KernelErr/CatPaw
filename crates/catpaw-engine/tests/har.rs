@@ -1,12 +1,15 @@
 //! Recording a page's traffic and replaying it: the same page, offline,
-//! with the same random numbers and clock.
+//! with the same random numbers and clock; WebSockets refused; every
+//! realm with random numbers of its own.
 
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::TcpListener;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
-use catpaw_engine::{LoopLimits, PageConfig, PageOptions, with_page};
+use catpaw_engine::{LoopLimits, PageConfig, PageOptions, with_html, with_page};
 use catpaw_net::{Misses, NetConfig, Recording};
 use url::Url;
 
@@ -109,7 +112,168 @@ fn a_recorded_page_replays_offline_the_same_every_time() {
     };
     let first = replay();
     let second = replay();
-    assert_eq!(first, recorded);
-    assert_eq!(second, recorded);
+    assert_eq!(first, second);
+    // The same run, but for the cookie: the recording keeps a placeholder
+    // for the value the server set, never the value.
+    let cookie = first
+        .split(' ')
+        .find(|part| part.starts_with("seen="))
+        .unwrap();
+    assert!(cookie.starts_with("seen=redacted-"), "{first}");
+    assert_eq!(first.replace(cookie, "seen=1"), recorded);
+    let file = std::fs::read_to_string(&har).unwrap();
+    assert!(!file.contains("seen=1"), "{file}");
     let _ = std::fs::remove_dir_all(dir);
+}
+
+/// A server that accepts connections, counts them and closes them at once.
+fn counting_server() -> (u16, Arc<AtomicUsize>) {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let count = Arc::new(AtomicUsize::new(0));
+    let seen = count.clone();
+    std::thread::spawn(move || {
+        for stream in listener.incoming() {
+            seen.fetch_add(1, Ordering::SeqCst);
+            drop(stream);
+        }
+    });
+    (port, count)
+}
+
+#[test]
+fn websockets_are_refused_at_once_while_replaying() {
+    let (socket_port, connections) = counting_server();
+    let page: &'static str = Box::leak(
+        format!(
+            r#"<!doctype html><p id=out></p>
+<script>
+const events = [];
+const socket = new WebSocket("ws://127.0.0.1:{socket_port}/");
+socket.onerror = () => events.push("error");
+socket.onclose = e => {{
+  events.push("close " + e.code + " at " + performance.now());
+  document.getElementById("out").textContent = events.join(", ");
+}};
+</script>"#
+        )
+        .into_boxed_str(),
+    );
+    let port = serve(HashMap::from([("/", page)]));
+    let url = Url::parse(&format!("http://127.0.0.1:{port}/")).unwrap();
+    let dir = std::env::temp_dir().join(format!("catpaw-har-ws-test-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let har = dir.join("run.har");
+    let out = |page: &mut catpaw_engine::Page| {
+        page.eval("document.getElementById('out').textContent")
+            .unwrap()
+    };
+
+    let recorded = with_page(
+        url.clone(),
+        options(Recording::Record(har.clone())),
+        move |page| {
+            page.net().client().save_recording().unwrap();
+            out(page)
+        },
+    )
+    .unwrap();
+    assert!(recorded.contains("close 1006"), "{recorded}");
+    let tried = connections.load(Ordering::SeqCst);
+    assert_eq!(tried, 1, "the live run connects");
+
+    let replay = || {
+        with_page(
+            url.clone(),
+            options(Recording::Replay {
+                path: har.clone(),
+                misses: Misses::Fail,
+            }),
+            move |page| {
+                // The socket is refused as it is made, not when an answer
+                // comes back from the network task.
+                let refusal = page
+                    .net()
+                    .requests()
+                    .into_iter()
+                    .find(|r| r.url.scheme() == "ws")
+                    .and_then(|r| r.error);
+                (out(page), refusal)
+            },
+        )
+        .unwrap()
+    };
+    let first = replay();
+    let second = replay();
+    // No time passes while the socket fails: page time shows only the
+    // clock's reads.
+    assert_eq!(first.0, "error, close 1006 at 0.02");
+    assert_eq!(
+        first.1.as_deref(),
+        Some("WebSockets are refused while replaying a recording")
+    );
+    assert_eq!(second, first);
+    assert_eq!(
+        connections.load(Ordering::SeqCst),
+        tried,
+        "a replay opens no connection"
+    );
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
+fn every_document_frame_and_worker_draws_random_numbers_of_its_own() {
+    // Two frames with the same URL, and two workers running the same
+    // script, start between the top document's draws: nobody's numbers
+    // repeat anybody's.
+    let html = r#"<!doctype html>
+<script>
+  const draw = () => [Math.random(), crypto.randomUUID(), crypto.getRandomValues(new Uint32Array(1))[0]];
+  window.log = { before: draw(), frames: [], workers: [] };
+  const finish = () => {
+    if (log.frames.length === 2 && log.workers.length === 2 && !log.after) log.after = draw();
+  };
+  window.addEventListener('message', e => { log.frames.push(e.data); finish(); });
+  const source = 'postMessage([Math.random(), crypto.randomUUID(), crypto.getRandomValues(new Uint32Array(1))[0]])';
+  const script = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
+  for (let i = 0; i < 2; i++) {
+    new Worker(script).onmessage = e => { log.workers.push(e.data); finish(); };
+  }
+</script>
+<iframe srcdoc="<script>parent.postMessage([Math.random(), crypto.randomUUID(), crypto.getRandomValues(new Uint32Array(1))[0]], '*')</script>"></iframe>
+<iframe srcdoc="<script>parent.postMessage([Math.random(), crypto.randomUUID(), crypto.getRandomValues(new Uint32Array(1))[0]], '*')</script>"></iframe>"#;
+    let run = || {
+        let options = PageOptions {
+            page: PageConfig {
+                random_seed: Some(7),
+                ..PageConfig::default()
+            },
+            limits: LoopLimits {
+                wall: Duration::from_secs(10),
+                ..LoopLimits::default()
+            },
+            ..PageOptions::default()
+        };
+        with_html(
+            Url::parse("https://parent.test/page").unwrap(),
+            html.to_string(),
+            options,
+            |page| page.eval("JSON.stringify(log)").unwrap(),
+        )
+        .unwrap()
+    };
+    let log = run();
+    assert!(log.contains("\"after\""), "{log}");
+    let values: Vec<&str> = log
+        .split(['[', ']', ',', '{', '}', ':'])
+        .map(|v| v.trim_matches('"'))
+        .filter(|v| !v.is_empty() && !matches!(*v, "before" | "frames" | "workers" | "after"))
+        .collect();
+    assert_eq!(values.len(), 18, "{log}");
+    let mut distinct = values.clone();
+    distinct.sort();
+    distinct.dedup();
+    assert_eq!(distinct.len(), values.len(), "a value repeats: {log}");
+    // And a seeded run gives the same numbers every time.
+    assert_eq!(run(), log);
 }

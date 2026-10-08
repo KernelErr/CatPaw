@@ -43,7 +43,8 @@ enum Cmd {
         #[arg(long)]
         update_expectations: bool,
     },
-    /// Check the task files: fields, recording sizes, no local paths.
+    /// Check the task files: fields, recording sizes, no local paths, no
+    /// credentials left in recordings.
     Lint {
         #[command(flatten)]
         select: Select,
@@ -548,13 +549,16 @@ fn lint(select: &Select, forbid: &[String]) -> Result<()> {
                 problems.push(format!("{}: a forbidden text in the task files", task.id));
             }
         }
-        for secret in ["\"name\":\"cookie\"", "\"name\":\"authorization\""] {
-            if text.contains(secret) {
-                problems.push(format!(
-                    "{}: a request secret header in the recording",
-                    task.id
-                ));
-            }
+        // Credentials stay out of recordings: no request credential
+        // headers, secret-looking form fields redacted, response cookies
+        // and credential headers as placeholders.
+        match catpaw_net::har::unredacted_secrets(&bytes) {
+            Ok(found) => problems.extend(
+                found
+                    .into_iter()
+                    .map(|what| format!("{}: unredacted in the recording: {what}", task.id)),
+            ),
+            Err(e) => problems.push(format!("{}: the recording does not parse: {e}", task.id)),
         }
     }
     if total > MAX_HARS {

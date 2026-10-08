@@ -1,8 +1,9 @@
 //! The HTTP client: hyper (HTTP/1.1 and HTTP/2 over ALPN) with rustls,
 //! redirects, cookies, content decoding and optional Web Bot Auth signing.
 
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use bytes::Bytes;
 use http::header::{
@@ -202,7 +203,7 @@ pub struct NetClient {
     h1: Client<Connector, Full<Bytes>>,
     /// Hosts (authorities) seen answering over HTTP/2, and those moved to
     /// HTTP/1.1 after a stall.
-    protocols: std::sync::Mutex<HostProtocols>,
+    protocols: Protocols,
     /// The transport again, for connections hyper does not make
     /// (WebSockets).
     connector: Connector,
@@ -216,15 +217,183 @@ pub struct NetClient {
 /// What the client has learnt about the HTTP versions of hosts.
 #[derive(Default, Debug)]
 struct HostProtocols {
-    h2: std::collections::HashSet<String>,
-    stalled: std::collections::HashSet<String>,
+    /// Hosts (authorities) seen answering over HTTP/2.
+    h2: HashSet<String>,
+    /// Hosts whose HTTP/2 stalls: they get HTTP/1.1 from then on.
+    stalled: HashSet<String>,
+    /// The requests sent to each host on the client that may speak
+    /// HTTP/2, as evidence of a stall.
+    traffic: HashMap<String, Traffic>,
 }
 
-/// How long a request to a host known to speak HTTP/2 may wait for its
-/// response headers before it is sent again over HTTP/1.1. Some servers
-/// (Heroku's router among them) at times leave multiplexed streams
-/// unanswered while separate connections are served in a second.
+/// One host's requests on the client that may speak HTTP/2.
+#[derive(Default, Debug)]
+struct Traffic {
+    /// How many have been sent: each request's number, counting from 1.
+    sent: u64,
+    /// The highest number of a request answered over HTTP/2.
+    answered: u64,
+    /// How many have waited for their response headers longer than
+    /// [`HTTP2_STALL`], and wait still.
+    waiting: usize,
+}
+
+/// [`HostProtocols`], and a signal for the requests waiting long on
+/// HTTP/2 whenever there may be news of their host.
+#[derive(Default, Debug)]
+struct Protocols {
+    known: std::sync::Mutex<HostProtocols>,
+    news: tokio::sync::Notify,
+}
+
+/// How long a request to a host known to speak HTTP/2 waits for its
+/// response headers before the client looks for evidence that the host's
+/// HTTP/2 stalls. Some servers (Heroku's router among them) at times leave
+/// streams multiplexed on one connection unanswered while other streams,
+/// and separate connections, are served in a second; but a request that
+/// takes long is often meant to (a long poll), and sending it again would
+/// repeat it.
+///
+/// The rule: a GET, HEAD or OPTIONS that has waited this long is sent
+/// again, over an HTTP/1.1 connection of its own, only on evidence that
+/// the host's HTTP/2 stalls: a request to the host sent after it has been
+/// answered over HTTP/2 meanwhile (the connection serves new streams, not
+/// this one), or another request to the host has waited this long at the
+/// same time. The host then gets HTTP/1.1 for the client's life, so the
+/// requests waiting when the evidence comes are the only ones ever sent
+/// twice. A request waiting without such evidence is left to be answered
+/// or to time out: a long poll is not repeated while it is its host's
+/// only traffic, and at most once in a client's life when it is not.
 const HTTP2_STALL: Duration = Duration::from_secs(5);
+
+/// How a request sent over HTTP/2 ended.
+#[derive(Debug, PartialEq, Eq)]
+enum H2Wait<T> {
+    /// It was answered (or failed) on its own.
+    Done(T),
+    /// The host's HTTP/2 stalls: send the request again over HTTP/1.1.
+    Resend,
+    /// The time allowed ran out.
+    TimedOut,
+}
+
+/// A request counted as waiting long on HTTP/2, until dropped.
+struct Waiting<'a> {
+    protocols: &'a Protocols,
+    host: String,
+}
+
+impl Drop for Waiting<'_> {
+    fn drop(&mut self) {
+        if let Some(traffic) = self.protocols.lock().traffic.get_mut(&self.host) {
+            traffic.waiting = traffic.waiting.saturating_sub(1);
+        }
+    }
+}
+
+impl Protocols {
+    fn lock(&self) -> std::sync::MutexGuard<'_, HostProtocols> {
+        self.known.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    #[cfg(test)]
+    fn is_stalled(&self, host: &str) -> bool {
+        self.lock().stalled.contains(host)
+    }
+
+    /// Numbers a request to `host` as it is sent on the client that may
+    /// speak HTTP/2.
+    fn sent(&self, host: &str) -> u64 {
+        let mut known = self.lock();
+        let traffic = known.traffic.entry(host.to_string()).or_default();
+        traffic.sent += 1;
+        traffic.sent
+    }
+
+    /// Notes that request `number` to `host` was answered over HTTP/2.
+    fn answered_h2(&self, host: &str, number: u64) {
+        {
+            let mut known = self.lock();
+            known.h2.insert(host.to_string());
+            let traffic = known.traffic.entry(host.to_string()).or_default();
+            traffic.answered = traffic.answered.max(number);
+        }
+        self.news.notify_waiters();
+    }
+
+    /// Counts a request to `host` as waiting long.
+    fn start_waiting(&self, host: &str) -> Waiting<'_> {
+        self.lock()
+            .traffic
+            .entry(host.to_string())
+            .or_default()
+            .waiting += 1;
+        self.news.notify_waiters();
+        Waiting {
+            protocols: self,
+            host: host.to_string(),
+        }
+    }
+
+    /// Whether there is evidence that `host`'s HTTP/2 stalls for request
+    /// `number`, which waits long (see [`HTTP2_STALL`]). Evidence found
+    /// marks the host, and the other requests waiting on it are told.
+    fn stalls(&self, host: &str, number: u64) -> bool {
+        let found = {
+            let mut known = self.lock();
+            if known.stalled.contains(host) {
+                return true;
+            }
+            let found = known
+                .traffic
+                .get(host)
+                .is_some_and(|traffic| traffic.answered > number || traffic.waiting >= 2);
+            if found {
+                known.stalled.insert(host.to_string());
+            }
+            found
+        };
+        if found {
+            self.news.notify_waiters();
+        }
+        found
+    }
+
+    /// Waits up to `budget` for `response`, request `number` to `host` sent
+    /// over HTTP/2, and says to send it again when, after `stall`, there
+    /// is evidence that the host stalls (see [`HTTP2_STALL`]).
+    async fn wait_h2<F: std::future::Future>(
+        &self,
+        host: &str,
+        number: u64,
+        response: F,
+        stall: Duration,
+        budget: Duration,
+    ) -> H2Wait<F::Output> {
+        tokio::pin!(response);
+        let deadline = tokio::time::sleep(budget);
+        tokio::pin!(deadline);
+        tokio::select! {
+            out = &mut response => return H2Wait::Done(out),
+            _ = &mut deadline => return H2Wait::TimedOut,
+            _ = tokio::time::sleep(stall) => {}
+        }
+        let _waiting = self.start_waiting(host);
+        loop {
+            let news = self.news.notified();
+            tokio::pin!(news);
+            news.as_mut().enable();
+            if self.stalls(host, number) {
+                return H2Wait::Resend;
+            }
+            tokio::select! {
+                out = &mut response => return H2Wait::Done(out),
+                _ = &mut deadline => return H2Wait::TimedOut,
+                _ = &mut news => {}
+            }
+        }
+    }
+}
 
 impl std::fmt::Debug for NetClient {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -546,7 +715,7 @@ impl NetClient {
         if let Some(replayer) = &self.replayer {
             let request_body = body.clone().unwrap_or_default();
             match replayer.answer(method, url, &request_body) {
-                Some(answer) => {
+                Some(Ok(answer)) => {
                     if credentials {
                         self.cookies.store_response(url, &answer.headers);
                     }
@@ -556,6 +725,7 @@ impl NetClient {
                         body: answer.body,
                     });
                 }
+                Some(Err(reason)) => return Err(NetError::Replay(reason)),
                 None if replayer.misses == crate::har::Misses::Fail => {
                     return Err(NetError::Replay(format!(
                         "no recorded answer for {method} {url}"
@@ -564,8 +734,11 @@ impl NetClient {
                 None => {}
             }
         }
-        let recording = self.recorder.as_ref().map(|_| {
+        // The entry takes its place in the recording now, as the request
+        // starts: a replay asks in this order.
+        let recording = self.recorder.as_ref().map(|recorder| {
             (
+                recorder.start(),
                 headers.clone(),
                 body.clone().unwrap_or_default(),
                 crate::har::now_ms(),
@@ -583,8 +756,9 @@ impl NetClient {
             request.body(Full::new(body.unwrap_or_default()))
         };
         let timeout = self.config.timeout;
+        let started = Instant::now();
         let (stalled, speaks_h2) = {
-            let known = self.protocols.lock().expect("not poisoned");
+            let known = self.protocols.lock();
             (
                 known.stalled.contains(&authority),
                 known.h2.contains(&authority),
@@ -595,36 +769,37 @@ impl NetClient {
             tokio::time::timeout(timeout, self.h1.request(build(uri, headers, body)?))
                 .await
                 .map_err(|_| NetError::Timeout(timeout))??
-        } else if idempotent && speaks_h2 && timeout > HTTP2_STALL {
-            let first = build(uri.clone(), headers.clone(), body.clone())?;
-            match tokio::time::timeout(HTTP2_STALL, self.inner.request(first)).await {
-                Ok(response) => response?,
-                Err(_) => {
-                    // No headers yet on a multiplexed stream: ask again on a
-                    // connection of its own, and keep to HTTP/1.1 there.
-                    self.protocols
-                        .lock()
-                        .expect("not poisoned")
-                        .stalled
-                        .insert(authority.clone());
-                    let rest = timeout - HTTP2_STALL;
-                    tokio::time::timeout(rest, self.h1.request(build(uri, headers, body)?))
-                        .await
-                        .map_err(|_| NetError::Timeout(timeout))??
-                }
-            }
         } else {
-            tokio::time::timeout(timeout, self.inner.request(build(uri, headers, body)?))
-                .await
-                .map_err(|_| NetError::Timeout(timeout))??
+            let number = self.protocols.sent(&authority);
+            let response = if idempotent && speaks_h2 && timeout > HTTP2_STALL {
+                let first = self
+                    .inner
+                    .request(build(uri.clone(), headers.clone(), body.clone())?);
+                match self
+                    .protocols
+                    .wait_h2(&authority, number, first, HTTP2_STALL, timeout)
+                    .await
+                {
+                    H2Wait::Done(response) => response?,
+                    H2Wait::TimedOut => return Err(NetError::Timeout(timeout)),
+                    H2Wait::Resend => {
+                        // Ask again on a connection of its own.
+                        let rest = timeout.saturating_sub(started.elapsed());
+                        tokio::time::timeout(rest, self.h1.request(build(uri, headers, body)?))
+                            .await
+                            .map_err(|_| NetError::Timeout(timeout))??
+                    }
+                }
+            } else {
+                tokio::time::timeout(timeout, self.inner.request(build(uri, headers, body)?))
+                    .await
+                    .map_err(|_| NetError::Timeout(timeout))??
+            };
+            if response.version() == http::Version::HTTP_2 {
+                self.protocols.answered_h2(&authority, number);
+            }
+            response
         };
-        if response.version() == http::Version::HTTP_2 && !speaks_h2 {
-            self.protocols
-                .lock()
-                .expect("not poisoned")
-                .h2
-                .insert(authority);
-        }
         let (parts, incoming) = response.into_parts();
         if credentials {
             self.cookies.store_response(url, &parts.headers);
@@ -656,19 +831,22 @@ impl NetClient {
         // The body is now decoded; these headers would describe the wire form.
         headers.remove(CONTENT_ENCODING);
         headers.remove(CONTENT_LENGTH);
-        if let (Some(recorder), Some((request_headers, request_body, started))) =
+        if let (Some(recorder), Some((place, request_headers, request_body, started_ms))) =
             (&self.recorder, recording)
         {
             recorder.record(
-                method,
-                url,
-                &request_headers,
-                &request_body,
-                parts.status,
-                &headers,
-                &decoded,
-                started,
-                crate::har::now_ms().saturating_sub(started),
+                place,
+                crate::har::Exchange {
+                    method,
+                    url,
+                    request_headers: &request_headers,
+                    request_body: &request_body,
+                    status: parts.status,
+                    response_headers: &headers,
+                    response_body: &decoded,
+                    started_ms,
+                    took_ms: crate::har::now_ms().saturating_sub(started_ms),
+                },
             );
         }
         Ok(Hop {
@@ -731,5 +909,132 @@ mod tests {
         let client = NetClient::new(NetConfig::default()).unwrap();
         assert!(client.cookies().is_empty());
         assert_eq!(client.config().user_agent, DEFAULT_USER_AGENT);
+    }
+
+    const STALL: Duration = Duration::from_millis(40);
+    const BUDGET: Duration = Duration::from_secs(5);
+
+    async fn answered_after(delay: Duration) -> &'static str {
+        tokio::time::sleep(delay).await;
+        "answer"
+    }
+
+    fn waiting(protocols: &Protocols, host: &str) -> usize {
+        protocols
+            .lock()
+            .traffic
+            .get(host)
+            .map_or(0, |traffic| traffic.waiting)
+    }
+
+    #[tokio::test]
+    async fn a_slow_request_waiting_alone_is_not_sent_again() {
+        let protocols = Protocols::default();
+        let number = protocols.sent("host");
+        let slow = answered_after(STALL * 5);
+        assert_eq!(
+            protocols.wait_h2("host", number, slow, STALL, BUDGET).await,
+            H2Wait::Done("answer")
+        );
+        assert!(!protocols.is_stalled("host"));
+        assert_eq!(waiting(&protocols, "host"), 0);
+        // Nor are two slow requests to different hosts, nor one whose host
+        // answered only requests sent before it.
+        let earlier = protocols.sent("b");
+        let (a, b, ()) = tokio::join!(
+            protocols.wait_h2(
+                "a",
+                protocols.sent("a"),
+                answered_after(STALL * 3),
+                STALL,
+                BUDGET
+            ),
+            protocols.wait_h2(
+                "b",
+                protocols.sent("b"),
+                answered_after(STALL * 3),
+                STALL,
+                BUDGET
+            ),
+            async {
+                tokio::time::sleep(STALL * 2).await;
+                protocols.answered_h2("b", earlier);
+            },
+        );
+        assert_eq!((a, b), (H2Wait::Done("answer"), H2Wait::Done("answer")));
+        assert!(!protocols.is_stalled("a") && !protocols.is_stalled("b"));
+    }
+
+    #[tokio::test]
+    async fn requests_stuck_at_once_on_a_host_are_sent_again() {
+        let protocols = Protocols::default();
+        let stuck = || std::future::pending::<&str>();
+        let later = async {
+            tokio::time::sleep(STALL * 2).await;
+            let number = protocols.sent("host");
+            protocols
+                .wait_h2("host", number, stuck(), STALL, BUDGET)
+                .await
+        };
+        let first = protocols.sent("host");
+        let (first, second) = tokio::join!(
+            protocols.wait_h2("host", first, stuck(), STALL, BUDGET),
+            later
+        );
+        assert_eq!((first, second), (H2Wait::Resend, H2Wait::Resend));
+        assert!(protocols.is_stalled("host"));
+        assert_eq!(waiting(&protocols, "host"), 0);
+        // Once a host stalls, a request that waits long goes again at once.
+        let number = protocols.sent("host");
+        assert_eq!(
+            protocols
+                .wait_h2("host", number, stuck(), STALL, BUDGET)
+                .await,
+            H2Wait::Resend
+        );
+    }
+
+    #[tokio::test]
+    async fn a_request_skipped_while_later_ones_are_answered_is_sent_again() {
+        let protocols = Protocols::default();
+        let stuck = protocols.sent("host");
+        let (outcome, ()) = tokio::join!(
+            protocols.wait_h2("host", stuck, std::future::pending::<&str>(), STALL, BUDGET),
+            async {
+                // A request sent later is answered while the first waits,
+                // before and after the first has waited long.
+                tokio::time::sleep(STALL / 2).await;
+                let later = protocols.sent("host");
+                protocols.answered_h2("host", later);
+            },
+        );
+        assert_eq!(outcome, H2Wait::Resend);
+        assert!(protocols.is_stalled("host"));
+
+        let protocols = Protocols::default();
+        let stuck = protocols.sent("host");
+        let (outcome, ()) = tokio::join!(
+            protocols.wait_h2("host", stuck, std::future::pending::<&str>(), STALL, BUDGET),
+            async {
+                tokio::time::sleep(STALL * 3).await;
+                let later = protocols.sent("host");
+                protocols.answered_h2("host", later);
+            },
+        );
+        assert_eq!(outcome, H2Wait::Resend);
+    }
+
+    #[tokio::test]
+    async fn a_request_waiting_alone_times_out() {
+        let protocols = Protocols::default();
+        let number = protocols.sent("host");
+        let stuck = std::future::pending::<&str>();
+        assert_eq!(
+            protocols
+                .wait_h2("host", number, stuck, STALL, STALL * 3)
+                .await,
+            H2Wait::TimedOut
+        );
+        assert!(!protocols.is_stalled("host"));
     }
 }

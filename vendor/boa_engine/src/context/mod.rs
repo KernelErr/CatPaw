@@ -480,6 +480,27 @@ impl Context {
         self.deadline
     }
 
+    /// CatPaw: makes `tag` (a BCP 47 language tag such as `en-US`) the
+    /// locale `Intl` and the `toLocale…` methods use when script names
+    /// none (ECMA-402's `DefaultLocale()`), in place of the host's;
+    /// `None` restores the host's.
+    ///
+    /// # Errors
+    ///
+    /// A `RangeError` when `tag` is not a well-formed language tag.
+    #[cfg(feature = "intl")]
+    pub fn set_default_locale(&mut self, tag: Option<&str>) -> JsResult<()> {
+        let locale = match tag {
+            Some(tag) => Some(tag.parse::<icu_locale::Locale>().map_err(|_| {
+                JsNativeError::range()
+                    .with_message(format!("{tag:?} is not a well-formed language tag"))
+            })?),
+            None => None,
+        };
+        self.intl_provider.set_default_locale(locale);
+        Ok(())
+    }
+
     /// Returns the currently active realm.
     #[inline]
     #[must_use]

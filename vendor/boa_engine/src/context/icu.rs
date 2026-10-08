@@ -40,6 +40,8 @@ pub(crate) struct IntlProvider {
     locale_expander: OnceCell<LocaleExpander>,
     string_normalizers: OnceCell<StringNormalizers>,
     case_mapper: OnceCell<CaseMapper>,
+    /// CatPaw: the embedder's default locale, in place of the host's.
+    default_locale: Option<icu_locale::Locale>,
 }
 
 impl<M> DataProvider<M> for IntlProvider
@@ -92,7 +94,28 @@ impl IntlProvider {
             string_normalizers: OnceCell::new(),
             case_mapper: OnceCell::new(),
             inner_provider: Box::new(provider),
+            default_locale: None,
         }
+    }
+
+    /// CatPaw: sets the locale [`IntlProvider::default_locale`] gives
+    /// (`None`: the host's).
+    pub(crate) fn set_default_locale(&mut self, locale: Option<icu_locale::Locale>) {
+        self.default_locale = locale;
+    }
+
+    /// The `DefaultLocale()` of ECMA-402, canonicalized: the one the
+    /// embedder set, else the host environment's.
+    pub(crate) fn default_locale(&self) -> Result<icu_locale::Locale, IcuError> {
+        let canonicalizer = self.locale_canonicalizer()?;
+        Ok(match &self.default_locale {
+            Some(locale) => {
+                let mut locale = locale.clone();
+                canonicalizer.canonicalize(&mut locale);
+                locale
+            }
+            None => crate::builtins::intl::locale::default_locale(canonicalizer),
+        })
     }
 
     /// Gets the [`LocaleCanonicalizer`] tool.

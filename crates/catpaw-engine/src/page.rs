@@ -372,15 +372,6 @@ fn load(
     }
     config.history_before = placement.history.0;
     config.history_after = placement.history.1;
-    // A seeded run starts each document's random sequences again.
-    if let Some(seed) = config.random_seed {
-        let mut mixed = seed;
-        for b in info.url.as_str().bytes() {
-            mixed = (mixed ^ u64::from(b)).wrapping_mul(0x0100_0000_01b3);
-        }
-        catpaw_web::crypto::set_random_seed(Some(mixed));
-        catpaw_bindings_boa::set_random_seed(Some(mixed.rotate_left(17)));
-    }
     let state = Rc::new(PageState::new(info.url.clone(), config));
     state.set_net(net.clone());
     state.frames.place(placement.frame, placement.tree);

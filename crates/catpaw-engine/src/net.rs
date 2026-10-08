@@ -774,6 +774,16 @@ impl NetHost for EngineNet {
     }
 
     fn ws_connect(&self, url: Url, protocols: Vec<String>, origin: String) -> Option<u64> {
+        // Recordings hold no WebSocket traffic: a replay refuses sockets at
+        // once rather than leave one connecting on the real clock.
+        if self.client.is_replaying() {
+            let index = self.record(&NetRequest::get(url, RequestKind::Other));
+            self.finish(
+                index,
+                &Err("WebSockets are refused while replaying a recording".to_string()),
+            );
+            return None;
+        }
         // A socket cannot be held either: one the gate would hold is
         // refused.
         let gate = self.gate.borrow().clone();

@@ -357,7 +357,7 @@ where
     let mut found_locale = if let Some(loc) = found_locale {
         loc
     } else {
-        let default = default_locale(provider.locale_canonicalizer()?);
+        let default = provider.default_locale()?;
         lookup_matching_locale_by_best_fit::<S>([default], provider).ok_or_else(|| {
             JsNativeError::typ().with_message("could not find i18n data for Intl service")
         })?

@@ -1775,7 +1775,7 @@ impl String {
     ) -> JsResult<JsValue> {
         #[cfg(feature = "intl")]
         {
-            use super::intl::locale::{canonicalize_locale_list, default_locale};
+            use super::intl::locale::canonicalize_locale_list;
 
             // 1. Let O be ? RequireObjectCoercible(this value).
             let this = this.require_object_coercible()?;
@@ -1800,7 +1800,7 @@ impl String {
             } else {
                 // 3. Else,
                 //     a. Let requestedLocale be ! DefaultLocale().
-                default_locale(context.intl_provider().locale_canonicalizer()?)
+                context.intl_provider().default_locale()?
             };
 
             // 4. Let noExtensionsLocale be the String value that is requestedLocale with any Unicode locale extension sequences (6.2.1) removed.
