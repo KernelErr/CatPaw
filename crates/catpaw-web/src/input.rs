@@ -31,6 +31,8 @@ pub enum InputError {
     NotEditable,
     /// The element is disabled.
     Disabled,
+    /// Several files for a file input without `multiple`.
+    TooManyFiles,
 }
 
 impl std::fmt::Display for InputError {
@@ -41,6 +43,7 @@ impl std::fmt::Display for InputError {
             InputError::Occluded { .. } => f.write_str("another element covers it"),
             InputError::NotEditable => f.write_str("the element does not take text"),
             InputError::Disabled => f.write_str("the element is disabled"),
+            InputError::TooManyFiles => f.write_str("the file input takes one file"),
         }
     }
 }
@@ -983,11 +986,9 @@ pub fn select_option(cx: &mut Cx<'_>, select: NodeId, value: &str) -> Result<(),
     }
 }
 
-/// Selects exactly `options` of a `select` (only the first, in a
-/// single-select), with `input` and `change`, as a user picking them would.
 /// Chooses files in an `<input type=file>`, as its file picker would:
-/// each file is a name, a MIME type and the bytes. The input fires
-/// `input` and `change`.
+/// each file is a name, a MIME type and the bytes; more than one only
+/// when the input has `multiple`. The input fires `input` and `change`.
 pub fn choose_files(
     cx: &mut Cx<'_>,
     input: NodeId,
@@ -1008,6 +1009,9 @@ pub fn choose_files(
         if forms::is_disabled(&dom, input) {
             return Err(InputError::Disabled);
         }
+        if files.len() > 1 && dom.attr(input, "multiple").is_none() {
+            return Err(InputError::TooManyFiles);
+        }
     }
     focus_for_input(cx, Some(input));
     crate::file_api::choose_files(cx, input, files);
@@ -1016,6 +1020,8 @@ pub fn choose_files(
     Ok(())
 }
 
+/// Selects exactly `options` of a `select` (only the first, in a
+/// single-select), with `input` and `change`, as a user picking them would.
 pub fn select_options(
     cx: &mut Cx<'_>,
     select: NodeId,

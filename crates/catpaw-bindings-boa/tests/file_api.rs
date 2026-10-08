@@ -6,9 +6,10 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use catpaw_bindings_boa::BoaPage;
+use catpaw_dom::NodeId;
 use catpaw_web::event_loop::{self, LoopLimits, StopReason};
 use catpaw_web::net::{NetHost, NetRequest, NetResponse, NetResult};
-use catpaw_web::{PageConfig, PageState, scripting};
+use catpaw_web::{PageConfig, PageState, input, scripting};
 use url::Url;
 
 /// Echoes every request's body and content type back as JSON.
@@ -250,6 +251,80 @@ fn form_data_entries_and_bodies() {
             "var x = new XMLHttpRequest(); x.open('POST', '/form'); x.responseType = 'blob'; x.send(new Blob(['hi'], { type: 'text/x-hi' })); await new Promise(function (ok) { x.onload = ok; }); log.push(x.response instanceof Blob, x.response.type, await x.response.text()); var x2 = new XMLHttpRequest(); x2.open('POST', '/form'); x2.send(fd); await new Promise(function (ok) { x2.onload = ok; }); log.push(x2.getResponseHeader('content-type').split(';')[0]);"
         ),
         "true / text/x-hi / hi / multipart/form-data"
+    );
+}
+
+fn find(page: &BoaPage, id: &str) -> NodeId {
+    let dom = page.page().dom.borrow();
+    dom.descendants(dom.document())
+        .find(|&n| dom.attr(n, "id") == Some(id))
+        .unwrap_or_else(|| panic!("no #{id}"))
+}
+
+fn choose(page: &mut BoaPage, input: NodeId, names: &[&str]) {
+    let files = names
+        .iter()
+        .map(|name| (name.to_string(), "text/plain".to_string(), b"x".to_vec()))
+        .collect();
+    page.with_cx(|cx| input::choose_files(cx, input, files))
+        .expect("the files are chosen");
+}
+
+#[test]
+fn a_file_input_that_changes_type_forgets_its_files() {
+    let (mut page, _) =
+        load(r#"<!doctype html><input type=file id=f><textarea id=t type=file>typed</textarea>"#);
+    let f = find(&page, "f");
+    choose(&mut page, f, &["a.txt"]);
+    let files =
+        "var f = document.getElementById('f'); f.files.length + ' ' + JSON.stringify(f.value)";
+    assert_eq!(eval(&mut page, files), r#"1 "C:\\fakepath\\a.txt""#);
+    // Another spelling of the same type keeps them.
+    eval(&mut page, "f.setAttribute('type', 'FILE')");
+    assert_eq!(eval(&mut page, files), r#"1 "C:\\fakepath\\a.txt""#);
+    eval(&mut page, "f.type = 'text'; f.type = 'file'");
+    assert_eq!(eval(&mut page, files), r#"0 """#);
+    choose(&mut page, f, &["b.txt"]);
+    eval(
+        &mut page,
+        "f.removeAttribute('type'); f.setAttribute('type', 'file')",
+    );
+    assert_eq!(eval(&mut page, files), r#"0 """#);
+    // A textarea is never a file input, whatever its attributes say.
+    assert_eq!(
+        eval(&mut page, "document.getElementById('t').value"),
+        "typed"
+    );
+}
+
+#[test]
+fn a_file_input_takes_one_file_unless_multiple() {
+    let (mut page, _) = load(
+        r#"<!doctype html><form id=form><input type=file id=one required readonly><input type=file id=many multiple></form>"#,
+    );
+    let (one, many) = (find(&page, "one"), find(&page, "many"));
+    // `readonly` does not apply to file inputs: a required one still
+    // needs a file.
+    let valid = "document.getElementById('form').checkValidity()";
+    assert_eq!(eval(&mut page, valid), "false");
+    let two = |names: [&str; 2]| {
+        names
+            .map(|name| (name.to_string(), String::new(), b"x".to_vec()))
+            .to_vec()
+    };
+    let result = page.with_cx(|cx| input::choose_files(cx, one, two(["a", "b"])));
+    assert_eq!(result, Err(input::InputError::TooManyFiles));
+    assert_eq!(
+        eval(&mut page, "document.getElementById('one').files.length"),
+        "0"
+    );
+    choose(&mut page, one, &["a.txt"]);
+    assert_eq!(eval(&mut page, valid), "true");
+    page.with_cx(|cx| input::choose_files(cx, many, two(["a", "b"])))
+        .expect("several files for a multiple input");
+    assert_eq!(
+        eval(&mut page, "document.getElementById('many').files.length"),
+        "2"
     );
 }
 

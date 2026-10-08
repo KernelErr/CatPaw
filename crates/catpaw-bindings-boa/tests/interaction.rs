@@ -359,6 +359,18 @@ fn validation_and_cancellation_stop_submission() {
 }
 
 #[test]
+fn readonly_bars_from_validation_only_where_it_applies() {
+    let mut page = load(
+        r#"<!doctype html><form id=f><input id=text required readonly><textarea id=area required readonly></textarea><input id=check type=checkbox required readonly></form>"#,
+    );
+    // The text field and the textarea are barred; the checkbox is not.
+    let valid = "document.getElementById('f').checkValidity()";
+    assert_eq!(eval(&mut page, valid), "false");
+    eval(&mut page, "document.getElementById('check').checked = true");
+    assert_eq!(eval(&mut page, valid), "true");
+}
+
+#[test]
 fn form_collections_and_owners() {
     let mut page = load(
         r#"<!doctype html><form id=f><input name=a><input name=g type=radio value=1><input name=g type=radio value=2 checked><select name=s><option>x</option><option>y</option></select><button>b</button></form>

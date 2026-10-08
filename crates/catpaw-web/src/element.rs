@@ -96,6 +96,16 @@ fn attribute_changed(
     {
         crate::forms::selectedness_reset(cx.page, el);
     }
+    // An input that stops being a file input lets go of its files: made
+    // one again, it has none chosen.
+    if local == "type"
+        && namespace.unwrap_or_default().is_empty()
+        && cx.dom().is_html_element(el, "input")
+        && type_keyword(old.as_deref()) == "file"
+        && input_type(&cx.dom(), el) != "file"
+    {
+        crate::file_api::forget_files(cx, el);
+    }
 }
 
 /// Sets the null-namespace attribute `local`.
@@ -1593,7 +1603,12 @@ const INPUT_TYPES: &[&str] = &[
 /// An `input`'s type: its `type` attribute when that is a known keyword
 /// (ASCII case-insensitively), else `text`.
 fn input_type(dom: &Dom, el: NodeId) -> String {
-    dom.attr(el, "type")
+    type_keyword(dom.attr(el, "type"))
+}
+
+/// The type an `input` has with `type` attribute `value` (or none).
+fn type_keyword(value: Option<&str>) -> String {
+    value
         .map(|t| t.to_ascii_lowercase())
         .filter(|t| INPUT_TYPES.contains(&t.as_str()))
         .unwrap_or_else(|| "text".to_string())
@@ -1801,14 +1816,6 @@ impl web::HTMLTextAreaElementImpl for Web {
 
     fn value(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {
         node::check(cx, this)?;
-        if input_type(&cx.dom(), this) == "file" {
-            // The first file's name behind the path browsers make up.
-            let first = crate::file_api::chosen_files(cx, this).first().copied();
-            return Ok(first
-                .and_then(|f| crate::file_api::file_name(cx, f))
-                .map(|name| format!("C:\\fakepath\\{name}"))
-                .unwrap_or_default());
-        }
         let dirty = cx
             .page
             .form_state

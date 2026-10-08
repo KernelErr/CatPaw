@@ -244,6 +244,28 @@ fn validate(cx: &mut Cx<'_>, form: NodeId) -> bool {
     valid
 }
 
+/// Whether the `readonly` attribute applies to a control: a textarea, or
+/// an input of a type that takes text (an unknown type is text).
+fn readonly_applies(local: &str, type_: &str) -> bool {
+    match local {
+        "textarea" => true,
+        "input" => !matches!(
+            type_,
+            "hidden"
+                | "range"
+                | "color"
+                | "checkbox"
+                | "radio"
+                | "file"
+                | "submit"
+                | "image"
+                | "reset"
+                | "button"
+        ),
+        _ => false,
+    }
+}
+
 fn control_is_valid(cx: &mut Cx<'_>, control: NodeId) -> bool {
     let (local, type_, required, name, readonly) = {
         let dom = cx.dom();
@@ -258,7 +280,9 @@ fn control_is_valid(cx: &mut Cx<'_>, control: NodeId) -> bool {
             el.has_attr("readonly"),
         )
     };
-    if readonly {
+    // `readonly` bars a control from validation where the attribute
+    // applies: text fields and textareas, not checkboxes or file inputs.
+    if readonly && readonly_applies(&local, &type_) {
         return true;
     }
     match local.as_str() {

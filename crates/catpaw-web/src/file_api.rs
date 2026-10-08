@@ -128,6 +128,14 @@ pub(crate) fn set_file_list(cx: &mut Cx<'_>, input: NodeId, list: Option<ObjectI
     }
 }
 
+/// Forgets what an input chose, as it stops being a file input.
+pub(crate) fn forget_files(cx: &mut Cx<'_>, input: NodeId) {
+    let list = cx.page.file_lists.borrow_mut().remove(&input);
+    if let Some(list) = list {
+        cx.unpin(list);
+    }
+}
+
 /// The files a file input chose.
 pub(crate) fn chosen_files(cx: &Cx<'_>, input: NodeId) -> Vec<ObjectId> {
     let list = cx.page.file_lists.borrow().get(&input).copied();
