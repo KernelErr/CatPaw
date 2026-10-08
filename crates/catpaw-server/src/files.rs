@@ -181,3 +181,31 @@ pub(crate) fn read(root: Option<&Path>, paths: &[String]) -> Result<Vec<Chosen>,
         })
         .collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn an_upload_shows_where_each_file_really_is() {
+        let base = std::env::temp_dir().join(format!("catpaw-files-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        let (root, elsewhere) = (base.join("root"), base.join("elsewhere"));
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::create_dir_all(&elsewhere).unwrap();
+        std::fs::write(root.join("notes.txt"), "twelve bytes").unwrap();
+        std::fs::write(elsewhere.join("id.txt"), "ssh").unwrap();
+        let outside = elsewhere.join("id.txt").display().to_string();
+        let shown = describe_paths(Some(&root), &["notes.txt".to_string(), outside]).unwrap();
+        // Under the root, relative to it; elsewhere, all of the path, so
+        // that the user sees which file leaves the machine.
+        let real = std::fs::canonicalize(elsewhere.join("id.txt")).unwrap();
+        let home = std::env::var_os("HOME").and_then(|h| std::fs::canonicalize(h).ok());
+        let expected_outside = match home.as_deref().and_then(|h| real.strip_prefix(h).ok()) {
+            Some(rest) => format!("~/{}", rest.display()),
+            None => real.display().to_string(),
+        };
+        assert_eq!(shown, format!("notes.txt (12 B), {expected_outside} (3 B)"));
+        let _ = std::fs::remove_dir_all(&base);
+    }
+}

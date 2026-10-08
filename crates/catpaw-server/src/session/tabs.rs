@@ -122,13 +122,21 @@ impl Session {
                     output
                 })
             }
-            Err(_) => {
+            Err(error) => {
                 let lost = self.drop_group(group_id);
                 let note = self.repair_current();
-                let mut failure = Failure::new(
-                    ErrorCode::Crashed,
-                    format!("the engine failed on this page; closed {}", names(&lost)),
-                );
+                // A group that is simply gone closed its tabs; one a call
+                // took down crashed.
+                let mut failure = match error {
+                    EngineError::GroupClosed => Failure::new(
+                        ErrorCode::NoTab,
+                        format!("t{tab} is closed (with {})", names(&lost)),
+                    ),
+                    _ => Failure::new(
+                        ErrorCode::Crashed,
+                        format!("the engine failed on this page; closed {}", names(&lost)),
+                    ),
+                };
                 if let Some(note) = note {
                     failure = failure.with(note);
                 }

@@ -828,21 +828,25 @@ impl GroupState {
     /// The checks before acting on an element: enabled (when the action
     /// needs it), and holding still while the page animates.
     fn actionable(&mut self, tab: u32, aim: &Aim, enabled: bool) -> Result<(), Failure> {
-        let Some(state) = self.page.frame_state(aim.frame).cloned() else {
-            return Ok(());
-        };
         let what = self.aimed(tab, aim);
-        if enabled && agent::is_disabled(&state, aim.node) {
-            return Err(
-                Failure::new(ErrorCode::NotActionable, format!("{what} is disabled"))
-                    .with(advice::DISABLED),
-            );
-        }
-        let animating = self.page.pending_of(aim.frame).is_some_and(|p| p.animating);
-        if !animating {
-            return Ok(());
-        }
-        let mut last = agent::element_rect(&state, aim.node);
+        // The document is let go of before the page runs again: a
+        // navigation meanwhile does not keep it alive.
+        let mut last = {
+            let Some(state) = self.page.frame_state(aim.frame).cloned() else {
+                return Ok(());
+            };
+            if enabled && agent::is_disabled(&state, aim.node) {
+                return Err(
+                    Failure::new(ErrorCode::NotActionable, format!("{what} is disabled"))
+                        .with(advice::DISABLED),
+                );
+            }
+            let animating = self.page.pending_of(aim.frame).is_some_and(|p| p.animating);
+            if !animating {
+                return Ok(());
+            }
+            agent::element_rect(&state, aim.node)
+        };
         for _ in 0..10 {
             self.page.settle(&LoopLimits {
                 wall: std::time::Duration::from_millis(500),
@@ -955,6 +959,9 @@ impl GroupState {
                         .with(advice::OCCLUDED),
                     None => failure.with(advice::OCCLUDED),
                 }
+            }
+            ActionError::Input(InputError::TooManyFiles) => {
+                Failure::bad_argument(format!("{what} takes one file; pass one path"))
             }
             ActionError::NoFrame(_) => {
                 Failure::new(ErrorCode::StaleRef, format!("{what} (frame closed)"))
