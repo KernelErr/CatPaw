@@ -230,3 +230,83 @@ fn a_handshake_with_an_ignored_host_does_not_hold_the_page_up() {
     )
     .expect("the page runs");
 }
+
+/// A server that keeps the close code each client sends.
+fn closing_server() -> (u16, std::sync::Arc<std::sync::Mutex<Vec<u16>>>) {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let codes = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let seen = codes.clone();
+    std::thread::spawn(move || {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        runtime.block_on(async move {
+            listener.set_nonblocking(true).unwrap();
+            let listener = tokio::net::TcpListener::from_std(listener).unwrap();
+            loop {
+                let Ok((stream, _)) = listener.accept().await else {
+                    return;
+                };
+                let seen = seen.clone();
+                tokio::spawn(async move {
+                    let Ok(mut ws) = tokio_tungstenite::accept_async(stream).await else {
+                        return;
+                    };
+                    while let Some(Ok(message)) = ws.next().await {
+                        if let Message::Close(frame) = message {
+                            let code = frame.map(|f| u16::from(f.code)).unwrap_or(0);
+                            seen.lock().unwrap().push(code);
+                            break;
+                        }
+                    }
+                });
+            }
+        });
+    });
+    (port, codes)
+}
+
+#[test]
+fn a_socket_closes_going_away_when_its_document_goes() {
+    let (port, codes) = closing_server();
+    let html = format!(
+        r#"<!doctype html><script>
+  window.ws = new WebSocket('ws://127.0.0.1:{port}/');
+  ws.onopen = () => {{ window.opened = true; }};
+</script>"#
+    );
+    let page_server = TcpListener::bind("127.0.0.1:0").unwrap();
+    let next = format!(
+        "http://127.0.0.1:{}/next",
+        page_server.local_addr().unwrap().port()
+    );
+    std::thread::spawn(move || {
+        for stream in page_server.incoming() {
+            let Ok(mut stream) = stream else { return };
+            let mut buf = [0u8; 4096];
+            let _ = std::io::Read::read(&mut stream, &mut buf);
+            let body = "<!doctype html><title>next</title>";
+            let _ = std::io::Write::write_all(
+                &mut stream,
+                format!("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).as_bytes(),
+            );
+        }
+    });
+    run(html, move |page| {
+        assert_eq!(page.eval("String(window.opened)").unwrap(), "true");
+        page.goto(Url::parse(&next).unwrap()).unwrap();
+        assert_eq!(page.eval("document.title").unwrap(), "next");
+    });
+    let started = std::time::Instant::now();
+    while codes.lock().unwrap().is_empty() && started.elapsed() < std::time::Duration::from_secs(5)
+    {
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+    assert_eq!(
+        *codes.lock().unwrap(),
+        [1001],
+        "the socket said it was going away"
+    );
+}

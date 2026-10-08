@@ -145,3 +145,22 @@ fn a_page_loaded_again_starts_a_worker_that_draws_numbers_of_its_own() {
     );
     assert_eq!(run(), drawn);
 }
+
+#[test]
+fn web_crypto_keys_come_from_the_seed() {
+    // An AES key made and exported: the same seed makes the same key.
+    let make = |seed: u64| {
+        let mut options = options();
+        options.page.random_seed = Some(seed);
+        let html = "<!doctype html><script>crypto.subtle.generateKey({name: 'AES-GCM', length: 128}, true, ['encrypt']).then(k => crypto.subtle.exportKey('raw', k)).then(b => { window.key = Array.from(new Uint8Array(b)).join(','); });</script>";
+        let url = Url::parse("https://keys.example/").unwrap();
+        with_html(url, html.to_string(), options, |page| {
+            page.eval("window.key").unwrap()
+        })
+        .unwrap()
+    };
+    let (one, again, other) = (make(7), make(7), make(8));
+    assert_eq!(one.split(',').count(), 16, "{one}");
+    assert_eq!(one, again);
+    assert_ne!(one, other);
+}

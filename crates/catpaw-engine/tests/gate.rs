@@ -569,3 +569,53 @@ fn an_approved_request_goes_on_through_its_redirects() {
     })
     .unwrap();
 }
+
+#[test]
+fn a_held_beacon_does_not_hide_a_request_on_its_way() {
+    // A server whose /slow answers after three seconds.
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+    std::thread::spawn(move || {
+        for stream in listener.incoming() {
+            let Ok(mut stream) = stream else { return };
+            std::thread::spawn(move || {
+                let line = read_request(&mut stream);
+                if line.contains(" /slow ") {
+                    std::thread::sleep(std::time::Duration::from_secs(3));
+                }
+                let body = "<!doctype html><title>t</title>";
+                let _ = stream.write_all(
+                    format!("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).as_bytes(),
+                );
+            });
+        }
+    });
+    let url = Url::parse(&format!("http://127.0.0.1:{port}/app")).unwrap();
+    let blank = Url::parse(&format!("http://127.0.0.1:{port}/blank")).unwrap();
+    let mut options = options();
+    options.limits.settle = Some(Default::default());
+    with_html(blank, String::new(), options, move |page| {
+        page.set_request_gate(Some(Rc::new(|request: &catpaw_web::net::NetRequest| {
+            if request.method == "POST" {
+                Gate::Hold
+            } else {
+                Gate::Allow
+            }
+        })));
+        page.goto(url).unwrap();
+        page.eval("navigator.sendBeacon('/beacon', 'x'); fetch('/slow').then(() => { document.title = 'came'; }); 1")
+            .unwrap();
+        // The beacon waits for the user; the fetch is on its way, and is
+        // counted as such (the beacon once, as a background request).
+        page.settle(&LoopLimits {
+            wall: std::time::Duration::from_millis(400),
+            virtual_ms: 200.0,
+            max_steps: 100_000,
+            settle: Some(Default::default()),
+        });
+        assert_eq!(page.held_requests().len(), 1);
+        assert!(!page.is_settled(), "{:?}", page.report());
+        assert_eq!(page.report().inflight_requests, 1, "{:?}", page.report());
+    })
+    .unwrap();
+}
