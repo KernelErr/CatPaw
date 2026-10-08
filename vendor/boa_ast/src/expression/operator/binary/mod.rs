@@ -85,6 +85,13 @@ impl Binary {
     pub fn rhs_mut(&mut self) -> &mut Expression {
         &mut self.rhs
     }
+
+    /// CatPaw: takes the two sides out of the binary operation.
+    #[inline]
+    #[must_use]
+    pub fn into_operands(self) -> (Expression, Expression) {
+        (*self.lhs, *self.rhs)
+    }
 }
 
 impl Spanned for Binary {

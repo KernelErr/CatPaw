@@ -1277,6 +1277,16 @@ fn vendored_engine_fixes_hold() {
             "(function () { { using x = null; } return typeof using; })()",
             "undefined",
         ),
+        // Arrow parameters with defaults and patterns, which the parser
+        // moves out of the parenthesized expression it first read.
+        (
+            "((a = 1, { b, c: [d] = [2] } = { b: 3 }, [e = 4, ...f] = [], ...g) => [a, b, d, e, f.length, g.length].join())()",
+            "1,3,2,4,0,0",
+        ),
+        (
+            "((x, { y = x + 1 } = {}, [z] = [y * 2], f = function () {}, h = () => {}) => [x, y, z, f.name, h.name].join())(5)",
+            "5,6,12,f,h",
+        ),
     ] {
         assert_eq!(eval(&mut page, source), expected, "{source}");
     }

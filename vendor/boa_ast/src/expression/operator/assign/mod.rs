@@ -70,6 +70,13 @@ impl Assign {
     pub const fn rhs(&self) -> &Expression {
         &self.rhs
     }
+
+    /// CatPaw: takes the target and the value out of the assignment.
+    #[inline]
+    #[must_use]
+    pub fn into_parts(self) -> (AssignTarget, Expression) {
+        (*self.lhs, *self.rhs)
+    }
 }
 
 impl Spanned for Assign {

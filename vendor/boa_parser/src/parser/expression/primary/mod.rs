@@ -505,7 +505,7 @@ where
             match expression {
                 InnerExpression::Expression(node) => {
                     expression_to_formal_parameters(
-                        &node,
+                        node,
                         &mut parameters,
                         cursor.strict(),
                         span_start,
@@ -555,20 +555,24 @@ where
 }
 
 /// Convert an expression to a formal parameter and append it to the given parameter list.
+///
+/// CatPaw: the expression is taken by value, so that default values and
+/// destructuring patterns are moved into the parameters rather than
+/// copied.
 fn expression_to_formal_parameters(
-    node: &ast::Expression,
+    node: ast::Expression,
     parameters: &mut Vec<FormalParameter>,
     strict: bool,
     span: Span,
 ) -> ParseResult<()> {
     match node {
-        ast::Expression::Identifier(identifier) if strict && *identifier == Sym::EVAL => {
+        ast::Expression::Identifier(identifier) if strict && identifier == Sym::EVAL => {
             return Err(Error::general(
                 "parameter name 'eval' not allowed in strict mode",
                 span.start(),
             ));
         }
-        ast::Expression::Identifier(identifier) if strict && *identifier == Sym::ARGUMENTS => {
+        ast::Expression::Identifier(identifier) if strict && identifier == Sym::ARGUMENTS => {
             return Err(Error::general(
                 "parameter name 'arguments' not allowed in strict mode",
                 span.start(),
@@ -576,42 +580,34 @@ fn expression_to_formal_parameters(
         }
         ast::Expression::Identifier(identifier) => {
             parameters.push(FormalParameter::new(
-                Variable::from_identifier(*identifier, None),
+                Variable::from_identifier(identifier, None),
                 false,
             ));
         }
         ast::Expression::Binary(bin_op) if bin_op.op() == BinaryOp::Comma => {
-            expression_to_formal_parameters(bin_op.lhs(), parameters, strict, span)?;
-            expression_to_formal_parameters(bin_op.rhs(), parameters, strict, span)?;
+            let (lhs, rhs) = bin_op.into_operands();
+            expression_to_formal_parameters(lhs, parameters, strict, span)?;
+            expression_to_formal_parameters(rhs, parameters, strict, span)?;
         }
-        ast::Expression::Assign(assign) => match assign.lhs() {
-            AssignTarget::Identifier(ident) => {
-                parameters.push(FormalParameter::new(
-                    Variable::from_identifier(*ident, Some(assign.rhs().clone())),
-                    false,
-                ));
-            }
-            AssignTarget::Pattern(pattern) => match pattern {
-                Pattern::Object(pattern) => {
-                    parameters.push(FormalParameter::new(
-                        Variable::from_pattern(pattern.clone().into(), Some(assign.rhs().clone())),
-                        false,
+        ast::Expression::Assign(assign) => {
+            let (target, init) = assign.into_parts();
+            let declaration = match target {
+                AssignTarget::Identifier(ident) => Variable::from_identifier(ident, Some(init)),
+                AssignTarget::Pattern(Pattern::Object(pattern)) => {
+                    Variable::from_pattern(pattern.into(), Some(init))
+                }
+                AssignTarget::Pattern(Pattern::Array(pattern)) => {
+                    Variable::from_pattern(pattern.into(), Some(init))
+                }
+                AssignTarget::Access(_) => {
+                    return Err(Error::general(
+                        "invalid initialization expression in formal parameter list",
+                        span.start(),
                     ));
                 }
-                Pattern::Array(pattern) => {
-                    parameters.push(FormalParameter::new(
-                        Variable::from_pattern(pattern.clone().into(), Some(assign.rhs().clone())),
-                        false,
-                    ));
-                }
-            },
-            AssignTarget::Access(_) => {
-                return Err(Error::general(
-                    "invalid initialization expression in formal parameter list",
-                    span.start(),
-                ));
-            }
-        },
+            };
+            parameters.push(FormalParameter::new(declaration, false));
+        }
         ast::Expression::ObjectLiteral(object) => {
             let pattern = object.to_pattern(strict).ok_or_else(|| {
                 Error::general(

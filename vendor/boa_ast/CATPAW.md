@@ -88,3 +88,8 @@ every other scope keeps its ID.
 `AssignTarget::from_expression_owned` / `from_expression_simple_owned` and
 `Parenthesized::into_expression`, so that the parser can move an
 assignment's left-hand side into its target instead of cloning it.
+
+`src/expression/operator/assign/mod.rs`,
+`src/expression/operator/binary/mod.rs`: `Assign::into_parts` and
+`Binary::into_operands`, so that the parser can move an arrow function's
+default values and destructuring patterns into its parameters.

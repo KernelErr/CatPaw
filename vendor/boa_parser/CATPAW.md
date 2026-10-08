@@ -46,6 +46,14 @@ left-hand side into the assignment or update target instead of cloning it
 (`a.b.c = x` cloned `a.b.c`), and peek the operator without cloning the
 token.
 
+`src/parser/expression/primary/mod.rs`: an arrow function's parameters
+are first parsed as a parenthesized expression, which was then converted
+into the parameter list by copying each default value and destructuring
+pattern (`({ a, b } = defaults(), [c] = []) => ...` copied `defaults()`,
+the pattern and `[]`). They are now moved. An object or array literal
+that becomes a pattern goes through `ObjectLiteral::to_pattern` or
+`ArrayLiteral::to_pattern`, which still copy what they convert.
+
 `src/parser/mod.rs`, `src/parser/function/mod.rs`,
 `src/parser/statement/mod.rs`, the function and class parsers: early
 errors that walk a whole statement list (`super` and `new.target` outside
