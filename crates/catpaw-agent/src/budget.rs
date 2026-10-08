@@ -3,15 +3,16 @@
 //! Over budget, a snapshot first shows only the start of long texts and
 //! names (`… [+1830 chars]`), then only the start of its long lists, as
 //! much as fits (`[more=460 nodes after e212]`), then folds containers,
-//! deepest first and those with the fewest things to act on first
-//! (`[collapsed=12]`). Whatever still does not fit is cut at the end. The
-//! ref of a folded container, as `root` (with `after` for a list), shows
-//! what was left out.
+//! deepest first, those with the fewest things to act on first, and the
+//! last first, so that the top of the page stays open
+//! (`[collapsed=12]`, and what a nameless one holds). Whatever still does
+//! not fit is cut at the end. The ref of a folded container, as `root`
+//! (or of a list's last item shown, as `after`), shows what was left out.
 
 use std::collections::HashMap;
 
 use crate::a11y::is_interactive;
-use crate::snapshot::{Format, LineKind, SnapLine, cap_name, cap_text, render_line};
+use crate::snapshot::{Format, LineKind, SnapLine, cap_name, cap_text, gist, render_line};
 
 /// Items of a long list shown before the rest is left out.
 const LIST_HEAD: usize = 10;
@@ -58,6 +59,22 @@ pub(crate) fn capped(line: &SnapLine) -> SnapLine {
     line
 }
 
+/// A container folded: how many lines it holds (`[collapsed=12]`), and,
+/// when it has no name, what they are about (`: A Light in the …`).
+fn fold(line: &SnapLine, inside: &[SnapLine]) -> SnapLine {
+    let mut line = line.clone();
+    if let LineKind::Element {
+        name, attrs, text, ..
+    } = &mut line.kind
+    {
+        attrs.push(("collapsed", inside.len().to_string()));
+        if name.is_empty() {
+            *text = gist(inside);
+        }
+    }
+    line
+}
+
 /// Fits `lines` into `max` bytes as rendered in `format`.
 pub fn fit(lines: &[SnapLine], format: Format, max: usize) -> Fitted {
     let size = |line: &SnapLine| {
@@ -99,7 +116,8 @@ pub fn fit(lines: &[SnapLine], format: Format, max: usize) -> Fitted {
         end[i] = children[i].last().map_or(i + 1, |&c| end[c]);
     }
     let mut hidden = vec![false; n];
-    let mut collapsed: HashMap<usize, usize> = HashMap::new();
+    // Folded containers, as their lines show them.
+    let mut folded: HashMap<usize, SnapLine> = HashMap::new();
     // Parent → (index of the first child left out, lines left out).
     let mut more: HashMap<usize, (usize, usize)> = HashMap::new();
     let visible_bytes = |hidden: &[bool], from: usize, to: usize| -> usize {
@@ -164,7 +182,8 @@ pub fn fit(lines: &[SnapLine], format: Format, max: usize) -> Fitted {
         total = total.saturating_sub(saved) + 32;
     }
 
-    // Then containers, the fewest things to act on and the deepest first.
+    // Then containers: the deepest, the fewest things to act on and the
+    // last first.
     if total > max {
         let mut containers: Vec<(usize, f64)> = (0..n)
             .filter(|&i| !children[i].is_empty() && !actionable(&lines[i]))
@@ -177,13 +196,13 @@ pub fn fit(lines: &[SnapLine], format: Format, max: usize) -> Fitted {
             .collect();
         // Deepest first, so that folding trims the tree from its leaves and
         // stops close to the budget; at one depth, the fewest things to act
-        // on first.
+        // on first, and the last first: the top of the page stays open.
         containers.sort_by(|a, b| {
             lines[b.0]
                 .depth
                 .cmp(&lines[a.0].depth)
                 .then(a.1.total_cmp(&b.1))
-                .then(a.0.cmp(&b.0))
+                .then(b.0.cmp(&a.0))
         });
         for (i, _) in containers {
             if total <= max {
@@ -196,17 +215,17 @@ pub fn fit(lines: &[SnapLine], format: Format, max: usize) -> Fitted {
             if saved == 0 {
                 continue;
             }
-            let count = (i + 1..end[i]).filter(|&k| !hidden[k]).count();
             for flag in &mut hidden[i + 1..end[i]] {
                 *flag = true;
             }
             for k in i + 1..end[i] {
-                collapsed.remove(&k);
+                folded.remove(&k);
                 more.remove(&k);
             }
             more.remove(&i);
-            collapsed.insert(i, count + collapsed.get(&i).copied().unwrap_or(0));
-            total = total.saturating_sub(saved) + 16;
+            let line = fold(&lines[i], &lines[i + 1..end[i]]);
+            total = (total + size(&line)).saturating_sub(saved + sizes[i]);
+            folded.insert(i, line);
         }
     }
 
@@ -230,13 +249,7 @@ pub fn fit(lines: &[SnapLine], format: Format, max: usize) -> Fitted {
     }
     for i in 0..n {
         if !hidden[i] {
-            let mut line = lines[i].clone();
-            if let (Some(count), LineKind::Element { attrs, .. }) =
-                (collapsed.get(&i), &mut line.kind)
-            {
-                attrs.push(("collapsed", count.to_string()));
-            }
-            out.push(line);
+            out.push(folded.remove(&i).unwrap_or_else(|| lines[i].clone()));
         }
         if let Some(&(depth, count, after)) = more_at.get(&i) {
             out.push(SnapLine {
@@ -358,6 +371,38 @@ mod tests {
     }
 
     #[test]
+    fn folding_keeps_the_top_and_says_what_a_fold_holds() {
+        let mut lines = vec![el(0, 1, "list", "")];
+        for k in 0..8 {
+            let r = 10 + k * 10;
+            let mut title = el(2, r + 1, "link", &format!("Book {k}"));
+            if let LineKind::Element { attrs, .. } = &mut title.kind {
+                attrs.push(("heading", "3".to_string()));
+            }
+            lines.push(el(1, r, "article", ""));
+            lines.push(title);
+            lines.push(text(2, &format!("£{k}1.77")));
+            lines.push(el(2, r + 2, "button", "Add to basket"));
+        }
+        let whole = render_lines(&lines, Format::Compact).len();
+        let fitted = fit(&lines, Format::Compact, whole - 80);
+        let shown = render_lines(&fitted.lines, Format::Compact);
+        // The first books stay open, the last fold, and say what they are.
+        assert!(
+            shown.starts_with("e1 list\n  e10 article\n    e11 link \"Book 0\" [heading=3]\n"),
+            "{shown}"
+        );
+        assert!(
+            shown.ends_with(
+                "  e60 article\n    e61 link \"Book 5\" [heading=3]\n    text: £51.77\n    \
+                 e62 button \"Add to basket\"\n  e70 article [collapsed=3]: Book 6\n  \
+                 e80 article [collapsed=3]: Book 7\n"
+            ),
+            "{shown}"
+        );
+    }
+
+    #[test]
     fn small_snapshots_are_left_alone() {
         let lines = vec![el(0, 1, "main", ""), el(1, 2, "button", "Go")];
         let fitted = fit(&lines, Format::Compact, 1000);
@@ -380,7 +425,10 @@ mod tests {
         }
         let fitted = fit(&lines, Format::Compact, 900);
         let text = render_lines(&fitted.lines, Format::Compact);
-        assert!(text.contains("e2 article [collapsed=20]\n"), "{text}");
+        assert!(
+            text.contains("e2 article [collapsed=20]: A long paragraph of prose number 0 that…\n"),
+            "{text}"
+        );
         assert!(
             text.contains("    e19 link \"Item 9\"\n    [more=30 nodes after e19]\n"),
             "{text}"

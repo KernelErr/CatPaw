@@ -78,7 +78,7 @@
         "additionalProperties": false,
         "properties": {
           "after": {
-            "description": "With root: show the items after this ref ([more=… after eN])",
+            "description": "Ref of a list item: show the items after it ([more=… after eN])",
             "type": "string"
           },
           "attrs": {

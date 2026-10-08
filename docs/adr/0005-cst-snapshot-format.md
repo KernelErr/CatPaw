@@ -184,3 +184,9 @@ they name.
    results: by its lone text, else, as a container, by what it holds,
    kept short: its first heading, else its first text
    (`listitem "Buy milk"`, `row "Wool socks"`). Its line is unchanged.
+4. **Folding keeps the top.** Containers fold deepest first, those with
+   the fewest things to act on first, and the last first: of a list of
+   items alike, the first stay open. A folded container counts all the
+   nodes it holds, and a nameless one says what they are about, by
+   their first heading or text: `e80 article [collapsed=3]: Book 7`.
+   (Amends point 7 of the first amendment.)

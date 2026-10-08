@@ -67,7 +67,7 @@ pub static TOOLS: &[ToolDef] = &[
         schema: r#"{"type":"object","properties":{
 "filter":{"type":"string","enum":["interesting","interactive","all"],"description":"interesting (default): controls, headings, landmarks and text; interactive: controls only; all: every element"},
 "root":{"type":"string","description":"Ref of a subtree to show alone (a [collapsed] one, say)"},
-"after":{"type":"string","description":"With root: show the items after this ref ([more=… after eN])"},
+"after":{"type":"string","description":"Ref of a list item: show the items after it ([more=… after eN])"},
 "maxTokens":{"type":"integer","minimum":200,"description":"Size budget (default 4000)"},
 "attrs":{"type":"array","items":{"type":"string","enum":["href","src","description"]},"description":"Extra attributes: link URLs, image sources, descriptions"},
 "format":{"type":"string","enum":["compact","aria"],"description":"compact (default): e12 link \"Home\"; aria: - link \"Home\" [ref=e12]. Later results use it too"},
