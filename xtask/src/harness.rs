@@ -443,7 +443,14 @@ fn run_test(root: &Path, test_path: &str, budget_ms: u64) -> Outcome {
         stash: Stash::default(),
     });
     let url = Url::parse(&format!("{ORIGIN}/{test_path}")).expect("test URL");
-    let state = Rc::new(PageState::new(url.clone(), PageConfig::default()));
+    // testharness.js keeps a record (with a stack) of every assertion, so a
+    // test that asserts in a loop over `window` runs for seconds: give a
+    // script as long as the run itself may take.
+    let config = PageConfig {
+        script_budget: Some(Duration::from_secs(30)),
+        ..PageConfig::default()
+    };
+    let state = Rc::new(PageState::new(url.clone(), config));
     state.set_net(net.clone());
     let Ok(mut page) = BoaPage::new(state) else {
         return Outcome::harness_error("page setup");

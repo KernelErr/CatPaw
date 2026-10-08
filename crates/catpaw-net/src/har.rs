@@ -490,6 +490,65 @@ fn content_json(body: &[u8], mime: &str) -> Value {
     }
 }
 
+/// JSON fields in which services echo the address a request came from
+/// (httpbin's `origin`, "what is my IP" services, proxies' headers).
+const ADDRESS_FIELDS: &[&str] = &[
+    "origin",
+    "ip",
+    "client_ip",
+    "clientip",
+    "remote_addr",
+    "remoteaddr",
+    "x-forwarded-for",
+    "x-real-ip",
+];
+
+/// What a recording keeps in place of an echoed address: one reserved for
+/// documentation (RFC 5737), never the recording machine's.
+pub const STAND_IN_ADDRESS: &str = "203.0.113.7";
+
+/// The addresses a JSON body echoes in [`ADDRESS_FIELDS`] (comma lists
+/// included), other than the stand-in.
+fn echoed_addresses(value: &Value, out: &mut Vec<String>) {
+    match value {
+        Value::Object(map) => {
+            for (key, value) in map {
+                if ADDRESS_FIELDS.contains(&key.to_ascii_lowercase().as_str())
+                    && let Some(text) = value.as_str()
+                {
+                    for part in text.split(',').map(str::trim) {
+                        if part.parse::<std::net::IpAddr>().is_ok() && part != STAND_IN_ADDRESS {
+                            out.push(part.to_string());
+                        }
+                    }
+                }
+                echoed_addresses(value, out);
+            }
+        }
+        Value::Array(items) => items.iter().for_each(|item| echoed_addresses(item, out)),
+        _ => {}
+    }
+}
+
+/// A JSON response body with the addresses it echoes replaced by the
+/// stand-in, everywhere in the body; `None` when it echoes none.
+fn scrub_addresses(body: &[u8], mime: &str) -> Option<Vec<u8>> {
+    if !mime.to_ascii_lowercase().contains("json") {
+        return None;
+    }
+    let value: Value = serde_json::from_slice(body).ok()?;
+    let mut found = Vec::new();
+    echoed_addresses(&value, &mut found);
+    if found.is_empty() {
+        return None;
+    }
+    let mut text = String::from_utf8(body.to_vec()).ok()?;
+    for address in found {
+        text = text.replace(&address, STAND_IN_ADDRESS);
+    }
+    Some(text.into_bytes())
+}
+
 /// A request body as HAR `postData`: text, or base64 when not UTF-8.
 fn post_data_json(body: &[u8], mime: &str) -> Value {
     match std::str::from_utf8(body) {
@@ -643,6 +702,12 @@ impl Recorder {
             };
             request["postData"] = post_data_json(&stored, mime);
         }
+        // An address the service echoes is the recording machine's.
+        let mime = content_type(response_headers);
+        let content = match scrub_addresses(response_body, mime) {
+            Some(scrubbed) => content_json(&scrubbed, mime),
+            None => content_json(response_body, mime),
+        };
         let entry = json!({
             "startedDateTime": iso8601(started_ms),
             "time": took_ms,
@@ -653,7 +718,7 @@ impl Recorder {
                 "httpVersion": "HTTP/1.1",
                 "headers": response_header_list,
                 "cookies": [],
-                "content": content_json(response_body, content_type(response_headers)),
+                "content": content,
                 "redirectURL": response_headers
                     .get(http::header::LOCATION)
                     .and_then(|v| v.to_str().ok())
@@ -912,6 +977,12 @@ pub fn unredacted_secrets(har: &[u8]) -> Result<Vec<String>, String> {
                     found.push(format!("{what}: form field {field}"));
                 }
             }
+        }
+        let content = &entry["response"]["content"];
+        if let Ok(body) = decode_text(content)
+            && scrub_addresses(&body, content["mimeType"].as_str().unwrap_or("")).is_some()
+        {
+            found.push(format!("{what}: an address the response echoes"));
         }
         for (name, value) in headers(&entry["response"]) {
             match name.as_str() {
@@ -1419,6 +1490,32 @@ mod tests {
             assert_eq!(mode & 0o777, 0o600);
         }
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn echoed_addresses_are_kept_out() {
+        let body = br#"{"origin": "198.51.100.23, 10.0.0.1", "url": "https://httpbin.org/post", "nested": {"ip": "2001:db8::1"}}"#;
+        let scrubbed = scrub_addresses(body, "application/json").unwrap();
+        let text = String::from_utf8(scrubbed).unwrap();
+        assert!(!text.contains("198.51.100.23"), "{text}");
+        assert!(!text.contains("10.0.0.1"), "{text}");
+        assert!(!text.contains("2001:db8::1"), "{text}");
+        assert!(text.contains(STAND_IN_ADDRESS), "{text}");
+        assert!(text.contains("https://httpbin.org/post"), "{text}");
+        assert!(scrub_addresses(body, "text/html").is_none());
+        assert!(
+            scrub_addresses(br#"{"origin": "https://a.example"}"#, "application/json").is_none()
+        );
+        let har = serde_json::json!({"log": {"entries": [{
+            "request": {"method": "POST", "url": "https://httpbin.org/post", "headers": []},
+            "response": {"status": 200, "headers": [], "content": {
+                "mimeType": "application/json", "text": String::from_utf8_lossy(body)}}
+        }]}});
+        let found = unredacted_secrets(har.to_string().as_bytes()).unwrap();
+        assert_eq!(
+            found,
+            ["POST https://httpbin.org/post: an address the response echoes"]
+        );
     }
 
     #[test]
