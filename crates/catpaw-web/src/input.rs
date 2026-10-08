@@ -73,13 +73,12 @@ fn trusted(cx: &Cx<'_>, id: ObjectId) -> ObjectId {
 }
 
 fn mouse_state(cx: &Cx<'_>, x: f32, y: f32, button: i16, buttons: u16, detail: i32) -> UiEvent {
-    let (sx, sy) = layout::window_scroll(cx.page);
-    let _ = (sx, sy);
     UiEvent {
         has_view: true,
         detail,
         client: (x.round() as i32, y.round() as i32),
         screen: (x.round() as i32, y.round() as i32),
+        scroll: Some(layout::window_scroll(cx.page)),
         button,
         buttons,
         // The legacy `which`: the button, counted from 1, while one is

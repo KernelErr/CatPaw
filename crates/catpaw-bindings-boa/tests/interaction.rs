@@ -96,6 +96,31 @@ fn a_click_runs_the_pointer_sequence_and_moves_focus() {
 }
 
 #[test]
+fn page_coordinates_add_the_scroll() {
+    let mut page = load(
+        r#"<!doctype html><body style="margin:0"><div style="height:3000px"></div><button id=b style="position:absolute;left:10px;top:2000px;width:100px;height:40px">b</button>
+        <script>var seen, kept; document.getElementById('b').addEventListener('click', function (e) { kept = e; seen = [e.clientX, e.clientY, e.pageX, e.pageY, e.offsetX, e.offsetY].join(' '); });</script>"#,
+    );
+    let b = find(&page, "b");
+    page.with_cx(|cx| input::click_element(cx, b).expect("click"));
+    // The button was scrolled into view, to the bottom edge.
+    assert_eq!(
+        eval(&mut page, "seen + ' at ' + scrollY"),
+        "60 580 60 2020 60 580 at 1440"
+    );
+    // An event script makes follows the scroll; a user's keeps the one it
+    // was made at.
+    eval(
+        &mut page,
+        "var made = new MouseEvent('x', { clientX: 5, clientY: 6 })",
+    );
+    let points = "[made.pageX, made.pageY, made.offsetY, kept.pageY, kept.offsetY].join(' ')";
+    assert_eq!(eval(&mut page, points), "5 1446 1446 2020 2020");
+    eval(&mut page, "scrollTo(0, 100)");
+    assert_eq!(eval(&mut page, points), "5 106 106 2020 2020");
+}
+
+#[test]
 fn occluded_and_hidden_elements_refuse_clicks() {
     let mut page = load(
         r#"<!doctype html><body style="margin:0"><button id=under style="position:absolute;left:0;top:0;width:100px;height:40px">under</button><div id=over style="position:absolute;left:0;top:0;width:200px;height:200px"></div><button id=gone style="display:none">gone</button>"#,

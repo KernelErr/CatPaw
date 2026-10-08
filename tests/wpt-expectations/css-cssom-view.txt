@@ -393,7 +393,6 @@ css/cssom-view/matchMedia.html	iframe.matchMedia("(width: 200px)") matches
 css/cssom-view/mouseEvent-offsetXY-svg.html	-
 css/cssom-view/mouseEvent-offsetXY-svg.html	rect offsetX/Y is relative to the root svg
 css/cssom-view/mouseEvent-offsetXY-svg.html	tspan offsetX/Y is relative to the root svg
-css/cssom-view/mouseEvent.html	MouseEvent's pageX and pageY attributes should be the sum of the scroll offset and clientX/clientY
 css/cssom-view/negativeMargins.html	cssom-view - elementFromPoint and elementsFromPoint dealing with negative margins 1
 css/cssom-view/offsetParent-block-in-inline.html	offsetParent-block-in-inline
 css/cssom-view/offsetParent-body-and-html.html	The offsetParent of a <body> element which has a previous <body> sibling is also null

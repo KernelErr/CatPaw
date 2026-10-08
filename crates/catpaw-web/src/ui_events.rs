@@ -2,16 +2,18 @@
 //! `KeyboardEvent`, `MouseEvent`, `WheelEvent` and `PointerEvent`.
 //!
 //! One state record serves them all; each interface reads its own part.
-//! Without layout, coordinates are what the constructor was given, and the
-//! page-relative and offset coordinates equal the client ones (the page is
-//! not scrolled and no box has a position).
+//! Client coordinates are what the constructor was given, or where a
+//! user's pointer was. Page coordinates add the window's scroll: where it
+//! was when the user's pointer moved, or where it is now for an event
+//! script made. Offset coordinates are the client ones while the event is
+//! dispatched (no box offsets yet), and the page ones otherwise.
 
 use catpaw_js::{EventTargetRef, Fallible, ObjectId, WindowRef};
 
-use crate::Web;
 use crate::events::{Event, EventData};
 use crate::generated::{self as web, InterfaceId};
 use crate::page::Cx;
+use crate::{Web, layout};
 
 /// The state of a UI event, whichever interface it is.
 #[derive(Clone, Debug, Default)]
@@ -22,6 +24,9 @@ pub struct UiEvent {
     pub modifiers: Modifiers,
     pub screen: (i32, i32),
     pub client: (i32, i32),
+    /// The window's scroll position when a user's pointer made the event;
+    /// `None` for one script made.
+    pub scroll: Option<(f32, f32)>,
     pub button: i16,
     pub buttons: u16,
     pub related_target: Option<EventTargetRef>,
@@ -175,6 +180,29 @@ fn ui<R>(cx: &Cx<'_>, this: ObjectId, f: impl FnOnce(&UiEvent) -> R) -> Fallible
         EventData::Ui(state) => f(state),
         _ => f(&fallback),
     })
+}
+
+/// <https://drafts.csswg.org/cssom-view/#dom-mouseevent-pagex>: the client
+/// point plus the window's scroll, as it was when a user's pointer made
+/// the event, else as it is now.
+fn page_point(cx: &Cx<'_>, this: ObjectId) -> Fallible<(f64, f64)> {
+    let (client, scroll) = ui(cx, this, |s| (s.client, s.scroll))?;
+    let (sx, sy) = scroll.unwrap_or_else(|| layout::window_scroll(cx.page));
+    Ok((
+        f64::from(client.0) + f64::from(sx),
+        f64::from(client.1) + f64::from(sy),
+    ))
+}
+
+/// <https://drafts.csswg.org/cssom-view/#dom-mouseevent-offsetx>: while the
+/// event is dispatched, the point relative to its target (taken as the
+/// client point: boxes have no offsets here yet); otherwise the page point.
+fn offset_point(cx: &Cx<'_>, this: ObjectId) -> Fallible<(f64, f64)> {
+    let dispatching = cx.page.with::<Event, _>(this, |e| e.dispatching)?;
+    if dispatching {
+        return ui(cx, this, |s| (f64::from(s.client.0), f64::from(s.client.1)));
+    }
+    page_point(cx, this)
 }
 
 fn modifiers_from(ctrl: bool, shift: bool, alt: bool, meta: bool, rest: [bool; 10]) -> Modifiers {
@@ -448,11 +476,11 @@ impl web::MouseEventImpl for Web {
     }
 
     fn page_x(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64> {
-        ui(cx, this, |s| f64::from(s.client.0))
+        Ok(page_point(cx, this)?.0)
     }
 
     fn page_y(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64> {
-        ui(cx, this, |s| f64::from(s.client.1))
+        Ok(page_point(cx, this)?.1)
     }
 
     fn x(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64> {
@@ -464,11 +492,11 @@ impl web::MouseEventImpl for Web {
     }
 
     fn offset_x(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64> {
-        ui(cx, this, |s| f64::from(s.client.0))
+        Ok(offset_point(cx, this)?.0)
     }
 
     fn offset_y(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64> {
-        ui(cx, this, |s| f64::from(s.client.1))
+        Ok(offset_point(cx, this)?.1)
     }
 
     fn ctrl_key(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool> {
