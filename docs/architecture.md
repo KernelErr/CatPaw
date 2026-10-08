@@ -142,10 +142,15 @@ and defaults. The tree keeps the computed styles it was built with.
 Both follow the document through the arena's journal of changes: the
 style engine restyles only what the changes since the last restyle can
 affect (Stylo's invalidation, from snapshots of what changed elements
-had), and the tree is kept until a scroll position, a style sheet, a
-computed style of something shown, or the rendered part of the document
-changes. Writes nothing derived from the tree reads (parser and custom
-element bookkeeping) are not journaled at all.
+had, and from the rules of style sheets that came or went), and the tree
+is kept until a scroll position, a computed style of something shown, or
+the rendered part of the document changes. A tree built again takes from
+the last one the shaped text of the inline formatting contexts that did
+not change and the layout of unchanged subtrees that are laid out on
+their own (flex and grid items, atomic inline boxes, positioned boxes).
+Writes nothing derived from the tree reads (parser and custom element
+bookkeeping) are not journaled at all. `CATPAW_RENDER_STATS=1` logs each
+restyle, layout and index rebuild to stderr with its duration.
 Fonts come from `catpaw-text`: a bundled DejaVu set stands in for the
 generic families so that layout is the same on every machine (the
 `system-fonts` feature adds the machine's fonts behind them). Boxes hold
