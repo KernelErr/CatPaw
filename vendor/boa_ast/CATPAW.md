@@ -69,6 +69,13 @@ bytecode compiler and the parser tests construct and match the boxed
 variants. This is about 18% of the CPU cycles of a parse (5% of the
 instructions: the gain is memory traffic).
 
+`src/operations/mod.rs`: functions, arrow functions, blocks and loops
+record when they are built whether they contain a direct `eval`, by
+walking their contents. That walk descended into nested blocks and arrow
+functions, so a block nested n deep was walked n times; it now takes the
+answer those already recorded (they are built before their parents and
+not changed while the tree is built, so the answer is the same).
+
 `src/scope_analyzer.rs`, `src/operations/mod.rs`: when a function needs no
 function scope otherwise, the scope analyzer looked for `super` and
 `new.target` in its parameters and body with four walks; one walk per

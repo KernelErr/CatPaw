@@ -100,6 +100,22 @@ where
             node.statement().visit_with(self)
         }
 
+        fn visit_block(
+            &mut self,
+            node: &'ast crate::statement::Block,
+        ) -> ControlFlow<Self::BreakTy> {
+            // CatPaw: a block knows whether its statements contain a direct `eval`, so
+            // nested blocks are not walked again for every enclosing one.
+            if self.0 == ContainsSymbol::DirectEval {
+                return if node.contains_direct_eval {
+                    ControlFlow::Break(())
+                } else {
+                    ControlFlow::Continue(())
+                };
+            }
+            node.visit_with(self)
+        }
+
         fn visit_call(&mut self, node: &'ast Call) -> ControlFlow<Self::BreakTy> {
             if self.0 == ContainsSymbol::DirectEval
                 && let Expression::Identifier(ident) = node.function().flatten()
@@ -273,6 +289,16 @@ where
                 return ControlFlow::Continue(());
             }
 
+            // CatPaw: an arrow function knows whether it contains a direct `eval`; it
+            // looked at its parameters and body, as walking them here would.
+            if self.0 == ContainsSymbol::DirectEval {
+                return if node.contains_direct_eval {
+                    ControlFlow::Break(())
+                } else {
+                    ControlFlow::Continue(())
+                };
+            }
+
             node.visit_with(self)
         }
 
@@ -291,6 +317,16 @@ where
             .contains(&self.0)
             {
                 return ControlFlow::Continue(());
+            }
+
+            // CatPaw: an arrow function knows whether it contains a direct `eval`; it
+            // looked at its parameters and body, as walking them here would.
+            if self.0 == ContainsSymbol::DirectEval {
+                return if node.contains_direct_eval {
+                    ControlFlow::Break(())
+                } else {
+                    ControlFlow::Continue(())
+                };
             }
 
             node.visit_with(self)

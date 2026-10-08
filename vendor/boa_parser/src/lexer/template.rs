@@ -20,9 +20,24 @@ pub struct TemplateString {
 impl TemplateString {
     /// Creates a new `TemplateString` with the given raw template ans start position.
     pub fn new(raw: Sym, interner: &mut Interner) -> Self {
+        // CatPaw: the raw form only differs from the source text where it has a
+        // carriage return, and the cooked form only where it also has a backslash.
+        // Most template strings have neither: they are their own raw and cooked
+        // forms, which would only be rebuilt and interned again (to the same symbol).
+        let units = interner.resolve_expect(raw).utf16();
+        let has_cr = units.contains(&0x0D);
+        let has_escape = has_cr || units.contains(&0x5C);
         Self {
-            raw: Self::as_raw(raw, interner),
-            cooked: Self::as_cooked(raw, interner),
+            raw: if has_cr {
+                Self::as_raw(raw, interner)
+            } else {
+                raw
+            },
+            cooked: if has_escape {
+                Self::as_cooked(raw, interner)
+            } else {
+                Some(raw)
+            },
         }
     }
 

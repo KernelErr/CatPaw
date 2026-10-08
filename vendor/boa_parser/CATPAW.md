@@ -77,6 +77,15 @@ relational or tighter operators, and an escaped `in` or `instanceof`
 fails where the relational level would have looked at it. `||`, `&&` and
 `??` keep their own parser (`a || b || c` nests to the right there).
 
+`src/lexer/template.rs`: every template string was copied twice more to
+build its raw and cooked forms, and each copy interned again, though a
+string without a carriage return is its own raw form and one without a
+backslash either is its own cooked form. Those are now taken as they are
+(the symbols are the same ones the copies interned to). Minifiers such as
+esbuild write many plain strings as template literals; in the Sauce Demo
+bundle (a fifth of whose text is template literals) this was an eighth of
+the parse.
+
 `src/parser/cursor/`: `peek(0)` of an already buffered token returns
 without entering the general look-ahead loop; line terminators and other
 token kinds are recognised with `matches!` rather than the derived

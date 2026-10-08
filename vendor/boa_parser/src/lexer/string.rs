@@ -48,6 +48,7 @@ pub(crate) trait UTF16CodeUnitsBuffer {
 }
 
 impl UTF16CodeUnitsBuffer for Vec<u16> {
+    #[inline]
     fn push_code_point(&mut self, mut code_point: u32) {
         if let Ok(cp) = code_point.try_into() {
             self.push(cp);
