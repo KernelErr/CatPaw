@@ -79,6 +79,9 @@ pub enum EngineError {
     Thread(std::io::Error),
     #[error("the page thread panicked")]
     Panicked,
+    /// The group was closed before the call could run (see `group`).
+    #[error("the browsing context group is closed")]
+    GroupClosed,
 }
 
 /// Facts about the response the current document was parsed from.
