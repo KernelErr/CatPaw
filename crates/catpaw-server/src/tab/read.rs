@@ -150,7 +150,7 @@ impl GroupState {
         if offset > 0 || end < rest.len() {
             let _ = write!(
                 text,
-                " (chars {}-{} of {})",
+                " (bytes {}-{} of {})",
                 offset,
                 offset + end,
                 full.len()
@@ -173,7 +173,11 @@ impl GroupState {
                 );
             }
             if let Some(root) = &p.root {
-                let _ = write!(args, ",\"root\":\"{root}\"");
+                let _ = write!(
+                    args,
+                    ",\"root\":{}",
+                    serde_json::to_string(root).unwrap_or_default()
+                );
             }
             if main {
                 args.push_str(",\"main\":true");

@@ -14,15 +14,24 @@ of the model on every turn.
 
 1. **MCP over stdio first.** `catpaw mcp --stdio` speaks newline-delimited
    JSON-RPC 2.0 (`initialize`, `ping`, `tools/list`, `tools/call`;
-   notifications are accepted and ignored). It is written by hand rather
-   than with an MCP crate: the surface is small, the same session will
-   serve JSON-RPC over WebSocket later, and the crates still change often.
-   Stdout carries protocol messages only; lines are read on a thread of
-   their own, so that a call can ask the client (`elicitation/create`) and
-   read its answer while it runs; requests that arrive meanwhile wait
-   their turn, pings are answered at once.
-2. **Tools.** `navigate`, `snapshot`, `click`, `type`, `press`, `select`,
-   `act` (hover, check, uncheck, focus, clear, scroll, upload, drag),
+   notifications are accepted, and `notifications/cancelled` stops a call
+   that waits: for the user's decision, a hand-off, an elicitation). It is
+   written by hand rather than with an MCP crate: the surface is small,
+   the same session will serve JSON-RPC over WebSocket later, and the
+   crates still change often. Stdout carries protocol messages only;
+   lines are read on a thread of their own, so that a call can ask the
+   client (`elicitation/create`) and read its answer while it runs;
+   requests that arrive meanwhile wait their turn, pings are answered at
+   once, and a cancelled call gets no answer. A line that is not UTF-8
+   gets a parse error and the session goes on. SIGINT or SIGTERM (or
+   stdout closing) ends the session once the call under way returns,
+   writing what it keeps (recording, cookies, storage, profile); a second
+   signal ends the process at once.
+2. **Tools.** `navigate`, `snapshot`, `click` (any button, a double
+   click, modifier keys), `type`, `fill` (several fields at once: text,
+   checked or not, options), `press`, `select`,
+   `act` (hover, check, uncheck, focus, clear, scroll — the window, or
+   inside an element with a target and `dy` — upload, drag),
    `wait`,
    `read` (markdown, text, links, forms, tables, find, html), `screenshot`,
    `evaluate`, `tabs`, `logs` and `handoff`; `session` (checkpoints) is
@@ -36,12 +45,15 @@ of the model on every turn.
    `cargo xtask protocol --check` keeps it current. Deriving them
    (schemars, as first planned) would put words in front of the model that
    nobody chose. A test parses every example with the tool's parameter type
-   and keeps the whole list under 10 000 bytes (6.4 KB for the eleven tools
-   today). Unknown fields are refused with the names of the right ones.
+   and keeps the whole list under 11 000 bytes (10.9 KB for the fifteen
+   standard tools today; `fill` earns its kilobyte by saving a turn per
+   form). Unknown fields are refused with the names of the right ones.
 4. **Targets** are one string: a ref `e12` (a whole snapshot line or
    `[ref=e12]` is accepted, since models copy those), `text:<visible
    text>`, `role "name"` (`button "Sign in"`: a snapshot line without its
-   ref), `css:<selector>` (shadow trees and frames included) or
+   ref), `css:<selector>` (shadow trees and frames included; like a
+   strict locator it names one element, the shown matches counting first,
+   and several are `AmbiguousTarget`) or
    `xy:<x>,<y>` (into the frame under the point). Text and names are
    matched against what a snapshot shows, frames included; an exact match
    beats a partial one and a single control beats other matches, and
@@ -51,7 +63,9 @@ of the model on every turn.
    short with `…`; a name found only inside another is listed, not taken
    (`error NotFound textbox "Password" names nothing in full; in part: e5
    textbox "Username Password"`), since it is another field as often as
-   not. Before acting, an element must be
+   not. A role that matches nothing lists the elements of that name under
+   other roles (`with that name: e5 link "Log in"`). Before acting, an
+   element must be
    enabled (for clicks, typing, choosing and checking) and hold still while
    the page animates; one covered by something else is reported with the
    control that would dismiss the cover when there is one
@@ -60,19 +74,28 @@ of the model on every turn.
 5. **Result grammar.** The first line is `ok …`, `error <Code> …`,
    `needs_confirmation cN …` or `blocked <reason> …`; only `error` sets
    MCP's `isError`. An `ok` line echoes the element acted on as
-   `eN role "name"` (the cheapest guard against acting on the wrong one)
-   and how the page moved: `→ <url> (200)`, `(POST, 302)`, or
-   `(same document)` for `pushState`. Lines starting with `!` report
-   consequences in a fixed order (navigation failures, new tabs, closed
-   tabs, dialogs, requests the page made, console errors, and what kept the
-   page busy when it did not settle). What changed on the page follows
-   (decision 9). Errors say what to try next on an `advice:` line; the
-   codes are `BadArgument`, `NoTab`, `StaleRef`, `NotFound`,
+   `eN role "name"` (the cheapest guard against acting on the wrong one),
+   with where it is when other shown elements have its role and name
+   (`(in e12 listitem "Hats")`, or `(after e14 button "View details for
+   …")`), and how the page moved: `→ <url> (200)`, `(POST, 302)`, or
+   `(same document)` for `pushState`. A lone change to that element ends
+   the line (`ok type e2 textbox "Name" [value=- → Ada]`). Lines starting
+   with `!` report consequences in a fixed order (navigation failures,
+   new tabs, closed tabs, downloads, dialogs, requests the page made —
+   a polling timer's routine ones only counted — console errors, and what
+   kept the page busy when it did not settle). What changed on the page
+   follows (decision 9). Errors say what to try next on an `advice:`
+   line; the codes are `BadArgument`, `NoTab`, `StaleRef`, `NotFound`,
    `AmbiguousTarget`, `NotActionable`, `Occluded`, `NavigationFailed`,
-   `ScriptError`, `Timeout`, `Unsupported` and `Crashed`.
+   `ScriptError`, `Timeout`, `Unsupported`, `Busy` (the tab is with the
+   user) and `Crashed`.
 6. **Byte stability.** Header keys, attributes, consequence lines and diff
    lines come in fixed orders; ids are never reused; no wall-clock time
-   appears; defaults are not printed; all wording comes from one table
+   appears; defaults are not printed (a snapshot's header gives only what
+   is not the usual: a URL the status line did not give, the title, an
+   unusual viewport, scroll, focus, a filter other than the default,
+   counts when the budget left nodes out, `settled=no`); all wording comes
+   from one table
    (`catpaw_protocol::wording`); estimators and limits are constants. A
    page that did not change gives a snapshot identical but for its `sN`,
    so hosts' prompt caches keep hitting.
@@ -87,10 +110,17 @@ of the model on every turn.
    requests that send data to another site and `evaluate`; `open` asks
    for nothing (test runs). `--trust <host>` exempts a host,
    `--allowed-domain <domain>` limits what tabs may show (anything else is
-   `blocked policy: …`). Navigations and script requests are held where
-   they would leave for the network, after the action ran, so an
-   approved action is let go and never carried out again; uploads and
-   `evaluate` are stopped before they run. The result names what would
+   `blocked policy: …`; every redirect hop of a document is judged as the
+   first). Navigations and script requests (synchronous ones, and
+   WebSocket connections, are refused rather than held: they cannot wait)
+   are held where they would leave for the network, after the action ran,
+   so an approved action is let go and never carried out again; uploads
+   and `evaluate` are stopped before they run. Holds are numbered per
+   page, and a confirmation is tied to the holds its action made:
+   approving lets exactly those go (with their preflights and redirect
+   hops), declining or running out drops them, and one whose holds the
+   page dropped (it navigated, the frame asked for another navigation)
+   no longer applies (`blocked superseded`). The result names what would
    happen, with secrets masked:
    `needs_confirmation c1: click e8 button "Login" would submit → POST
    https://…/authenticate (fields: username=tomsmith, password=***)`. A
@@ -98,15 +128,24 @@ of the model on every turn.
    (a boolean `approve`; declining gives `blocked user: declined c1`).
    Otherwise the result gives the address of a page on 127.0.0.1 where
    the user approves with a key kept in a file (made on first use in the
-   user's data directory, or `--approval-key-file`); the browser keeps the
-   key in a cookie after the first time, and the page refuses other hosts
-   and other origins. The agent never sees the key: no result prints it,
-   and its browser refuses private addresses. It then repeats the call
-   with `confirmation: "c1"`; the repeat must match the original call
-   (tool and arguments) or it is refused, an unanswered one says
-   `(still pending)`, and confirmations run out after ten minutes. This
-   bounds an agent that holds only the browser tools; an agent with a
-   shell is bounded by its host's own permission prompts.
+   user's data directory, or `--approval-key-file`; readable by its owner
+   alone). The page is served on a port that stays the same between
+   sessions while it is free (47115, or `--approval-port`), so the browser
+   that approved once keeps the key in its storage for that origin —
+   never in a cookie, which every port of the host would receive; the
+   server answers several connections at a time, refuses oversized
+   requests, other host names and other origins, and stops with the
+   session. The agent never sees the key: no result prints it, its
+   browser refuses private addresses, and an upload of the key file (or a
+   link to it, or a copy) is refused. The result gives the exact call to
+   repeat with `confirmation: "c1"`; the repeat must match it or it is
+   refused, a repeat sent before the user decided waits for the decision
+   (up to 45 seconds, then `(still pending)`), and confirmations run out
+   after ten minutes. With elicitation, only an explicit yes approves; a
+   cancelled question is `blocked user: cancelled`, and a host that does
+   not answer falls back to the approval page. This bounds an agent that
+   holds only the browser tools; an agent with a shell is bounded by its
+   host's own permission prompts.
 
 9. **Diffs after actions.** An action answers with what changed since
    the tab's last snapshot (ADR 0005, amended): `~` changed, `+` added
@@ -115,14 +154,16 @@ of the model on every turn.
    it stayed (the diff over 60% of the whole), or no snapshot to compare
    with gives the whole snapshot, its header saying why (`full=navigated`,
    `full=large`, `full=no-baseline`). `snapshot: "full" | "none"` on any
-   action says otherwise. A tab keeps its last eight snapshots.
+   action says otherwise. A tab keeps its latest snapshot of each filter.
 10. **Settling.** An action is done when the page has settled under a
     policy, not when its event loop is empty (real pages never empty
     it). The policy waits for requests the page waits on, timers due
     within a second, animation frames that change the document, and a
     document quiet for 100 ms of page time. It does not wait for
     analytics and telemetry hosts, beacons, requests started by polling
-    timers (a site that armed five timers of 100 ms or more), style sheets
+    timers (one that set itself again, from its own callback, five times
+    with 100 ms or more; a debounce set again from each key press is still
+    waited for), WebSocket handshakes and style sheets
     and fonts slower than two seconds, requests to other sites slower than
     three, or anything open ten seconds. Timers and requests remember the
     script position that made them, so a page that did not settle is
@@ -173,24 +214,35 @@ of the model on every turn.
 14. **Flight recorder, profiles and checkpoints.** `--flight-log <dir>`
     keeps a journal: one JSON line per call (tool, arguments, first line
     of the result, consequences, URL, time taken) and per confirmation
-    and decision; `--flight-screens` adds a screenshot per page action.
-    It never holds cookies or the bodies of held requests, and text typed
-    into a password field becomes its length. `--profile <dir>` keeps the
-    cookie jar, `localStorage`, saved checkpoints and the journals between
-    sessions, written after every call that acts. The `session` tool
-    saves a checkpoint (cookies, storage, each tab's URL and scroll),
-    restores it (tabs load again, refs start afresh) and lists them.
+    and decision; `--flight-screens` adds a screenshot per page action
+    (in a profile's journal too). A journal asked for must open, or the
+    session does not start; it is readable by its owner alone, and a write
+    that fails is said once in a result. It never holds cookies or the
+    bodies of held requests, and text typed into a password field becomes
+    its length. `--profile <dir>` keeps the cookie jar, `localStorage`,
+    saved checkpoints and the journals between sessions, written after
+    every call that acts and when the session ends; one session at a time
+    may use a profile (a lock). The `session` tool saves a checkpoint
+    (cookies, storage, each tab's URL and scroll), restores it (checked
+    first: a damaged one leaves the session as it was; tabs load again,
+    refs start afresh) and lists them.
 15. **Hand-off.** `handoff({reason})` gives the user the current tab on a
-    page served at 127.0.0.1 (its address carries a one-time token): a
-    screenshot of the tab, kept current, that passes the user's clicks,
-    typing, keys and scrolling to it, and a Done button. What the user
-    does is theirs to decide, so what the policy would hold goes through
-    (what it refuses stays refused). The agent calls
-    `wait({for: "handoff"})`, which returns once the user is done, with
-    what happened meanwhile (`→ https://…/welcome (POST, 200)`) and the
-    whole page; it never learns what was typed, and the journal keeps no
-    hand-off input. For logins, checks meant for a person (ADR 0003), and
-    anything else the agent should not do or see.
+    page served by the same local server as the approval page (its address
+    carries a token; acting needs the approval key as well, so the link
+    alone lets nobody act): a screenshot of the tab, kept current, that
+    passes the user's clicks, typing, keys and scrolling to it, and a Done
+    button. What the user does is theirs to decide, so what the policy
+    would hold for an input of theirs goes through (what it refuses stays
+    refused); what the agent's own calls held stays held. Until the tab is
+    given back, the agent's calls on it are `error Busy`. The agent calls
+    `wait({for: "handoff"})`, which returns once the user is done (or after
+    50 seconds, to be called again; at most 30 minutes; it answers pings,
+    stops when cancelled, and notices a tab that closed), with what
+    happened meanwhile (`→ https://…/welcome (POST, 200)`) and the whole
+    page; it never learns what was typed (fields the user filled show
+    `***`), and the journal keeps no hand-off input. For logins, checks
+    meant for a person (ADR 0003), and anything else the agent should not
+    do or see.
 16. **Setting up a host.** `catpaw setup claude-code|codex|cursor` prints
     the command or configuration that registers `catpaw mcp --stdio`
     (with any `catpaw mcp` options after `--`); `--write` writes it:

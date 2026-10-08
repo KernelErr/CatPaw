@@ -79,7 +79,7 @@ pub fn journal_dir(dir: &Path) -> PathBuf {
 
 /// Writes `text` to `path` through a file beside it, so that a crash
 /// never leaves half a file; only its owner can read it.
-pub(crate) fn write_whole(path: &Path, text: &str) -> std::io::Result<()> {
+pub fn write_whole(path: &Path, text: &str) -> std::io::Result<()> {
     use std::io::Write;
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)?;

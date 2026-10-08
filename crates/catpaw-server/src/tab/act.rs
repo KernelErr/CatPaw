@@ -1575,7 +1575,7 @@ impl GroupState {
                     let cut = floor_char_boundary(&value, EVAL_CHARS);
                     let _ = write!(
                         text,
-                        "{}\n[truncated at {cut} of {} chars]",
+                        "{}\n[truncated at {cut} of {} bytes]",
                         &value[..cut],
                         value.len()
                     );

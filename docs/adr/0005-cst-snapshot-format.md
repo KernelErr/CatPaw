@@ -106,3 +106,51 @@ Playwright form one option away.
    `url=(same)` when the URL did not change, and the counts
    (`changed=3 added=1 removed=1 unchanged=33`, or `no changes`). Diff
    lines use the compact form whatever form snapshots use.
+
+## Amendment (2026-10-08): after the M3 review
+
+A review of real transcripts found the format hiding content and paying
+for news it did not have. These replace the points above they name.
+
+1. **Text keeps its blocks and its length.** Texts of different blocks
+   (`div`, `p`, `li`, table cells, anything laid out as a block) are
+   separate lines; only text of one block is joined. A text stays whole
+   in the model diffs compare, and is shown whole while the snapshot fits
+   its budget; over budget, long texts are the first thing cut, to their
+   start and `… [+N chars]`. A diff of a long text shows the stretch
+   where it changed. (Replaces the 200-character cap of point 4.)
+2. **Said once.** Besides point 4: a text that repeats its container's
+   name (a fieldset's legend under its group) is dropped; a container
+   named by the heading it starts with loses the name; an image beside
+   the button or link of its name is dropped; a paragraph around a single
+   element is that element; a heading that is one link is that link,
+   marked with its level (`e66 link "A Light in the …" [heading=3]`).
+3. **More state on the line.** A select lists its options when they are
+   at most ten and short (`[options: "Name (A to Z)", "Price (low to
+   high)"]`), else counts them; an element that takes text without being
+   a form control (`contenteditable`) is `[editable]`, and a `textbox`
+   target finds it. A label whose control is shown is never
+   `[clickable]`: its clicks go to the control.
+4. **Replacements are never rows alike.** A stale ref goes to the node a
+   diff saw the page render in its place, or else to the only node of
+   the same frame, role and name, under a parent of the same role and
+   name, that was first shown after the stale one was last seen. A node
+   shown alongside it (the next row of a list) is never its replacement,
+   and is not suggested either. (Replaces the rule of point 5.)
+5. **Header keys carry news.** A full snapshot's header gives its id and
+   only what is not the usual: `tab` when the session has more than one,
+   the URL unless the status line gave it, the title, `vp` when not
+   1280x720, `scroll` when not 0,0, `focus`, `filter` when not
+   `interesting`, `root`, `nodes` and `budget=hit` when the budget left
+   nodes out, `settled=no` with `pending`, `challenge`, `full`. A diff's
+   header gives what changed besides its lines (the URL, the title,
+   scroll, focus other than onto the element acted on) and the counts
+   that are not zero (`changed=1 removed=1`, or `no changes`).
+   `diff-from`, `doc`, `navigated-from` and `url=(same)` are gone; focus on
+   an element the page no longer shows is never given. (Replaces points 6
+   and 9's header.)
+6. **Budget.** A long list keeps as many items as fit, not ten, before
+   `[more=N nodes after eX]`; `snapshot({after: "eX"})` continues the list
+   `eX` is an item of without naming its root. (Amends point 7.)
+7. **What a tab keeps.** A tab keeps its latest snapshot of each filter
+   to diff against. (Replaces the "last eight" of point 4.)

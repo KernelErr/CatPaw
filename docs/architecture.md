@@ -23,21 +23,24 @@ sentence (`catpaw setup <host>` writes the host's MCP config, or the host
 connects to a hosted server) and occasionally take over.
 
 - One step, one round trip: an action returns the settled diff snapshot and
-  its consequences; batches run several actions per call.
-- Token-frugal and byte-stable output: compact CST, diffs, cursors, and
-  deterministic ordering so prompt caches hit.
+  its consequences; `fill` sets a whole form in one call.
+- Token-frugal and byte-stable output: compact CST, diffs, headers that
+  carry only news, continuation by `root`/`after`, and deterministic
+  ordering so prompt caches hit.
 - Failures name their cause (in-flight requests, occluding elements,
   blocking dialogs); nothing ever hangs, dialogs and downloads are events.
 - Persistent profiles: a human logs in once. The hand-off viewer shows the
   agent's tab live in the human's own browser and relays input; keystrokes
   are never logged and password values are always masked.
 - Auditability is enforced by the browser, not by the agent: an append-only
-  per-session journal (actions, consequences, snapshots, later screenshots)
-  with `catpaw log`/`catpaw replay`; a policy file that is conservative about
-  side effects by default (submissions, POST navigations, uploads, downloads
-  need confirmation unless a domain is allowed); confirmation through MCP
-  elicitation or the local viewer; attribution of host, model and task; and
-  rate/page quotas that stop runaway agents.
+  per-session journal (`--flight-log`, or a profile's `journal/`: one JSON
+  line per call, confirmation and decision, screenshots on request);
+  policy presets that are conservative about side effects by default
+  (submissions, POST navigations and uploads need confirmation unless a
+  host is trusted; `--allowed-domain` bounds where tabs go); confirmation
+  through MCP elicitation or a local approval page with a key the agent
+  never sees. Planned: attribution of host, model and task in the
+  journal, and rate/page quotas that stop runaway agents.
 
 ## Crate map
 

@@ -99,8 +99,6 @@ pub mod outcome {
     pub const BLOCKED: &str = "blocked";
     /// How to get a confirmation approved, before its URL.
     pub const ASK_USER: &str = "ask the user to approve at";
-    /// How to go on once it is.
-    pub const REISSUE: &str = "then repeat the same call with confirmation:";
     /// A confirmation the user has not answered yet.
     pub const STILL_PENDING: &str = "(still pending)";
     /// The reason a policy gives for asking.
@@ -118,7 +116,6 @@ pub mod outcome {
 /// Words that start consequence lines (`! <word> ...`), in the order the
 /// lines appear.
 pub mod consequence {
-    pub const NAVIGATED: &str = "navigated";
     pub const NAVIGATION_FAILED: &str = "navigation-failed";
     pub const POPUP: &str = "popup";
     pub const DOWNLOAD: &str = "download";

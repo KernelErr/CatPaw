@@ -1011,60 +1011,31 @@ fn fetch_with_scripts_on(
 
 /// Reads a `--storage` file: an object of origins, each an object of
 /// `localStorage` keys and values. A missing file is empty storage.
-fn read_storage_file(
-    path: Option<&std::path::Path>,
-) -> Result<std::collections::HashMap<String, Vec<(String, String)>>> {
-    let mut out = std::collections::HashMap::new();
-    let Some(path) = path else {
-        return Ok(out);
+fn read_storage_file(path: Option<&std::path::Path>) -> Result<catpaw_server::profile::Storage> {
+    let Some(path) = path.filter(|p| p.exists()) else {
+        return Ok(catpaw_server::profile::Storage::new());
     };
-    if !path.exists() {
-        return Ok(out);
-    }
     let text = std::fs::read_to_string(path)
         .with_context(|| format!("reading the storage file {}", path.display()))?;
-    let value: serde_json::Value = serde_json::from_str(&text)
-        .with_context(|| format!("parsing the storage file {}", path.display()))?;
-    let Some(origins) = value.as_object() else {
-        bail!("the storage file {} is not a JSON object", path.display());
-    };
-    for (origin, items) in origins {
-        let Some(items) = items.as_object() else {
-            continue;
-        };
-        let items: Vec<(String, String)> = items
-            .iter()
-            .filter_map(|(k, v)| v.as_str().map(|v| (k.clone(), v.to_string())))
-            .collect();
-        out.insert(origin.clone(), items);
-    }
-    Ok(out)
+    catpaw_server::profile::parse_storage(&text)
+        .map_err(|e| anyhow::anyhow!("parsing the storage file {}: {e}", path.display()))
 }
 
-/// Writes `localStorage` by origin to a `--storage` file.
+/// Writes storage as `--storage` reads it, readable by its owner alone.
 fn write_storage_file(
     path: &std::path::Path,
-    storage: std::collections::HashMap<String, Vec<(String, String)>>,
+    storage: catpaw_server::profile::Storage,
 ) -> Result<()> {
-    let mut origins = serde_json::Map::new();
-    let mut storage: Vec<_> = storage.into_iter().collect();
-    storage.sort();
-    for (origin, items) in storage {
-        let mut object = serde_json::Map::new();
-        for (k, v) in items {
-            object.insert(k, serde_json::Value::String(v));
-        }
-        origins.insert(origin, serde_json::Value::Object(object));
-    }
-    let text = serde_json::to_string_pretty(&serde_json::Value::Object(origins))?;
-    std::fs::write(path, text)
-        .with_context(|| format!("writing the storage file {}", path.display()))?;
-    Ok(())
+    let text = catpaw_server::profile::storage_json(&storage);
+    catpaw_server::profile::write_whole(path, &text)
+        .with_context(|| format!("writing the storage file {}", path.display()))
 }
 
+/// Writes the cookie jar where `--cookie-jar` says, readable by its owner
+/// alone.
 fn save_cookie_jar(args: &NetArgs, jar: &catpaw_net::CookieJar) -> Result<()> {
     if let Some(path) = &args.cookie_jar {
-        std::fs::write(path, jar.to_json())
+        catpaw_server::profile::write_whole(path, &jar.to_json())
             .with_context(|| format!("writing the cookie file {}", path.display()))?;
     }
     Ok(())
