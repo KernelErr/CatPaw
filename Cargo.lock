@@ -659,6 +659,7 @@ dependencies = [
  "catpaw-style",
  "catpaw-text",
  "csscolorparser",
+ "png",
  "stylo",
  "tiny-skia",
 ]

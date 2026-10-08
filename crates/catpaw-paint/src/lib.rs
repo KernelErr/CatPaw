@@ -77,9 +77,28 @@ pub fn render_png_with(
     options: &Options,
     replaced: ReplacedContent<'_>,
 ) -> Vec<u8> {
-    render_with(tree, dom, options, replaced)
-        .encode_png()
-        .expect("PNG encoding of an in-memory pixmap")
+    encode_png(render_with(tree, dom, options, replaced))
+}
+
+/// A pixmap as PNG, byte for byte what `Pixmap::encode_png` writes, with
+/// the pixels demultiplied where they are rather than in a copy (a
+/// full-page screenshot's pixmap is tens of megabytes).
+fn encode_png(pixmap: Pixmap) -> Vec<u8> {
+    let (width, height) = (pixmap.width(), pixmap.height());
+    let pixels = pixmap.take_demultiplied();
+    let mut data = Vec::new();
+    {
+        let mut encoder = png::Encoder::new(&mut data, width, height);
+        encoder.set_color(png::ColorType::Rgba);
+        encoder.set_depth(png::BitDepth::Eight);
+        let mut writer = encoder
+            .write_header()
+            .expect("PNG encoding of an in-memory pixmap");
+        writer
+            .write_image_data(&pixels)
+            .expect("PNG encoding of an in-memory pixmap");
+    }
+    data
 }
 
 /// `render_with`, with counts of the work it did.
@@ -1037,6 +1056,31 @@ mod tests {
         assert_eq!(stats.drawn, 0, "{stats:?}");
         assert!(stats.culled < 10, "{stats:?}");
         assert_eq!(ink(&pixmap, 0..400, 0..300), 0);
+    }
+
+    #[test]
+    fn a_png_is_encoded_from_the_pixmap_itself() {
+        let html = format!(
+            r#"<!doctype html><body style="margin:0;font:14px/18px sans-serif"><div style="background:#36c;width:300px;height:200px"></div>{}"#,
+            words(300)
+        );
+        let page = lay_out(&html, 1280, 720);
+        let options = Options {
+            width: 1280,
+            height: 2048,
+            scroll: (0.0, 0.0),
+            scale: 1.0,
+        };
+        let (png, large) = allocations_of(1280 * 2048 * 4, || {
+            render_png_with(&page.tree, &page.dom, &options, &|_| None)
+        });
+        // The pixmap, and no copy of it.
+        assert_eq!(large, 1, "{large} allocations as big as the pixmap");
+        // What tiny-skia's encoder writes, byte for byte.
+        let copied = render_with(&page.tree, &page.dom, &options, &|_| None)
+            .encode_png()
+            .expect("a PNG");
+        assert!(png == copied, "the encodings differ");
     }
 
     #[test]
