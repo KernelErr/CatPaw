@@ -63,6 +63,7 @@ pub(super) fn confirmation_of(call: &Call) -> Option<&str> {
         Call::Navigate(p) => p.confirmation.as_deref(),
         Call::Click(p) => p.confirmation.as_deref(),
         Call::Type(p) => p.confirmation.as_deref(),
+        Call::Fill(p) => p.confirmation.as_deref(),
         Call::Press(p) => p.confirmation.as_deref(),
         Call::Select(p) => p.confirmation.as_deref(),
         Call::Act(p) => p.confirmation.as_deref(),

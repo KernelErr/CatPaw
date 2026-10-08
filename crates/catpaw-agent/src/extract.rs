@@ -45,8 +45,57 @@ fn cells(dom: &Dom, row: NodeId) -> Vec<NodeId> {
 }
 
 /// GFM-safe cell text.
+/// The longest cell a table shows.
+const CELL_CHARS: usize = 300;
+
 fn cell_text(text: &str) -> String {
-    truncate(&collapse_whitespace(text), 80).replace('|', "\\|")
+    truncate(&collapse_whitespace(text), CELL_CHARS).replace('|', "\\|")
+}
+
+/// What a cell shows: its text, with each control in it written in its
+/// place as `[e12 link "name"]` rather than as its text.
+fn cell_content(
+    dom: &Dom,
+    node: NodeId,
+    oracle: &dyn StyleOracle,
+    assign: &mut dyn FnMut(NodeId) -> String,
+    out: &mut String,
+) {
+    for child in dom.rendered_children(node) {
+        match dom.kind(child) {
+            NodeKind::Text(t) => out.push_str(t),
+            NodeKind::Element(el) => {
+                if is_hidden(dom, child, oracle) {
+                    continue;
+                }
+                if let Some(role) = role_for(dom, child).filter(|role| is_interactive(role)) {
+                    let r = assign(child);
+                    let head = if r.is_empty() {
+                        role.to_string()
+                    } else {
+                        format!("{r} {role}")
+                    };
+                    let name = collapse_whitespace(&subtree_text(dom, child, oracle));
+                    if name.is_empty() {
+                        let _ = write!(out, " [{head}] ");
+                    } else {
+                        let _ = write!(out, " [{head} {}] ", quote(&truncate(&name, 60)));
+                    }
+                    continue;
+                }
+                match &*el.name.local {
+                    "br" => out.push(' '),
+                    "img" => {
+                        if let Some(alt) = el.attr("alt") {
+                            let _ = write!(out, " {alt} ");
+                        }
+                    }
+                    _ => cell_content(dom, child, oracle, assign, out),
+                }
+            }
+            _ => {}
+        }
+    }
 }
 
 /// Every visible table as a GFM table whose first column holds the rows'
@@ -112,40 +161,9 @@ pub fn tables(
             let row_ref = assign(row);
             let mut values: Vec<String> = Vec::with_capacity(width);
             for cell in cells(dom, row) {
-                let mut text = cell_text(&subtree_text(dom, cell, oracle));
-                let mut controls = String::new();
-                let mut names = Vec::new();
-                for control in dom.descendants(cell) {
-                    let Some(role) = role_for(dom, control) else {
-                        continue;
-                    };
-                    if !is_interactive(role) || is_hidden(dom, control, oracle) {
-                        continue;
-                    }
-                    let r = assign(control);
-                    let name = collapse_whitespace(&subtree_text(dom, control, oracle));
-                    if !controls.is_empty() {
-                        controls.push(' ');
-                    }
-                    if name.is_empty() {
-                        let _ = write!(controls, "[{r} {role}]");
-                    } else {
-                        let _ = write!(controls, "[{r} {role} {}]", quote(&truncate(&name, 40)));
-                    }
-                    names.push(name);
-                }
-                // A cell that only shows its controls' names shows the
-                // controls.
-                if !names.is_empty() && cell_text(&names.join(" ")) == text {
-                    text.clear();
-                }
-                if !controls.is_empty() {
-                    if !text.is_empty() {
-                        text.push(' ');
-                    }
-                    text.push_str(&controls);
-                }
-                values.push(text);
+                let mut content = String::new();
+                cell_content(dom, cell, oracle, &mut assign, &mut content);
+                values.push(cell_text(&content));
             }
             values.resize(width, String::new());
             let _ = writeln!(out, "| {row_ref} | {} |", values.join(" | "));

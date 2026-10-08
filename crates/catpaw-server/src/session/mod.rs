@@ -116,8 +116,8 @@ impl Host for NoHost {
 /// profile saved, or a screenshot in the journal).
 fn acts(name: &str, arguments: &Value) -> bool {
     match name {
-        "navigate" | "click" | "type" | "press" | "select" | "act" | "evaluate" | "wait"
-        | "session" => true,
+        "navigate" | "click" | "type" | "fill" | "press" | "select" | "act" | "evaluate"
+        | "wait" | "session" => true,
         "tabs" => arguments["op"] != json!("list"),
         _ => false,
     }
@@ -206,6 +206,7 @@ impl Session {
             options,
             view: View {
                 format: config.format,
+                tabs: 0,
             },
             groups: BTreeMap::new(),
             next_group: 1,
@@ -439,6 +440,10 @@ impl Session {
             Call::Type(p) => {
                 let tab = self.current_tab()?;
                 self.on_tab(tab, move |g, tab, view| g.type_text(tab, p, view))
+            }
+            Call::Fill(p) => {
+                let tab = self.current_tab()?;
+                self.on_tab(tab, move |g, tab, view| g.fill(tab, p, view))
             }
             Call::Press(p) => {
                 let tab = self.current_tab()?;

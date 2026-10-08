@@ -29,7 +29,6 @@ pub(super) struct Model {
     pub scroll: (i64, i64),
     pub viewport: (u32, u32),
     pub epoch: u64,
-    pub doc: u64,
     /// The ref of the subtree shown, when not the whole page.
     pub root: Option<u32>,
 }
@@ -67,6 +66,26 @@ fn after_item(lines: &[SnapLine], after: &str) -> Result<Vec<SnapLine>, Failure>
         .collect())
 }
 
+/// The viewport pages get unless told otherwise: not worth a header key.
+fn default_viewport() -> (u32, u32) {
+    let config = catpaw_web::PageConfig::default();
+    (config.viewport_width, config.viewport_height)
+}
+
+/// What a result shows of the page.
+pub(super) struct PageView {
+    pub text: String,
+    /// For a diff whose header says nothing but its counts: its lines (a
+    /// lone change can then go on the status line).
+    pub quiet: Option<Vec<String>>,
+}
+
+impl PageView {
+    fn whole(text: String) -> Self {
+        Self { text, quiet: None }
+    }
+}
+
 /// The size of all the lines rendered.
 fn rendered_len(lines: &[SnapLine], format: Format) -> usize {
     let mut out = String::new();
@@ -94,7 +113,6 @@ impl GroupState {
         entry.sync(page);
         entry.refs.begin_pass();
         let epoch = entry.doc_epoch;
-        let doc = entry.doc;
         let root_node: Option<(FrameId, NodeId, u32)> = match root {
             Some(text) => Some(resolve_ref(page, &mut entry.refs, text, &allowed)?),
             None => None,
@@ -113,7 +131,12 @@ impl GroupState {
             0,
         )?;
         let title = super::title_of(&state);
-        let focus = self.focus_ref(tab, top, &frames);
+        // Focus on an element the page no longer shows says nothing.
+        let focus = self.focus_ref(tab, top, &frames).filter(|&focused| {
+            lines
+                .iter()
+                .any(|l| matches!(l.kind, LineKind::Element { r, .. } if r == focused))
+        });
         Ok(Model {
             lines,
             total,
@@ -123,7 +146,6 @@ impl GroupState {
             scroll: (sx.round() as i64, sy.round() as i64),
             viewport,
             epoch,
-            doc,
             root: root_node.map(|(_, _, r)| r),
         })
     }
@@ -269,17 +291,17 @@ impl GroupState {
     }
 
     /// Keeps a whole-page model to diff later snapshots against.
-    fn remember(&mut self, tab: u32, id: u64, filter: Filter, model: Model) {
+    fn remember(&mut self, tab: u32, filter: Filter, model: Model) {
         let Some(entry) = self.tabs.get_mut(&tab) else {
             return;
         };
         entry.history.push_back(Stored {
-            id,
             filter,
             epoch: model.epoch,
-            doc: model.doc,
             url: model.url,
             title: model.title,
+            scroll: model.scroll,
+            focus: model.focus,
             lines: model.lines,
         });
         while entry.history.len() > HISTORY {
@@ -310,14 +332,16 @@ impl GroupState {
             .then(|| "cloudflare".to_string())
     }
 
-    /// A whole snapshot, rendered within the request's budget.
+    /// A whole snapshot, rendered within the request's budget. Its header
+    /// gives what is not the usual: a URL the status line did not, an
+    /// unusual viewport, a scroll, focus, a filter other than the default,
+    /// counts when the budget left some out, a page not settled.
     fn full_text(
         &mut self,
         tab: u32,
         request: &SnapRequest,
         view: View,
         full: Option<&str>,
-        navigated_from: Option<u64>,
     ) -> Result<String, Failure> {
         let model = self.model(tab, request.filter, request.extra, request.root.as_deref())?;
         let (settled, pending) = self.settledness(tab);
@@ -334,18 +358,16 @@ impl GroupState {
         let body = catpaw_agent::snapshot::render_lines(&fitted.lines, view.format);
         let header = Header {
             id,
-            tab: Some(format!("t{}", entry.id)),
-            doc: Some(model.doc),
-            navigated_from,
-            url: Some(model.url.clone()),
-            title: Some(model.title.clone()),
-            viewport: Some(model.viewport),
-            scroll: Some(model.scroll),
+            tab: (view.tabs > 1).then(|| format!("t{}", entry.id)),
+            url: (!request.url_shown).then(|| model.url.clone()),
+            title: (!model.title.is_empty()).then(|| model.title.clone()),
+            viewport: (model.viewport != default_viewport()).then_some(model.viewport),
+            scroll: (model.scroll != (0, 0)).then_some(model.scroll),
             focus: model.focus,
-            filter: Some(request.filter),
+            filter: (request.filter != Filter::Interesting).then_some(request.filter),
             root: model.root,
-            nodes: Some((shown.len() - truncated, model.total)),
-            settled: Some(settled),
+            nodes: (truncated > 0).then_some((shown.len() - truncated, model.total)),
+            settled: (!settled).then_some(false),
             pending,
             challenge,
             budget_hit: truncated > 0,
@@ -361,7 +383,7 @@ impl GroupState {
         }
         self.mark(tab, id);
         if request.root.is_none() && request.extra == ExtraAttrs::default() {
-            self.remember(tab, id, request.filter, model);
+            self.remember(tab, request.filter, model);
         }
         Ok(text.trim_end().to_string())
     }
@@ -373,7 +395,7 @@ impl GroupState {
         request: &SnapRequest,
         view: View,
     ) -> Result<String, Failure> {
-        self.full_text(tab, request, view, None, None)
+        self.full_text(tab, request, view, None)
     }
 
     pub(crate) fn snapshot(&mut self, tab: u32, p: params::Snapshot, view: View) -> CallResult {
@@ -395,6 +417,8 @@ impl GroupState {
             after: p.after,
             max_tokens: p.max_tokens.unwrap_or(SNAPSHOT_TOKENS).max(200),
             extra,
+            url_shown: false,
+            acted: None,
         };
         let text = if p.diff && request.root.is_none() {
             self.diff_or_full(tab, &request, view)?
@@ -405,33 +429,52 @@ impl GroupState {
     }
 
     /// What the page looks like after an action, as `mode` asks: what
-    /// changed (the default), all of it, or nothing.
+    /// changed (the default), all of it, or nothing. `url_shown`: the
+    /// status line gives the URL already.
     pub(super) fn page_view(
         &mut self,
         tab: u32,
         mode: Option<SnapshotMode>,
         view: View,
-    ) -> Result<String, Failure> {
+        url_shown: bool,
+        acted: Option<u32>,
+    ) -> Result<PageView, Failure> {
         if !self.tabs.contains_key(&tab) {
-            return Ok(String::new());
+            return Ok(PageView::whole(String::new()));
         }
-        let request = SnapRequest::default();
+        let request = SnapRequest {
+            url_shown,
+            acted,
+            ..SnapRequest::default()
+        };
         match mode.unwrap_or(SnapshotMode::Diff) {
-            SnapshotMode::None => Ok(String::new()),
-            SnapshotMode::Full => self.snapshot_text(tab, &request, view),
-            SnapshotMode::Diff => self.diff_or_full(tab, &request, view),
+            SnapshotMode::None => Ok(PageView::whole(String::new())),
+            SnapshotMode::Full => self.snapshot_text(tab, &request, view).map(PageView::whole),
+            SnapshotMode::Diff => self.diff_view(tab, &request, view),
         }
     }
 
-    /// What changed since the last snapshot with the same filter; the whole
-    /// snapshot when there is none to compare with, the document changed,
-    /// or the changes are most of the page.
+    /// [`GroupState::diff_view`] as text.
     fn diff_or_full(
         &mut self,
         tab: u32,
         request: &SnapRequest,
         view: View,
     ) -> Result<String, Failure> {
+        self.diff_view(tab, request, view).map(|v| v.text)
+    }
+
+    /// What changed since the last snapshot with the same filter; the whole
+    /// snapshot when there is none to compare with, the document changed,
+    /// or the changes are most of the page. The header gives what changed
+    /// besides the lines (the URL, the title, scroll, focus) and a page not
+    /// settled.
+    fn diff_view(
+        &mut self,
+        tab: u32,
+        request: &SnapRequest,
+        view: View,
+    ) -> Result<PageView, Failure> {
         let model = self.model(tab, request.filter, request.extra, None)?;
         let entry = self.tabs.get(&tab).expect("model found the tab");
         let baseline = entry
@@ -440,22 +483,28 @@ impl GroupState {
             .rev()
             .find(|s| s.filter == request.filter);
         let Some(baseline) = baseline else {
-            return self.full_text(tab, request, view, Some("no-baseline"), None);
+            return self
+                .full_text(tab, request, view, Some("no-baseline"))
+                .map(PageView::whole);
         };
         if baseline.epoch != model.epoch {
-            let from = baseline.doc;
-            return self.full_text(tab, request, view, Some("navigated"), Some(from));
+            return self
+                .full_text(tab, request, view, Some("navigated"))
+                .map(PageView::whole);
         }
         let diff = catpaw_agent::diff(&baseline.lines, &model.lines);
         let budget = token_bytes(request.max_tokens);
         let diff_len: usize = diff.lines.iter().map(|l| l.len() + 1).sum();
         if diff_len * 10 > rendered_len(&model.lines, view.format) * 6 || diff_len > budget {
-            return self.full_text(tab, request, view, Some("large"), None);
+            return self
+                .full_text(tab, request, view, Some("large"))
+                .map(PageView::whole);
         }
-        let (baseline_id, same_url, title_changed) = (
-            baseline.id,
+        let (same_url, title_changed, scroll_from, focus_from) = (
             baseline.url == model.url,
             baseline.title != model.title,
+            baseline.scroll,
+            baseline.focus,
         );
         let (settled, pending) = self.settledness(tab);
         let challenge = self.challenge(tab);
@@ -466,27 +515,36 @@ impl GroupState {
         let id = entry.take_id();
         let header = Header {
             id,
-            diff_from: Some(baseline_id),
-            tab: Some(format!("t{}", entry.id)),
-            doc: Some(model.doc),
-            url: Some(model.url.clone()),
-            same_url,
+            tab: (view.tabs > 1).then(|| format!("t{}", entry.id)),
+            url: (!same_url && !request.url_shown).then(|| model.url.clone()),
             title: title_changed.then(|| model.title.clone()),
-            scroll: Some(model.scroll),
-            focus: model.focus,
-            settled: Some(settled),
+            scroll: (model.scroll != scroll_from).then_some(model.scroll),
+            focus: model
+                .focus
+                .filter(|&f| model.focus != focus_from && Some(f) != request.acted),
+            settled: (!settled).then_some(false),
             pending,
             challenge,
             stats: Some(diff.stats()),
             ..Header::default()
         };
+        let quiet = header.tab.is_none()
+            && header.url.is_none()
+            && header.title.is_none()
+            && header.scroll.is_none()
+            && header.focus.is_none()
+            && header.settled.is_none()
+            && header.challenge.is_none();
         let mut text = header.render();
         if !diff.is_empty() {
             text.push('\n');
             text.push_str(&diff.text());
         }
         self.mark(tab, id);
-        self.remember(tab, id, request.filter, model);
-        Ok(text.trim_end().to_string())
+        self.remember(tab, request.filter, model);
+        Ok(PageView {
+            text: text.trim_end().to_string(),
+            quiet: quiet.then(|| diff.lines.clone()),
+        })
     }
 }

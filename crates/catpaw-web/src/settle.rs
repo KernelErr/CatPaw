@@ -263,7 +263,7 @@ impl RequestClass {
             RequestClass::Polling => "polling",
             RequestClass::IgnoredHost => "analytics",
             RequestClass::SlowThirdParty => "slow third party",
-            RequestClass::LongStream => "stream",
+            RequestClass::LongStream => "streaming",
             RequestClass::SlowAsset => "slow asset",
             RequestClass::Held => "held",
         }
@@ -363,6 +363,20 @@ impl Drop for InitiatorGuard<'_> {
     fn drop(&mut self) {
         self.page.settle.initiator.set(self.saved);
     }
+}
+
+/// Whether the work running now is a polling timer's, as the default
+/// settle policy judges it.
+pub(crate) fn polling_now(page: &PageState) -> bool {
+    let Some(Initiator::Timer { site: Some(i) }) = page.settle.initiator.get() else {
+        return false;
+    };
+    let policy = SettlePolicy::default();
+    page.settle
+        .sites
+        .borrow()
+        .get(i)
+        .is_some_and(|site| policy.is_polling(site))
 }
 
 /// The context new work is attributed to now.

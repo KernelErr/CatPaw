@@ -1,6 +1,6 @@
 > navigate {"url":"https://the-internet.herokuapp.com/dynamic_loading/2"}
 ok navigate → https://the-internet.herokuapp.com/dynamic_loading/2 (200)
-# s1 tab=t1 doc=d1 url=https://the-internet.herokuapp.com/dynamic_loading/2 title="The Internet" vp=1280x720 scroll=0,0 filter=interesting nodes=6/37 settled=yes
+# s1 title="The Internet"
 e1 link "Fork me on GitHub"
 e2 heading "Dynamically Loaded Page Elements" [level=3]
 e3 heading "Example 2: Element rendered after the fact" [level=4]
@@ -10,13 +10,13 @@ e5 link "Elemental Selenium"
 
 > click {"target":"button \"Start\""}
 ok click e4 button "Start"
-# s2 diff-from=s1 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e4 settled=yes changed=0 added=1 removed=1 unchanged=4
+# s2 added=1 removed=1
 + text[0] "Loading..."
 - e4 button "Start"
 
 > wait {"for":"text","text":"Hello World!"}
 ok wait text "Hello World!" (4.9s)
-# s3 diff-from=s2 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e4 settled=yes changed=0 added=1 removed=1 unchanged=4
+# s3 added=1 removed=1
 + e6 heading "Hello World!" [level=4] (after e3)
 - text[0] "Loading..."
 

@@ -214,6 +214,18 @@ pub(crate) fn scroll_size(page: &PageState, node: NodeId) -> (f32, f32) {
     })
 }
 
+/// Whether an element scrolls its content up and down (a scroll container
+/// with more content than room).
+pub(crate) fn scrolls_vertically(page: &PageState, node: NodeId) -> bool {
+    with_layout(page, |tree, dom| {
+        !is_viewport_element(dom, node)
+            && tree.box_of(node).is_some_and(|id| {
+                let m = tree.scroll_metrics(id);
+                tree.is_scroll_container(id) && m.scroll_height > m.client.height + 0.5
+            })
+    })
+}
+
 /// `scrollLeft`/`scrollTop`.
 pub(crate) fn scroll_position(page: &PageState, node: NodeId) -> (f32, f32) {
     let is_viewport = with_layout(page, |_, dom| is_viewport_element(dom, node));

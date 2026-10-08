@@ -2,6 +2,7 @@
 //! Accessible Name and Description Computation, enough for the snapshot to
 //! match what Chromium-based agent tools show.
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 
 use catpaw_dom::{Dom, ElementData, NodeId, NodeKind};
@@ -289,11 +290,66 @@ pub fn is_layout_table(dom: &Dom, table: NodeId) -> bool {
     max_cols <= 1
 }
 
+/// What one pass over documents that do not change meanwhile keeps (see
+/// [`in_one_pass`]), per document: which tables are for layout, and the
+/// elements by id.
+#[derive(Default)]
+struct PassCache {
+    layout_tables: HashMap<(usize, NodeId), bool>,
+    ids: HashMap<usize, HashMap<String, NodeId>>,
+}
+
+thread_local! {
+    static PASS: RefCell<Option<PassCache>> = const { RefCell::new(None) };
+}
+
+/// The key of a document within a pass: where it lives, which stays put
+/// while the pass borrows it.
+fn doc_key(dom: &Dom) -> usize {
+    dom as *const Dom as usize
+}
+
+/// Runs `f` as one pass over documents that do not change while it runs
+/// (they are borrowed): answers about layout tables and ids are worked out
+/// once each, rather than for every row and every reference.
+pub fn in_one_pass<R>(f: impl FnOnce() -> R) -> R {
+    struct Restore(Option<PassCache>);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            let outer = self.0.take();
+            PASS.with(|pass| *pass.borrow_mut() = outer);
+        }
+    }
+    let outer = PASS.with(|pass| pass.borrow_mut().replace(PassCache::default()));
+    let _restore = Restore(outer);
+    f()
+}
+
+/// [`is_layout_table`], kept for the pass when one runs.
+fn layout_table(dom: &Dom, table: NodeId) -> bool {
+    let key = (doc_key(dom), table);
+    let known = PASS.with(|pass| {
+        pass.borrow()
+            .as_ref()
+            .and_then(|cache| cache.layout_tables.get(&key).copied())
+    });
+    if let Some(known) = known {
+        return known;
+    }
+    let answer = is_layout_table(dom, table);
+    PASS.with(|pass| {
+        if let Some(cache) = pass.borrow_mut().as_mut() {
+            cache.layout_tables.insert(key, answer);
+        }
+    });
+    answer
+}
+
 /// Whether `id` (a table part) belongs to a layout table.
 fn in_layout_table(dom: &Dom, id: NodeId) -> bool {
     dom.ancestors(id)
         .find(|&a| dom.is_html_element(a, "table"))
-        .is_some_and(|t| is_layout_table(dom, t))
+        .is_some_and(|t| layout_table(dom, t))
 }
 
 /// The implicit role of an HTML element, or `None` for generic / no role.
@@ -351,7 +407,7 @@ fn implicit_role(dom: &Dom, id: NodeId, el: &ElementData) -> Option<&'static str
         "dt" => "term",
         "dd" => "definition",
         "table" => {
-            if is_layout_table(dom, id) {
+            if layout_table(dom, id) {
                 return None;
             }
             "table"
@@ -622,9 +678,29 @@ pub fn is_block_level(local: &str) -> bool {
     )
 }
 
+/// The first element in tree order with this id; within a pass, from an
+/// index made once per document.
 fn by_id(dom: &Dom, id: &str) -> Option<NodeId> {
-    dom.descendants(dom.document())
-        .find(|&n| dom.attr(n, "id") == Some(id))
+    let indexed = PASS.with(|pass| {
+        let mut pass = pass.borrow_mut();
+        let cache = pass.as_mut()?;
+        let index = cache.ids.entry(doc_key(dom)).or_insert_with(|| {
+            let mut index = HashMap::new();
+            for n in dom.descendants(dom.document()) {
+                if let Some(id) = dom.attr(n, "id") {
+                    index.entry(id.to_string()).or_insert(n);
+                }
+            }
+            index
+        });
+        Some(index.get(id).copied())
+    });
+    match indexed {
+        Some(found) => found,
+        None => dom
+            .descendants(dom.document())
+            .find(|&n| dom.attr(n, "id") == Some(id)),
+    }
 }
 
 fn nearest_ancestor_label(dom: &Dom, id: NodeId) -> Option<NodeId> {

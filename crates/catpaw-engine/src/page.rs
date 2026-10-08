@@ -277,6 +277,124 @@ pub enum PageEvent {
         url: Url,
         reason: String,
     },
+    /// A navigation brought a file to save rather than a page to show (an
+    /// attachment, a type pages are not made of, a `download` link): the
+    /// document stayed, and the file is kept (see [`Page::downloads`]).
+    Download {
+        url: Url,
+        name: String,
+        mime: String,
+        size: usize,
+    },
+}
+
+/// A file a navigation brought (see [`PageEvent::Download`]).
+#[derive(Clone, Debug)]
+pub struct Download {
+    pub url: Url,
+    pub name: String,
+    pub mime: String,
+    /// The bytes, the first [`DOWNLOAD_KEPT`] of them.
+    pub bytes: Vec<u8>,
+    pub size: usize,
+}
+
+/// The most of one download a page keeps.
+pub const DOWNLOAD_KEPT: usize = 8 * 1024 * 1024;
+/// Downloads a page keeps, the latest.
+const DOWNLOADS_KEPT: usize = 8;
+
+/// Types a browser shows as a page; others are saved.
+fn shows_as_page(mime: &str) -> bool {
+    matches!(
+        mime,
+        "" | "text/html"
+            | "application/xhtml+xml"
+            | "text/plain"
+            | "text/xml"
+            | "application/xml"
+            | "application/json"
+            | "image/svg+xml"
+    ) || mime.ends_with("+xml")
+        || mime.ends_with("+json")
+}
+
+/// The file a response is when it is not a page: an attachment, a type
+/// pages are not made of, or what a `download` link asked for.
+fn as_download(fetched: &FetchedDocument, asked: Option<&str>) -> Option<Download> {
+    let response = &fetched.response;
+    if !response.status.is_success() {
+        return None;
+    }
+    let mime = response.mime_essence().unwrap_or_default();
+    let attachment = response
+        .headers
+        .get("content-disposition")
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|v| v.trim().to_ascii_lowercase().starts_with("attachment"));
+    if asked.is_none() && !attachment && shows_as_page(&mime) {
+        return None;
+    }
+    let size = response.body.len();
+    Some(Download {
+        url: response.url.clone(),
+        name: download_name(response, asked.unwrap_or("")),
+        mime,
+        bytes: response.body[..size.min(DOWNLOAD_KEPT)].to_vec(),
+        size,
+    })
+}
+
+/// The file name a response offers: `Content-Disposition`'s, else the
+/// last part of its URL.
+fn download_name(response: &catpaw_net::Response, asked: &str) -> String {
+    if !asked.trim().is_empty() {
+        return asked.trim().to_string();
+    }
+    let header = response
+        .headers
+        .get("content-disposition")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    for part in header.split(';').map(str::trim) {
+        if let Some(name) = part.strip_prefix("filename*=") {
+            let name = name.rsplit("''").next().unwrap_or(name);
+            return percent_decode(name.trim_matches('"'));
+        }
+    }
+    for part in header.split(';').map(str::trim) {
+        if let Some(name) = part.strip_prefix("filename=") {
+            return name.trim_matches('"').to_string();
+        }
+    }
+    response
+        .url
+        .path_segments()
+        .and_then(|mut s| s.next_back())
+        .filter(|s| !s.is_empty())
+        .map(percent_decode)
+        .unwrap_or_else(|| "download".to_string())
+}
+
+fn percent_decode(text: &str) -> String {
+    let bytes = text.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%'
+            && let Some(v) = bytes
+                .get(i + 1..i + 3)
+                .and_then(|hex| std::str::from_utf8(hex).ok())
+                .and_then(|hex| u8::from_str_radix(hex, 16).ok())
+        {
+            out.push(v);
+            i += 3;
+            continue;
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
 }
 
 /// A frame of a page, as the embedder sees it.
@@ -324,6 +442,8 @@ pub struct Page {
     gate: Option<NavigationGate>,
     /// What the gate holds, at most one navigation per frame.
     held: Vec<HeldNavigation>,
+    /// Files navigations brought, the latest last.
+    downloads: Vec<Download>,
     /// Set while a held navigation is released: it passes the gate.
     releasing: bool,
 }
@@ -469,6 +589,7 @@ impl Page {
             events: Vec::new(),
             gate: None,
             held: Vec::new(),
+            downloads: Vec::new(),
             releasing: false,
         }
     }
@@ -534,6 +655,11 @@ impl Page {
     /// closes ([`PageEvent::HoldDropped`]).
     pub fn set_navigation_gate(&mut self, gate: Option<NavigationGate>) {
         self.gate = gate;
+    }
+
+    /// The files navigations brought, the latest last (a few are kept).
+    pub fn downloads(&self) -> &[Download] {
+        &self.downloads
     }
 
     /// The navigations the gate holds.
@@ -794,6 +920,20 @@ impl Page {
                 return Err(e.into());
             }
         };
+        // A file to save rather than a page to show: the document stays.
+        if let Some(download) = as_download(&fetched, request.download.as_deref()) {
+            self.events.push(PageEvent::Download {
+                url: download.url.clone(),
+                name: download.name.clone(),
+                mime: download.mime.clone(),
+                size: download.size,
+            });
+            self.downloads.push(download);
+            if self.downloads.len() > DOWNLOADS_KEPT {
+                self.downloads.remove(0);
+            }
+            return Ok(false);
+        }
         // The new document comes: what the old one held, had on its way
         // or kept open goes.
         self.unhold(FrameId(0));

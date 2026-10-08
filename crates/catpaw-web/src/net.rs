@@ -47,6 +47,8 @@ pub struct NetRequest {
     /// itself and each redirect hop share this number (0 when no script
     /// made the request).
     pub chain: u64,
+    /// Started by a timer that keeps setting itself again (polling).
+    pub polling: bool,
 }
 
 impl NetRequest {
@@ -62,6 +64,7 @@ impl NetRequest {
             follow_redirects: true,
             site: None,
             chain: 0,
+            polling: false,
         }
     }
 }
@@ -297,6 +300,8 @@ pub fn start_request(
         });
         return None;
     };
+    let mut request = request;
+    request.polling = crate::settle::polling_now(page);
     let info = crate::settle::RequestInfo {
         method: request.method.clone(),
         url: request.url.clone(),

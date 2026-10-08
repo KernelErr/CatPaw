@@ -67,7 +67,11 @@ impl GroupState {
                     ..
                 } => {
                     parent_stack.push((line.depth, *r));
-                    if role.is_some_and(|wanted| wanted != *line_role) {
+                    // Rich text editors take text as a textbox does.
+                    let editable = attrs.iter().any(|(k, _)| *k == "editable");
+                    if role.is_some_and(|wanted| {
+                        wanted != *line_role && !(wanted == "textbox" && editable)
+                    }) {
                         continue;
                     }
                     let shown = [Some(name.as_str()), inline.as_deref()];

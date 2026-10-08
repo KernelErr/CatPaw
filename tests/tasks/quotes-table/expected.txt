@@ -1,116 +1,114 @@
 > navigate {"url":"https://quotes.toscrape.com/tableful/"}
 ok navigate → https://quotes.toscrape.com/tableful/ (200)
-# s1 tab=t1 doc=d1 url=https://quotes.toscrape.com/tableful/ title="Quotes to Scrape" vp=1280x720 scroll=0,0 filter=interesting nodes=83/124 settled=yes
-e1 heading [level=1]
-  e2 link "Quotes to Scrape"
-e3 paragraph
-  e4 link "Login"
-e5 heading "Top Ten tags" [level=3]
-e6 link "love"
+# s1 title="Quotes to Scrape"
+e1 link "Quotes to Scrape" [heading=1]
+e2 link "Login"
+e3 heading "Top Ten tags" [level=3]
+e4 link "love"
 text: (14)
-e7 link "inspirational"
+e5 link "inspirational"
 text: (13)
-e8 link "life"
+e6 link "life"
 text: (13)
-e9 link "humor"
+e7 link "humor"
 text: (12)
-e10 link "books"
+e8 link "books"
 text: (11)
-e11 link "reading"
+e9 link "reading"
 text: (7)
-e12 link "friendship"
+e10 link "friendship"
 text: (5)
-e13 link "friends"
+e11 link "friends"
 text: (4)
-e14 link "truth"
+e12 link "truth"
 text: (4)
-e15 link "simile"
+e13 link "simile"
 text: (3)
 text: “The world as we have created it is a process of our thinking. It cannot be changed without changing our thinking.” Author: Albert Einstein
 text: Tags:
-e16 link "change"
-e17 link "deep-thoughts"
-e18 link "thinking"
-e19 link "world"
+e14 link "change"
+e15 link "deep-thoughts"
+e16 link "thinking"
+e17 link "world"
 text: “It is our choices, Harry, that show what we truly are, far more than our abilities.” Author: J.K. Rowling
 text: Tags:
-e20 link "abilities"
-e21 link "choices"
+e18 link "abilities"
+e19 link "choices"
 text: “There are only two ways to live your life. One is as though nothing is a miracle. The other is as though everything is a miracle.” Author: Albert Einstein
 text: Tags:
-e22 link "inspirational"
-e23 link "life"
-e24 link "live"
-e25 link "miracle"
-e26 link "miracles"
+e20 link "inspirational"
+e21 link "life"
+e22 link "live"
+e23 link "miracle"
+e24 link "miracles"
 text: “The person, be it gentleman or lady, who has not pleasure in a good novel, must be intolerably stupid.” Author: Jane Austen
 text: Tags:
-e27 link "aliteracy"
-e28 link "books"
-e29 link "classic"
-e30 link "humor"
+e25 link "aliteracy"
+e26 link "books"
+e27 link "classic"
+e28 link "humor"
 text: “Imperfection is beauty, madness is genius and it's better to be absolutely ridiculous than absolutely boring.” Author: Marilyn Monroe
 text: Tags:
-e31 link "be-yourself"
-e32 link "inspirational"
+e29 link "be-yourself"
+e30 link "inspirational"
 text: “Try not to become a man of success. Rather become a man of value.” Author: Albert Einstein
 text: Tags:
-e33 link "adulthood"
-e34 link "success"
-e35 link "value"
+e31 link "adulthood"
+e32 link "success"
+e33 link "value"
 text: “It is better to be hated for what you are than to be loved for what you are not.” Author: André Gide
 text: Tags:
-e36 link "life"
-e37 link "love"
+e34 link "life"
+e35 link "love"
 text: “I have not failed. I've just found 10,000 ways that won't work.” Author: Thomas A. Edison
 text: Tags:
-e38 link "edison"
-e39 link "failure"
-e40 link "inspirational"
-e41 link "paraphrased"
+e36 link "edison"
+e37 link "failure"
+e38 link "inspirational"
+e39 link "paraphrased"
 text: “A woman is like a tea bag; you never know how strong it is until it's in hot water.” Author: Eleanor Roosevelt
 text: Tags:
-e42 link "misattributed-eleanor-roosevelt"
+e40 link "misattributed-eleanor-roosevelt"
 text: “A day without sunshine is like, you know, night.” Author: Steve Martin
 text: Tags:
-e43 link "humor"
-e44 link "obvious"
-e45 link "simile"
-e46 link "Next"
-e47 contentinfo
-  e48 paragraph
+e41 link "humor"
+e42 link "obvious"
+e43 link "simile"
+e44 link "Next"
+e45 contentinfo
+  e46 paragraph
     text: Quotes by:
-    e49 link "GoodReads.com"
-  e50 paragraph
+    e47 link "GoodReads.com"
+  e48 paragraph
     text: Made with ❤ by
-    e51 link "Zyte"
+    e49 link "Zyte"
 
 > read {"maxTokens":1500,"view":"tables"}
 ok read tables
-table e52 (22 rows)
+table e50 (22 rows)
 | ref | 1 | 2 |
 |---|---|---|
-| e53 |  | Top Ten tags love (14) inspirational (13) life (13) humor (12) books (11) readi… [e6 link "love"] [e7 link "inspirational"] [e8 link "life"] [e9 link "humor"] [e10 link "books"] [e11 link "reading"] [e12 link "friendship"] [e13 link "friends"] [e14 link "truth"] [e15 link "simile"] |
-| e54 | “The world as we have created it is a process of our thinking. It cannot be cha… |  |
-| e55 | Tags: change deep-thoughts thinking world [e16 link "change"] [e17 link "deep-thoughts"] [e18 link "thinking"] [e19 link "world"] |  |
-| e56 | “It is our choices, Harry, that show what we truly are, far more than our abili… |  |
-| e57 | Tags: abilities choices [e20 link "abilities"] [e21 link "choices"] |  |
-| e58 | “There are only two ways to live your life. One is as though nothing is a mirac… |  |
-| e59 | Tags: inspirational life live miracle miracles [e22 link "inspirational"] [e23 link "life"] [e24 link "live"] [e25 link "miracle"] [e26 link "miracles"] |  |
-| e60 | “The person, be it gentleman or lady, who has not pleasure in a good novel, mus… |  |
-| e61 | Tags: aliteracy books classic humor [e27 link "aliteracy"] [e28 link "books"] [e29 link "classic"] [e30 link "humor"] |  |
-| e62 | “Imperfection is beauty, madness is genius and it's better to be absolutely rid… |  |
-| e63 | Tags: be-yourself inspirational [e31 link "be-yourself"] [e32 link "inspirational"] |  |
-| e64 | “Try not to become a man of success. Rather become a man of value.” Author: Alb… |  |
-| e65 | Tags: adulthood success value [e33 link "adulthood"] [e34 link "success"] [e35 link "value"] |  |
-| e66 | “It is better to be hated for what you are than to be loved for what you are no… |  |
-| e67 | Tags: life love [e36 link "life"] [e37 link "love"] |  |
-| e68 | “I have not failed. I've just found 10,000 ways that won't work.” Author: Thoma… |  |
-| e69 | Tags: edison failure inspirational paraphrased [e38 link "edison"] [e39 link "failure"] [e40 link "inspirational"] [e41 link "paraphrased"] |  |
-| e70 | “A woman is like a tea bag; you never know how strong it is until it's in hot w… |  |
-| e71 | Tags: misattributed-eleanor-roosevelt [e42 link "misattributed-eleanor-roosevelt"] |  |
-| e72 | “A day without sunshine is like, you know, night.” Author: Steve Martin |  |
-| e73 | Tags: humor obvious simile [e43 link "humor"] [e44 link "obvious"] [e45 link "simile"] |  |
-| e74 |  | [e46 link "Next"] |
+| e51 |  | Top Ten tags [e4 link "love"] (14) [e5 link "inspirational"] (13) [e6 link "life"] (13) [e7 link "humor"] (12) [e8 link "books"] (11) [e9 link "reading"] (7) [e10 link "friendship"] (5) [e11 link "friends"] (4) [e12 link "truth"] (4) [e13 link "simile"] (3) |
+| e52 | “The world as we have created it is a process of our thinking. It cannot be changed without changing our thinking.” Author: Albert Einstein |  |
+| e53 | Tags: [e14 link "change"] [e15 link "deep-thoughts"] [e16 link "thinking"] [e17 link "world"] |  |
+| e54 | “It is our choices, Harry, that show what we truly are, far more than our abilities.” Author: J.K. Rowling |  |
+| e55 | Tags: [e18 link "abilities"] [e19 link "choices"] |  |
+| e56 | “There are only two ways to live your life. One is as though nothing is a miracle. The other is as though everything is a miracle.” Author: Albert Einstein |  |
+| e57 | Tags: [e20 link "inspirational"] [e21 link "life"] [e22 link "live"] [e23 link "miracle"] [e24 link "miracles"] |  |
+| e58 | “The person, be it gentleman or lady, who has not pleasure in a good novel, must be intolerably stupid.” Author: Jane Austen |  |
+| e59 | Tags: [e25 link "aliteracy"] [e26 link "books"] [e27 link "classic"] [e28 link "humor"] |  |
+| e60 | “Imperfection is beauty, madness is genius and it's better to be absolutely ridiculous than absolutely boring.” Author: Marilyn Monroe |  |
+| e61 | Tags: [e29 link "be-yourself"] [e30 link "inspirational"] |  |
+| e62 | “Try not to become a man of success. Rather become a man of value.” Author: Albert Einstein |  |
+| e63 | Tags: [e31 link "adulthood"] [e32 link "success"] [e33 link "value"] |  |
+| e64 | “It is better to be hated for what you are than to be loved for what you are not.” Author: André Gide |  |
+| e65 | Tags: [e34 link "life"] [e35 link "love"] |  |
+| e66 | “I have not failed. I've just found 10,000 ways that won't work.” Author: Thomas A. Edison |  |
+| e67 | Tags: [e36 link "edison"] [e37 link "failure"] [e38 link "inspirational"] [e39 link "paraphrased"] |  |
+| e68 | “A woman is like a tea bag; you never know how strong it is until it's in hot water.” Author: Eleanor Roosevelt |  |
+| e69 | Tags: [e40 link "misattributed-eleanor-roosevelt"] |  |
+| e70 | “A day without sunshine is like, you know, night.” Author: Steve Martin |  |
+| e71 | Tags: [e41 link "humor"] [e42 link "obvious"] [e43 link "simile"] |  |
+| e72 |  | [e44 link "Next"] |
 
 ? text_contains "Albert Einstein" → yes

@@ -285,6 +285,18 @@ fn follow_link(cx: &mut Cx<'_>, link: NodeId) {
         }
         return;
     }
+    // `download` saves the response instead (same-origin links only, as
+    // browsers have it).
+    let download = cx.dom().attr(link, "download").map(str::to_string);
+    if let Some(name) = download
+        && url.origin() == cx.page.url.borrow().origin()
+    {
+        *cx.page.navigation.borrow_mut() = Some(crate::NavigationRequest {
+            download: Some(name),
+            ..crate::NavigationRequest::get(url, false)
+        });
+        return;
+    }
     if link_target(cx, link).as_deref() == Some("_blank") {
         // Opened as a popup, which needs the user's action as any does.
         let _ = crate::frames::open_popup(cx, Some(url));

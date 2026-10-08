@@ -16,7 +16,7 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicU32;
 use std::time::Duration;
 
-use catpaw_agent::snapshot::quote;
+use catpaw_agent::snapshot::{LineKind, quote, truncate};
 use catpaw_agent::{ExtraAttrs, Filter, Format, RefError, RefKey, RefScope, RefTable, SnapLine};
 use catpaw_dom::NodeId;
 use catpaw_engine::{
@@ -58,6 +58,9 @@ fn token_bytes(tokens: u32) -> usize {
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct View {
     pub format: Format,
+    /// The tabs open in the session: headers name the tab when there is
+    /// more than one.
+    pub tabs: usize,
 }
 
 /// What a snapshot should show.
@@ -69,6 +72,10 @@ pub(crate) struct SnapRequest {
     pub after: Option<String>,
     pub max_tokens: u32,
     pub extra: ExtraAttrs,
+    /// The result's status line already gives the URL.
+    pub url_shown: bool,
+    /// The element the action was on: focus going to it is no news.
+    pub acted: Option<u32>,
 }
 
 impl Default for SnapRequest {
@@ -79,6 +86,8 @@ impl Default for SnapRequest {
             after: None,
             max_tokens: SNAPSHOT_TOKENS,
             extra: ExtraAttrs::default(),
+            url_shown: false,
+            acted: None,
         }
     }
 }
@@ -94,12 +103,12 @@ pub(crate) struct TabSummary {
 
 /// A snapshot a tab keeps to diff against: the whole page, as lines.
 struct Stored {
-    id: u64,
     filter: Filter,
     epoch: u64,
-    doc: u64,
     url: String,
     title: String,
+    scroll: (i64, i64),
+    focus: Option<u32>,
     lines: Vec<SnapLine>,
 }
 
@@ -120,8 +129,7 @@ struct Tab {
     opener: Option<u32>,
     refs: RefTable,
     next_snapshot: u64,
-    /// The number of the document shown (`dN`), and its epoch.
-    doc: u64,
+    /// The epoch of the document shown.
     doc_epoch: u64,
     history: VecDeque<Stored>,
     marks: VecDeque<Mark>,
@@ -130,14 +138,13 @@ struct Tab {
 }
 
 impl Tab {
-    fn new(id: u32, root: FrameId, opener: Option<u32>, epoch: u64, doc: u64) -> Self {
+    fn new(id: u32, root: FrameId, opener: Option<u32>, epoch: u64) -> Self {
         Self {
             id,
             root,
             opener,
             refs: RefTable::new(),
             next_snapshot: 1,
-            doc,
             doc_epoch: epoch,
             history: VecDeque::new(),
             marks: VecDeque::new(),
@@ -146,16 +153,46 @@ impl Tab {
     }
 
     /// Notices a new document in the tab: its refs into the old one go
-    /// stale, and the document number moves on.
+    /// stale.
     fn sync(&mut self, page: &Page) {
         let Some(epoch) = page.document_epoch(self.root) else {
             return;
         };
         if epoch != self.doc_epoch {
             self.refs.document_replaced(self.root.0, epoch);
-            self.doc += 1;
             self.doc_epoch = epoch;
         }
+    }
+
+    /// What comes before a ref in the latest snapshot, at its depth, to
+    /// place it: the nearest named element (`e14 button "View details"`),
+    /// else the nearest text.
+    fn line_before(&self, r: u32) -> Option<String> {
+        let lines = &self.history.back()?.lines;
+        let at = lines
+            .iter()
+            .position(|l| matches!(l.kind, LineKind::Element { r: lr, .. } if lr == r))?;
+        let depth = lines[at].depth;
+        let siblings = || {
+            lines[..at]
+                .iter()
+                .rev()
+                .take_while(move |l| l.depth >= depth)
+                .filter(move |l| l.depth == depth)
+        };
+        siblings()
+            .find_map(|l| match &l.kind {
+                LineKind::Element { r, role, name, .. } if !name.is_empty() => {
+                    Some(format!("e{r} {role} {}", quote(&truncate(name, 60))))
+                }
+                _ => None,
+            })
+            .or_else(|| {
+                siblings().find_map(|l| match &l.kind {
+                    LineKind::Text(t) => Some(format!("text {}", quote(&truncate(t, 40)))),
+                    _ => None,
+                })
+            })
     }
 
     fn event(&mut self, line: String) {
@@ -291,7 +328,7 @@ impl GroupState {
         install_gates(&mut page, &setup.policy);
         let epoch = page.document_epoch(FrameId(0)).unwrap_or(0);
         let mut tabs = BTreeMap::new();
-        tabs.insert(first, Tab::new(first, FrameId(0), None, epoch, 0));
+        tabs.insert(first, Tab::new(first, FrameId(0), None, epoch));
         Ok(Self {
             page,
             tabs,
@@ -688,14 +725,29 @@ impl GroupState {
     /// (`e14 button "Add to cart" (in e12 listitem "Socks")`).
     pub(super) fn describe_in_context(&self, tab: u32, r: u32) -> String {
         let mut text = self.describe(tab, r);
-        let Some(refs) = self.tabs.get(&tab).map(|t| &t.refs) else {
+        let Some(entry) = self.tabs.get(&tab) else {
             return text;
         };
-        let alike = refs
+        let refs = &entry.refs;
+        let alike: Vec<u32> = refs
             .namesakes(r)
-            .any(|other| is_live(&self.page, &other.key));
-        if alike && let Some(around) = refs.context_of(r) {
+            .filter(|other| is_live(&self.page, &other.key))
+            .filter_map(|other| refs.get(other.key))
+            .collect();
+        if alike.is_empty() {
+            return text;
+        }
+        // Where it is, when that tells it from the others: the element
+        // around it, else what comes before it on the page.
+        let around = refs.context_of(r);
+        if let Some(around) = around
+            && alike
+                .iter()
+                .all(|&other| refs.context_of(other) != Some(around))
+        {
             text.push_str(&format!(" (in {})", describe(refs, around)));
+        } else if let Some(before) = entry.line_before(r) {
+            text.push_str(&format!(" (after {before})"));
         }
         text
     }

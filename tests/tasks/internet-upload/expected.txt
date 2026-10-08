@@ -1,6 +1,6 @@
 > navigate {"url":"https://the-internet.herokuapp.com/upload"}
 ok navigate → https://the-internet.herokuapp.com/upload (200)
-# s1 tab=t1 doc=d1 url=https://the-internet.herokuapp.com/upload title="The Internet" vp=1280x720 scroll=0,0 filter=interesting nodes=8/49 settled=yes
+# s1 title="The Internet"
 e1 link "Fork me on GitHub"
 e2 heading "File Uploader" [level=3]
 e3 paragraph: Choose a file on your system and then click upload. Or, drag and drop a file into the area below.
@@ -19,7 +19,7 @@ approved
 
 > act {"confirmation":"c1","files":["hello.txt"],"kind":"upload","target":"css:#file-upload"}
 ok upload e4 button ← hello.txt (19 B)
-# s2 diff-from=s1 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e4 settled=yes no changes
+# s2 no changes
 
 > click {"target":"button \"Upload\""}
 needs_confirmation c2: click e5 button "Upload" would submit → POST https://the-internet.herokuapp.com/upload (fields: file=(file hello.txt))
@@ -30,7 +30,7 @@ approved
 
 > click {"confirmation":"c2","target":"button \"Upload\""}
 ok click e5 button "Upload" (confirmed c2) → https://the-internet.herokuapp.com/upload (POST, 200)
-# s4 tab=t1 doc=d2 navigated-from=d1 url=https://the-internet.herokuapp.com/upload title="The Internet" vp=1280x720 scroll=0,0 filter=interesting nodes=5/32 settled=yes full=navigated
+# s4 title="The Internet" full=navigated
 e8 link "Fork me on GitHub"
 e9 heading "File Uploaded!" [level=3]
 text: hello.txt

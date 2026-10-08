@@ -1,6 +1,6 @@
 > navigate {"url":"https://books.toscrape.com/"}
 ok navigate → https://books.toscrape.com/ (200)
-# s1 tab=t1 doc=d1 url=https://books.toscrape.com/ title="All products | Books to Scrape - Sandbox" vp=1280x720 scroll=0,0 filter=interesting nodes=208/541 settled=yes
+# s1 title="All products | Books to Scrape - Sandbox"
 e1 banner
   e2 link "Books to Scrape"
   text: We love being scraped!
@@ -68,360 +68,320 @@ e62 alert: Warning! This is a demo website for web scraping purposes. Prices and
 e63 list
   e64 article
     e65 link "A Light in the Attic"
-    e66 heading [level=3]
-      e67 link "A Light in the ..."
-    e68 paragraph: £51.77
-    e69 paragraph: In stock
-    e70 button "Add to basket"
-  e71 article
-    e72 link "Tipping the Velvet"
-    e73 heading [level=3]
-      e74 link "Tipping the Velvet"
-    e75 paragraph: £53.74
-    e76 paragraph: In stock
-    e77 button "Add to basket"
-  e78 article
-    e79 link "Soumission"
-    e80 heading [level=3]
-      e81 link "Soumission"
-    e82 paragraph: £50.10
-    e83 paragraph: In stock
-    e84 button "Add to basket"
-  e85 article
-    e86 link "Sharp Objects"
-    e87 heading [level=3]
-      e88 link "Sharp Objects"
-    e89 paragraph: £47.82
-    e90 paragraph: In stock
-    e91 button "Add to basket"
-  e92 article
-    e93 link "Sapiens: A Brief History of Humankind"
-    e94 heading [level=3]
-      e95 link "Sapiens: A Brief History ..."
-    e96 paragraph: £54.23
-    e97 paragraph: In stock
-    e98 button "Add to basket"
-  e99 article
-    e100 link "The Requiem Red"
-    e101 heading [level=3]
-      e102 link "The Requiem Red"
-    e103 paragraph: £22.65
+    e66 link "A Light in the ..." [heading=3]
+    e67 paragraph: £51.77
+    e68 paragraph: In stock
+    e69 button "Add to basket"
+  e70 article
+    e71 link "Tipping the Velvet"
+    e72 link "Tipping the Velvet" [heading=3]
+    e73 paragraph: £53.74
+    e74 paragraph: In stock
+    e75 button "Add to basket"
+  e76 article
+    e77 link "Soumission"
+    e78 link "Soumission" [heading=3]
+    e79 paragraph: £50.10
+    e80 paragraph: In stock
+    e81 button "Add to basket"
+  e82 article
+    e83 link "Sharp Objects"
+    e84 link "Sharp Objects" [heading=3]
+    e85 paragraph: £47.82
+    e86 paragraph: In stock
+    e87 button "Add to basket"
+  e88 article
+    e89 link "Sapiens: A Brief History of Humankind"
+    e90 link "Sapiens: A Brief History ..." [heading=3]
+    e91 paragraph: £54.23
+    e92 paragraph: In stock
+    e93 button "Add to basket"
+  e94 article
+    e95 link "The Requiem Red"
+    e96 link "The Requiem Red" [heading=3]
+    e97 paragraph: £22.65
+    e98 paragraph: In stock
+    e99 button "Add to basket"
+  e100 article
+    e101 link "The Dirty Little Secrets of Getting Your Dream Job"
+    e102 link "The Dirty Little Secrets ..." [heading=3]
+    e103 paragraph: £33.34
     e104 paragraph: In stock
     e105 button "Add to basket"
   e106 article
-    e107 link "The Dirty Little Secrets of Getting Your Dream Job"
-    e108 heading [level=3]
-      e109 link "The Dirty Little Secrets ..."
-    e110 paragraph: £33.34
-    e111 paragraph: In stock
-    e112 button "Add to basket"
-  e113 article
-    e114 link "The Coming Woman: A Novel Based on the Life of the Infamous Feminist, Victoria Woodhull"
-    e115 heading [level=3]
-      e116 link "The Coming Woman: A ..."
-    e117 paragraph: £17.93
-    e118 paragraph: In stock
-    e119 button "Add to basket"
-  e120 article
-    e121 link "The Boys in the Boat: Nine Americans and Their Epic Quest for Gold at the 1936 Berlin Olympics"
-    e122 heading [level=3]
-      e123 link "The Boys in the ..."
-    e124 paragraph: £22.60
-    e125 paragraph: In stock
-    e126 button "Add to basket"
-  e127 article
-    e128 link "The Black Maria"
-    e129 heading [level=3]
-      e130 link "The Black Maria"
-    e131 paragraph: £52.15
-    e132 paragraph: In stock
-    e133 button "Add to basket"
-  e134 article
-    e135 link "Starving Hearts (Triangular Trade Trilogy, #1)"
-    e136 heading [level=3]
-      e137 link "Starving Hearts (Triangular Trade ..."
-    e138 paragraph: £13.99
-    e139 paragraph: In stock
-    e140 button "Add to basket"
-  e141 article
-    e142 link "Shakespeare's Sonnets"
-    e143 heading [level=3]
-      e144 link "Shakespeare's Sonnets"
-    e145 paragraph: £20.66
+    e107 link "The Coming Woman: A Novel Based on the Life of the Infamous Feminist, Victoria Woodhull"
+    e108 link "The Coming Woman: A ..." [heading=3]
+    e109 paragraph: £17.93
+    e110 paragraph: In stock
+    e111 button "Add to basket"
+  e112 article
+    e113 link "The Boys in the Boat: Nine Americans and Their Epic Quest for Gold at the 1936 Berlin Olympics"
+    e114 link "The Boys in the ..." [heading=3]
+    e115 paragraph: £22.60
+    e116 paragraph: In stock
+    e117 button "Add to basket"
+  e118 article
+    e119 link "The Black Maria"
+    e120 link "The Black Maria" [heading=3]
+    e121 paragraph: £52.15
+    e122 paragraph: In stock
+    e123 button "Add to basket"
+  e124 article
+    e125 link "Starving Hearts (Triangular Trade Trilogy, #1)"
+    e126 link "Starving Hearts (Triangular Trade ..." [heading=3]
+    e127 paragraph: £13.99
+    e128 paragraph: In stock
+    e129 button "Add to basket"
+  e130 article
+    e131 link "Shakespeare's Sonnets"
+    e132 link "Shakespeare's Sonnets" [heading=3]
+    e133 paragraph: £20.66
+    e134 paragraph: In stock
+    e135 button "Add to basket"
+  e136 article
+    e137 link "Set Me Free"
+    e138 link "Set Me Free" [heading=3]
+    e139 paragraph: £17.46
+    e140 paragraph: In stock
+    e141 button "Add to basket"
+  e142 article
+    e143 link "Scott Pilgrim's Precious Little Life (Scott Pilgrim #1)"
+    e144 link "Scott Pilgrim's Precious Little ..." [heading=3]
+    e145 paragraph: £52.29
     e146 paragraph: In stock
     e147 button "Add to basket"
   e148 article
-    e149 link "Set Me Free"
-    e150 heading [level=3]
-      e151 link "Set Me Free"
-    e152 paragraph: £17.46
-    e153 paragraph: In stock
-    e154 button "Add to basket"
-  e155 article
-    e156 link "Scott Pilgrim's Precious Little Life (Scott Pilgrim #1)"
-    e157 heading [level=3]
-      e158 link "Scott Pilgrim's Precious Little ..."
-    e159 paragraph: £52.29
-    e160 paragraph: In stock
-    e161 button "Add to basket"
-  e162 article
-    e163 link "Rip it Up and Start Again"
-    e164 heading [level=3]
-      e165 link "Rip it Up and ..."
-    e166 paragraph: £35.02
-    e167 paragraph: In stock
-    e168 button "Add to basket"
-  e169 article
-    e170 link "Our Band Could Be Your Life: Scenes from the American Indie Underground, 1981-1991"
-    e171 heading [level=3]
-      e172 link "Our Band Could Be ..."
-    e173 paragraph: £57.25
-    e174 paragraph: In stock
-    e175 button "Add to basket"
-  e176 article
-    e177 link "Olio"
-    e178 heading [level=3]
-      e179 link "Olio"
-    e180 paragraph: £23.88
-    e181 paragraph: In stock
-    e182 button "Add to basket"
-  e183 article
-    e184 link "Mesaerion: The Best Science Fiction Stories 1800-1849"
-    e185 heading [level=3]
-      e186 link "Mesaerion: The Best Science ..."
-    e187 paragraph: £37.59
-    e188 paragraph: In stock
-    e189 button "Add to basket"
-  e190 article
-    e191 link "Libertarianism for Beginners"
-    e192 heading [level=3]
-      e193 link "Libertarianism for Beginners"
-    e194 paragraph: £51.33
-    e195 paragraph: In stock
-    e196 button "Add to basket"
-  e197 article
-    e198 link "It's Only the Himalayas"
-    e199 heading [level=3]
-      e200 link "It's Only the Himalayas"
-    e201 paragraph: £45.17
-    e202 paragraph: In stock
-    e203 button "Add to basket"
-e204 list
-  e205 listitem: Page 1 of 50
-  e206 link "next"
+    e149 link "Rip it Up and Start Again"
+    e150 link "Rip it Up and ..." [heading=3]
+    e151 paragraph: £35.02
+    e152 paragraph: In stock
+    e153 button "Add to basket"
+  e154 article
+    e155 link "Our Band Could Be Your Life: Scenes from the American Indie Underground, 1981-1991"
+    e156 link "Our Band Could Be ..." [heading=3]
+    e157 paragraph: £57.25
+    e158 paragraph: In stock
+    e159 button "Add to basket"
+  e160 article
+    e161 link "Olio"
+    e162 link "Olio" [heading=3]
+    e163 paragraph: £23.88
+    e164 paragraph: In stock
+    e165 button "Add to basket"
+  e166 article
+    e167 link "Mesaerion: The Best Science Fiction Stories 1800-1849"
+    e168 link "Mesaerion: The Best Science ..." [heading=3]
+    e169 paragraph: £37.59
+    e170 paragraph: In stock
+    e171 button "Add to basket"
+  e172 article
+    e173 link "Libertarianism for Beginners"
+    e174 link "Libertarianism for Beginners" [heading=3]
+    e175 paragraph: £51.33
+    e176 paragraph: In stock
+    e177 button "Add to basket"
+  e178 article
+    e179 link "It's Only the Himalayas"
+    e180 link "It's Only the Himalayas" [heading=3]
+    e181 paragraph: £45.17
+    e182 paragraph: In stock
+    e183 button "Add to basket"
+e184 list
+  e185 listitem: Page 1 of 50
+  e186 link "next"
 
 > click {"target":"link \"next\""}
-ok click e206 link "next" → https://books.toscrape.com/catalogue/page-2.html (200)
-# s2 tab=t1 doc=d2 navigated-from=d1 url=https://books.toscrape.com/catalogue/page-2.html title="All products | Books to Scrape - Sandbox" vp=1280x720 scroll=0,0 filter=interesting nodes=209/543 settled=yes full=navigated
-e207 banner
-  e208 link "Books to Scrape"
+ok click e186 link "next" → https://books.toscrape.com/catalogue/page-2.html (200)
+# s2 title="All products | Books to Scrape - Sandbox" full=navigated
+e187 banner
+  e188 link "Books to Scrape"
   text: We love being scraped!
-e209 list
-  e210 link "Home"
-  e211 listitem: All products
-e212 complementary
-  e213 list
-    e214 listitem
-      e215 link "Books"
-      e216 list
-        e217 link "Travel"
-        e218 link "Mystery"
-        e219 link "Historical Fiction"
-        e220 link "Sequential Art"
-        e221 link "Classics"
-        e222 link "Philosophy"
-        e223 link "Romance"
-        e224 link "Womens Fiction"
-        e225 link "Fiction"
-        e226 link "Childrens"
-        e227 link "Religion"
-        e228 link "Nonfiction"
-        e229 link "Music"
-        e230 link "Default"
-        e231 link "Science Fiction"
-        e232 link "Sports and Games"
-        e233 link "Add a comment"
-        e234 link "Fantasy"
-        e235 link "New Adult"
-        e236 link "Young Adult"
-        e237 link "Science"
-        e238 link "Poetry"
-        e239 link "Paranormal"
-        e240 link "Art"
-        e241 link "Psychology"
-        e242 link "Autobiography"
-        e243 link "Parenting"
-        e244 link "Adult Fiction"
-        e245 link "Humor"
-        e246 link "Horror"
-        e247 link "History"
-        e248 link "Food and Drink"
-        e249 link "Christian Fiction"
-        e250 link "Business"
-        e251 link "Biography"
-        e252 link "Thriller"
-        e253 link "Contemporary"
-        e254 link "Spirituality"
-        e255 link "Academic"
-        e256 link "Self Help"
-        e257 link "Historical"
-        e258 link "Christian"
-        e259 link "Suspense"
-        e260 link "Short Stories"
-        e261 link "Novels"
-        e262 link "Health"
-        e263 link "Politics"
-        e264 link "Cultural"
-        e265 link "Erotica"
-        e266 link "Crime"
-e267 heading "All products" [level=1]
+e189 list
+  e190 link "Home"
+  e191 listitem: All products
+e192 complementary
+  e193 list
+    e194 listitem
+      e195 link "Books"
+      e196 list
+        e197 link "Travel"
+        e198 link "Mystery"
+        e199 link "Historical Fiction"
+        e200 link "Sequential Art"
+        e201 link "Classics"
+        e202 link "Philosophy"
+        e203 link "Romance"
+        e204 link "Womens Fiction"
+        e205 link "Fiction"
+        e206 link "Childrens"
+        e207 link "Religion"
+        e208 link "Nonfiction"
+        e209 link "Music"
+        e210 link "Default"
+        e211 link "Science Fiction"
+        e212 link "Sports and Games"
+        e213 link "Add a comment"
+        e214 link "Fantasy"
+        e215 link "New Adult"
+        e216 link "Young Adult"
+        e217 link "Science"
+        e218 link "Poetry"
+        e219 link "Paranormal"
+        e220 link "Art"
+        e221 link "Psychology"
+        e222 link "Autobiography"
+        e223 link "Parenting"
+        e224 link "Adult Fiction"
+        e225 link "Humor"
+        e226 link "Horror"
+        e227 link "History"
+        e228 link "Food and Drink"
+        e229 link "Christian Fiction"
+        e230 link "Business"
+        e231 link "Biography"
+        e232 link "Thriller"
+        e233 link "Contemporary"
+        e234 link "Spirituality"
+        e235 link "Academic"
+        e236 link "Self Help"
+        e237 link "Historical"
+        e238 link "Christian"
+        e239 link "Suspense"
+        e240 link "Short Stories"
+        e241 link "Novels"
+        e242 link "Health"
+        e243 link "Politics"
+        e244 link "Cultural"
+        e245 link "Erotica"
+        e246 link "Crime"
+e247 heading "All products" [level=1]
 text: 1000 results - showing 21 to 40.
-e268 alert: Warning! This is a demo website for web scraping purposes. Prices and ratings here were randomly assigned and have no real meaning.
-e269 list
-  e270 article
-    e271 link "In Her Wake"
-    e272 heading [level=3]
-      e273 link "In Her Wake"
-    e274 paragraph: £12.84
-    e275 paragraph: In stock
-    e276 button "Add to basket"
-  e277 article
-    e278 link "How Music Works"
-    e279 heading [level=3]
-      e280 link "How Music Works"
-    e281 paragraph: £37.32
-    e282 paragraph: In stock
-    e283 button "Add to basket"
-  e284 article
-    e285 link "Foolproof Preserving: A Guide to Small Batch Jams, Jellies, Pickles, Condiments, and More: A Foolpr…"
-    e286 heading [level=3]
-      e287 link "Foolproof Preserving: A Guide ..."
-    e288 paragraph: £30.52
-    e289 paragraph: In stock
-    e290 button "Add to basket"
-  e291 article
-    e292 link "Chase Me (Paris Nights #2)"
-    e293 heading [level=3]
-      e294 link "Chase Me (Paris Nights ..."
-    e295 paragraph: £25.27
+e248 alert: Warning! This is a demo website for web scraping purposes. Prices and ratings here were randomly assigned and have no real meaning.
+e249 list
+  e250 article
+    e251 link "In Her Wake"
+    e252 link "In Her Wake" [heading=3]
+    e253 paragraph: £12.84
+    e254 paragraph: In stock
+    e255 button "Add to basket"
+  e256 article
+    e257 link "How Music Works"
+    e258 link "How Music Works" [heading=3]
+    e259 paragraph: £37.32
+    e260 paragraph: In stock
+    e261 button "Add to basket"
+  e262 article
+    e263 link "Foolproof Preserving: A Guide to Small Batch Jams, Jellies, Pickles, Condiments, and More: A Foolpr…"
+    e264 link "Foolproof Preserving: A Guide ..." [heading=3]
+    e265 paragraph: £30.52
+    e266 paragraph: In stock
+    e267 button "Add to basket"
+  e268 article
+    e269 link "Chase Me (Paris Nights #2)"
+    e270 link "Chase Me (Paris Nights ..." [heading=3]
+    e271 paragraph: £25.27
+    e272 paragraph: In stock
+    e273 button "Add to basket"
+  e274 article
+    e275 link "Black Dust"
+    e276 link "Black Dust" [heading=3]
+    e277 paragraph: £34.53
+    e278 paragraph: In stock
+    e279 button "Add to basket"
+  e280 article
+    e281 link "Birdsong: A Story in Pictures"
+    e282 link "Birdsong: A Story in ..." [heading=3]
+    e283 paragraph: £54.64
+    e284 paragraph: In stock
+    e285 button "Add to basket"
+  e286 article
+    e287 link "America's Cradle of Quarterbacks: Western Pennsylvania's Football Factory from Johnny Unitas to Joe…"
+    e288 link "America's Cradle of Quarterbacks: ..." [heading=3]
+    e289 paragraph: £22.50
+    e290 paragraph: In stock
+    e291 button "Add to basket"
+  e292 article
+    e293 link "Aladdin and His Wonderful Lamp"
+    e294 link "Aladdin and His Wonderful ..." [heading=3]
+    e295 paragraph: £53.13
     e296 paragraph: In stock
     e297 button "Add to basket"
   e298 article
-    e299 link "Black Dust"
-    e300 heading [level=3]
-      e301 link "Black Dust"
-    e302 paragraph: £34.53
-    e303 paragraph: In stock
-    e304 button "Add to basket"
-  e305 article
-    e306 link "Birdsong: A Story in Pictures"
-    e307 heading [level=3]
-      e308 link "Birdsong: A Story in ..."
-    e309 paragraph: £54.64
-    e310 paragraph: In stock
-    e311 button "Add to basket"
-  e312 article
-    e313 link "America's Cradle of Quarterbacks: Western Pennsylvania's Football Factory from Johnny Unitas to Joe…"
-    e314 heading [level=3]
-      e315 link "America's Cradle of Quarterbacks: ..."
-    e316 paragraph: £22.50
-    e317 paragraph: In stock
-    e318 button "Add to basket"
-  e319 article
-    e320 link "Aladdin and His Wonderful Lamp"
-    e321 heading [level=3]
-      e322 link "Aladdin and His Wonderful ..."
-    e323 paragraph: £53.13
-    e324 paragraph: In stock
-    e325 button "Add to basket"
-  e326 article
-    e327 link "Worlds Elsewhere: Journeys Around Shakespeare’s Globe"
-    e328 heading [level=3]
-      e329 link "Worlds Elsewhere: Journeys Around ..."
-    e330 paragraph: £40.30
-    e331 paragraph: In stock
-    e332 button "Add to basket"
-  e333 article
-    e334 link "Wall and Piece"
-    e335 heading [level=3]
-      e336 link "Wall and Piece"
-    e337 paragraph: £44.18
+    e299 link "Worlds Elsewhere: Journeys Around Shakespeare’s Globe"
+    e300 link "Worlds Elsewhere: Journeys Around ..." [heading=3]
+    e301 paragraph: £40.30
+    e302 paragraph: In stock
+    e303 button "Add to basket"
+  e304 article
+    e305 link "Wall and Piece"
+    e306 link "Wall and Piece" [heading=3]
+    e307 paragraph: £44.18
+    e308 paragraph: In stock
+    e309 button "Add to basket"
+  e310 article
+    e311 link "The Four Agreements: A Practical Guide to Personal Freedom"
+    e312 link "The Four Agreements: A ..." [heading=3]
+    e313 paragraph: £17.66
+    e314 paragraph: In stock
+    e315 button "Add to basket"
+  e316 article
+    e317 link "The Five Love Languages: How to Express Heartfelt Commitment to Your Mate"
+    e318 link "The Five Love Languages: ..." [heading=3]
+    e319 paragraph: £31.05
+    e320 paragraph: In stock
+    e321 button "Add to basket"
+  e322 article
+    e323 link "The Elephant Tree"
+    e324 link "The Elephant Tree" [heading=3]
+    e325 paragraph: £23.82
+    e326 paragraph: In stock
+    e327 button "Add to basket"
+  e328 article
+    e329 link "The Bear and the Piano"
+    e330 link "The Bear and the ..." [heading=3]
+    e331 paragraph: £36.89
+    e332 paragraph: In stock
+    e333 button "Add to basket"
+  e334 article
+    e335 link "Sophie's World"
+    e336 link "Sophie's World" [heading=3]
+    e337 paragraph: £15.94
     e338 paragraph: In stock
     e339 button "Add to basket"
   e340 article
-    e341 link "The Four Agreements: A Practical Guide to Personal Freedom"
-    e342 heading [level=3]
-      e343 link "The Four Agreements: A ..."
-    e344 paragraph: £17.66
-    e345 paragraph: In stock
-    e346 button "Add to basket"
-  e347 article
-    e348 link "The Five Love Languages: How to Express Heartfelt Commitment to Your Mate"
-    e349 heading [level=3]
-      e350 link "The Five Love Languages: ..."
-    e351 paragraph: £31.05
-    e352 paragraph: In stock
-    e353 button "Add to basket"
-  e354 article
-    e355 link "The Elephant Tree"
-    e356 heading [level=3]
-      e357 link "The Elephant Tree"
-    e358 paragraph: £23.82
-    e359 paragraph: In stock
-    e360 button "Add to basket"
-  e361 article
-    e362 link "The Bear and the Piano"
-    e363 heading [level=3]
-      e364 link "The Bear and the ..."
-    e365 paragraph: £36.89
-    e366 paragraph: In stock
-    e367 button "Add to basket"
-  e368 article
-    e369 link "Sophie's World"
-    e370 heading [level=3]
-      e371 link "Sophie's World"
-    e372 paragraph: £15.94
-    e373 paragraph: In stock
-    e374 button "Add to basket"
-  e375 article
-    e376 link "Penny Maybe"
-    e377 heading [level=3]
-      e378 link "Penny Maybe"
-    e379 paragraph: £33.29
-    e380 paragraph: In stock
-    e381 button "Add to basket"
-  e382 article
-    e383 link "Maude (1883-1993):She Grew Up with the country"
-    e384 heading [level=3]
-      e385 link "Maude (1883-1993):She Grew Up ..."
-    e386 paragraph: £18.02
-    e387 paragraph: In stock
-    e388 button "Add to basket"
-  e389 article
-    e390 link "In a Dark, Dark Wood"
-    e391 heading [level=3]
-      e392 link "In a Dark, Dark ..."
-    e393 paragraph: £19.63
-    e394 paragraph: In stock
-    e395 button "Add to basket"
-  e396 article
-    e397 link "Behind Closed Doors"
-    e398 heading [level=3]
-      e399 link "Behind Closed Doors"
-    e400 paragraph: £52.22
-    e401 paragraph: In stock
-    e402 button "Add to basket"
-  e403 article
-    e404 link "You can't bury them all: Poems"
-    e405 heading [level=3]
-      e406 link "You can't bury them ..."
-    e407 paragraph: £33.63
-    e408 paragraph: In stock
-    e409 button "Add to basket"
-e410 list
-  e411 link "previous"
-  e412 listitem: Page 2 of 50
-  e413 link "next"
+    e341 link "Penny Maybe"
+    e342 link "Penny Maybe" [heading=3]
+    e343 paragraph: £33.29
+    e344 paragraph: In stock
+    e345 button "Add to basket"
+  e346 article
+    e347 link "Maude (1883-1993):She Grew Up with the country"
+    e348 link "Maude (1883-1993):She Grew Up ..." [heading=3]
+    e349 paragraph: £18.02
+    e350 paragraph: In stock
+    e351 button "Add to basket"
+  e352 article
+    e353 link "In a Dark, Dark Wood"
+    e354 link "In a Dark, Dark ..." [heading=3]
+    e355 paragraph: £19.63
+    e356 paragraph: In stock
+    e357 button "Add to basket"
+  e358 article
+    e359 link "Behind Closed Doors"
+    e360 link "Behind Closed Doors" [heading=3]
+    e361 paragraph: £52.22
+    e362 paragraph: In stock
+    e363 button "Add to basket"
+  e364 article
+    e365 link "You can't bury them all: Poems"
+    e366 link "You can't bury them ..." [heading=3]
+    e367 paragraph: £33.63
+    e368 paragraph: In stock
+    e369 button "Add to basket"
+e370 list
+  e371 link "previous"
+  e372 listitem: Page 2 of 50
+  e373 link "next"
 
 ? url_contains "page-2.html" → yes
 ? text_contains "Page 2 of 50" → yes

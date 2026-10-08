@@ -1,6 +1,8 @@
 //! Actions on a tab, and what they led to.
 
+use std::cell::Cell;
 use std::fmt::Write as _;
+use std::rc::Rc;
 use std::sync::atomic::Ordering;
 
 use catpaw_agent::snapshot::{quote, truncate};
@@ -48,6 +50,8 @@ pub(super) struct Report {
     pub dropped: Vec<u64>,
     /// A navigation the policy refused: where to, and why.
     pub blocked: Option<(Url, String)>,
+    /// The element acted on: focus that went to it is no news.
+    pub acted: Option<u32>,
 }
 
 impl Report {
@@ -163,6 +167,175 @@ fn describe_held(held: &HeldNavigation) -> String {
     }
 }
 
+/// The options of a select that the words name (label, value, then
+/// loosely, when only one fits), or an error listing the options.
+fn choose_options(
+    state: &catpaw_web::PageState,
+    select: catpaw_dom::NodeId,
+    wanted: &[String],
+    what: &str,
+) -> Result<Vec<(catpaw_dom::NodeId, String)>, Failure> {
+    let all: Vec<(catpaw_dom::NodeId, String, String)> = agent::options_of(state, select)
+        .into_iter()
+        .map(|o| {
+            let (label, value) = agent::option_label_and_value(state, o);
+            (o, label, value)
+        })
+        .collect();
+    let mut chosen = Vec::new();
+    for wanted in wanted.iter().cloned() {
+        let w = wanted.split_whitespace().collect::<Vec<_>>().join(" ");
+        let found = all
+            .iter()
+            .find(|(_, label, _)| *label == w)
+            .or_else(|| all.iter().find(|(_, _, value)| *value == wanted))
+            .or_else(|| {
+                all.iter()
+                    .find(|(_, label, _)| label.to_lowercase() == w.to_lowercase())
+            })
+            .or_else(|| {
+                // Loosely, when only one option fits: the same words,
+                // punctuation aside ("Price low to high" for "Price (low
+                // to high)"), or words all in the label.
+                let key = loose(&wanted);
+                let words: Vec<&str> = key.split(' ').filter(|w| !w.is_empty()).collect();
+                let same: Vec<_> = all.iter().filter(|(_, l, _)| loose(l) == key).collect();
+                let within: Vec<_> = all
+                    .iter()
+                    .filter(|(_, l, _)| {
+                        let label = loose(l);
+                        let label: Vec<&str> = label.split(' ').collect();
+                        !words.is_empty() && words.iter().all(|w| label.contains(w))
+                    })
+                    .collect();
+                match (same.as_slice(), within.as_slice()) {
+                    ([one], _) => Some(*one),
+                    ([], [one]) => Some(*one),
+                    _ => None,
+                }
+            });
+        match found {
+            Some((node, label, _)) => chosen.push((*node, label.clone())),
+            None => {
+                let listed: Vec<String> = all
+                    .iter()
+                    .take(30)
+                    .map(|(_, label, _)| quote(&truncate(label, 60)))
+                    .collect();
+                let mut message = format!("no option {} in {what}", quote(&wanted));
+                let _ = write!(message, "; options: {}", listed.join(", "));
+                if all.len() > 30 {
+                    let _ = write!(message, " (+{} more)", all.len() - 30);
+                }
+                return Err(Failure::new(ErrorCode::NotFound, message));
+            }
+        }
+    }
+    Ok(chosen)
+}
+
+/// `true`/`false` as a field's value may say it.
+fn flag(text: &str) -> Option<bool> {
+    match text.trim().to_ascii_lowercase().as_str() {
+        "true" | "yes" | "on" | "checked" | "1" => Some(true),
+        "false" | "no" | "off" | "unchecked" | "0" => Some(false),
+        _ => None,
+    }
+}
+
+/// How a click call asks to click.
+fn click_options(p: &params::Click) -> Result<input::ClickOptions, Failure> {
+    let mut how = input::ClickOptions {
+        button: match p.button {
+            None | Some(params::MouseButton::Left) => 0,
+            Some(params::MouseButton::Middle) => 1,
+            Some(params::MouseButton::Right) => 2,
+        },
+        count: p.count.unwrap_or(1).clamp(1, 3),
+        ..input::ClickOptions::default()
+    };
+    for key in p.modifiers.iter().flatten() {
+        match key.trim().to_ascii_lowercase().as_str() {
+            "control" | "ctrl" => how.ctrl = true,
+            "shift" => how.shift = true,
+            "alt" | "option" => how.alt = true,
+            "meta" | "cmd" | "command" => how.meta = true,
+            _ => {
+                return Err(Failure::bad_argument(format!(
+                    "{key:?} is not a modifier (Control, Shift, Alt, Meta)"
+                )));
+            }
+        }
+    }
+    Ok(how)
+}
+
+/// Text as option matching compares it loosely: lowercase words, with
+/// punctuation gone.
+fn loose(text: &str) -> String {
+    text.to_lowercase()
+        .chars()
+        .map(|c| if c.is_alphanumeric() { c } else { ' ' })
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// A failure with the consequences of the action that failed; one that
+/// only repeats a navigation failure is left out.
+fn with_consequences(mut failure: Failure, lines: Vec<String>) -> Failure {
+    let repeats = format!("! {} ", consequence::NAVIGATION_FAILED);
+    for line in lines {
+        if failure.code == ErrorCode::NavigationFailed && line.starts_with(&repeats) {
+            continue;
+        }
+        failure = failure.with(line);
+    }
+    failure
+}
+
+/// The element part of a diff line (`e2 textbox "Name"` of `e2 textbox
+/// "Name" [value=- → Ada]`): its ref, role and quoted name.
+fn element_part(line: &str) -> Option<&str> {
+    let (r, rest) = line.split_once(' ')?;
+    if !r.starts_with('e') || !r[1..].bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    let role_end = rest.find(' ').unwrap_or(rest.len());
+    let role = &rest[..role_end];
+    if role.contains('[') {
+        // A text of the element (`text[2]`), not the element.
+        return None;
+    }
+    let mut end = r.len() + 1 + role_end;
+    if let Some(quoted) = rest[role_end..].strip_prefix(" \"") {
+        let mut escaped = false;
+        let close = quoted.char_indices().find(|&(_, c)| {
+            let close = c == '"' && !escaped;
+            escaped = c == '\\' && !escaped;
+            close
+        })?;
+        end += 2 + close.0 + 1;
+    }
+    Some(&line[..end])
+}
+
+/// What a lone change to the element a status line names adds to that
+/// line: `[value=- → Ada]` for `~ e2 textbox "Name" [value=- → Ada]`.
+fn lone_change<'a>(status: &str, lines: &'a [String]) -> Option<&'a str> {
+    let [line] = lines else {
+        return None;
+    };
+    let change = line.strip_prefix("~ ")?;
+    let element = element_part(change)?;
+    let echoed = status
+        .split_once(' ')
+        .and_then(|(_, rest)| rest.split_once(' '))
+        .is_some_and(|(_, rest)| rest.starts_with(element) || rest == element);
+    echoed.then(|| &change[element.len()..])
+}
+
 fn dialog_line(kind: &str, message: &str, answer: &DialogAnswer) -> String {
     let message = quote(&truncate(message, 120));
     let answer = match (kind, answer) {
@@ -260,12 +433,31 @@ impl GroupState {
                     let id = self.next_tab.fetch_add(1, Ordering::SeqCst);
                     let opener = self.tab_of_frame(opener);
                     let epoch = self.page.document_epoch(frame).unwrap_or(0);
-                    self.tabs.insert(id, Tab::new(id, frame, opener, epoch, 1));
+                    self.tabs.insert(id, Tab::new(id, frame, opener, epoch));
                     events.push(format!("popup t{id} {url}"));
                     report.lines.push(format!(
                         "! {} t{id} {} (switch with tabs)",
                         consequence::POPUP,
                         truncate(url.as_str(), 120)
+                    ));
+                }
+                PageEvent::Download {
+                    url,
+                    name,
+                    mime,
+                    size,
+                } => {
+                    events.push(format!("download {name} {url}"));
+                    let kind = if mime.is_empty() {
+                        String::new()
+                    } else {
+                        format!("{mime}, ")
+                    };
+                    report.lines.push(format!(
+                        "! {} {} ({kind}{})",
+                        consequence::DOWNLOAD,
+                        quote(&truncate(&name, 80)),
+                        crate::files::size(size as u64)
                     ));
                 }
                 PageEvent::PopupClosed { frame } => {
@@ -300,9 +492,11 @@ impl GroupState {
                     .push(format!("! {} {line}", consequence::DIALOG));
             }
         }
-        // Requests the action made (script's own, not analytics).
+        // Requests the action made (script's own, not analytics); those of
+        // a polling timer only when they write or fail.
         let policy = SettlePolicy::default();
         let page_url = state.as_ref().map(|s| s.url.borrow().clone());
+        let mut polled = 0;
         let made: Vec<String> = self
             .page
             .net()
@@ -313,6 +507,15 @@ impl GroupState {
                     r.kind,
                     catpaw_web::net::RequestKind::Fetch | catpaw_web::net::RequestKind::Xhr
                 ) && !policy.ignores_host(&r.url)
+            })
+            .filter(|r| {
+                let routine = r.polling
+                    && matches!(r.method.as_str(), "GET" | "HEAD")
+                    && r.status.is_some_and(|s| s < 400);
+                if routine {
+                    polled += 1;
+                }
+                !routine
             })
             .map(|r| {
                 let outcome = match (r.status, &r.error, r.finished) {
@@ -336,6 +539,9 @@ impl GroupState {
             );
             if made.len() > 3 {
                 let _ = write!(line, " (+{} more)", made.len() - 3);
+            }
+            if polled > 0 {
+                let _ = write!(line, " (+{polled} polling)");
             }
             report.lines.push(line);
         }
@@ -426,16 +632,34 @@ impl GroupState {
         }
         let held = report.held.clone();
         let dropped = report.dropped.clone();
+        let suffix = report.suffix();
+        let url_shown = report.navigated.is_some() || report.same_document.is_some();
+        let page = self.page_view(tab, mode, view, url_shown, report.acted)?;
+        // A lone change to the element acted on, with nothing else to say,
+        // goes on the status line (`ok type e2 textbox "Name" [value=- →
+        // Ada]`).
+        if suffix.is_empty()
+            && report.lines.is_empty()
+            && let Some(rest) = page
+                .quiet
+                .as_deref()
+                .and_then(|lines| lone_change(&status, lines))
+        {
+            return Ok(ToolOutput {
+                held,
+                dropped_holds: dropped,
+                ..ToolOutput::ok(format!("{status}{rest}"))
+            });
+        }
         let mut text = status;
-        text.push_str(&report.suffix());
+        text.push_str(&suffix);
         for line in &report.lines {
             text.push('\n');
             text.push_str(line);
         }
-        let page = self.page_view(tab, mode, view)?;
-        if !page.is_empty() {
+        if !page.text.is_empty() {
             text.push('\n');
-            text.push_str(&page);
+            text.push_str(&page.text);
         }
         Ok(ToolOutput {
             held,
@@ -483,11 +707,8 @@ impl GroupState {
         self.page.settle(&super::action_limits());
         let report = self.finish(tab, &base);
         if let Err(e) = result {
-            let mut failure = Failure::new(ErrorCode::NavigationFailed, e.to_string());
-            for line in report.lines {
-                failure = failure.with(line);
-            }
-            return Err(failure);
+            let failure = Failure::new(ErrorCode::NavigationFailed, e.to_string());
+            return Err(with_consequences(failure, report.lines));
         }
         self.page_result(tab, status, report, None, view).map(Some)
     }
@@ -529,7 +750,8 @@ impl GroupState {
         let result = self.with_dialogs(options, |g| {
             g.page.input_in(aim.frame, |cx| action(cx, &aim))
         });
-        let report = self.finish(tab, &base);
+        let mut report = self.finish(tab, &base);
+        report.acted = Some(aim.r);
         match result {
             Ok(_) => self.page_result(tab, status, report, options.snapshot, view),
             Err(e) => Err(self.action_failure(tab, &aim, e, report)),
@@ -695,9 +917,7 @@ impl GroupState {
             }
             other => Failure::new(ErrorCode::NavigationFailed, other.to_string()),
         };
-        for line in report.lines {
-            failure = failure.with(line);
-        }
+        failure = with_consequences(failure, report.lines);
         failure
     }
 
@@ -767,22 +987,47 @@ impl GroupState {
         if !force && aim.point.is_none() {
             self.actionable(tab, &aim, true)?;
         }
-        let status = format!("ok click {}", self.aimed(tab, &aim));
+        let how = click_options(&p)?;
+        let verb = match (how.button, how.count) {
+            (0, 1) => "click".to_string(),
+            (0, 2) => "double-click".to_string(),
+            (0, _) => "triple-click".to_string(),
+            (2, 1) => "right-click".to_string(),
+            (1, 1) => "middle-click".to_string(),
+            (button, count) => {
+                let name = if button == 2 { "right" } else { "middle" };
+                format!("{name}-click x{count}")
+            }
+        };
+        let mut status = format!("ok {verb} {}", self.aimed(tab, &aim));
+        let held: Vec<&str> = [
+            (how.ctrl, "Control"),
+            (how.shift, "Shift"),
+            (how.alt, "Alt"),
+            (how.meta, "Meta"),
+        ]
+        .iter()
+        .filter(|(on, _)| *on)
+        .map(|(_, name)| *name)
+        .collect();
+        if !held.is_empty() {
+            let _ = write!(status, " with {}", held.join("+"));
+        }
         self.act_on(tab, aim, status, &options, view, move |cx, aim| {
             match aim.point {
                 Some((x, y)) => {
-                    input::click_at(cx, x, y);
+                    input::click_at_with(cx, x, y, how);
                     Ok(())
                 }
                 // Forced: the element gets the click, whatever covers it.
-                None if force => match input::click_element(cx, aim.node) {
+                None if force => match input::click_element_with(cx, aim.node, how) {
                     Err(InputError::Occluded { .. } | InputError::NotVisible) => {
                         catpaw_web::activation::click(cx, aim.node, true);
                         Ok(())
                     }
                     other => other.map(drop),
                 },
-                None => input::click_element(cx, aim.node).map(drop),
+                None => input::click_element_with(cx, aim.node, how).map(drop),
             }
         })
     }
@@ -841,6 +1086,158 @@ impl GroupState {
         output
     }
 
+    /// Sets several fields as one action, each as what it is: text, checked
+    /// or not, or options; then Enter in the last one when asked. Every
+    /// target is found before anything is set.
+    pub(crate) fn fill(&mut self, tab: u32, p: params::Fill, view: View) -> CallResult {
+        enum Step {
+            Text(String),
+            /// Checked or not, and an ARIA checkbox's state now.
+            Check(bool, Option<bool>),
+            Choose(Vec<catpaw_dom::NodeId>),
+        }
+        let options = p.options();
+        if p.fields.is_empty() {
+            return Err(Failure::bad_argument(
+                "fill needs fields: [{\"target\":…, \"value\":…}]",
+            ));
+        }
+        let mut plan: Vec<(Aim, Step)> = Vec::new();
+        let mut shown = Vec::new();
+        let mut secret = false;
+        for field in &p.fields {
+            let aim = self.aim(tab, &field.target)?;
+            let what = self.aimed(tab, &aim);
+            let state = self
+                .page
+                .frame_state(aim.frame)
+                .cloned()
+                .ok_or_else(|| Failure::new(ErrorCode::NoTab, format!("t{tab} is closed")))?;
+            let role = self
+                .tabs
+                .get(&tab)
+                .and_then(|t| t.refs.entry(aim.r))
+                .map(|e| e.role)
+                .unwrap_or("");
+            let (is_select, password, aria_checked) = {
+                let dom = state.dom.borrow();
+                let is_input = dom.is_html_element(aim.node, "input");
+                let password = is_input
+                    && dom
+                        .attr(aim.node, "type")
+                        .is_some_and(|t| t.trim().eq_ignore_ascii_case("password"));
+                let aria = (!is_input).then(|| {
+                    dom.attr(aim.node, "aria-checked")
+                        .is_some_and(|v| v.trim().eq_ignore_ascii_case("true"))
+                });
+                (dom.is_html_element(aim.node, "select"), password, aria)
+            };
+            let checkable = matches!(
+                role,
+                "checkbox" | "radio" | "switch" | "menuitemcheckbox" | "menuitemradio"
+            );
+            let step = if is_select {
+                let wanted = match &field.value {
+                    params::FillValue::Text(text) => vec![text.clone()],
+                    params::FillValue::Options(list) => list.clone(),
+                    params::FillValue::Checked(_) => {
+                        return Err(Failure::bad_argument(format!(
+                            "{what} takes an option's label, not true or false"
+                        )));
+                    }
+                };
+                let chosen = choose_options(&state, aim.node, &wanted, &what)?;
+                let labels: Vec<String> = chosen.iter().map(|(_, l)| quote(l)).collect();
+                shown.push(format!("{what} ← {}", labels.join(", ")));
+                Step::Choose(chosen.into_iter().map(|(n, _)| n).collect())
+            } else if checkable {
+                let want = match &field.value {
+                    params::FillValue::Checked(on) => Some(*on),
+                    params::FillValue::Text(text) => flag(text),
+                    params::FillValue::Options(_) => None,
+                }
+                .ok_or_else(|| Failure::bad_argument(format!("{what} takes true or false")))?;
+                shown.push(format!(
+                    "{what} ← {}",
+                    if want { "checked" } else { "unchecked" }
+                ));
+                Step::Check(
+                    want,
+                    if role == "radio" && !want {
+                        None
+                    } else {
+                        aria_checked
+                    },
+                )
+            } else {
+                let params::FillValue::Text(text) = &field.value else {
+                    return Err(Failure::bad_argument(format!("{what} takes text")));
+                };
+                secret |= password;
+                let value = if password {
+                    "***".to_string()
+                } else {
+                    quote(&truncate(text, 60))
+                };
+                shown.push(format!("{what} ← {value}"));
+                Step::Text(text.clone())
+            };
+            self.actionable(tab, &aim, true)?;
+            plan.push((aim, step));
+        }
+        let mut status = format!("ok fill {}", shown.join(", "));
+        if p.submit {
+            status.push_str(" + Enter");
+        }
+        for (aim, step) in &plan {
+            if matches!(step, Step::Text(_))
+                && let Some(state) = self.page.frame_state(aim.frame)
+            {
+                agent::unmask_value(state, aim.node);
+            }
+        }
+        let base = self.baseline(tab);
+        let submit = p.submit;
+        let mut failed: Option<(usize, ActionError)> = None;
+        self.with_dialogs(&options, |g| {
+            for (i, (aim, step)) in plan.iter().enumerate() {
+                let node = aim.node;
+                let result = g.page.input_in(aim.frame, |cx| match step {
+                    Step::Text(text) => input::fill(cx, node, text),
+                    Step::Check(want, aria) => match aria {
+                        // An ARIA checkbox flips when clicked.
+                        Some(now) if now == want => Ok(()),
+                        Some(_) => input::click_element(cx, node).map(drop),
+                        None => input::set_checked(cx, node, *want),
+                    },
+                    Step::Choose(nodes) => input::select_options(cx, node, nodes),
+                });
+                if let Err(e) = result {
+                    failed = Some((i, e));
+                    return;
+                }
+            }
+            if submit && let Some((aim, _)) = plan.last() {
+                let node = aim.node;
+                let pressed = g.page.input_in(aim.frame, |cx| {
+                    input::focus(cx, node)?;
+                    input::press(cx, "Enter")
+                });
+                if let Err(e) = pressed {
+                    failed = Some((plan.len() - 1, e));
+                }
+            }
+        });
+        let mut report = self.finish(tab, &base);
+        report.acted = plan.last().map(|(aim, _)| aim.r);
+        if let Some((i, e)) = failed {
+            return Err(self.action_failure(tab, &plan[i].0, e, report));
+        }
+        let mut output = self.page_result(tab, status, report, options.snapshot, view)?;
+        output.secret_input = secret;
+        Ok(output)
+    }
+
     pub(crate) fn press(&mut self, tab: u32, p: params::Press, view: View) -> CallResult {
         let options = p.options();
         let key = crate::target::normalize_key(&p.key).map_err(Failure::bad_argument)?;
@@ -890,41 +1287,7 @@ impl GroupState {
             )
             .with(advice::NOT_A_SELECT));
         }
-        let all: Vec<(catpaw_dom::NodeId, String, String)> = agent::options_of(&state, aim.node)
-            .into_iter()
-            .map(|o| {
-                let (label, value) = agent::option_label_and_value(&state, o);
-                (o, label, value)
-            })
-            .collect();
-        let mut chosen = Vec::new();
-        for wanted in p.option.to_vec() {
-            let w = wanted.split_whitespace().collect::<Vec<_>>().join(" ");
-            let found = all
-                .iter()
-                .find(|(_, label, _)| *label == w)
-                .or_else(|| all.iter().find(|(_, _, value)| *value == wanted))
-                .or_else(|| {
-                    all.iter()
-                        .find(|(_, label, _)| label.to_lowercase() == w.to_lowercase())
-                });
-            match found {
-                Some((node, label, _)) => chosen.push((*node, label.clone())),
-                None => {
-                    let listed: Vec<String> = all
-                        .iter()
-                        .take(30)
-                        .map(|(_, label, _)| quote(&truncate(label, 60)))
-                        .collect();
-                    let mut message = format!("no option {} in {what}", quote(&wanted));
-                    let _ = write!(message, "; options: {}", listed.join(", "));
-                    if all.len() > 30 {
-                        let _ = write!(message, " (+{} more)", all.len() - 30);
-                    }
-                    return Err(Failure::new(ErrorCode::NotFound, message));
-                }
-            }
-        }
+        let chosen = choose_options(&state, aim.node, &p.option.to_vec(), &what)?;
         self.actionable(tab, &aim, true)?;
         let labels: Vec<String> = chosen.iter().map(|(_, l)| quote(l)).collect();
         let status = format!("ok select {what} ← {}", labels.join(", "));
@@ -943,15 +1306,8 @@ impl GroupState {
         if kind == params::ActKind::Drag {
             return self.drag(tab, p, view);
         }
-        if kind == params::ActKind::Scroll && p.target.is_none() {
-            let (_, state) = self.root_state(tab)?;
-            let dy =
-                p.dy.unwrap_or_else(|| f64::from(agent::viewport(&state).1) * 0.9) as f32;
-            let status = format!("ok scroll {dy:.0}px");
-            return self.act_on_focus(tab, status, &options, view, move |cx| {
-                agent::scroll_by(cx, 0.0, dy);
-                Ok(())
-            });
+        if kind == params::ActKind::Scroll && (p.target.is_none() || p.dy.is_some()) {
+            return self.scroll(tab, p, view);
         }
         let target = p
             .target
@@ -1022,6 +1378,56 @@ impl GroupState {
                 params::ActKind::Upload | params::ActKind::Drag => Ok(()),
             },
         )
+    }
+
+    /// Scrolls the window, or with a target the content of that element
+    /// (or of the nearest element around it that scrolls), by `dy` (90% of
+    /// the viewport by default); says how far it really moved.
+    fn scroll(&mut self, tab: u32, p: params::Act, view: View) -> CallResult {
+        let options = p.options();
+        let (_, state) = self.root_state(tab)?;
+        let dy =
+            p.dy.unwrap_or_else(|| f64::from(agent::viewport(&state).1) * 0.9) as f32;
+        let moved = Rc::new(Cell::new(0.0_f32));
+        let out = moved.clone();
+        let (what, mut result) = match p.target.as_deref() {
+            Some(target) => {
+                let aim = self.aim(tab, target)?;
+                let what = format!(" {}", self.aimed(tab, &aim));
+                let result = self.act_on(
+                    tab,
+                    aim,
+                    "ok scroll".to_string(),
+                    &options,
+                    view,
+                    move |cx, aim| {
+                        out.set(agent::scroll_within(cx, aim.node, dy));
+                        Ok(())
+                    },
+                )?;
+                (what, result)
+            }
+            None => {
+                let result =
+                    self.act_on_focus(tab, "ok scroll".to_string(), &options, view, move |cx| {
+                        let before = agent::window_scroll(cx.page).1;
+                        agent::scroll_by(cx, 0.0, dy);
+                        out.set(agent::window_scroll(cx.page).1 - before);
+                        Ok(())
+                    })?;
+                (String::new(), result)
+            }
+        };
+        let moved = moved.get().round();
+        let mut status = format!("ok scroll{what} {moved:.0}px");
+        if (moved - dy.round()).abs() >= 1.0 {
+            let edge = if dy > 0.0 { "the end" } else { "the start" };
+            let _ = write!(status, " (asked {:.0}px; at {edge})", dy.round());
+        }
+        if let Some(rest) = result.text.strip_prefix("ok scroll") {
+            result.text = format!("{status}{rest}");
+        }
+        Ok(result)
     }
 
     /// Drags an element onto another, both in the same frame.

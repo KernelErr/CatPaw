@@ -1,11 +1,9 @@
 > navigate {"url":"https://quotes.toscrape.com/scroll"}
 ok navigate → https://quotes.toscrape.com/scroll (200)
 ! network GET /api/quotes?page=1 200
-# s1 tab=t1 doc=d1 url=https://quotes.toscrape.com/scroll title="Quotes to Scrape" vp=1280x720 scroll=0,0 filter=interesting nodes=41/109 settled=yes
-e1 heading [level=1]
-  e2 link "Quotes to Scrape"
-e3 paragraph
-  e4 link "Login"
+# s1 title="Quotes to Scrape"
+e1 link "Quotes to Scrape" [heading=1]
+e2 link "Login"
 text: “The world as we have created it is a process of our thinking. It cannot be changed without changing our thinking.”
 text: by Albert Einstein
 text: Tags: change deep-thoughts thinking world
@@ -36,18 +34,18 @@ text: Tags: misattributed-eleanor-roosevelt
 text: “A day without sunshine is like, you know, night.”
 text: by Steve Martin
 text: Tags: humor obvious simile
-e5 contentinfo
-  e6 paragraph
+e3 contentinfo
+  e4 paragraph
     text: Quotes by:
-    e7 link "GoodReads.com"
-  e8 paragraph
+    e5 link "GoodReads.com"
+  e6 paragraph
     text: Made with ❤ by
-    e9 link "Zyte"
+    e7 link "Zyte"
 
 > act {"dy":20000,"kind":"scroll"}
-ok scroll 20000px
+ok scroll 997px (asked 20000px; at the end)
 ! network GET /api/quotes?page=2 200
-# s2 diff-from=s1 tab=t1 doc=d1 url=(same) scroll=0,997 settled=yes changed=0 added=30 removed=0 unchanged=9
+# s2 scroll=0,997 added=30
 + text[30] "“This life is what you make it. No matter what, you're going to mess up sometimes, it's a universal truth. But the good…"
 + text[31] "by Marilyn Monroe"
 + text[32] "Tags: friends heartbreak inspirational life love sisters"
@@ -81,6 +79,6 @@ ok scroll 20000px
 
 > wait {"for":"settled"}
 ok wait settled
-# s3 diff-from=s2 tab=t1 doc=d1 url=(same) scroll=0,997 settled=yes no changes
+# s3 no changes
 
 ? eval "ok evaluate\ntrue" → yes

@@ -136,20 +136,23 @@ impl Diff {
         out
     }
 
-    /// `changed=3 added=1 removed=1 unchanged=33`, or `no changes`.
+    /// The counts that are not zero (`changed=3 added=1`), or `no
+    /// changes`.
     pub fn stats(&self) -> String {
         if self.is_empty() {
             return "no changes".to_string();
         }
-        let mut out = format!(
-            "changed={} added={} removed={}",
-            self.changed, self.added, self.removed
-        );
-        if self.moved > 0 {
-            let _ = write!(out, " moved={}", self.moved);
-        }
-        let _ = write!(out, " unchanged={}", self.unchanged);
-        out
+        [
+            ("changed", self.changed),
+            ("added", self.added),
+            ("removed", self.removed),
+            ("moved", self.moved),
+        ]
+        .iter()
+        .filter(|(_, n)| *n > 0)
+        .map(|(key, n)| format!("{key}={n}"))
+        .collect::<Vec<_>>()
+        .join(" ")
     }
 }
 
@@ -707,7 +710,7 @@ mod tests {
                 "~ e6 paragraph: idle → bought",
             ]
         );
-        assert_eq!(d.stats(), "changed=4 added=1 removed=1 unchanged=1");
+        assert_eq!(d.stats(), "changed=4 added=1 removed=1");
     }
 
     #[test]

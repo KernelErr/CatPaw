@@ -1,6 +1,6 @@
 > navigate {"url":"https://httpbin.org/forms/post"}
 ok navigate → https://httpbin.org/forms/post (200)
-# s1 tab=t1 doc=d1 url=https://httpbin.org/forms/post title="" vp=1280x720 scroll=0,0 filter=interesting nodes=30/46 settled=yes
+# s1
 e1 paragraph
   e2 textbox "Customer name:"
 e3 paragraph
@@ -8,7 +8,6 @@ e3 paragraph
 e5 paragraph
   e6 textbox "E-mail address:"
 e7 group "Pizza Size"
-  text: Pizza Size
   e8 paragraph
     e9 radio "Small"
   e10 paragraph
@@ -16,7 +15,6 @@ e7 group "Pizza Size"
   e12 paragraph
     e13 radio "Large"
 e14 group "Pizza Toppings"
-  text: Pizza Toppings
   e15 paragraph
     e16 checkbox "Bacon"
   e17 paragraph
@@ -29,34 +27,27 @@ e23 paragraph
   e24 textbox "Preferred delivery time:"
 e25 paragraph
   e26 textbox "Delivery instructions:"
-e27 paragraph
-  e28 button "Submit order"
+e27 button "Submit order"
 
 > type {"target":"textbox \"Customer name:\"","text":"Ada Lovelace"}
-ok type e2 textbox "Customer name:"
-# s2 diff-from=s1 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e2 settled=yes changed=1 added=0 removed=0 unchanged=27
-~ e2 textbox "Customer name:" [value=- → "Ada Lovelace"]
+ok type e2 textbox "Customer name:" [value=- → "Ada Lovelace"]
 
 > act {"kind":"check","target":"radio \"Large\""}
-ok check e13 radio "Large"
-# s3 diff-from=s2 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e13 settled=yes changed=1 added=0 removed=0 unchanged=27
-~ e13 radio "Large" [- → checked]
+ok check e13 radio "Large" [- → checked]
 
 > act {"kind":"check","target":"checkbox \"Bacon\""}
-ok check e16 checkbox "Bacon"
-# s4 diff-from=s3 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e16 settled=yes changed=1 added=0 removed=0 unchanged=27
-~ e16 checkbox "Bacon" [- → checked]
+ok check e16 checkbox "Bacon" [- → checked]
 
 > click {"target":"button \"Submit order\""}
-needs_confirmation c1: click e28 button "Submit order" would submit → POST https://httpbin.org/post (fields: custname=Ada Lovelace, size=large, topping=bacon, 4 empty)
+needs_confirmation c1: click e27 button "Submit order" would submit → POST https://httpbin.org/post (fields: custname=Ada Lovelace, size=large, topping=bacon, 4 empty)
   ask the user to approve at http://127.0.0.1:PORT/confirm/c1 (expires in 10m); once they approve, repeat: click {"confirmation":"c1","target":"button \"Submit order\""}
 
 > (user) approve c1
 approved
 
 > click {"confirmation":"c1","target":"button \"Submit order\""}
-ok click e28 button "Submit order" (confirmed c1) → https://httpbin.org/post (POST, 200)
-# s6 tab=t1 doc=d2 navigated-from=d1 url=https://httpbin.org/post title="" vp=1280x720 scroll=0,0 filter=interesting nodes=1/3 settled=yes full=navigated
+ok click e27 button "Submit order" (confirmed c1) → https://httpbin.org/post (POST, 200)
+# s6 full=navigated
 text: { "args": {}, "data": "", "files": {}, "form": { "comments": "", "custemail": "", "custname": "Ada Lovelace", "custtel": "", "delivery": "", "size": "large", "topping": "bacon" }, "headers": { "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Encoding": "gzip, deflate, br, zstd", "Accept-Language": "en-US,en;q=0.9", "Content-Length": "86", "Content-Type": "application/x-www-form-urlencoded", "Host": "httpbin.org", "Referer": "https://httpbin.org/forms/post", "User-Agent": "CatPaw/0.0.1", "X-Amzn-Trace-Id": "Root=1-6ac716a8-6966b15072ffd26b1fdebced" }, "json": null, "origin": "203.0.113.7", "url": "https://httpbin.org/post" }
 
 ? text_contains "\"custname\": \"Ada Lovelace\"" → yes

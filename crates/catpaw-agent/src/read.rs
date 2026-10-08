@@ -66,7 +66,7 @@ pub fn text(dom: &Dom, oracle: &dyn StyleOracle) -> String {
 
 /// Plain text, with options (`main_only`).
 pub fn text_with(dom: &Dom, oracle: &dyn StyleOracle, options: &ReadOptions) -> String {
-    markdown_with(dom, oracle, None, options, true)
+    crate::a11y::in_one_pass(|| markdown_with(dom, oracle, None, options, true))
 }
 
 /// Markdown rendering of the (main) content.
@@ -76,7 +76,7 @@ pub fn markdown(
     refs: Option<RefScope<'_>>,
     options: &ReadOptions,
 ) -> String {
-    markdown_with(dom, oracle, refs, options, false)
+    crate::a11y::in_one_pass(|| markdown_with(dom, oracle, refs, options, false))
 }
 
 fn markdown_with(
@@ -87,10 +87,12 @@ fn markdown_with(
     plain: bool,
 ) -> String {
     let root = content_root(dom, options);
+    let labels = LabelIndex::build(dom);
     let mut w = MdWriter {
         dom,
         oracle,
         refs,
+        labels: &labels,
         base: dom.url().cloned(),
         link_style: options.link_style,
         plain,
@@ -109,10 +111,20 @@ fn markdown_with(
     out
 }
 
+/// `(ref:e12)` for ` ref:e12`; nothing for nothing.
+fn bracketed(r: &str) -> String {
+    match r.trim() {
+        "" => String::new(),
+        r => format!("({r})"),
+    }
+}
+
 struct MdWriter<'a> {
     dom: &'a Dom,
     oracle: &'a dyn StyleOracle,
     refs: Option<RefScope<'a>>,
+    /// Made once: fields are named from it.
+    labels: &'a LabelIndex,
     base: Option<Url>,
     link_style: LinkStyle,
     plain: bool,
@@ -189,6 +201,17 @@ impl MdWriter<'_> {
                 .map(|u| u.to_string())
                 .unwrap_or_else(|_| href.trim().to_string()),
             None => href.trim().to_string(),
+        }
+    }
+
+    /// ` ref:e12` for a control, when the view names refs.
+    fn control_ref(&mut self, id: NodeId) -> String {
+        if self.plain || self.link_style != LinkStyle::Ref {
+            return String::new();
+        }
+        match self.refs.as_mut() {
+            Some(refs) => format!(" ref:e{}", refs.assign(self.dom, id, self.oracle)),
+            None => String::new(),
         }
     }
 
@@ -286,6 +309,7 @@ impl MdWriter<'_> {
                     dom: self.dom,
                     oracle: self.oracle,
                     refs: None,
+                    labels: self.labels,
                     base: self.base.clone(),
                     link_style: match self.link_style {
                         LinkStyle::Ref => LinkStyle::Url,
@@ -381,20 +405,30 @@ impl MdWriter<'_> {
                 match ty.as_str() {
                     "submit" | "button" | "reset" => {
                         if let Some(v) = el.attr("value") {
-                            let _ = write!(self.inline, " [{v}] ");
+                            let r = self.control_ref(id);
+                            let _ = write!(self.inline, " [{v}{r}] ");
                         }
                     }
                     "hidden" => {}
+                    "checkbox" | "radio" => {
+                        if !self.plain {
+                            let name =
+                                name_for(self.dom, id, Some(ty.as_str()), self.oracle, self.labels);
+                            let mark = if self.oracle.is_checked(self.dom, id).unwrap_or(false) {
+                                "x"
+                            } else {
+                                " "
+                            };
+                            let r = self.control_ref(id);
+                            let _ = write!(self.inline, " [{mark}] {name}{} ", bracketed(&r));
+                        }
+                    }
                     _ => {
-                        let name = name_for(
-                            self.dom,
-                            id,
-                            Some("textbox"),
-                            self.oracle,
-                            &LabelIndex::build(self.dom),
-                        );
+                        let name =
+                            name_for(self.dom, id, Some("textbox"), self.oracle, self.labels);
                         if !name.is_empty() && !self.plain {
-                            let _ = write!(self.inline, " [{name}: ___] ");
+                            let r = self.control_ref(id);
+                            let _ = write!(self.inline, " [{name}: ___{r}] ");
                         }
                     }
                 }
@@ -402,11 +436,45 @@ impl MdWriter<'_> {
             "button" => {
                 let text = subtree_text(self.dom, id, self.oracle);
                 if !text.is_empty() {
-                    let _ = write!(self.inline, " [{text}] ");
+                    let r = self.control_ref(id);
+                    let _ = write!(self.inline, " [{text}{r}] ");
                 }
             }
-            "select" | "textarea" | "script" | "style" | "template" | "noscript" | "iframe"
-            | "object" | "embed" | "canvas" | "video" | "audio" | "map" | "head" | "title" => {}
+            "select" => {
+                if !self.plain {
+                    let name = name_for(self.dom, id, Some("combobox"), self.oracle, self.labels);
+                    let chosen = match self.oracle.displayed_options(self.dom, id) {
+                        Some(options) => options,
+                        None => self
+                            .dom
+                            .descendants(id)
+                            .filter(|&o| self.dom.is_html_element(o, "option"))
+                            .find(|&o| self.dom.attr(o, "selected").is_some())
+                            .into_iter()
+                            .collect(),
+                    };
+                    let shown: Vec<String> = chosen
+                        .iter()
+                        .map(|&o| subtree_text(self.dom, o, self.oracle))
+                        .collect();
+                    let r = self.control_ref(id);
+                    let label = if name.is_empty() {
+                        String::new()
+                    } else {
+                        format!("{name}: ")
+                    };
+                    let _ = write!(self.inline, " [{label}{} ▾{r}] ", shown.join(", "));
+                }
+            }
+            "textarea" => {
+                let name = name_for(self.dom, id, Some("textbox"), self.oracle, self.labels);
+                if !name.is_empty() && !self.plain {
+                    let r = self.control_ref(id);
+                    let _ = write!(self.inline, " [{name}: ___{r}] ");
+                }
+            }
+            "script" | "style" | "template" | "noscript" | "iframe" | "object" | "embed"
+            | "canvas" | "video" | "audio" | "map" | "head" | "title" => {}
             _ => self.block_children(id),
         }
     }
@@ -444,6 +512,7 @@ impl MdWriter<'_> {
             dom: self.dom,
             oracle: self.oracle,
             refs: self.refs.as_mut().map(RefScope::reborrow),
+            labels: self.labels,
             base: self.base.clone(),
             link_style: self.link_style,
             plain: self.plain,

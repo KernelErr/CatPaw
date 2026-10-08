@@ -83,10 +83,13 @@ pub static TOOLS: &[ToolDef] = &[
     ToolDef {
         name: "click",
         title: "Click",
-        description: "Click an element: scroll it into view, check that nothing covers it, click its centre. Returns the outcome and what changed on the page.\nExample: {\"target\":\"e12\"}",
+        description: "Click an element: scroll it into view, check that nothing covers it, click its centre. Returns the outcome and what changed on the page. count:2 double-clicks; button:\"right\" opens a context menu.\nExample: {\"target\":\"e12\"}",
         schema: r#"{"type":"object","properties":{
 "target":{"type":"string","description":"Ref (e12), text:<visible text>, role \"name\", css:<selector> or xy:<x>,<y>"},
 "force":{"type":"boolean","description":"Skip the checks (covered, disabled, moving) and click the element itself"},
+"button":{"type":"string","enum":["left","middle","right"]},
+"count":{"type":"integer","minimum":1,"maximum":3},
+"modifiers":{"type":"array","items":{"type":"string","enum":["Control","Shift","Alt","Meta"]}},
 "snapshot":{"type":"string","enum":["diff","full","none"]},
 "dialog":{"type":"string","enum":["accept","dismiss"]},
 "promptText":{"type":"string"},
@@ -108,6 +111,23 @@ pub static TOOLS: &[ToolDef] = &[
 "promptText":{"type":"string"},
 "confirmation":{"type":"string"}
 },"required":["text"],"additionalProperties":false}"#,
+        read_only: false,
+    },
+    ToolDef {
+        name: "fill",
+        title: "Fill form",
+        description: "Set several fields at once: text for a text field or editable element (replacing it), true or false for a checkbox or radio button, an option label (or a list) for a select; submit presses Enter in the last field.\nExample: {\"fields\":[{\"target\":\"e3\",\"value\":\"Ada\"},{\"target\":\"e7\",\"value\":true}]}",
+        schema: r#"{"type":"object","properties":{
+"fields":{"type":"array","minItems":1,"maxItems":50,"items":{"type":"object","properties":{
+"target":{"type":"string","description":"Ref (e12), text:<visible text>, role \"name\" or css:<selector>"},
+"value":{"anyOf":[{"type":"string"},{"type":"boolean"},{"type":"array","items":{"type":"string"}}]}
+},"required":["target","value"],"additionalProperties":false}},
+"submit":{"type":"boolean"},
+"snapshot":{"type":"string","enum":["diff","full","none"]},
+"dialog":{"type":"string","enum":["accept","dismiss"]},
+"promptText":{"type":"string"},
+"confirmation":{"type":"string"}
+},"required":["fields"],"additionalProperties":false}"#,
         read_only: false,
     },
     ToolDef {

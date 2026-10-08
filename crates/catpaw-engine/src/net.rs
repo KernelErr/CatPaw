@@ -42,6 +42,8 @@ pub struct RequestRecord {
     pub finished: bool,
     /// Why the request failed, when it did.
     pub error: Option<String>,
+    /// Started by a timer that keeps setting itself again (polling).
+    pub polling: bool,
 }
 
 /// How much of a request body a record keeps.
@@ -606,6 +608,7 @@ impl EngineNet {
             body_preview: None,
             finished: true,
             error: None,
+            polling: false,
         });
     }
 
@@ -622,6 +625,7 @@ impl EngineNet {
             }),
             finished: false,
             error: None,
+            polling: request.polling,
         });
         log.len() - 1
     }

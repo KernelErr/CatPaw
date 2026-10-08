@@ -1,10 +1,8 @@
 > navigate {"url":"https://quotes.toscrape.com/js/"}
 ok navigate → https://quotes.toscrape.com/js/ (200)
-# s1 tab=t1 doc=d1 url=https://quotes.toscrape.com/js/ title="Quotes to Scrape" vp=1280x720 scroll=0,0 filter=interesting nodes=44/109 settled=yes
-e1 heading [level=1]
-  e2 link "Quotes to Scrape"
-e3 paragraph
-  e4 link "Login"
+# s1 title="Quotes to Scrape"
+e1 link "Quotes to Scrape" [heading=1]
+e2 link "Login"
 text: “The world as we have created it is a process of our thinking. It cannot be changed without changing our thinking.”
 text: by Albert Einstein
 text: Tags: change deep-thoughts thinking world
@@ -35,24 +33,22 @@ text: Tags: misattributed-eleanor-roosevelt
 text: “A day without sunshine is like, you know, night.”
 text: by Steve Martin
 text: Tags: humor obvious simile
-e5 navigation
-  e6 list
-    e7 link "Next"
-e8 contentinfo
-  e9 paragraph
+e3 navigation
+  e4 list
+    e5 link "Next"
+e6 contentinfo
+  e7 paragraph
     text: Quotes by:
-    e10 link "GoodReads.com"
-  e11 paragraph
+    e8 link "GoodReads.com"
+  e9 paragraph
     text: Made with ❤ by
-    e12 link "Zyte"
+    e10 link "Zyte"
 
 > click {"target":"text:Next"}
-ok click e7 link "Next" → https://quotes.toscrape.com/js/page/2/ (200)
-# s2 tab=t1 doc=d2 navigated-from=d1 url=https://quotes.toscrape.com/js/page/2/ title="Quotes to Scrape" vp=1280x720 scroll=0,0 filter=interesting nodes=45/120 settled=yes full=navigated
-e13 heading [level=1]
-  e14 link "Quotes to Scrape"
-e15 paragraph
-  e16 link "Login"
+ok click e5 link "Next" → https://quotes.toscrape.com/js/page/2/ (200)
+# s2 title="Quotes to Scrape" full=navigated
+e11 link "Quotes to Scrape" [heading=1]
+e12 link "Login"
 text: “This life is what you make it. No matter what, you're going to mess up sometimes, it's a universal truth. But the good part is you get to decide how you're going to mess it up. Girls will be your friends - they'll act like it anyway. But just remember, some come, some go. The ones that stay with you through everything - they're your true best friends. Don't let go of them. Also remember, sisters make the best friends in the world. As for lovers, well, they'll come and go too. And baby, I hate to say it, most of them - actually pretty much all of them are going to break your heart, but you can't give up because if you give up, you'll never find your soulmate. You'll never find that half who makes you whole and that goes for everything. Just because you fail once, doesn't mean you're gonna fail at everything. Keep trying, hold on, and always, always, always believe in yourself, because if you don't, then who will, sweetie? So keep your head high, keep your chin up, and most importantly, keep smiling, because life's a beautiful thing and there's so much to smile about.”
 text: by Marilyn Monroe
 text: Tags: friends heartbreak inspirational life love sisters
@@ -83,17 +79,17 @@ text: Tags: books contentment friends friendship life
 text: “Life is what happens to us while we are making other plans.”
 text: by Allen Saunders
 text: Tags: fate life misattributed-john-lennon planning plans
-e17 navigation
-  e18 list
-    e19 link "Previous"
-    e20 link "Next"
-e21 contentinfo
-  e22 paragraph
+e13 navigation
+  e14 list
+    e15 link "Previous"
+    e16 link "Next"
+e17 contentinfo
+  e18 paragraph
     text: Quotes by:
-    e23 link "GoodReads.com"
-  e24 paragraph
+    e19 link "GoodReads.com"
+  e20 paragraph
     text: Made with ❤ by
-    e25 link "Zyte"
+    e21 link "Zyte"
 
 ? url_contains "/js/page/2/" → yes
 ? text_contains "Quotes to Scrape" → yes

@@ -270,9 +270,9 @@ impl GroupState {
                 if idle {
                     failure = failure.with(advice::IDLE);
                 }
-                let page = self.page_view(tab, p.snapshot, view)?;
-                if !page.is_empty() {
-                    failure = failure.with(page);
+                let page = self.page_view(tab, p.snapshot, view, false, None)?;
+                if !page.text.is_empty() {
+                    failure = failure.with(page.text);
                 }
                 Err(failure)
             }

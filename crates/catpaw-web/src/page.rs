@@ -165,6 +165,9 @@ pub struct NavigationRequest {
     /// document: the embedder loads the entry `delta` steps away. `url`
     /// is then the current URL and the other fields do not apply.
     pub traverse: i32,
+    /// A link with `download` asked for the response to be saved, under
+    /// this name (empty: the URL's).
+    pub download: Option<String>,
 }
 
 impl NavigationRequest {
@@ -177,6 +180,7 @@ impl NavigationRequest {
             method: "GET".to_string(),
             body: None,
             traverse: 0,
+            download: None,
         }
     }
 }

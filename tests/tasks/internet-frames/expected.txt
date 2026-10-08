@@ -1,6 +1,6 @@
 > navigate {"url":"https://the-internet.herokuapp.com/nested_frames"}
 ok navigate → https://the-internet.herokuapp.com/nested_frames (200)
-# s1 tab=t1 doc=d1 url=https://the-internet.herokuapp.com/nested_frames title="" vp=1280x720 scroll=0,0 filter=interesting nodes=9/25 settled=yes
+# s1
 e1 iframe "frame-top" [frame=f1]
   e3 iframe "frame-left" [frame=f3]
     text: LEFT
@@ -13,7 +13,7 @@ e2 iframe "frame-bottom" [frame=f2]
 
 > snapshot {}
 ok snapshot
-# s2 tab=t1 doc=d1 url=https://the-internet.herokuapp.com/nested_frames title="" vp=1280x720 scroll=0,0 filter=interesting nodes=9/25 settled=yes
+# s2 url=https://the-internet.herokuapp.com/nested_frames
 e1 iframe "frame-top" [frame=f1]
   e3 iframe "frame-left" [frame=f3]
     text: LEFT

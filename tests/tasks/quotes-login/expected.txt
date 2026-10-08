@@ -1,147 +1,139 @@
 > navigate {"url":"https://quotes.toscrape.com/login"}
 ok navigate → https://quotes.toscrape.com/login (200)
-# s1 tab=t1 doc=d1 url=https://quotes.toscrape.com/login title="Quotes to Scrape" vp=1280x720 scroll=0,0 filter=interesting nodes=16/33 settled=yes
-e1 heading [level=1]
-  e2 link "Quotes to Scrape"
-e3 paragraph
-  e4 link "Login"
+# s1 title="Quotes to Scrape"
+e1 link "Quotes to Scrape" [heading=1]
+e2 link "Login"
 text: Username
-e5 textbox "Username Password"
+e3 textbox "Username Password"
 text: Password
-e6 textbox
-e7 button "Login"
-e8 contentinfo
-  e9 paragraph
+e4 textbox
+e5 button "Login"
+e6 contentinfo
+  e7 paragraph
     text: Quotes by:
-    e10 link "GoodReads.com"
-  e11 paragraph
+    e8 link "GoodReads.com"
+  e9 paragraph
     text: Made with ❤ by
-    e12 link "Zyte"
+    e10 link "Zyte"
 
 > type {"target":"textbox \"Username Password\"","text":"catpaw"}
-ok type e5 textbox "Username Password"
-# s2 diff-from=s1 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e5 settled=yes changed=1 added=0 removed=0 unchanged=11
-~ e5 textbox "Username Password" [value=- → catpaw]
+ok type e3 textbox "Username Password" [value=- → catpaw]
 
 > type {"target":"css:#password","text":"secret"}
-ok type e6 textbox
-# s3 diff-from=s2 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e6 settled=yes changed=1 added=0 removed=0 unchanged=11
-~ e6 textbox [value=- → ***]
+ok type e4 textbox [value=- → ***]
 
 > click {"target":"button \"Login\""}
-needs_confirmation c1: click e7 button "Login" would submit → POST https://quotes.toscrape.com/login (fields: csrf_token=***, username=catpaw, password=***)
+needs_confirmation c1: click e5 button "Login" would submit → POST https://quotes.toscrape.com/login (fields: csrf_token=***, username=catpaw, password=***)
   ask the user to approve at http://127.0.0.1:PORT/confirm/c1 (expires in 10m); once they approve, repeat: click {"confirmation":"c1","target":"button \"Login\""}
 
 > (user) approve c1
 approved
 
 > click {"confirmation":"c1","target":"button \"Login\""}
-ok click e7 button "Login" (confirmed c1) → https://quotes.toscrape.com/ (POST, 200)
-# s5 tab=t1 doc=d2 navigated-from=d1 url=https://quotes.toscrape.com/ title="Quotes to Scrape" vp=1280x720 scroll=0,0 filter=interesting nodes=105/161 settled=yes full=navigated
-e13 heading [level=1]
-  e14 link "Quotes to Scrape"
-e15 paragraph
-  e16 link "Logout"
+ok click e5 button "Login" (confirmed c1) → https://quotes.toscrape.com/ (POST, 200)
+# s5 title="Quotes to Scrape" full=navigated
+e11 link "Quotes to Scrape" [heading=1]
+e12 link "Logout"
 text: “The world as we have created it is a process of our thinking. It cannot be changed without changing our thinking.”
 text: by Albert Einstein
-e17 link "(about)"
-e18 link "(Goodreads page)"
+e13 link "(about)"
+e14 link "(Goodreads page)"
 text: Tags:
-e19 link "change"
-e20 link "deep-thoughts"
-e21 link "thinking"
-e22 link "world"
+e15 link "change"
+e16 link "deep-thoughts"
+e17 link "thinking"
+e18 link "world"
 text: “It is our choices, Harry, that show what we truly are, far more than our abilities.”
 text: by J.K. Rowling
+e19 link "(about)"
+e20 link "(Goodreads page)"
+text: Tags:
+e21 link "abilities"
+e22 link "choices"
+text: “There are only two ways to live your life. One is as though nothing is a miracle. The other is as though everything is a miracle.”
+text: by Albert Einstein
 e23 link "(about)"
 e24 link "(Goodreads page)"
 text: Tags:
-e25 link "abilities"
-e26 link "choices"
-text: “There are only two ways to live your life. One is as though nothing is a miracle. The other is as though everything is a miracle.”
-text: by Albert Einstein
-e27 link "(about)"
-e28 link "(Goodreads page)"
-text: Tags:
-e29 link "inspirational"
-e30 link "life"
-e31 link "live"
-e32 link "miracle"
-e33 link "miracles"
+e25 link "inspirational"
+e26 link "life"
+e27 link "live"
+e28 link "miracle"
+e29 link "miracles"
 text: “The person, be it gentleman or lady, who has not pleasure in a good novel, must be intolerably stupid.”
 text: by Jane Austen
-e34 link "(about)"
-e35 link "(Goodreads page)"
+e30 link "(about)"
+e31 link "(Goodreads page)"
 text: Tags:
-e36 link "aliteracy"
-e37 link "books"
-e38 link "classic"
-e39 link "humor"
+e32 link "aliteracy"
+e33 link "books"
+e34 link "classic"
+e35 link "humor"
 text: “Imperfection is beauty, madness is genius and it's better to be absolutely ridiculous than absolutely boring.”
 text: by Marilyn Monroe
+e36 link "(about)"
+e37 link "(Goodreads page)"
+text: Tags:
+e38 link "be-yourself"
+e39 link "inspirational"
+text: “Try not to become a man of success. Rather become a man of value.”
+text: by Albert Einstein
 e40 link "(about)"
 e41 link "(Goodreads page)"
 text: Tags:
-e42 link "be-yourself"
-e43 link "inspirational"
-text: “Try not to become a man of success. Rather become a man of value.”
-text: by Albert Einstein
-e44 link "(about)"
-e45 link "(Goodreads page)"
-text: Tags:
-e46 link "adulthood"
-e47 link "success"
-e48 link "value"
+e42 link "adulthood"
+e43 link "success"
+e44 link "value"
 text: “It is better to be hated for what you are than to be loved for what you are not.”
 text: by André Gide
+e45 link "(about)"
+e46 link "(Goodreads page)"
+text: Tags:
+e47 link "life"
+e48 link "love"
+text: “I have not failed. I've just found 10,000 ways that won't work.”
+text: by Thomas A. Edison
 e49 link "(about)"
 e50 link "(Goodreads page)"
 text: Tags:
-e51 link "life"
-e52 link "love"
-text: “I have not failed. I've just found 10,000 ways that won't work.”
-text: by Thomas A. Edison
-e53 link "(about)"
-e54 link "(Goodreads page)"
-text: Tags:
-e55 link "edison"
-e56 link "failure"
-e57 link "inspirational"
-e58 link "paraphrased"
+e51 link "edison"
+e52 link "failure"
+e53 link "inspirational"
+e54 link "paraphrased"
 text: “A woman is like a tea bag; you never know how strong it is until it's in hot water.”
 text: by Eleanor Roosevelt
-e59 link "(about)"
-e60 link "(Goodreads page)"
+e55 link "(about)"
+e56 link "(Goodreads page)"
 text: Tags:
-e61 link "misattributed-eleanor-roosevelt"
+e57 link "misattributed-eleanor-roosevelt"
 text: “A day without sunshine is like, you know, night.”
 text: by Steve Martin
-e62 link "(about)"
-e63 link "(Goodreads page)"
+e58 link "(about)"
+e59 link "(Goodreads page)"
 text: Tags:
-e64 link "humor"
-e65 link "obvious"
-e66 link "simile"
-e67 navigation
-  e68 list
-    e69 link "Next"
-e70 heading "Top Ten tags" [level=2]
-e71 link "love"
-e72 link "inspirational"
-e73 link "life"
-e74 link "humor"
-e75 link "books"
-e76 link "reading"
-e77 link "friendship"
-e78 link "friends"
-e79 link "truth"
-e80 link "simile"
-e81 contentinfo
-  e82 paragraph
+e60 link "humor"
+e61 link "obvious"
+e62 link "simile"
+e63 navigation
+  e64 list
+    e65 link "Next"
+e66 heading "Top Ten tags" [level=2]
+e67 link "love"
+e68 link "inspirational"
+e69 link "life"
+e70 link "humor"
+e71 link "books"
+e72 link "reading"
+e73 link "friendship"
+e74 link "friends"
+e75 link "truth"
+e76 link "simile"
+e77 contentinfo
+  e78 paragraph
     text: Quotes by:
-    e83 link "GoodReads.com"
-  e84 paragraph
+    e79 link "GoodReads.com"
+  e80 paragraph
     text: Made with ❤ by
-    e85 link "Zyte"
+    e81 link "Zyte"
 
 ? text_contains "Logout" → yes

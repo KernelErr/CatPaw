@@ -92,6 +92,16 @@ const ACTIVATION_EVENTS: &[&str] = &[
     "touchstart",
 ];
 
+/// The handler attributes of those events.
+const ACTIVATION_HANDLERS: &[&str] = &[
+    "onclick",
+    "onmousedown",
+    "onmouseup",
+    "onpointerdown",
+    "onpointerup",
+    "ontouchstart",
+];
+
 /// Whether the element itself has a click-like listener or handler (an
 /// `onclick` attribute counts). Listeners delegated to an ancestor
 /// (React's root listener) are not seen; the agent layer pairs this with
@@ -99,9 +109,9 @@ const ACTIVATION_EVENTS: &[&str] = &[
 pub fn has_activation_listener(page: &PageState, el: NodeId) -> bool {
     {
         let dom = page.dom.borrow();
-        if ACTIVATION_EVENTS
+        if ACTIVATION_HANDLERS
             .iter()
-            .any(|ty| dom.attr(el, &format!("on{ty}")).is_some())
+            .any(|name| dom.attr(el, name).is_some())
         {
             return true;
         }
@@ -156,6 +166,23 @@ pub fn scroll_into_view(cx: &mut Cx<'_>, el: NodeId) {
 pub fn scroll_by(cx: &mut Cx<'_>, dx: f32, dy: f32) {
     let (x, y) = crate::layout::window_scroll(cx.page);
     crate::layout::scroll_window_to(cx, x + dx, y + dy);
+}
+
+/// Scrolls the content of `el`, or of the nearest element around it that
+/// scrolls, by `dy` (the window when none does); how far it moved.
+pub fn scroll_within(cx: &mut Cx<'_>, el: NodeId, dy: f32) -> f32 {
+    let mut at = Some(el);
+    while let Some(node) = at {
+        if crate::layout::scrolls_vertically(cx.page, node) {
+            let (x, y) = crate::layout::scroll_position(cx.page, node);
+            crate::layout::scroll_element_to(cx, node, x, y + dy);
+            return crate::layout::scroll_position(cx.page, node).1 - y;
+        }
+        at = cx.dom().parent_element(node);
+    }
+    let before = window_scroll(cx.page).1;
+    scroll_by(cx, 0.0, dy);
+    window_scroll(cx.page).1 - before
 }
 
 /// The options of a `select`, in order (those inside `optgroup`s too).

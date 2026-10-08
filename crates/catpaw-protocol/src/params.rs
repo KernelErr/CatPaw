@@ -57,7 +57,7 @@ macro_rules! action_options {
         }
     )*};
 }
-action_options!(Click, Type, Press, Select, Act);
+action_options!(Click, Type, Fill, Press, Select, Act);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -111,6 +111,11 @@ pub struct Click {
     /// Skip the checks and click the element itself.
     #[serde(default)]
     pub force: bool,
+    pub button: Option<MouseButton>,
+    /// Presses in a row (2: double click).
+    pub count: Option<u8>,
+    /// Keys held: Control, Shift, Alt, Meta.
+    pub modifiers: Option<Vec<String>>,
     pub snapshot: Option<SnapshotMode>,
     pub dialog: Option<DialogChoice>,
     pub prompt_text: Option<String>,
@@ -134,6 +139,36 @@ pub struct Type {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct Fill {
+    pub fields: Vec<FillField>,
+    /// Press Enter in the last field afterwards.
+    #[serde(default)]
+    pub submit: bool,
+    pub snapshot: Option<SnapshotMode>,
+    pub dialog: Option<DialogChoice>,
+    pub prompt_text: Option<String>,
+    pub confirmation: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FillField {
+    pub target: String,
+    pub value: FillValue,
+}
+
+/// What a field is set to: text, checked or not, or the options of a
+/// select.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+pub enum FillValue {
+    Checked(bool),
+    Text(String),
+    Options(Vec<String>),
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct Press {
     pub key: String,
     pub target: Option<String>,
@@ -153,6 +188,14 @@ pub struct Select {
     pub dialog: Option<DialogChoice>,
     pub prompt_text: Option<String>,
     pub confirmation: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum MouseButton {
+    Left,
+    Middle,
+    Right,
 }
 
 /// A string, or an array of them.
@@ -384,6 +427,7 @@ pub enum Call {
     Snapshot(Snapshot),
     Click(Click),
     Type(Type),
+    Fill(Fill),
     Press(Press),
     Select(Select),
     Act(Act),
@@ -413,6 +457,7 @@ pub fn parse(name: &str, value: serde_json::Value) -> Result<Call, String> {
         "snapshot" => Call::Snapshot(args(value)?),
         "click" => Call::Click(args(value)?),
         "type" => Call::Type(args(value)?),
+        "fill" => Call::Fill(args(value)?),
         "press" => Call::Press(args(value)?),
         "select" => Call::Select(args(value)?),
         "act" => Call::Act(args(value)?),

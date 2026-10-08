@@ -148,6 +148,12 @@ impl Default for SnapshotOptions {
 const MAX_TEXT_LEN: usize = 200;
 /// Longest control value shown.
 const MAX_VALUE_LEN: usize = 80;
+/// A select lists its options when it has at most this many,
+const MAX_LISTED_OPTIONS: usize = 10;
+/// each at most this long,
+const MAX_OPTION_LEN: usize = 40;
+/// and all of them together at most this long (bytes).
+const MAX_OPTIONS_LEN: usize = 240;
 
 /// Canonical attribute order: the same node always prints the same bytes.
 const ATTR_ORDER: &[&str] = &[
@@ -167,6 +173,8 @@ const ATTR_ORDER: &[&str] = &[
     "max",
     "options",
     "type",
+    "heading",
+    "editable",
     "clickable",
     "href",
     "src",
@@ -285,6 +293,11 @@ pub fn render_line(out: &mut String, line: &SnapLine, format: Format) {
 
 /// One `[key]` or `[key=value]` attribute.
 pub fn write_attr(out: &mut String, key: &str, value: &str) {
+    // A select's options, listed: `[options: "A", "B"]`.
+    if key == "options" && value.starts_with('"') {
+        let _ = write!(out, " [options: {value}]");
+        return;
+    }
     if value.is_empty() && key != "value" {
         let _ = write!(out, " [{key}]");
     } else {
@@ -307,10 +320,7 @@ pub fn render_lines(lines: &[SnapLine], format: Format) -> String {
 #[derive(Debug, Clone, Default)]
 pub struct Header {
     pub id: u64,
-    pub diff_from: Option<u64>,
     pub tab: Option<String>,
-    pub doc: Option<u64>,
-    pub navigated_from: Option<u64>,
     pub url: Option<String>,
     pub title: Option<String>,
     pub viewport: Option<(u32, u32)>,
@@ -325,8 +335,6 @@ pub struct Header {
     pub budget_hit: bool,
     /// Why a full snapshot was returned where a diff was asked for.
     pub full: Option<String>,
-    /// The URL is the one of the snapshot diffed from (`url=(same)`).
-    pub same_url: bool,
     /// A diff's counts (`changed=3 added=1 …`, or `no changes`).
     pub stats: Option<String>,
 }
@@ -334,21 +342,10 @@ pub struct Header {
 impl Header {
     pub fn render(&self) -> String {
         let mut out = format!("# s{}", self.id);
-        if let Some(from) = self.diff_from {
-            let _ = write!(out, " diff-from=s{from}");
-        }
         if let Some(tab) = &self.tab {
             let _ = write!(out, " tab={tab}");
         }
-        if let Some(doc) = self.doc {
-            let _ = write!(out, " doc=d{doc}");
-        }
-        if let Some(from) = self.navigated_from {
-            let _ = write!(out, " navigated-from=d{from}");
-        }
-        if self.same_url {
-            out.push_str(" url=(same)");
-        } else if let Some(url) = &self.url {
+        if let Some(url) = &self.url {
             let _ = write!(out, " url={}", truncate(url, 120));
         }
         if let Some(title) = &self.title {
@@ -516,7 +513,7 @@ impl<'a> Snapshotter<'a> {
             .filter(|&n| self.dom.is_element(n))
             .count();
 
-        let mut forest = self.build_children(root, options);
+        let mut forest = crate::a11y::in_one_pass(|| self.build_children(root, options));
         if options.filter != Filter::All {
             forest = forest.into_iter().flat_map(elide_generic).collect();
         }
@@ -567,7 +564,7 @@ impl<'a> Snapshotter<'a> {
         let header = Header {
             id: self.next_id,
             url: self.document_url.as_ref().map(Url::to_string),
-            title: Some(self.title()),
+            title: Some(self.title()).filter(|t| !t.is_empty()),
             filter: Some(options.filter),
             nodes: Some((body.emitted, body.total_elements)),
             ..Header::default()
@@ -677,6 +674,24 @@ impl<'a> Snapshotter<'a> {
             children.clear();
         }
 
+        // An element that takes text without being a form control (rich
+        // text editors) says so.
+        if el.attr("contenteditable").is_some_and(|v| {
+            matches!(
+                v.trim().to_ascii_lowercase().as_str(),
+                "" | "true" | "plaintext-only"
+            )
+        }) && !matches!(role, Some("textbox" | "searchbox" | "combobox"))
+            && !self
+                .dom
+                .parent_element(id)
+                .and_then(|p| self.dom.attr(p, "contenteditable"))
+                .is_some()
+        {
+            interactive = true;
+            attrs.push(("editable", String::new()));
+            attrs.sort_by_key(|(k, _)| attr_rank(k));
+        }
         // A generic element styled or scripted as something to click, with
         // nothing clickable inside it: the "clickable div" of single-page
         // apps. It gets a ref so that it can be acted on.
@@ -716,6 +731,36 @@ impl<'a> Snapshotter<'a> {
             text: None,
             breaks_before: false,
             breaks_after: false,
+        }
+    }
+
+    /// A select's options as its line shows them: listed when they are few
+    /// and short (`"A", "B"`), else counted.
+    fn options_attr(&self, select: NodeId) -> String {
+        let labels: Vec<String> = self
+            .dom
+            .descendants(select)
+            .filter(|&n| self.dom.is_html_element(n, "option"))
+            .map(|n| {
+                let label = self
+                    .dom
+                    .attr(n, "label")
+                    .map(str::to_string)
+                    .unwrap_or_else(|| self.dom.text_content(n));
+                collapse_whitespace(&label)
+            })
+            .collect();
+        let listed = labels.len() <= MAX_LISTED_OPTIONS
+            && labels.iter().all(|l| l.chars().count() <= MAX_OPTION_LEN)
+            && labels.iter().map(String::len).sum::<usize>() <= MAX_OPTIONS_LEN;
+        if listed && !labels.is_empty() {
+            labels
+                .iter()
+                .map(|l| quote(l))
+                .collect::<Vec<_>>()
+                .join(", ")
+        } else {
+            labels.len().to_string()
         }
     }
 
@@ -863,12 +908,7 @@ impl<'a> Snapshotter<'a> {
                 if !selected.is_empty() {
                     attrs.push(("value", truncate(&selected, MAX_VALUE_LEN)));
                 }
-                let count = self
-                    .dom
-                    .descendants(id)
-                    .filter(|&n| self.dom.is_html_element(n, "option"))
-                    .count();
-                attrs.push(("options", count.to_string()));
+                attrs.push(("options", self.options_attr(id)));
             }
             "link" if options.extra.href => {
                 if let Some(href) = el.attr("href") {
@@ -1317,9 +1357,61 @@ fn elide_generic(node: AxNode) -> Vec<AxNode> {
             !(c.children.is_empty() && !shown.is_empty() && name.contains(&shown.to_lowercase()))
         });
     }
+    // A text that only repeats the container's name (a fieldset's legend
+    // under its group) says nothing more.
+    if !node.interactive && !node.name.is_empty() {
+        let name = node.name.clone();
+        kids.retain(|c| !(c.children.is_empty() && c.text.as_deref() == Some(name.as_str())));
+    }
+    // A container named by the heading it starts with: the heading says it.
+    if !node.interactive
+        && !node.name.is_empty()
+        && kids
+            .first()
+            .is_some_and(|k| k.role == Some("heading") && k.name == node.name)
+    {
+        node.name.clear();
+    }
+    // An image beside the button or link of its name repeats it.
+    let names: Vec<Option<String>> = kids
+        .iter()
+        .map(|k| (k.interactive && !k.name.is_empty()).then(|| k.name.clone()))
+        .collect();
+    let mut index: usize = 0;
+    kids.retain(|k| {
+        let i = index;
+        index += 1;
+        let alike = |j: Option<usize>| {
+            j.and_then(|j| names.get(j))
+                .and_then(Option::as_ref)
+                .is_some_and(|n| *n == k.name)
+        };
+        !(k.role == Some("img")
+            && !k.interactive
+            && k.children.is_empty()
+            && !k.name.is_empty()
+            && (alike(i.checked_sub(1)) || alike(Some(i + 1))))
+    });
     node.children = kids;
     if generic {
         return node.children;
+    }
+    // A heading that is one link is that link, marked with its level.
+    if node.role == Some("heading")
+        && node.children.len() == 1
+        && node.children[0].role == Some("link")
+        && (node.name.is_empty() || node.name == node.children[0].name)
+    {
+        let level = node
+            .attrs
+            .iter()
+            .find(|(k, _)| *k == "level")
+            .map(|(_, v)| v.clone())
+            .unwrap_or_default();
+        let mut link = node.children.remove(0);
+        link.attrs.push(("heading", level));
+        link.attrs.sort_by_key(|(k, _)| attr_rank(k));
+        return vec![link];
     }
     if !node.interactive && node.text.is_none() && node.name.is_empty() {
         // An empty element says nothing (a star rating drawn by CSS); a
@@ -1327,8 +1419,8 @@ fn elide_generic(node: AxNode) -> Vec<AxNode> {
         if node.children.is_empty() && !matches!(node.role, Some("iframe" | "document")) {
             return Vec::new();
         }
-        // A list item around one element is that element.
-        if node.role == Some("listitem")
+        // A list item or paragraph around one element is that element.
+        if matches!(node.role, Some("listitem" | "paragraph"))
             && node.children.len() == 1
             && node.children[0].text.is_none()
         {
@@ -1746,6 +1838,56 @@ e5 main
     }
 
     #[test]
+    fn repeated_structure_is_said_once() {
+        let text = snap(
+            "<section aria-labelledby=h><h2 id=h>History</h2><p>Old times.</p></section>\
+             <p><input aria-label=Email></p>\
+             <div><button>Open Menu</button><img alt=\"Open Menu\" src=m.png></div>\
+             <select aria-label=Many>\
+             <option>1</option><option>2</option><option>3</option><option>4</option>\
+             <option>5</option><option>6</option><option>7</option><option>8</option>\
+             <option>9</option><option>10</option><option>11</option></select>",
+            Filter::Interesting,
+        );
+        let body: Vec<&str> = text.lines().skip(1).collect();
+        assert_eq!(
+            body,
+            [
+                "e1 region",
+                "  e2 heading \"History\" [level=2]",
+                "  e3 paragraph: Old times.",
+                "e4 textbox \"Email\"",
+                "e5 button \"Open Menu\"",
+                "e6 combobox \"Many\" [value=1] [options=11]",
+            ],
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn a_pass_keeps_documents_apart() {
+        let layout = parse_html(
+            "<table border=0 cellpadding=0><tr><td>a<td>b</table>",
+            &Default::default(),
+        );
+        let data = parse_html(
+            "<table><tr><th>A<th>B<tr><td>1<td>2</table>",
+            &Default::default(),
+        );
+        let first_row = |dom: &Dom| {
+            dom.descendants(dom.document())
+                .find(|&n| dom.is_html_element(n, "tr"))
+                .unwrap()
+        };
+        crate::a11y::in_one_pass(|| {
+            for _ in 0..2 {
+                assert_eq!(role_for(&layout.dom, first_row(&layout.dom)), None);
+                assert_eq!(role_for(&data.dom, first_row(&data.dom)), Some("row"));
+            }
+        });
+    }
+
+    #[test]
     fn labels_and_lone_texts_fold_into_their_lines() {
         let text = snap(
             "<label>Search <input name=q></label><label><input type=checkbox> In stock</label>\
@@ -1782,8 +1924,7 @@ e5 main
                 "  e3 link \"Travel\"",
                 "  e4 listitem: Page 1 of 50",
                 "e5 article",
-                "  e6 heading [level=3]",
-                "    e7 link \"A Light\"",
+                "  e6 link \"A Light\" [heading=3]",
             ],
             "{text}"
         );
@@ -1829,7 +1970,6 @@ e5 main
         let header = Header {
             id: 14,
             tab: Some("t1".into()),
-            doc: Some(3),
             url: Some("https://shop.example/cart".into()),
             title: Some("Cart (2)".into()),
             viewport: Some((1280, 720)),
@@ -1841,7 +1981,15 @@ e5 main
         };
         assert_eq!(
             header.render(),
-            "# s14 tab=t1 doc=d3 url=https://shop.example/cart title=\"Cart (2)\" vp=1280x720 scroll=0,0 filter=interesting nodes=38/412 settled=yes"
+            "# s14 tab=t1 url=https://shop.example/cart title=\"Cart (2)\" vp=1280x720 scroll=0,0 filter=interesting nodes=38/412 settled=yes"
+        );
+        assert_eq!(
+            Header {
+                id: 15,
+                ..Header::default()
+            }
+            .render(),
+            "# s15"
         );
     }
 }

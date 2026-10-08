@@ -364,6 +364,104 @@ fn focus_for_input(cx: &mut Cx<'_>, to: Option<NodeId>) {
 
 /// Clicks a viewport point with the left button: the pointer and mouse
 /// down, focus, up and click sequence, with activation.
+/// How a click is made.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ClickOptions {
+    /// As `MouseEvent.button`: 0 left, 1 middle, 2 right.
+    pub button: i16,
+    /// Presses in a row: 2 is a double click.
+    pub count: u8,
+    pub ctrl: bool,
+    pub shift: bool,
+    pub alt: bool,
+    pub meta: bool,
+}
+
+impl Default for ClickOptions {
+    fn default() -> Self {
+        Self {
+            button: 0,
+            count: 1,
+            ctrl: false,
+            shift: false,
+            alt: false,
+            meta: false,
+        }
+    }
+}
+
+impl ClickOptions {
+    /// The `buttons` bit of the button.
+    fn bit(&self) -> u16 {
+        match self.button {
+            1 => 4,
+            2 => 2,
+            _ => 1,
+        }
+    }
+
+    fn state(&self, cx: &Cx<'_>, x: f32, y: f32, buttons: u16, detail: i32) -> UiEvent {
+        let mut state = mouse_state(cx, x, y, self.button, buttons, detail);
+        state.modifiers.ctrl = self.ctrl;
+        state.modifiers.shift = self.shift;
+        state.modifiers.alt = self.alt;
+        state.modifiers.meta = self.meta;
+        state
+    }
+}
+
+/// Clicks at a point as [`click_at`] does, with another button, more
+/// presses or modifier keys: each press is down and up; the left button
+/// clicks (and activates) each time and fires `dblclick` after a second,
+/// the right one opens the context menu (`contextmenu`), the middle one
+/// fires `auxclick`.
+pub fn click_at_with(cx: &mut Cx<'_>, x: f32, y: f32, options: ClickOptions) -> Option<NodeId> {
+    if options == ClickOptions::default() {
+        return click_at(cx, x, y);
+    }
+    let mut target = pointer_move(cx, x, y)?;
+    for press in 1..=i32::from(options.count.clamp(1, 3)) {
+        let down = options.state(cx, x, y, options.bit(), press);
+        let pointer_ok = fire_pointer(cx, target, "pointerdown", true, down.clone());
+        let mouse_ok = !pointer_ok || fire_pointer(cx, target, "mousedown", true, down);
+        if mouse_ok && press == 1 {
+            let focus = focus_target(&cx.dom(), target);
+            focus_for_input(cx, focus);
+        }
+        if options.button == 2 && press == 1 {
+            let menu = options.state(cx, x, y, options.bit(), 1);
+            fire_pointer(cx, target, "contextmenu", true, menu);
+        }
+        target = target_at(cx, x, y).filter(|&t| cx.dom().contains(t))?;
+        let up = options.state(cx, x, y, 0, press);
+        fire_pointer(cx, target, "pointerup", true, up.clone());
+        fire_pointer(cx, target, "mouseup", true, up);
+        match options.button {
+            0 => {
+                let click = pointer_event(
+                    cx,
+                    InterfaceId::PointerEvent,
+                    "click",
+                    true,
+                    true,
+                    options.state(cx, x, y, 0, press),
+                );
+                activation::click_with(cx, target, true, Some(click));
+            }
+            _ => {
+                let aux = options.state(cx, x, y, 0, press);
+                fire_pointer(cx, target, "auxclick", true, aux);
+            }
+        }
+        target = target_at(cx, x, y).filter(|&t| cx.dom().contains(t))?;
+        if options.button == 0 && press == 2 {
+            let double = options.state(cx, x, y, 0, 2);
+            fire_pointer(cx, target, "dblclick", true, double);
+        }
+    }
+    Some(target)
+}
+
 pub fn click_at(cx: &mut Cx<'_>, x: f32, y: f32) -> Option<NodeId> {
     let target = pointer_move(cx, x, y)?;
     let down = mouse_state(cx, x, y, 0, 1, 1);
@@ -400,6 +498,16 @@ pub fn click_at(cx: &mut Cx<'_>, x: f32, y: f32) -> Option<NodeId> {
 pub fn click_element(cx: &mut Cx<'_>, el: NodeId) -> Result<NodeId, InputError> {
     let point = aim(cx, el)?;
     Ok(click_at(cx, point.0, point.1).unwrap_or(el))
+}
+
+/// [`click_element`] with another button, more presses or modifiers.
+pub fn click_element_with(
+    cx: &mut Cx<'_>,
+    el: NodeId,
+    options: ClickOptions,
+) -> Result<NodeId, InputError> {
+    let point = aim(cx, el)?;
+    Ok(click_at_with(cx, point.0, point.1, options).unwrap_or(el))
 }
 
 /// Where to click an element, after scrolling it into view.

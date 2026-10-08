@@ -33,6 +33,7 @@ fn uses_page(call: &Call) -> bool {
         | Call::Snapshot(_)
         | Call::Click(_)
         | Call::Type(_)
+        | Call::Fill(_)
         | Call::Press(_)
         | Call::Select(_)
         | Call::Act(_)

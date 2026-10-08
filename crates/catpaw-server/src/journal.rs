@@ -129,12 +129,24 @@ impl Journal {
 /// password field becomes its length.
 pub fn redact(tool: &str, args: &Value, secret_input: bool) -> Value {
     let mut args = args.clone();
+    let length = |text: &str| json!(format!("({} characters)", text.chars().count()));
     if tool == "type"
         && secret_input
         && let Some(text) = args.get("text").and_then(Value::as_str)
     {
-        let length = text.chars().count();
-        args["text"] = json!(format!("({length} characters)"));
+        args["text"] = length(text);
+    }
+    // A fill with a password among its fields keeps the length of each
+    // text it set.
+    if tool == "fill"
+        && secret_input
+        && let Some(fields) = args.get_mut("fields").and_then(Value::as_array_mut)
+    {
+        for field in fields {
+            if let Some(text) = field.get("value").and_then(Value::as_str) {
+                field["value"] = length(text);
+            }
+        }
     }
     args
 }

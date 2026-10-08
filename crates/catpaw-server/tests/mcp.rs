@@ -108,6 +108,28 @@ document.addEventListener('mouseup', e => {
 });
 </script>"#;
 
+/// Forms, clicks of every kind, downloads, scrolling, an editor and a
+/// page that polls.
+const P5: &str = r#"<!doctype html><title>Five</title>
+<form action=/next>
+<fieldset><legend>Customer</legend>
+<label>First name <input name=first></label>
+<label>Password <input type=password name=pw></label>
+<label><input type=checkbox name=terms> Terms</label>
+<label>Sort <select name=sort><option>Name (A to Z)</option><option value=lohi>Price (low to high)</option></select></label>
+</fieldset>
+<button>Send</button>
+</form>
+<p id=out>none</p>
+<button id=twice ondblclick="out.textContent='double'" oncontextmenu="out.textContent='menu ' + event.button; return false" onclick="out.textContent = event.shiftKey ? 'shift' : 'once ' + event.detail">Twice</button>
+<a href="/data.csv">Data</a> <a href="/next" download="saved.html">Save</a>
+<div id=box style="height:50px;overflow:auto"><div style="height:500px">tall</div></div>
+<div contenteditable aria-label=Notes></div>
+<script>
+function poll() { fetch('/poll').catch(() => {}); setTimeout(poll, 200); }
+poll();
+</script>"#;
+
 /// Serves `pages` by path (the query is ignored), a thread per
 /// connection; `/slow…` answers after 300 ms and `/hang…` after 3 s.
 fn serve(pages: HashMap<&'static str, &'static str>) -> u16 {
@@ -118,9 +140,17 @@ fn serve(pages: HashMap<&'static str, &'static str>) -> u16 {
             let Ok(mut stream) = stream else { return };
             let pages = pages.clone();
             std::thread::spawn(move || {
+                // The head, however it arrives (GETs carry no body).
+                let mut data = Vec::new();
                 let mut buf = vec![0u8; 8192];
-                let n = stream.read(&mut buf).unwrap_or(0);
-                let request = String::from_utf8_lossy(&buf[..n]);
+                while !data.windows(4).any(|w| w == b"\r\n\r\n") {
+                    let n = stream.read(&mut buf).unwrap_or(0);
+                    if n == 0 {
+                        break;
+                    }
+                    data.extend_from_slice(&buf[..n]);
+                }
+                let request = String::from_utf8_lossy(&data);
                 let target = request
                     .lines()
                     .next()
@@ -141,8 +171,13 @@ fn serve(pages: HashMap<&'static str, &'static str>) -> u16 {
                     }
                     None => ("404 Not Found", "<p>not found</p>".to_string()),
                 };
+                let kind = if path.ends_with(".csv") {
+                    "text/csv"
+                } else {
+                    "text/html; charset=utf-8"
+                };
                 let head = format!(
-                    "HTTP/1.1 {status}\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                    "HTTP/1.1 {status}\r\nContent-Type: {kind}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
                     body.len()
                 );
                 let _ = stream.write_all(head.as_bytes());
@@ -175,6 +210,9 @@ impl Client {
             ("/alike", ALIKE),
             ("/long", LONG),
             ("/drag", DRAG),
+            ("/p5", P5),
+            ("/data.csv", "id,name\n1,Ada\n"),
+            ("/poll", "ok"),
         ]));
         let mut config = SessionConfig::default();
         config.options.net.allow_private_network = true;
@@ -274,16 +312,18 @@ fn a_form_is_filled_and_submitted_by_ref() {
 
     let url = format!("{}/", client.base);
     let page = client.ok("navigate", json!({"url": url}));
-    assert!(page.contains("# s1 tab=t1 doc=d1"), "{page}");
-    assert!(page.contains("settled=yes"), "{page}");
+    // The header gives what is not the usual: here, only the title.
+    assert!(page.contains("\n# s1 title=\"Shop\"\n"), "{page}");
+    assert!(!page.contains("settled="), "{page}");
     // The label's text is the textbox's name, not a line of its own.
     assert!(!page.contains("text: Search"), "{page}");
 
     let search = ref_of(&page, "textbox \"Search\"");
     let typed = client.ok("type", json!({"target": search, "text": "wool socks"}));
-    assert!(
-        typed.contains("~ e3 textbox \"Search\" [value=- → \"wool socks\"]"),
-        "{typed}"
+    // The lone change, to the field typed into, is on the ok line.
+    assert_eq!(
+        typed,
+        "ok type e3 textbox \"Search\" [value=- → \"wool socks\"]"
     );
 
     // Control+A selects what is there: typing replaces it.
@@ -317,10 +357,7 @@ fn a_form_is_filled_and_submitted_by_ref() {
 
     let stock = ref_of(&page, "checkbox \"In stock\"");
     let checked = client.ok("act", json!({"kind": "check", "target": stock}));
-    assert!(
-        checked.contains("~ e5 checkbox \"In stock\" [- → checked]"),
-        "{checked}"
-    );
+    assert_eq!(checked, "ok check e5 checkbox \"In stock\" [- → checked]");
 
     let go = ref_of(&page, "button \"Go\"");
     let submitted = client.ok("click", json!({"target": go}));
@@ -328,7 +365,8 @@ fn a_form_is_filled_and_submitted_by_ref() {
         submitted.contains("/next?q=wool+socks&sort=lohi&stock=on (200)"),
         "{submitted}"
     );
-    assert!(submitted.contains("doc=d2"), "{submitted}");
+    assert!(submitted.contains("\n# s"), "{submitted}");
+    assert!(submitted.contains(" full=navigated"), "{submitted}");
 
     let stale = client.error("click", json!({"target": go}));
     assert!(
@@ -338,7 +376,7 @@ fn a_form_is_filled_and_submitted_by_ref() {
 
     let back = client.ok("navigate", json!({"go": "back"}));
     assert!(back.starts_with("ok back → "), "{back}");
-    assert!(back.contains("doc=d3"), "{back}");
+    assert!(back.contains("\n# s9 title=\"Shop\"\n"), "{back}");
 }
 
 #[test]
@@ -405,8 +443,8 @@ fn bad_targets_get_errors_with_advice() {
     let not_text = client.error("type", json!({"target": heading, "text": "x"}));
     assert!(not_text.contains("does not take this input"), "{not_text}");
 
-    let field = client.error("click", json!({"target": "e1", "button": "right"}));
-    assert!(field.contains("unknown field `button`"), "{field}");
+    let field = client.error("click", json!({"target": "e1", "buton": "right"}));
+    assert!(field.contains("unknown field `buton`"), "{field}");
 }
 
 #[test]
@@ -468,7 +506,7 @@ fn actions_answer_with_diffs_unless_told_otherwise() {
     let mut client = Client::new();
     let page = lab(&mut client);
     assert!(page.starts_with("ok navigate → "), "{page}");
-    assert!(page.contains("# s1 tab=t1 doc=d1 url="), "{page}");
+    assert!(page.contains("\n# s1 title=\"Lab\"\n"), "{page}");
 
     let log = ref_of(&page, "button \"Log\"");
     let none = client.ok("click", json!({"target": log, "snapshot": "none"}));
@@ -477,13 +515,9 @@ fn actions_answer_with_diffs_unless_told_otherwise() {
         format!("ok click {log} button \"Log\"\n! console error: boom happened")
     );
     let full = client.ok("click", json!({"target": log, "snapshot": "full"}));
-    assert!(full.contains("\n# s2 tab=t1 doc=d1 url="), "{full}");
+    assert!(full.contains("\n# s2 url="), "{full}");
     let same = client.ok("snapshot", json!({"diff": true}));
-    assert!(
-        same.starts_with("ok snapshot\n# s3 diff-from=s2 "),
-        "{same}"
-    );
-    assert!(same.ends_with("settled=yes no changes"), "{same}");
+    assert_eq!(same, "ok snapshot\n# s3 no changes");
 }
 
 #[test]
@@ -494,7 +528,7 @@ fn wait_lets_page_time_pass_and_says_when_nothing_will_come() {
     // The three-second timer is not part of the click.
     let clicked = client.ok("click", json!({"target": start}));
     assert!(clicked.contains(": idle → Loading..."), "{clicked}");
-    assert!(clicked.contains("settled=yes"), "{clicked}");
+    assert!(!clicked.contains("settled="), "{clicked}");
 
     let waited = client.ok("wait", json!({"for": "text", "text": "hello world!"}));
     // The click's quiet window already took 100 ms of the three seconds.
@@ -822,4 +856,117 @@ fn drag_moves_with_the_button_held() {
     );
     assert!(dragged.starts_with("ok drag e"), "{dragged}");
     assert!(dragged.contains("dropped after 5 moves"), "{dragged}");
+}
+
+#[test]
+fn fill_sets_several_fields_at_once() {
+    let mut client = Client::new();
+    let url = format!("{}/p5", client.base);
+    let page = client.ok("navigate", json!({ "url": url }));
+    // A fieldset's legend names its group once.
+    assert!(page.contains("group \"Customer\""), "{page}");
+    assert!(!page.contains("text: Customer"), "{page}");
+    assert!(
+        page.contains("[options: \"Name (A to Z)\", \"Price (low to high)\"]"),
+        "{page}"
+    );
+    let filled = client.ok(
+        "fill",
+        json!({"fields": [
+            {"target": "textbox \"First name\"", "value": "Ada"},
+            {"target": "textbox \"Password\"", "value": "s3cret"},
+            {"target": "checkbox \"Terms\"", "value": true},
+            {"target": "combobox \"Sort\"", "value": "Price low to high"}
+        ]}),
+    );
+    assert!(filled.starts_with("ok fill e"), "{filled}");
+    assert!(
+        filled.contains("textbox \"First name\" ← \"Ada\""),
+        "{filled}"
+    );
+    assert!(filled.contains("textbox \"Password\" ← ***"), "{filled}");
+    assert!(filled.contains("checkbox \"Terms\" ← checked"), "{filled}");
+    assert!(
+        filled.contains("combobox \"Sort\" ← \"Price (low to high)\""),
+        "{filled}"
+    );
+    assert!(!filled.contains("s3cret"), "{filled}");
+    let wrong = client.error(
+        "fill",
+        json!({"fields": [{"target": "checkbox \"Terms\"", "value": "maybe"}]}),
+    );
+    assert!(wrong.contains("takes true or false"), "{wrong}");
+    // The markdown view names the controls by ref.
+    let read = client.ok("read", json!({"view": "markdown"}));
+    assert!(read.contains("[Send ref:e"), "{read}");
+    assert!(
+        read.contains("[Sort: Price (low to high) ▾ ref:e"),
+        "{read}"
+    );
+    let sent = client.ok(
+        "fill",
+        json!({"fields": [{"target": "textbox \"First name\"", "value": "Grace"}], "submit": true}),
+    );
+    assert!(
+        sent.contains("/next?first=Grace&pw=s3cret&terms=on&sort=lohi (200)"),
+        "{sent}"
+    );
+}
+
+#[test]
+fn clicks_of_every_kind() {
+    let mut client = Client::new();
+    let url = format!("{}/p5", client.base);
+    client.ok("navigate", json!({ "url": url }));
+    let target = "button \"Twice\"";
+    let double = client.ok("click", json!({"target": target, "count": 2}));
+    assert!(double.starts_with("ok double-click e"), "{double}");
+    assert!(double.contains("→ double"), "{double}");
+    let menu = client.ok("click", json!({"target": target, "button": "right"}));
+    assert!(menu.starts_with("ok right-click e"), "{menu}");
+    assert!(menu.contains("→ menu 2"), "{menu}");
+    let shifted = client.ok("click", json!({"target": target, "modifiers": ["Shift"]}));
+    assert!(shifted.contains(" with Shift"), "{shifted}");
+    assert!(shifted.contains("→ shift"), "{shifted}");
+    // A polling page's own requests do not crowd the result.
+    assert!(!shifted.contains("/poll"), "{shifted}");
+}
+
+#[test]
+fn downloads_scrolling_and_editors() {
+    let mut client = Client::new();
+    let url = format!("{}/p5", client.base);
+    let page = client.ok("navigate", json!({ "url": url }));
+    let data = client.ok("click", json!({"target": "link \"Data\""}));
+    assert!(
+        data.contains("! download \"data.csv\" (text/csv, 14 B)"),
+        "{data}"
+    );
+    let saved = client.ok("click", json!({"target": "link \"Save\""}));
+    assert!(saved.contains("! download \"saved.html\""), "{saved}");
+    let title = client.ok("evaluate", json!({"script": "document.title"}));
+    assert_eq!(title, "ok evaluate\nFive", "the page stays");
+
+    let inside = client.ok(
+        "act",
+        json!({"kind": "scroll", "target": "css:#box", "dy": 100}),
+    );
+    assert!(inside.starts_with("ok scroll e"), "{inside}");
+    assert!(inside.contains(" 100px"), "{inside}");
+    let top = client.ok("evaluate", json!({"script": "box.scrollTop"}));
+    assert_eq!(top, "ok evaluate\n100");
+    let far = client.ok("act", json!({"kind": "scroll", "dy": 20000}));
+    assert!(far.contains("(asked 20000px; at the end)"), "{far}");
+
+    assert!(page.contains("[editable]"), "{page}");
+    let typed = client.ok(
+        "type",
+        json!({"target": "textbox \"Notes\"", "text": "hello"}),
+    );
+    assert!(typed.starts_with("ok type e"), "{typed}");
+    let text = client.ok(
+        "evaluate",
+        json!({"script": "document.querySelector('[contenteditable]').textContent"}),
+    );
+    assert_eq!(text, "ok evaluate\nhello");
 }

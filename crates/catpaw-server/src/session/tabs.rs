@@ -86,7 +86,10 @@ impl Session {
             .groups
             .get(&group_id)
             .ok_or_else(|| Failure::new(ErrorCode::NoTab, format!("t{tab} is closed")))?;
-        let view = self.view;
+        let view = View {
+            tabs: self.routes.len(),
+            ..self.view
+        };
         let reply = group.call(move |state| {
             let result = f(state, tab, view);
             (result, tab_list(state))

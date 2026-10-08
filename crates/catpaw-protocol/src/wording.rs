@@ -87,7 +87,7 @@ pub mod advice {
     pub const WAIT: &str =
         "advice: wait({\"for\":\"settled\"}) gives it more time, or wait for the text you expect";
     pub const IDLE: &str =
-        "advice: the page has nothing left to do; what you wait for will not come on its own";
+        "advice: it will not come on its own: act on the page, or wait for something else";
 }
 
 /// The first words of results that are neither `ok` nor `error`, and
@@ -121,6 +121,7 @@ pub mod consequence {
     pub const NAVIGATED: &str = "navigated";
     pub const NAVIGATION_FAILED: &str = "navigation-failed";
     pub const POPUP: &str = "popup";
+    pub const DOWNLOAD: &str = "download";
     pub const TAB_CLOSED: &str = "tab-closed";
     pub const DIALOG: &str = "dialog";
     pub const NETWORK: &str = "network";

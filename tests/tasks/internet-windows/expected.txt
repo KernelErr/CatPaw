@@ -1,6 +1,6 @@
 > navigate {"url":"https://the-internet.herokuapp.com/windows"}
 ok navigate → https://the-internet.herokuapp.com/windows (200)
-# s1 tab=t1 doc=d1 url=https://the-internet.herokuapp.com/windows title="The Internet" vp=1280x720 scroll=0,0 filter=interesting nodes=5/32 settled=yes
+# s1 title="The Internet"
 e1 link "Fork me on GitHub"
 e2 heading "Opening a new window" [level=3]
 e3 link "Click Here"
@@ -10,11 +10,11 @@ e4 link "Elemental Selenium"
 > click {"target":"link \"Click Here\""}
 ok click e3 link "Click Here"
 ! popup t2 https://the-internet.herokuapp.com/windows/new (switch with tabs)
-# s2 diff-from=s1 tab=t1 doc=d1 url=(same) scroll=0,0 focus=e3 settled=yes no changes
+# s2 no changes
 
 > tabs {"op":"switch","tab":"t2"}
 ok switch t2
-# s1 tab=t2 doc=d1 url=https://the-internet.herokuapp.com/windows/new title="New Window" vp=1280x720 scroll=0,0 filter=interesting nodes=1/6 settled=yes
+# s1 tab=t2 url=https://the-internet.herokuapp.com/windows/new title="New Window"
 e1 heading "New Window" [level=3]
 
 ? text_contains "New Window" → yes

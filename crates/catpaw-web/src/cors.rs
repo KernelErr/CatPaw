@@ -507,6 +507,7 @@ impl Transfer {
             follow_redirects: false,
             site: self.site.clone(),
             chain: self.chain,
+            polling: false,
         };
         let preflight = self.needs_preflight().then(|| {
             let mut headers = vec![
@@ -534,6 +535,7 @@ impl Transfer {
                 follow_redirects: false,
                 site: self.site.clone(),
                 chain: self.chain,
+                polling: false,
             }
         });
         (request, preflight)
