@@ -56,6 +56,14 @@ and the copying version is now built on it.
 `src/lib.rs`: `Sym::to_js_string` narrows short Latin-1 names on the stack
 instead of in a temporary `Vec`.
 
+`src/scope_analyzer.rs`, `src/operations/mod.rs`: when a function needs no
+function scope otherwise, the scope analyzer looked for `super` and
+`new.target` in its parameters and body with four walks; one walk per
+part now looks for both (`contains_super_or_new_target`, which visits the
+same nodes as `contains`). Blocks without lexical declarations no longer
+build a scope only to drop it; the scope's unique ID is still used up, so
+every other scope keeps its ID.
+
 `src/expression/operator/assign/mod.rs`, `src/expression/parenthesized.rs`:
 `AssignTarget::from_expression_owned` / `from_expression_simple_owned` and
 `Parenthesized::into_expression`, so that the parser can move an

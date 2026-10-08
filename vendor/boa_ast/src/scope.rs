@@ -660,6 +660,11 @@ impl Scope {
     pub fn unique_id(&self) -> u32 {
         self.inner.unique_id
     }
+
+    /// Uses up the unique ID that the next scope created in this scope tree would get.
+    pub(crate) fn skip_unique_id(&self) {
+        self.inner.context.next_unique_id();
+    }
 }
 
 /// Additional state that all Scopes of a single AST share for bookkeeping.

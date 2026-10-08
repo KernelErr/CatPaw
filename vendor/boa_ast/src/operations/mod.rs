@@ -347,6 +347,125 @@ where
     node.visit_with(&mut ContainsVisitor(symbol)).is_break()
 }
 
+/// Returns `true` if the node contains `super` or `new.target`.
+///
+/// This is `contains(node, ContainsSymbol::Super) || contains(node, ContainsSymbol::NewTarget)`
+/// in one walk: [`contains`] walks the same nodes for both symbols.
+pub(crate) fn contains_super_or_new_target<N>(node: &N) -> bool
+where
+    N: VisitWith,
+{
+    /// The visitor of [`contains`] for `ContainsSymbol::Super` and
+    /// `ContainsSymbol::NewTarget` at once.
+    #[derive(Debug, Clone, Copy)]
+    struct SuperOrNewTargetVisitor;
+
+    impl<'ast> Visitor<'ast> for SuperOrNewTargetVisitor {
+        type BreakTy = ();
+
+        // Functions other than arrow functions have their own `super` and `new.target`.
+        fn visit_function_expression(
+            &mut self,
+            _node: &'ast FunctionExpression,
+        ) -> ControlFlow<Self::BreakTy> {
+            ControlFlow::Continue(())
+        }
+
+        fn visit_function_declaration(
+            &mut self,
+            _node: &'ast FunctionDeclaration,
+        ) -> ControlFlow<Self::BreakTy> {
+            ControlFlow::Continue(())
+        }
+
+        fn visit_async_function_expression(
+            &mut self,
+            _node: &'ast AsyncFunctionExpression,
+        ) -> ControlFlow<Self::BreakTy> {
+            ControlFlow::Continue(())
+        }
+
+        fn visit_async_function_declaration(
+            &mut self,
+            _node: &'ast AsyncFunctionDeclaration,
+        ) -> ControlFlow<Self::BreakTy> {
+            ControlFlow::Continue(())
+        }
+
+        fn visit_generator_expression(
+            &mut self,
+            _node: &'ast GeneratorExpression,
+        ) -> ControlFlow<Self::BreakTy> {
+            ControlFlow::Continue(())
+        }
+
+        fn visit_generator_declaration(
+            &mut self,
+            _node: &'ast GeneratorDeclaration,
+        ) -> ControlFlow<Self::BreakTy> {
+            ControlFlow::Continue(())
+        }
+
+        fn visit_async_generator_expression(
+            &mut self,
+            _node: &'ast AsyncGeneratorExpression,
+        ) -> ControlFlow<Self::BreakTy> {
+            ControlFlow::Continue(())
+        }
+
+        fn visit_async_generator_declaration(
+            &mut self,
+            _node: &'ast AsyncGeneratorDeclaration,
+        ) -> ControlFlow<Self::BreakTy> {
+            ControlFlow::Continue(())
+        }
+
+        // `ComputedPropertyContains`: https://tc39.es/ecma262/#sec-static-semantics-computedpropertycontains
+        fn visit_class_element(&mut self, node: &'ast ClassElement) -> ControlFlow<Self::BreakTy> {
+            match node {
+                ClassElement::MethodDefinition(m) => {
+                    if let ClassElementName::PropertyName(name) = m.name() {
+                        name.visit_with(self)
+                    } else {
+                        ControlFlow::Continue(())
+                    }
+                }
+                ClassElement::FieldDefinition(field)
+                | ClassElement::StaticFieldDefinition(field) => field.name.visit_with(self),
+                _ => ControlFlow::Continue(()),
+            }
+        }
+
+        fn visit_property_definition(
+            &mut self,
+            node: &'ast PropertyDefinition,
+        ) -> ControlFlow<Self::BreakTy> {
+            if let PropertyDefinition::MethodDefinition(m) = node {
+                return m.name().visit_with(self);
+            }
+
+            node.visit_with(self)
+        }
+
+        fn visit_super_property_access(
+            &mut self,
+            _node: &'ast SuperPropertyAccess,
+        ) -> ControlFlow<Self::BreakTy> {
+            ControlFlow::Break(())
+        }
+
+        fn visit_super_call(&mut self, _node: &'ast SuperCall) -> ControlFlow<Self::BreakTy> {
+            ControlFlow::Break(())
+        }
+
+        fn visit_new_target(&mut self, _node: &'ast NewTarget) -> ControlFlow<Self::BreakTy> {
+            ControlFlow::Break(())
+        }
+    }
+
+    node.visit_with(&mut SuperOrNewTargetVisitor).is_break()
+}
+
 /// Returns true if the node contains an identifier reference with name `arguments`.
 ///
 /// This is equivalent to the [`ContainsArguments`][spec] syntax operation in the spec.

@@ -18,8 +18,8 @@ use crate::{
     },
     operations::{
         ContainsSymbol, LexicallyScopedDeclaration, VarScopedDeclarationRef, bound_names, contains,
-        lexically_declared_names, lexically_scoped_declarations, var_declared_names,
-        var_scoped_declarations_ref,
+        contains_super_or_new_target, lexically_declared_names, lexically_scoped_declarations,
+        var_declared_names, var_scoped_declarations_ref,
     },
     property::PropertyName,
     scope::{FunctionScopes, IdentifierReference, Scope},
@@ -1699,11 +1699,10 @@ impl ScopeIndexVisitor {
             self.index += 1;
         } else if !arrow {
             assert!(scopes.function_scope().is_function());
+            // One walk each for `super` and `new.target` together.
             scopes.requires_function_scope = scopes.function_scope().escaped_this()
-                || contains(parameters, ContainsSymbol::Super)
-                || contains(body, ContainsSymbol::Super)
-                || contains(parameters, ContainsSymbol::NewTarget)
-                || contains(body, ContainsSymbol::NewTarget);
+                || contains_super_or_new_target(parameters)
+                || contains_super_or_new_target(body);
             self.index += u32::from(scopes.requires_function_scope);
         }
 
@@ -1828,10 +1827,17 @@ fn block_declaration_instantiation<'a, N>(
 where
     &'a N: Into<NodeRef<'a>>,
 {
-    let scope = Scope::new(scope, false);
-
     // 1. Let declarations be the LexicallyScopedDeclarations of code.
     let declarations = lexically_scoped_declarations(block);
+
+    // CatPaw: most blocks declare nothing and would get an empty scope, which is
+    // dropped; skip building it, but use up its unique ID so that the other scopes
+    // keep theirs.
+    if declarations.is_empty() {
+        scope.skip_unique_id();
+        return None;
+    }
+    let scope = Scope::new(scope, false);
 
     // 2. Let privateEnv be the running execution context's PrivateEnvironment.
     // Note: Private environments are currently handled differently.
