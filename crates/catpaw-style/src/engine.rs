@@ -1,9 +1,9 @@
 //! The style engine: device, stylist, stylesheets, and the restyle driver.
 
-use std::sync::Once;
 use std::sync::atomic::Ordering;
+use std::sync::{Mutex, Once};
 
-use catpaw_dom::{Dom, NodeId, NodeKind};
+use catpaw_dom::{Dom, NodeId};
 use selectors::matching::QuirksMode;
 use style::context::{
     RegisteredSpeculativePainter, RegisteredSpeculativePainters, SharedStyleContext, StyleContext,
@@ -14,15 +14,13 @@ use style::dom::TNode;
 use style::global_style_data::GLOBAL_STYLE_DATA;
 use style::media_queries::{MediaList, MediaType};
 use style::properties::style_structs::Font;
-use style::properties::{ComputedValues, StyleBuilder, parse_style_attribute};
+use style::properties::{ComputedValues, StyleBuilder};
 use style::queries::values::PrefersColorScheme;
 use style::selector_parser::{PseudoElement, SnapshotMap};
 use style::servo::media_features::PointerCapabilities;
 use style::servo_arc::Arc;
 use style::shared_lock::{SharedRwLock, StylesheetGuards};
-use style::stylesheets::{
-    AllowImportRules, CssRuleType, DocumentStyleSheet, Origin, Stylesheet, UrlExtraData,
-};
+use style::stylesheets::{AllowImportRules, DocumentStyleSheet, Origin, Stylesheet, UrlExtraData};
 use style::stylist::{RuleInclusion, Stylist};
 use style::thread_state::{self, ThreadState};
 use style::traversal::{DomTraversal, UndisplayedStyleCache, recalc_style_at, resolve_style};
@@ -102,21 +100,58 @@ pub(crate) fn make_device(options: &StyleOptions) -> Device {
     )
 }
 
+/// What changed in the computed styles since layout last asked
+/// ([`StyleEngine::take_restyled`]).
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct Restyled {
+    /// Every style may have changed: the document was styled from scratch.
+    pub full: bool,
+    /// Otherwise, the elements whose style (or that of their `::before` or
+    /// `::after`) changed. Elements styled for the first time are not
+    /// listed: they came with a change to the tree.
+    pub elements: Vec<NodeId>,
+}
+
+/// How many restyled elements are kept for layout before the engine just
+/// says that everything may have changed.
+const RESTYLED_LIMIT: usize = 4096;
+
 /// Computes styles for one document.
+///
+/// The engine follows the document through the arena's journal of
+/// changes: a restyle only restyles what the changes since the last one
+/// can have affected (Stylo's invalidation, from snapshots of the
+/// attributes elements had), and the document is styled from scratch only
+/// at first, when the style sheets or quirks mode change, or when the
+/// journal no longer reaches back to the last restyle.
 pub struct StyleEngine {
-    table: StyleTable,
+    pub(crate) table: StyleTable,
     stylist: Stylist,
-    snapshots: SnapshotMap,
+    pub(crate) snapshots: SnapshotMap,
     animations: style::animation::DocumentAnimationSet,
-    url_data: UrlExtraData,
-    quirks_mode: QuirksMode,
+    pub(crate) url_data: UrlExtraData,
+    pub(crate) quirks_mode: QuirksMode,
     /// The author stylesheets in cascade order, each with the key it was
     /// set under.
     author_sheets: Vec<(u64, DocumentStyleSheet)>,
     /// Styles resolved on demand, until the document next changes.
-    resolved: UndisplayedStyleCache,
-    /// The slots reflect the document as it is.
-    slots_fresh: bool,
+    pub(crate) resolved: UndisplayedStyleCache,
+    /// The arena version the slots reflect, once they were made.
+    pub(crate) synced: Option<u64>,
+    /// The elements' style data is what a traversal computed, with the
+    /// changes since recorded as restyle hints, snapshots and dirty bits.
+    /// Otherwise there is no style data, and the next restyle styles the
+    /// whole document.
+    pub(crate) styled: bool,
+    /// Restyle hints or snapshots wait for a traversal.
+    pub(crate) pending: bool,
+    /// The elements whose snapshots wait for the traversal.
+    pub(crate) snapshotted: Vec<NodeId>,
+    /// What changed for layout.
+    restyled: Restyled,
+    /// How many times the whole document was styled, and how many
+    /// incremental restyles were done (for tests and profiling).
+    counts: (u64, u64),
 }
 
 impl StyleEngine {
@@ -142,7 +177,12 @@ impl StyleEngine {
             quirks_mode: QuirksMode::NoQuirks,
             author_sheets: Vec::new(),
             resolved: UndisplayedStyleCache::default(),
-            slots_fresh: false,
+            synced: None,
+            styled: false,
+            pending: false,
+            snapshotted: Vec::new(),
+            restyled: Restyled::default(),
+            counts: (0, 0),
         }
     }
 
@@ -151,13 +191,18 @@ impl StyleEngine {
     }
 
     /// Sets the document's quirks mode (from the parser) before styling.
+    /// A change restyles the whole document.
     pub fn set_quirks_mode(&mut self, mode: catpaw_dom::QuirksMode) {
-        self.quirks_mode = match mode {
+        let mode = match mode {
             catpaw_dom::QuirksMode::Quirks => QuirksMode::Quirks,
             catpaw_dom::QuirksMode::LimitedQuirks => QuirksMode::LimitedQuirks,
             catpaw_dom::QuirksMode::NoQuirks => QuirksMode::NoQuirks,
         };
-        self.stylist.set_quirks_mode(self.quirks_mode);
+        if mode != self.quirks_mode {
+            self.quirks_mode = mode;
+            self.stylist.set_quirks_mode(mode);
+            self.invalidate();
+        }
     }
 
     /// Appends an author stylesheet (a `<style>` element's text or a fetched
@@ -180,15 +225,16 @@ impl StyleEngine {
     /// Replaces the author stylesheets with `sheets`, given in cascade
     /// order. Each comes with a key standing for its text: a sheet whose
     /// key is already in use is kept as it is rather than parsed again.
-    /// Keys must be unique.
-    pub fn set_author_stylesheets(&mut self, sheets: &[(u64, &str)]) {
+    /// Keys must be unique. Returns whether anything changed, in which
+    /// case the whole document is restyled.
+    pub fn set_author_stylesheets(&mut self, sheets: &[(u64, &str)]) -> bool {
         let unchanged = sheets.len() == self.author_sheets.len()
             && sheets
                 .iter()
                 .zip(&self.author_sheets)
                 .all(|((key, _), (old, _))| key == old);
         if unchanged {
-            return;
+            return false;
         }
         let lock = self.table.lock().clone();
         let guard = lock.read();
@@ -206,14 +252,39 @@ impl StyleEngine {
         }
         drop(guard);
         self.invalidate();
+        true
     }
 
-    /// Tells the engine that the document changed: styles resolved on
-    /// demand are forgotten.
+    /// Tells the engine that every style may have changed (the sheets or
+    /// what they are matched against changed): the style data is dropped
+    /// and the next restyle styles the whole document. Changes to the
+    /// document itself need no telling: the engine reads them from the
+    /// arena's journal.
     pub fn invalidate(&mut self) {
         self.resolved.clear();
-        self.slots_fresh = false;
         self.table.clear_data();
+        self.snapshots.clear();
+        self.snapshotted.clear();
+        self.styled = false;
+        self.pending = false;
+    }
+
+    /// What changed in the computed styles since the last call: whether
+    /// the document was styled from scratch, or which elements changed.
+    pub fn take_restyled(&mut self) -> Restyled {
+        std::mem::take(&mut self.restyled)
+    }
+
+    /// How many times the whole document was styled, and how many
+    /// incremental restyles found something to do.
+    pub fn restyle_counts(&self) -> (u64, u64) {
+        self.counts
+    }
+
+    /// Whether the style data reflects the document as it is: a restyle
+    /// now would have nothing to do.
+    pub fn is_fresh(&self, dom: &Dom) -> bool {
+        self.styled && !self.pending && self.synced == Some(dom.version())
     }
 
     pub fn author_sheet_count(&self) -> usize {
@@ -233,13 +304,15 @@ impl StyleEngine {
         if !dom.contains(id) || !dom.is_element(id) || !dom.is_connected(id) {
             return None;
         }
-        // A full restyle has the answer already.
-        if let (None, Some(style)) = (pseudo, self.primary_style(id)) {
-            return Some(ComputedStyle(style));
-        }
-        if !self.slots_fresh {
-            self.ensure_slots(dom);
-            self.slots_fresh = true;
+        if self.styled {
+            // Catching up with a few changes costs less than resolving
+            // the element and its ancestors from scratch.
+            self.restyle(dom);
+            if let (None, Some(style)) = (pseudo, self.primary_style(id)) {
+                return Some(ComputedStyle(style));
+            }
+        } else {
+            self.sync(dom);
         }
         if let (None, Some(style)) = (pseudo, self.resolved.get(&CatNode::new(id).opaque_id())) {
             return Some(ComputedStyle(style.clone()));
@@ -316,34 +389,72 @@ impl StyleEngine {
         Some(ComputedStyle(style))
     }
 
-    /// Creates slots for every connected element and refreshes the
-    /// attribute-derived data Stylo reads during matching.
+    /// Brings the slots of the connected elements (and the attribute
+    /// derived data Stylo reads during matching) up to date with the
+    /// document, and records what the changes since the last time mean
+    /// for the styles.
     pub fn ensure_slots(&mut self, dom: &Dom) {
-        let document = dom.document();
-        for id in dom.shadow_including_descendants(document) {
-            let NodeKind::Element(el) = dom.kind(id) else {
-                continue;
+        self.sync(dom);
+    }
+
+    /// Brings the styles of the whole document up to date: from scratch
+    /// the first time and after [`StyleEngine::invalidate`], otherwise
+    /// restyling only what changed since the last restyle.
+    pub fn restyle(&mut self, dom: &Dom) {
+        self.sync(dom);
+        if self.styled && !self.pending {
+            return;
+        }
+        let full = !self.styled;
+        let Some(root) = dom.child_elements(dom.document()).next() else {
+            self.styled = true;
+            self.pending = false;
+            self.clear_snapshots();
+            return;
+        };
+        if full {
+            self.table.clear_data();
+            self.clear_snapshots();
+        }
+        let restyled = self.traverse(dom, root);
+        self.clear_snapshots();
+        self.styled = true;
+        self.pending = false;
+        if full {
+            self.counts.0 += 1;
+            self.restyled = Restyled {
+                full: true,
+                elements: Vec::new(),
             };
-            let url_data = &self.url_data;
-            let quirks = self.quirks_mode;
-            let lock = self.table.lock().clone();
-            let (slot, _created) = self.table.ensure(id);
-            slot.style_attribute = el.attr("style").map(|css| {
-                let block = parse_style_attribute(css, url_data, None, quirks, CssRuleType::Style);
-                Arc::new(lock.wrap(block))
-            });
-            slot.id_atom = el.id().map(style::Atom::from);
-            slot.state = element_state(dom, id);
+        } else {
+            self.counts.1 += 1;
+            if !self.restyled.full {
+                self.restyled.elements.extend(restyled);
+                if self.restyled.elements.len() > RESTYLED_LIMIT {
+                    self.restyled = Restyled {
+                        full: true,
+                        elements: Vec::new(),
+                    };
+                }
+            }
         }
     }
 
-    /// Resolves styles for the whole document.
-    pub fn restyle(&mut self, dom: &Dom) {
-        self.ensure_slots(dom);
-        let Some(root) = dom.child_elements(dom.document()).next() else {
-            return;
-        };
+    /// Drops the snapshots taken for a traversal, which has seen them.
+    fn clear_snapshots(&mut self) {
+        self.snapshots.clear();
+        for id in self.snapshotted.drain(..) {
+            if let Some(slot) = self.table.slot(id) {
+                slot.has_snapshot.store(false, Ordering::SeqCst);
+                slot.snapshot_handled.store(false, Ordering::SeqCst);
+            }
+        }
+    }
 
+    /// Runs Stylo's traversal from the root element: every element without
+    /// style data is styled, the others as their restyle hints, snapshots
+    /// and dirty bits say. Returns the elements whose style changed.
+    fn traverse(&mut self, dom: &Dom, root: NodeId) -> Vec<NodeId> {
         let Self {
             table,
             stylist,
@@ -377,13 +488,22 @@ impl StyleEngine {
                 registered_speculative_painters: &NoPainters,
             };
             let token = RecalcStyle::pre_traverse(root_node, &context);
+            let mut restyled = Vec::new();
             if token.should_traverse() {
-                let traversal = RecalcStyle { context };
+                let traversal = RecalcStyle {
+                    context,
+                    restyled: Mutex::new(Vec::new()),
+                };
                 style::driver::traverse_dom(&traversal, token, None);
+                restyled = traversal
+                    .restyled
+                    .into_inner()
+                    .unwrap_or_else(|e| e.into_inner());
             }
             stylist.rule_tree().maybe_gc();
             thread_state::exit(ThreadState::LAYOUT);
-        });
+            restyled
+        })
     }
 
     /// The style of the element's `::before` or `::after`, if the last
@@ -543,6 +663,8 @@ pub(crate) fn element_state(dom: &Dom, id: NodeId) -> ElementState {
 /// The traversal: style each element in pre-order.
 struct RecalcStyle<'a> {
     context: SharedStyleContext<'a>,
+    /// The elements whose style changed (they have restyle damage).
+    restyled: Mutex<Vec<NodeId>>,
 }
 
 #[allow(unsafe_code)]
@@ -557,6 +679,16 @@ impl DomTraversal<CatNode> for RecalcStyle<'_> {
             // SAFETY: the traversal has exclusive access to the style table.
             let mut data = unsafe { style::dom::TElement::ensure_data(&el) };
             recalc_style_at(self, context, el, &mut data, note_child);
+            // There is no layout pass to consume the damage: it is noted
+            // here and cleared, so that the next traversal does not visit
+            // the element for it.
+            if !data.damage.is_empty() {
+                self.restyled
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .push(el.id);
+            }
+            data.clear_restyle_flags_and_damage();
             unsafe { style::dom::TElement::unset_dirty_descendants(&el) };
         }
     }
@@ -577,7 +709,7 @@ impl DomTraversal<CatNode> for RecalcStyle<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use catpaw_dom::parse_html;
+    use catpaw_dom::{NodeKind, parse_html};
 
     fn find(dom: &Dom, id: &str) -> NodeId {
         dom.descendants(dom.document())
@@ -741,5 +873,377 @@ mod tests {
         assert!(names.contains(&"display") && names.contains(&"margin-top"));
         assert!(!names.contains(&"margin"), "shorthands are not listed");
         assert!(names.windows(2).all(|pair| pair[0] < pair[1]));
+    }
+
+    const SHEET: &str = r#"
+        .a { color: rgb(1, 0, 0) }
+        .a .b { margin-top: 3px }
+        .a > .c { display: none }
+        #x { width: 10px }
+        [data-k="1"] { font-size: 20px }
+        [data-k="1"] + p { color: rgb(0, 2, 0) }
+        .s ~ span { background-color: rgb(0, 0, 3) }
+        li:first-child { padding-left: 1px }
+        li:last-child { padding-right: 2px }
+        li:nth-child(2n) { border-top-width: 4px; border-top-style: solid }
+        li:nth-last-child(2) { margin-left: 7px }
+        div:empty { height: 5px }
+        div:empty + span { word-spacing: 3px }
+        .h { display: none }
+        .h + p { visibility: hidden }
+        p::before { content: "x" }
+        .q::after { content: "y"; color: rgb(9, 9, 9) }
+        input:disabled { opacity: 0.5 }
+        input:checked { opacity: 0.25 }
+        fieldset[disabled] { color: rgb(4, 4, 4) }
+        a:link { text-decoration-line: underline }
+        .a span:not(.b) { letter-spacing: 1px }
+        dt:first-child { padding-left: 1px }
+        dt:last-child { padding-right: 2px }
+    "#;
+
+    const BODY: &str = r#"<!doctype html><body><div id=root>
+        <ul id=list><li>1</li><li class=a>2</li><li>3</li></ul>
+        <dl id=terms><dt>1</dt><dt>2</dt><dt>3</dt></dl>
+        <div class=a><span class=b>b</span><span class=c>c</span><span>d</span></div>
+        <div id=e></div><span>after e</span>
+        <p data-k=0>p1</p><p>p2</p>
+        <span class=s>s</span><span>t</span><span>u</span>
+        <fieldset><input id=i type=checkbox><input></fieldset>
+        <a href=x>link</a><a>not a link</a>
+        </div>"#;
+
+    /// A style engine over `dom` with [`SHEET`], styled from scratch.
+    fn fresh_engine(dom: &Dom) -> StyleEngine {
+        let mut engine = StyleEngine::new(&StyleOptions::default());
+        engine.set_quirks_mode(dom.quirks_mode());
+        engine.set_author_stylesheets(&[(1, SHEET)]);
+        engine.restyle(dom);
+        engine
+    }
+
+    /// What the engine says about every connected element: the values of
+    /// the properties [`SHEET`] sets, and its pseudo-elements.
+    fn styles_of(engine: &StyleEngine, dom: &Dom) -> Vec<String> {
+        const PROPERTIES: &[&str] = &[
+            "display",
+            "color",
+            "margin-top",
+            "margin-left",
+            "width",
+            "height",
+            "font-size",
+            "visibility",
+            "background-color",
+            "padding-left",
+            "padding-right",
+            "border-top-width",
+            "opacity",
+            "text-decoration-line",
+            "letter-spacing",
+            "word-spacing",
+        ];
+        let mut out = Vec::new();
+        for n in dom.descendants(dom.document()) {
+            let Some(el) = dom.element(n) else {
+                continue;
+            };
+            let mut line = format!("{} {:?}:", el.name.local, el.attrs);
+            match engine.primary_style(n) {
+                Some(style) => {
+                    let style = ComputedStyle(style);
+                    for p in PROPERTIES {
+                        line.push_str(&format!(" {p}={}", style.get(p)));
+                    }
+                }
+                None => line.push_str(" unstyled"),
+            }
+            for pseudo in [Pseudo::Before, Pseudo::After] {
+                if let Some(style) = engine.pseudo_style(n, pseudo) {
+                    let style = ComputedStyle(style);
+                    line.push_str(&format!(
+                        " {pseudo:?}({} {})",
+                        style.get("content"),
+                        style.get("color")
+                    ));
+                }
+            }
+            out.push(line);
+        }
+        out
+    }
+
+    /// A small deterministic generator for the mutations.
+    struct Lcg(u64);
+
+    impl Lcg {
+        fn next(&mut self, n: usize) -> usize {
+            self.0 = self
+                .0
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            ((self.0 >> 33) as usize) % n.max(1)
+        }
+    }
+
+    fn attr_name(local: &str) -> catpaw_dom::QualName {
+        catpaw_dom::QualName::new(None, catpaw_dom::ns!(), catpaw_dom::LocalName::from(local))
+    }
+
+    /// Sets an attribute to `value`, or removes it when it has that value.
+    fn toggle(dom: &mut Dom, el: NodeId, local: &str, value: &str) {
+        let data = dom.element_mut(el).unwrap();
+        if data.attr(local) == Some(value) {
+            data.remove_attr(local);
+        } else {
+            data.set_attr(attr_name(local), value);
+        }
+    }
+
+    /// Changes the document at random, the way script would.
+    fn mutate(dom: &mut Dom, rng: &mut Lcg, [root, list, terms]: [NodeId; 3]) -> String {
+        let elements: Vec<NodeId> = dom
+            .descendants(root)
+            .filter(|&n| dom.is_element(n))
+            .collect();
+        let target = elements[rng.next(elements.len())];
+        match rng.next(12) {
+            0 => {
+                let class = ["a", "b", "c", "h", "s", "q"][rng.next(6)];
+                let data = dom.element_mut(target).unwrap();
+                let mut classes: Vec<String> = data.classes().map(str::to_string).collect();
+                if let Some(i) = classes.iter().position(|c| c == class) {
+                    classes.remove(i);
+                } else {
+                    classes.push(class.to_string());
+                }
+                data.set_attr(attr_name("class"), classes.join(" "));
+                format!("class {class}")
+            }
+            1 => {
+                toggle(dom, target, "id", "x");
+                "id x".into()
+            }
+            2 => {
+                let value = ["0", "1"][rng.next(2)];
+                dom.element_mut(target)
+                    .unwrap()
+                    .set_attr(attr_name("data-k"), value);
+                format!("data-k {value}")
+            }
+            3 => {
+                toggle(dom, target, "style", "color: rgb(5, 5, 5); display: block");
+                "style".into()
+            }
+            4 | 5 => {
+                // Lists half of the time, where the place of a child
+                // matters to selectors.
+                let (local, parent) = match rng.next(4) {
+                    0 => ("li", list),
+                    1 => ("dt", terms),
+                    _ => (
+                        ["li", "span", "div", "p", "dt"][rng.next(5)],
+                        elements[rng.next(elements.len())],
+                    ),
+                };
+                let new = dom.create_html_element(local, Vec::new());
+                if rng.next(2) == 0 {
+                    let text = dom.create_text("n");
+                    dom.append_child(new, text);
+                }
+                let children: Vec<NodeId> = dom.children(parent).collect();
+                let reference = rng.next(children.len() + 1);
+                dom.insert_before(parent, new, children.get(reference).copied());
+                format!("insert {local}")
+            }
+            6 => {
+                let from = [list, terms][rng.next(2)];
+                let children: Vec<NodeId> = dom.child_elements(from).collect();
+                let gone = match (rng.next(2), children.len()) {
+                    (0, n) if n > 0 => children[rng.next(n)],
+                    _ => target,
+                };
+                if gone != root {
+                    dom.detach(gone);
+                }
+                "remove".into()
+            }
+            7 => {
+                match dom.first_child(target) {
+                    Some(child) if dom.node(child).is_text() => match rng.next(2) {
+                        0 => dom.remove_subtree(child),
+                        _ => {
+                            let empty = dom.node(child).as_text() == Some("");
+                            let text = if empty { "t" } else { "" };
+                            dom.node_mut(child).kind = NodeKind::Text(text.into());
+                        }
+                    },
+                    _ => {
+                        let text = dom.create_text(["", "t"][rng.next(2)]);
+                        dom.append_child(target, text);
+                    }
+                }
+                "text".into()
+            }
+            8 => {
+                let fieldset = dom
+                    .descendants(root)
+                    .find(|&n| dom.is_html_element(n, "fieldset"));
+                if let Some(fieldset) = fieldset {
+                    toggle(dom, fieldset, "disabled", "");
+                }
+                let input = dom
+                    .descendants(root)
+                    .find(|&n| dom.attr(n, "id") == Some("i"));
+                if let Some(input) = input {
+                    toggle(dom, input, "checked", "");
+                }
+                "form state".into()
+            }
+            9 => {
+                let link = dom.descendants(root).find(|&n| dom.is_html_element(n, "a"));
+                if let Some(link) = link {
+                    toggle(dom, link, "href", "y");
+                }
+                "href".into()
+            }
+            10 => {
+                let to = elements[rng.next(elements.len())];
+                if target != root && to != target && !dom.ancestors(to).any(|a| a == target) {
+                    dom.append_child(to, target);
+                }
+                "move".into()
+            }
+            _ => {
+                // A write that changes nothing selectors see.
+                let value = dom.attr(target, "class").unwrap_or_default().to_string();
+                dom.element_mut(target)
+                    .unwrap()
+                    .set_attr(attr_name("class"), value);
+                "no-op".into()
+            }
+        }
+    }
+
+    #[test]
+    fn incremental_restyles_match_restyling_from_scratch() {
+        for seed in 1..=12u64 {
+            let mut dom = parse_html(BODY, &Default::default()).dom;
+            let mut engine = fresh_engine(&dom);
+            let mut rng = Lcg(seed);
+            let fixed = [find(&dom, "root"), find(&dom, "list"), find(&dom, "terms")];
+            for step in 0..40 {
+                let what = mutate(&mut dom, &mut rng, fixed);
+                engine.restyle(&dom);
+                let expected = styles_of(&fresh_engine(&dom), &dom);
+                let actual = styles_of(&engine, &dom);
+                assert_eq!(actual.len(), expected.len());
+                for (a, e) in actual.iter().zip(&expected) {
+                    assert_eq!(a, e, "seed {seed} step {step} ({what})");
+                }
+            }
+            assert_eq!(engine.restyle_counts().0, 1, "styled from scratch once");
+        }
+    }
+
+    #[test]
+    fn children_coming_and_going_restyle_their_siblings() {
+        let mut dom = parse_html(BODY, &Default::default()).dom;
+        let mut engine = fresh_engine(&dom);
+        let list = find(&dom, "list");
+        let style = |engine: &StyleEngine, dom: &Dom, n: usize, property: &str| {
+            let li = dom.child_elements(list).nth(n).unwrap();
+            ComputedStyle(engine.primary_style(li).unwrap()).get(property)
+        };
+        assert_eq!(style(&engine, &dom, 0, "padding-left"), "1px");
+        assert_eq!(style(&engine, &dom, 1, "border-top-width"), "4px");
+        assert_eq!(style(&engine, &dom, 1, "margin-left"), "7px");
+        assert_eq!(style(&engine, &dom, 2, "padding-right"), "2px");
+        // A new first item: the old first is second now.
+        let first = dom.first_child(list).unwrap();
+        let li = dom.create_html_element("li", Vec::new());
+        dom.insert_before(list, li, Some(first));
+        engine.restyle(&dom);
+        assert_eq!(style(&engine, &dom, 0, "padding-left"), "1px");
+        assert_eq!(style(&engine, &dom, 1, "padding-left"), "0px");
+        assert_eq!(style(&engine, &dom, 1, "border-top-width"), "4px");
+        assert_eq!(style(&engine, &dom, 2, "border-top-width"), "0px");
+        assert_eq!(style(&engine, &dom, 2, "margin-left"), "7px");
+        // The last one goes.
+        let last = dom.last_child(list).unwrap();
+        dom.detach(last);
+        engine.restyle(&dom);
+        assert_eq!(style(&engine, &dom, 2, "padding-right"), "2px");
+        assert_eq!(style(&engine, &dom, 1, "margin-left"), "7px");
+        assert_eq!(engine.restyle_counts().0, 1, "styled from scratch once");
+    }
+
+    #[test]
+    fn text_and_children_decide_empty() {
+        let mut dom = parse_html(BODY, &Default::default()).dom;
+        let mut engine = fresh_engine(&dom);
+        let e = find(&dom, "e");
+        let after = dom.next_sibling(e).unwrap();
+        let check = |engine: &StyleEngine, empty: bool| {
+            let height = ComputedStyle(engine.primary_style(e).unwrap()).get("height");
+            let spacing = ComputedStyle(engine.primary_style(after).unwrap()).get("word-spacing");
+            assert_eq!(height == "5px", empty, "{height}");
+            assert_eq!(spacing == "3px", empty, "{spacing}");
+        };
+        check(&engine, true);
+        let text = dom.create_text("t");
+        dom.append_child(e, text);
+        engine.restyle(&dom);
+        check(&engine, false);
+        dom.node_mut(text).kind = NodeKind::Text(String::new());
+        engine.restyle(&dom);
+        check(&engine, true);
+        dom.node_mut(text).kind = NodeKind::Text("again".into());
+        engine.restyle(&dom);
+        check(&engine, false);
+        dom.remove_subtree(text);
+        engine.restyle(&dom);
+        check(&engine, true);
+        let child = dom.create_html_element("i", Vec::new());
+        dom.append_child(e, child);
+        engine.restyle(&dom);
+        check(&engine, false);
+        assert_eq!(engine.restyle_counts().0, 1, "styled from scratch once");
+    }
+
+    #[test]
+    fn writes_that_change_nothing_restyle_nothing() {
+        let mut dom = parse_html(BODY, &Default::default()).dom;
+        let mut engine = fresh_engine(&dom);
+        assert_eq!(engine.restyle_counts(), (1, 0));
+        assert!(engine.take_restyled().full);
+        let list = find(&dom, "list");
+        // The same value again, and bookkeeping.
+        dom.element_mut(list)
+            .unwrap()
+            .set_attr(attr_name("id"), "list");
+        dom.set_custom_element_state(list, catpaw_dom::CustomElementState::Failed);
+        engine.restyle(&dom);
+        assert_eq!(engine.restyle_counts(), (1, 0));
+        assert!(engine.is_fresh(&dom));
+        // A class no selector looks at restyles nothing either.
+        dom.element_mut(list)
+            .unwrap()
+            .set_attr(attr_name("class"), "unknown");
+        engine.restyle(&dom);
+        assert_eq!(engine.take_restyled(), Restyled::default());
+        // One that matters restyles what it matches, and says so.
+        dom.element_mut(list)
+            .unwrap()
+            .set_attr(attr_name("class"), "a");
+        engine.restyle(&dom);
+        assert_eq!(engine.restyle_counts().0, 1);
+        let restyled = engine.take_restyled();
+        assert!(!restyled.full);
+        assert!(restyled.elements.contains(&list));
+        assert_eq!(
+            ComputedStyle(engine.primary_style(list).unwrap()).get("color"),
+            "rgb(1, 0, 0)"
+        );
     }
 }

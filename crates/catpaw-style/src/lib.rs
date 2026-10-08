@@ -15,6 +15,7 @@ pub mod cssom;
 pub mod engine;
 pub mod fonts;
 pub mod inline;
+mod invalidation;
 pub mod media;
 pub mod node;
 pub mod query;
@@ -22,7 +23,7 @@ pub mod supports;
 pub mod table;
 
 pub use computed::{ComputedStyle, Pseudo};
-pub use engine::{StyleEngine, StyleOptions};
+pub use engine::{Restyled, StyleEngine, StyleOptions};
 pub use inline::InlineStyle;
 pub use media::MediaQueryList;
 pub use node::{CatNode, with_style_context};

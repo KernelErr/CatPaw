@@ -304,12 +304,41 @@ pub enum TreeChange {
     },
 }
 
+/// A write to the arena, as the journal keeps it for the caches derived
+/// from the tree (styles, layout, indexes): see [`Dom::changes_since`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Change {
+    /// `node`, with its subtree, was inserted into `parent`.
+    Inserted { parent: NodeId, node: NodeId },
+    /// `node`, with its subtree, was removed from `parent`.
+    Removed { parent: NodeId, node: NodeId },
+    /// The node's own data may have changed: an element's attributes,
+    /// shadow root or template contents, a character data node's data, a
+    /// document's URL or quirks mode. Bookkeeping that nothing derived
+    /// from the tree reads (see [`Dom::set_script_already_started`]) is
+    /// not logged.
+    Data(NodeId),
+    /// The detached subtree rooted at the node was freed.
+    Freed(NodeId),
+}
+
+/// How many changes the journal keeps. Past that it starts over, and a
+/// cache that last looked before then rebuilds from the tree, which is
+/// what it would do for that many changes anyway.
+const JOURNAL_LIMIT: usize = 4096;
+
 /// The arena. See the module documentation.
 #[derive(Debug)]
 pub struct Dom {
     nodes: SlotMap<NodeId, Node>,
     document: NodeId,
+    /// The number of changes ever logged: always `journal_base` plus the
+    /// length of `journal`.
     version: u64,
+    /// The most recent changes, oldest first.
+    journal: Vec<Change>,
+    /// The version before the first change in `journal`.
+    journal_base: u64,
     /// The tree changes since the log was last taken, while logging is on.
     changes: Option<Vec<TreeChange>>,
 }
@@ -330,6 +359,8 @@ impl Dom {
             nodes,
             document,
             version: 0,
+            journal: Vec::new(),
+            journal_base: 0,
             changes: None,
         }
     }
@@ -345,11 +376,36 @@ impl Dom {
         self.document
     }
 
-    /// A counter that changes whenever the tree or any node's data may have
-    /// changed (every mutable access bumps it). Caches derived from the tree,
-    /// such as live collections, compare it to know when to recompute.
+    /// A counter that moves with every change to the tree or to a node's
+    /// data (each mutable access counts as one, whether or not it changed
+    /// anything). Caches derived from the tree, such as live collections,
+    /// compare it to know when to recompute; those that can tell which
+    /// changes matter to them read the journal instead
+    /// ([`Dom::changes_since`]). Bookkeeping writes that nothing derived
+    /// from the tree reads leave it alone.
     pub fn version(&self) -> u64 {
         self.version
+    }
+
+    /// The changes made since the arena was at `version`, oldest first;
+    /// `None` when the journal no longer reaches back that far (the caller
+    /// then starts over from the tree as it is). The nodes named may have
+    /// changed again, moved or been freed since: the journal says where to
+    /// look, the tree says what is there now.
+    pub fn changes_since(&self, version: u64) -> Option<&[Change]> {
+        if version < self.journal_base || version > self.version {
+            return None;
+        }
+        Some(&self.journal[(version - self.journal_base) as usize..])
+    }
+
+    fn log(&mut self, change: Change) {
+        if self.journal.len() >= JOURNAL_LIMIT {
+            self.journal.clear();
+            self.journal_base = self.version;
+        }
+        self.journal.push(change);
+        self.version += 1;
     }
 
     /// Turns the log of tree changes on or off. Turning it off discards
@@ -387,8 +443,12 @@ impl Dom {
         self.nodes.get(id)
     }
 
+    /// The node, to change; the change is logged (see [`Change::Data`]).
     pub fn get_mut(&mut self, id: NodeId) -> Option<&mut Node> {
-        self.version += 1;
+        if !self.nodes.contains_key(id) {
+            return None;
+        }
+        self.log(Change::Data(id));
         self.nodes.get_mut(id)
     }
 
@@ -397,8 +457,10 @@ impl Dom {
         &self.nodes[id]
     }
 
+    /// The node, to change; the change is logged. Panics if `id` is stale.
     pub fn node_mut(&mut self, id: NodeId) -> &mut Node {
-        self.version += 1;
+        assert!(self.nodes.contains_key(id), "stale node id");
+        self.log(Change::Data(id));
         &mut self.nodes[id]
     }
 
@@ -410,9 +472,45 @@ impl Dom {
         self.nodes.get(id).and_then(Node::as_element)
     }
 
+    /// The element, to change; the change is logged.
     pub fn element_mut(&mut self, id: NodeId) -> Option<&mut ElementData> {
-        self.version += 1;
+        if !self.is_element(id) {
+            return None;
+        }
+        self.log(Change::Data(id));
         self.nodes.get_mut(id).and_then(Node::as_element_mut)
+    }
+
+    /// The bookkeeping fields of an element: written without logging a
+    /// change or moving the version, since nothing derived from the tree
+    /// (styles, layout, indexes, collections) reads them.
+    fn bookkeeping_mut(&mut self, id: NodeId) -> Option<&mut ElementData> {
+        self.nodes.get_mut(id).and_then(Node::as_element_mut)
+    }
+
+    /// Sets the "already started" flag of a `<script>` (bookkeeping: not
+    /// logged).
+    pub fn set_script_already_started(&mut self, id: NodeId, started: bool) {
+        if let Some(el) = self.bookkeeping_mut(id) {
+            el.script_already_started = started;
+        }
+    }
+
+    /// Sets what became of an element as a custom element (bookkeeping:
+    /// not logged, as long as no selector depends on it; `:defined` does
+    /// not match yet).
+    pub fn set_custom_element_state(&mut self, id: NodeId, state: CustomElementState) {
+        if let Some(el) = self.bookkeeping_mut(id) {
+            el.custom_element_state = state;
+        }
+    }
+
+    /// Sets the `is` value of a customized built-in element (bookkeeping:
+    /// not logged).
+    pub fn set_is_value(&mut self, id: NodeId, is: Option<String>) {
+        if let Some(el) = self.bookkeeping_mut(id) {
+            el.is_value = is;
+        }
     }
 
     pub fn is_element(&self, id: NodeId) -> bool {
@@ -433,7 +531,7 @@ impl Dom {
     }
 
     pub fn document_data_mut(&mut self) -> &mut DocumentData {
-        self.version += 1;
+        self.log(Change::Data(self.document));
         match &mut self.nodes[self.document].kind {
             NodeKind::Document(d) => d,
             _ => unreachable!("document node is always a Document"),
@@ -499,7 +597,10 @@ impl Dom {
     }
 
     pub fn document_data_of_mut(&mut self, id: NodeId) -> Option<&mut DocumentData> {
-        self.version += 1;
+        if !matches!(self.nodes.get(id)?.kind, NodeKind::Document(_)) {
+            return None;
+        }
+        self.log(Change::Data(id));
         match &mut self.nodes.get_mut(id)?.kind {
             NodeKind::Document(d) => Some(d),
             _ => None,
@@ -763,7 +864,10 @@ impl Dom {
             "reference node is not a child of parent"
         );
         self.detach(child);
-        self.version += 1;
+        self.log(Change::Inserted {
+            parent,
+            node: child,
+        });
         match reference {
             None => {
                 let prev = self.nodes[parent].last_child;
@@ -822,7 +926,7 @@ impl Dom {
         let Some(parent) = parent else {
             return;
         };
-        self.version += 1;
+        self.log(Change::Removed { parent, node: id });
         if let Some(log) = &mut self.changes {
             log.push(TreeChange::Removed {
                 parent,
@@ -857,7 +961,7 @@ impl Dom {
     /// (including template contents).
     pub fn remove_subtree(&mut self, id: NodeId) {
         self.detach(id);
-        self.version += 1;
+        self.log(Change::Freed(id));
         let mut stack = vec![id];
         while let Some(n) = stack.pop() {
             if let Some(node) = self.nodes.remove(n) {
@@ -1053,6 +1157,101 @@ mod tests {
             vec![child, root, doc]
         );
         assert!(dom.is_connected(t2));
+    }
+
+    #[test]
+    fn the_journal_logs_changes_and_skips_bookkeeping() {
+        let mut dom = Dom::new();
+        let doc = dom.document();
+        let script = p(&mut dom, "script");
+        let div = p(&mut dom, "div");
+        let start = dom.version();
+        // Creating detached nodes changes nothing anyone derives.
+        assert_eq!(dom.changes_since(start), Some(&[][..]));
+
+        dom.append_child(doc, div);
+        dom.append_child(div, script);
+        dom.element_mut(div)
+            .unwrap()
+            .set_attr(QualName::new(None, ns!(), LocalName::from("class")), "x");
+        let after_writes = dom.version();
+        assert_eq!(
+            dom.changes_since(start).unwrap(),
+            &[
+                Change::Inserted {
+                    parent: doc,
+                    node: div
+                },
+                Change::Inserted {
+                    parent: div,
+                    node: script
+                },
+                Change::Data(div),
+            ]
+        );
+
+        // Bookkeeping that no cache reads is written without a trace.
+        dom.set_script_already_started(script, true);
+        dom.set_custom_element_state(div, CustomElementState::Failed);
+        dom.set_is_value(div, Some("x-y".into()));
+        assert_eq!(dom.version(), after_writes);
+        assert!(dom.element(script).unwrap().script_already_started);
+        assert_eq!(
+            dom.element(div).unwrap().custom_element_state,
+            CustomElementState::Failed
+        );
+        assert_eq!(dom.element(div).unwrap().is_value.as_deref(), Some("x-y"));
+
+        // Moving a node logs both ends; freeing a subtree says so.
+        dom.append_child(doc, script);
+        dom.remove_subtree(div);
+        assert_eq!(
+            dom.changes_since(after_writes).unwrap(),
+            &[
+                Change::Removed {
+                    parent: div,
+                    node: script
+                },
+                Change::Inserted {
+                    parent: doc,
+                    node: script
+                },
+                Change::Removed {
+                    parent: doc,
+                    node: div
+                },
+                Change::Freed(div),
+            ]
+        );
+        // Writes through a stale id are not changes.
+        let before = dom.version();
+        assert!(dom.element_mut(div).is_none());
+        assert!(dom.get_mut(div).is_none());
+        assert_eq!(dom.version(), before);
+    }
+
+    #[test]
+    fn a_full_journal_starts_over() {
+        let mut dom = Dom::new();
+        let a = p(&mut dom, "a");
+        let start = dom.version();
+        for _ in 0..JOURNAL_LIMIT {
+            dom.node_mut(a);
+        }
+        assert_eq!(
+            dom.changes_since(start).map(<[Change]>::len),
+            Some(JOURNAL_LIMIT)
+        );
+        dom.node_mut(a);
+        assert_eq!(dom.changes_since(start), None, "too far back");
+        let now = dom.version();
+        assert_eq!(dom.changes_since(now), Some(&[][..]));
+        assert_eq!(dom.changes_since(now - 1), Some(&[Change::Data(a)][..]));
+        assert_eq!(
+            dom.changes_since(now + 1),
+            None,
+            "not a version of this arena"
+        );
     }
 
     #[test]

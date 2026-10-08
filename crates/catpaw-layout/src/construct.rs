@@ -17,7 +17,7 @@ use crate::{BoxId, BoxKind, Intrinsic, LayoutBox, LayoutTree, Positioning};
 
 /// Elements laid out as a leaf sized by their content rather than by their
 /// children.
-pub(crate) fn is_replaced(dom: &Dom, el: NodeId) -> bool {
+pub fn is_replaced(dom: &Dom, el: NodeId) -> bool {
     let Some(data) = dom.element(el) else {
         return false;
     };

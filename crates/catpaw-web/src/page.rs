@@ -319,8 +319,11 @@ pub struct PageState {
 
     /// `localStorage` and `sessionStorage` contents.
     pub(crate) storage: [RefCell<IndexMap<String, String>>; 2],
-    /// Element ids of the document tree, valid for one arena version.
-    pub(crate) id_index: RefCell<(u64, HashMap<String, NodeId>)>,
+    /// Element ids and names of the document tree, for `getElementById`
+    /// and the window's named properties.
+    pub(crate) id_index: RefCell<crate::node::NameIndex>,
+    /// The document base URL, and what it was found from.
+    base_url_cache: RefCell<Option<BaseUrl>>,
     /// Current value and checkedness of form controls whose state has
     /// diverged from their content attributes.
     pub(crate) form_state: RefCell<HashMap<NodeId, FormControlState>>,
@@ -362,8 +365,6 @@ pub struct PageState {
     pub(crate) fonts: crate::fonts::FontSets,
     /// The live ranges, kept up to date with the tree.
     pub(crate) ranges: crate::range::Ranges,
-    /// The elements the window's named properties refer to.
-    pub(crate) named_elements: crate::window::NamedElements,
     /// The document's named properties (`document.myForm`).
     pub(crate) document_names: crate::document::DocumentNames,
     /// The `blob:` URLs the page made.
@@ -380,6 +381,41 @@ pub struct PageState {
     pub errors: RefCell<Vec<String>>,
     /// Calls to members that exist but are not implemented, by name.
     pub stub_calls: RefCell<IndexMap<&'static str, u64>>,
+}
+
+/// The document base URL as last found: the `base` element it came from
+/// (and that element's `href`), and the document URL it was resolved
+/// against.
+struct BaseUrl {
+    /// The DOM version it was found or last confirmed at.
+    version: u64,
+    element: Option<NodeId>,
+    href: Option<String>,
+    document_url: Url,
+    url: Url,
+}
+
+impl BaseUrl {
+    /// Whether the changes since `found` was made can have changed which
+    /// `base` element comes first: one came (with whatever was inserted),
+    /// changed, or the one found left the document.
+    fn may_have_changed(dom: &Dom, found: &BaseUrl) -> bool {
+        let Some(changes) = dom.changes_since(found.version) else {
+            return true;
+        };
+        let is_base = |n: NodeId| dom.is_html_element(n, "base");
+        let base_came_or_changed = changes.iter().any(|change| match *change {
+            catpaw_dom::Change::Inserted { node, .. } => {
+                dom.contains(node) && dom.traverse(node).any(is_base)
+            }
+            catpaw_dom::Change::Data(node) => dom.contains(node) && is_base(node),
+            _ => false,
+        });
+        base_came_or_changed
+            || found
+                .element
+                .is_some_and(|n| !dom.contains(n) || dom.root_of(n) != dom.document())
+    }
 }
 
 #[derive(Default, Debug, Clone)]
@@ -432,7 +468,8 @@ impl PageState {
             background_requests: Cell::new(0),
             scripts: ScriptState::default(),
             storage: [RefCell::new(IndexMap::new()), RefCell::new(IndexMap::new())],
-            id_index: RefCell::new((u64::MAX, HashMap::new())),
+            id_index: Default::default(),
+            base_url_cache: RefCell::new(None),
             form_state: RefCell::new(HashMap::new()),
             file_lists: RefCell::new(HashMap::new()),
             masked_values: RefCell::new(std::collections::HashSet::new()),
@@ -460,7 +497,6 @@ impl PageState {
             custom_elements: Default::default(),
             fonts: Default::default(),
             ranges: Default::default(),
-            named_elements: Default::default(),
             document_names: Default::default(),
             blob_urls: Default::default(),
             reactions: Default::default(),
@@ -651,15 +687,40 @@ impl PageState {
     // ---- urls -----------------------------------------------------------
 
     /// The document base URL: the first `<base href>`, else the document URL.
+    /// It is looked for again only when the document URL changed or a
+    /// `base` element may have come, gone or changed its `href`.
     pub fn base_url(&self) -> Url {
-        let document_url = self.url.borrow().clone();
         let dom = self.dom.borrow();
-        let base = dom
-            .descendants(dom.document())
-            .find(|&n| dom.is_html_element(n, "base") && dom.attr(n, "href").is_some())
-            .and_then(|n| dom.attr(n, "href"))
-            .and_then(|href| document_url.join(href).ok());
-        base.unwrap_or(document_url)
+        let document_url = self.url.borrow();
+        let mut cache = self.base_url_cache.borrow_mut();
+        let version = dom.version();
+        let element = match &*cache {
+            Some(found) if found.version == version => found.element,
+            Some(found) if !BaseUrl::may_have_changed(&dom, found) => found.element,
+            _ => dom
+                .descendants(dom.document())
+                .find(|&n| dom.is_html_element(n, "base") && dom.attr(n, "href").is_some()),
+        };
+        let href = element.and_then(|n| dom.attr(n, "href"));
+        if let Some(found) = &mut *cache
+            && found.element == element
+            && found.href.as_deref() == href
+            && found.document_url == *document_url
+        {
+            found.version = version;
+            return found.url.clone();
+        }
+        let url = href
+            .and_then(|href| document_url.join(href).ok())
+            .unwrap_or_else(|| document_url.clone());
+        *cache = Some(BaseUrl {
+            version,
+            element,
+            href: href.map(str::to_string),
+            document_url: document_url.clone(),
+            url: url.clone(),
+        });
+        url
     }
 
     /// Resolves `input` against the document base URL.
@@ -716,5 +777,75 @@ impl<'a> Cx<'a> {
     /// Performs a microtask checkpoint.
     pub fn checkpoint(&mut self) {
         self.script.run_microtasks();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use catpaw_dom::Attr;
+
+    use crate::layout::tests::{find, page_with, set_attr};
+
+    #[test]
+    fn the_base_url_follows_base_elements_and_the_document_url() {
+        let page = page_with("<head><meta id=m></head><body><a id=l href=x>x</a>");
+        let base = || page.base_url().to_string();
+        assert_eq!(base(), "https://example.test/dir/page.html");
+        // Unrelated writes keep it.
+        set_attr(&page, find(&page, "l"), "href", "y");
+        assert_eq!(base(), "https://example.test/dir/page.html");
+
+        let head = page.dom.borrow().parent(find(&page, "m")).unwrap();
+        let first = {
+            let mut dom = page.dom.borrow_mut();
+            let first = dom.create_html_element("base", vec![Attr::html("href", "/other/")]);
+            dom.append_child(head, first);
+            first
+        };
+        assert_eq!(base(), "https://example.test/other/");
+        set_attr(&page, first, "href", "third/");
+        assert_eq!(base(), "https://example.test/dir/third/");
+
+        // A later one does not count until the first goes.
+        let second = {
+            let mut dom = page.dom.borrow_mut();
+            let second = dom.create_html_element("base", vec![Attr::html("href", "/second/")]);
+            dom.append_child(head, second);
+            second
+        };
+        assert_eq!(base(), "https://example.test/dir/third/");
+        page.dom.borrow_mut().detach(first);
+        assert_eq!(base(), "https://example.test/second/");
+
+        // A base without `href` does not count, until it has one; one
+        // that loses it gives way to the next.
+        let bare = {
+            let mut dom = page.dom.borrow_mut();
+            let bare = dom.create_html_element("base", Vec::new());
+            dom.insert_before(head, bare, Some(second));
+            bare
+        };
+        assert_eq!(base(), "https://example.test/second/");
+        set_attr(&page, bare, "href", "/bare/");
+        assert_eq!(base(), "https://example.test/bare/");
+        page.dom
+            .borrow_mut()
+            .element_mut(bare)
+            .unwrap()
+            .remove_attr("href");
+        assert_eq!(base(), "https://example.test/second/");
+
+        // The document URL moves (`pushState`): the base resolves anew.
+        *page.url.borrow_mut() = url::Url::parse("https://example.test/a/b/c").unwrap();
+        page.dom
+            .borrow_mut()
+            .element_mut(second)
+            .unwrap()
+            .remove_attr("href");
+        assert_eq!(base(), "https://example.test/a/b/c");
+        set_attr(&page, second, "href", "d");
+        assert_eq!(base(), "https://example.test/a/b/d");
+        page.dom.borrow_mut().remove_subtree(second);
+        assert_eq!(base(), "https://example.test/a/b/c");
     }
 }

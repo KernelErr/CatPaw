@@ -490,8 +490,8 @@ impl web::DocumentImpl for Web {
         let element = {
             let mut dom = cx.dom_mut();
             let element = node::create_element_node(&mut dom, name);
-            if let (Some(is), Some(data)) = (is, dom.element_mut(element)) {
-                data.is_value = Some(is);
+            if let Some(is) = is {
+                dom.set_is_value(element, Some(is));
             }
             element
         };

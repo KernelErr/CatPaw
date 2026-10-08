@@ -174,9 +174,7 @@ impl web::DOMParserImpl for Web {
                 .filter(|&n| dom.is_html_element(n, "script"))
                 .collect();
             for script in scripts {
-                if let Some(element) = dom.element_mut(script) {
-                    element.script_already_started = true;
-                }
+                dom.set_script_already_started(script, true);
             }
             return Ok(document);
         }

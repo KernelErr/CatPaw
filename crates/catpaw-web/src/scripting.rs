@@ -346,9 +346,7 @@ fn prepare(cx: &mut Cx<'_>, el: NodeId, parser_inserted: bool) {
         if kind == ScriptKind::Data || (kind == ScriptKind::Classic && nomodule) {
             return;
         }
-        if let Some(data) = dom.element_mut(el) {
-            data.script_already_started = true;
-        }
+        dom.set_script_already_started(el, true);
         (src, kind, flags.0, flags.1)
     };
     let module = kind == ScriptKind::Module;

@@ -3,7 +3,7 @@
 use std::cell::Cell;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use catpaw_dom::NodeId;
+use catpaw_dom::{Attr, NodeId};
 use selectors::matching::ElementSelectorFlags;
 use slotmap::SecondaryMap;
 use style::Atom;
@@ -28,6 +28,21 @@ pub struct StyleSlot {
     /// Pseudo-class state derived from attributes (and later, from the
     /// engine's live state: hover, focus, checkedness...).
     pub state: ElementState,
+    /// The element's attributes as the slot last saw them: what the
+    /// parsed `style` attribute and `id_atom` come from, and what a
+    /// restyle compares against to tell what changed.
+    pub attrs: Vec<Attr>,
+}
+
+impl StyleSlot {
+    /// Forgets the computed style, so that the element is styled afresh.
+    pub fn clear_data(&mut self) {
+        self.data = ElementDataWrapper::default();
+        self.has_data.store(false, Ordering::SeqCst);
+        self.dirty_descendants.store(false, Ordering::SeqCst);
+        self.has_snapshot.store(false, Ordering::SeqCst);
+        self.snapshot_handled.store(false, Ordering::SeqCst);
+    }
 }
 
 impl Default for StyleSlot {
@@ -42,6 +57,7 @@ impl Default for StyleSlot {
             style_attribute: None,
             id_atom: None,
             state: ElementState::empty(),
+            attrs: Vec::new(),
         }
     }
 }
@@ -95,9 +111,7 @@ impl StyleTable {
     /// scratch.
     pub fn clear_data(&mut self) {
         for slot in self.slots.values_mut() {
-            slot.data = ElementDataWrapper::default();
-            slot.has_data.store(false, Ordering::SeqCst);
-            slot.dirty_descendants.store(false, Ordering::SeqCst);
+            slot.clear_data();
         }
     }
 

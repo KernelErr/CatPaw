@@ -133,13 +133,19 @@ cannot flood its engine thread. Workers get their own thread and `Context`.
 
 **Layout.** Style and layout run only when something observes geometry:
 a CSSOM View call, a scroll, an intersection or resize observer's frame.
-The page then restyles the whole document and builds a box tree apart
+The page then brings the styles up to date and builds a box tree apart
 from the DOM (`catpaw-layout`): block, flex and grid containers go to
 Taffy; a block container with only inline content becomes an inline root
 whose text, inline elements and atomic inline boxes Parley shapes and
 breaks into lines; replaced elements are leaves sized by their attributes
-and defaults. The tree keeps the computed styles it was built with and is
-dropped when the document, the style sheets or a scroll position change.
+and defaults. The tree keeps the computed styles it was built with.
+Both follow the document through the arena's journal of changes: the
+style engine restyles only what the changes since the last restyle can
+affect (Stylo's invalidation, from snapshots of what changed elements
+had), and the tree is kept until a scroll position, a style sheet, a
+computed style of something shown, or the rendered part of the document
+changes. Writes nothing derived from the tree reads (parser and custom
+element bookkeeping) are not journaled at all.
 Fonts come from `catpaw-text`: a bundled DejaVu set stands in for the
 generic families so that layout is the same on every machine (the
 `system-fonts` feature adds the machine's fonts behind them). Boxes hold

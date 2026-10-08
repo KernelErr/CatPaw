@@ -3,7 +3,10 @@
 //! `CharacterData`, `Text`, `Comment`, `DocumentFragment` and `DocumentType`
 //! interfaces plus the child/parent node mixins.
 
-use catpaw_dom::{Dom, ElementData, FragmentKind, NodeId, NodeKind};
+use std::collections::HashMap;
+use std::time::Instant;
+
+use catpaw_dom::{Change, Dom, ElementData, FragmentKind, NodeId, NodeKind};
 use catpaw_js::{Exception, Fallible, ObjectId};
 use catpaw_style::Selectors;
 
@@ -1163,21 +1166,171 @@ impl web::NonElementParentNodeImpl for Web {
                 .descendants(this)
                 .find(|&n| dom.element(n).is_some_and(|e| e.id() == Some(&element_id))));
         }
-        // The document keeps an index of ids, rebuilt when the tree changed.
-        let mut index = cx.page.id_index.borrow_mut();
-        if index.0 != dom.version() {
-            index.1.clear();
-            for n in dom.descendants(this) {
-                if let Some(id) = dom.element(n).and_then(|e| e.id())
-                    && !id.is_empty()
-                    && !index.1.contains_key(id)
-                {
-                    index.1.insert(id.to_string(), n);
+        Ok(cx.page.id_index.borrow_mut().by_id(&dom, &element_id))
+    }
+}
+
+/// Which elements the document can name: its elements by `id` (for
+/// `getElementById`), and the embed, form, iframe, img and object elements
+/// by `name` too (for the window's named properties). The index follows
+/// the arena's journal: only the elements a change touched are looked at
+/// again, and a change that touches no id or name leaves it as it is.
+/// Entries are not taken out when an element leaves or is renamed; they
+/// are checked on lookup.
+#[derive(Default)]
+pub(crate) struct NameIndex {
+    /// The DOM version the index has seen.
+    synced: Option<u64>,
+    /// Elements by `id`, in no particular order.
+    ids: HashMap<String, Vec<NodeId>>,
+    /// Elements that a `name` names, by name.
+    names: HashMap<String, Vec<NodeId>>,
+    /// How many times the index was built from the whole document.
+    builds: u64,
+}
+
+/// Elements whose `name` gives the window a named property.
+fn named_by_name(el: &ElementData) -> bool {
+    el.is_html()
+        && matches!(
+            &*el.name.local,
+            "embed" | "form" | "img" | "object" | "iframe"
+        )
+}
+
+impl NameIndex {
+    /// Brings the index up to date with the document.
+    fn sync(&mut self, dom: &Dom) {
+        let version = dom.version();
+        if self.synced == Some(version) {
+            return;
+        }
+        let document = dom.document();
+        let in_document = |n: NodeId| dom.contains(n) && dom.root_of(n) == document;
+        match self.synced.and_then(|synced| dom.changes_since(synced)) {
+            Some(changes) => {
+                for change in changes {
+                    match *change {
+                        Change::Inserted { node, .. } if in_document(node) => {
+                            for n in dom.traverse(node) {
+                                self.add(dom, n);
+                            }
+                        }
+                        Change::Data(node) if in_document(node) => self.add(dom, node),
+                        // Whoever left is found out on lookup.
+                        _ => {}
+                    }
                 }
             }
-            index.0 = dom.version();
+            None => {
+                let started = Instant::now();
+                self.ids.clear();
+                self.names.clear();
+                for n in dom.descendants(document) {
+                    self.add(dom, n);
+                }
+                self.builds += 1;
+                crate::layout::log_step("name-index", started);
+            }
         }
-        Ok(index.1.get(&element_id).copied())
+        self.synced = Some(version);
+    }
+
+    /// Notes the id and name an element has now.
+    fn add(&mut self, dom: &Dom, n: NodeId) {
+        let Some(el) = dom.element(n) else {
+            return;
+        };
+        let note = |map: &mut HashMap<String, Vec<NodeId>>, key: &str| {
+            if key.is_empty() {
+                return;
+            }
+            let list = map.entry(key.to_string()).or_default();
+            if !list.contains(&n) {
+                list.push(n);
+            }
+        };
+        if let Some(id) = el.id() {
+            note(&mut self.ids, id);
+        }
+        if named_by_name(el)
+            && let Some(name) = el.attr("name")
+        {
+            note(&mut self.names, name);
+        }
+    }
+
+    /// The elements of the document filed under `key` that still answer
+    /// to it (`valid`), in tree order. Those that do not are dropped.
+    fn lookup(
+        map: &mut HashMap<String, Vec<NodeId>>,
+        dom: &Dom,
+        key: &str,
+        valid: impl Fn(&ElementData) -> bool,
+    ) -> Vec<NodeId> {
+        let Some(list) = map.get_mut(key) else {
+            return Vec::new();
+        };
+        let document = dom.document();
+        list.retain(|&n| dom.element(n).is_some_and(&valid) && dom.root_of(n) == document);
+        if list.is_empty() {
+            map.remove(key);
+            return Vec::new();
+        }
+        let mut found = list.clone();
+        if found.len() > 1 {
+            found.sort_by(|&a, &b| {
+                if precedes(dom, a, b) {
+                    std::cmp::Ordering::Less
+                } else {
+                    std::cmp::Ordering::Greater
+                }
+            });
+        }
+        found
+    }
+
+    /// The first element of the document with this `id`.
+    pub(crate) fn by_id(&mut self, dom: &Dom, id: &str) -> Option<NodeId> {
+        if id.is_empty() {
+            return None;
+        }
+        self.sync(dom);
+        Self::lookup(&mut self.ids, dom, id, |el| el.id() == Some(id))
+            .first()
+            .copied()
+    }
+
+    /// The elements of the document a window named property `name`
+    /// refers to, in tree order: those with that `id`, and the embed,
+    /// form, iframe, img and object elements with that `name`.
+    pub(crate) fn named(&mut self, dom: &Dom, name: &str) -> Vec<NodeId> {
+        if name.is_empty() {
+            return Vec::new();
+        }
+        self.sync(dom);
+        let mut found = Self::lookup(&mut self.ids, dom, name, |el| el.id() == Some(name));
+        let by_name = Self::lookup(&mut self.names, dom, name, |el| {
+            named_by_name(el) && el.attr("name") == Some(name)
+        });
+        if by_name.is_empty() {
+            return found;
+        }
+        for n in by_name {
+            if !found.contains(&n) {
+                found.push(n);
+            }
+        }
+        found.sort_by(|&a, &b| {
+            if a == b {
+                std::cmp::Ordering::Equal
+            } else if precedes(dom, a, b) {
+                std::cmp::Ordering::Less
+            } else {
+                std::cmp::Ordering::Greater
+            }
+        });
+        found
     }
 }
 
@@ -1337,5 +1490,87 @@ impl web::DocumentTypeImpl for Web {
 
     fn system_id(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String> {
         doctype(cx, this, |d| d.system_id.clone())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use catpaw_dom::Attr;
+
+    use super::*;
+    use crate::layout::tests::{find, page_with, set_attr};
+
+    #[test]
+    fn the_name_index_follows_the_document() {
+        let page = page_with(
+            r#"<body><div id=a></div><form name=f id=g></form><img name=pic>
+            <span id=dup>1</span><p id=dup>2</p><i name=pic></i>"#,
+        );
+        let by_id = |id: &str| page.id_index.borrow_mut().by_id(&page.dom.borrow(), id);
+        let named = |name: &str| page.id_index.borrow_mut().named(&page.dom.borrow(), name);
+        let first = |local: &str| {
+            let dom = page.dom.borrow();
+            dom.descendants(dom.document())
+                .find(|&n| dom.is_html_element(n, local))
+                .unwrap()
+        };
+        let (a, form, img, span, p) = (
+            find(&page, "a"),
+            first("form"),
+            first("img"),
+            first("span"),
+            first("p"),
+        );
+        assert_eq!(by_id("a"), Some(a));
+        assert_eq!(by_id("dup"), Some(span), "the first in tree order");
+        assert_eq!(by_id(""), None);
+        assert_eq!(named("f"), [form]);
+        assert_eq!(named("g"), [form]);
+        assert_eq!(named("pic"), [img], "only some elements are named by name");
+        assert_eq!(named("dup"), [span, p]);
+        let builds = || page.id_index.borrow().builds;
+        assert_eq!(builds(), 1);
+
+        // Writes that touch no id or name change nothing.
+        set_attr(&page, a, "class", "x");
+        set_attr(&page, a, "id", "a");
+        assert_eq!(by_id("a"), Some(a));
+
+        // A new first `dup`, then the old ones go.
+        let body = first("body");
+        let new = {
+            let mut dom = page.dom.borrow_mut();
+            let new = dom.create_html_element("b", vec![Attr::html("id", "dup")]);
+            dom.insert_before(body, new, Some(a));
+            new
+        };
+        assert_eq!(by_id("dup"), Some(new));
+        assert_eq!(named("dup"), [new, span, p]);
+        page.dom.borrow_mut().detach(new);
+        page.dom.borrow_mut().remove_subtree(span);
+        assert_eq!(by_id("dup"), Some(p));
+
+        // Renamed: found under the new id only.
+        set_attr(&page, p, "id", "q");
+        assert_eq!(by_id("dup"), None);
+        assert_eq!(by_id("q"), Some(p));
+        set_attr(&page, form, "name", "h");
+        assert_eq!(named("f"), Vec::<NodeId>::new());
+        assert_eq!(named("h"), [form]);
+
+        // Built apart from the document, then inserted.
+        let (outer, inner) = {
+            let mut dom = page.dom.borrow_mut();
+            let outer = dom.create_html_element("div", Vec::new());
+            let inner = dom.create_html_element("embed", vec![Attr::html("name", "e")]);
+            dom.append_child(outer, inner);
+            (outer, inner)
+        };
+        assert_eq!(named("e"), Vec::<NodeId>::new());
+        page.dom.borrow_mut().append_child(body, outer);
+        assert_eq!(named("e"), [inner]);
+        page.dom.borrow_mut().detach(outer);
+        assert_eq!(named("e"), Vec::<NodeId>::new());
+        assert_eq!(builds(), 1, "kept up to date without rebuilding");
     }
 }

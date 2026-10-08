@@ -242,15 +242,16 @@ fn upgrade(cx: &mut Cx<'_>, element: NodeId, index: u32) -> Fallible<()> {
     let (attributes, connected) = {
         let mut dom = page.dom.borrow_mut();
         let connected = dom.is_connected(element);
-        let Some(data) = dom.element_mut(element) else {
+        let Some(data) = dom.element(element) else {
             return Ok(());
         };
         if data.custom_element_state != CustomElementState::Undefined {
             return Ok(());
         }
+        let attributes = data.attrs.clone();
         // Failed until the constructor says otherwise.
-        data.custom_element_state = CustomElementState::Failed;
-        (data.attrs.clone(), connected)
+        dom.set_custom_element_state(element, CustomElementState::Failed);
+        (attributes, connected)
     };
     let constructor = {
         let mut definitions = page.custom_elements.definitions.borrow_mut();
@@ -287,9 +288,9 @@ fn upgrade(cx: &mut Cx<'_>, element: NodeId, index: u32) -> Fallible<()> {
         page.custom_elements.queues.borrow_mut().remove(&element);
         return result;
     }
-    if let Some(data) = page.dom.borrow_mut().element_mut(element) {
-        data.custom_element_state = CustomElementState::Custom(index);
-    }
+    page.dom
+        .borrow_mut()
+        .set_custom_element_state(element, CustomElementState::Custom(index));
     Ok(())
 }
 
@@ -488,10 +489,8 @@ pub fn create_for_constructor(cx: &mut Cx<'_>, index: u32, document: NodeId) -> 
     let mut dom = cx.dom_mut();
     let name = QualName::new(None, ns!(html), LocalName::from(local_name));
     let element = node::create_element_node(&mut dom, name);
-    if let Some(data) = dom.element_mut(element) {
-        data.custom_element_state = CustomElementState::Custom(index);
-        data.is_value = is;
-    }
+    dom.set_custom_element_state(element, CustomElementState::Custom(index));
+    dom.set_is_value(element, is);
     dom.adopt_subtree(element, document);
     Some(element)
 }
@@ -558,10 +557,8 @@ pub(crate) fn create_synchronously(
             let mut dom = cx.dom_mut();
             let name = QualName::new(None, ns!(html), LocalName::from(local_name));
             let element = node::create_element_node(&mut dom, name);
-            if let Some(data) = dom.element_mut(element) {
-                data.custom_element_state = CustomElementState::Failed;
-                data.is_value = is.map(str::to_string);
-            }
+            dom.set_custom_element_state(element, CustomElementState::Failed);
+            dom.set_is_value(element, is.map(str::to_string));
             dom.adopt_subtree(element, document);
             Some(element)
         }

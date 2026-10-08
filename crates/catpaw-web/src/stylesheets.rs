@@ -17,7 +17,7 @@ use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
-use catpaw_dom::{Dom, NodeId};
+use catpaw_dom::{Change, Dom, NodeId};
 use catpaw_js::{EventTargetRef, ObjectId};
 use catpaw_style::{MediaQueryList, Pseudo, StyleEngine};
 
@@ -61,8 +61,6 @@ pub(crate) struct Styles {
     pub(crate) adopted: RefCell<HashMap<NodeId, Vec<ObjectId>>>,
     /// Bumped by every edit made through the CSSOM.
     pub(crate) edits: Cell<u64>,
-    /// The DOM version and CSSOM edit count of the last full restyle.
-    styled: Cell<Option<(u64, u64)>>,
 }
 
 /// The text of a `link` element's sheet, once it has loaded.
@@ -342,32 +340,91 @@ fn collect_sheets(page: &PageState, dom: &Dom) -> Vec<(u64, Rc<str>)> {
     sheets
 }
 
+/// Whether the changes to the document since it was at `since` can have
+/// changed its style sheets: a `style` or `link` element came, went or
+/// changed, or the text of a `style` element did.
+fn sheets_may_have_changed(dom: &Dom, since: u64) -> bool {
+    let Some(changes) = dom.changes_since(since) else {
+        return true;
+    };
+    let owns_sheet = |n: NodeId| dom.is_html_element(n, "style") || dom.is_html_element(n, "link");
+    let in_style = |n: NodeId| dom.contains(n) && dom.is_html_element(n, "style");
+    changes.iter().any(|change| match *change {
+        Change::Inserted { parent, node } | Change::Removed { parent, node } => {
+            // What a freed subtree held is not known.
+            in_style(parent) || !dom.contains(node) || dom.traverse(node).any(owns_sheet)
+        }
+        Change::Data(node) => {
+            dom.contains(node) && (owns_sheet(node) || dom.parent(node).is_some_and(in_style))
+        }
+        Change::Freed(_) => false,
+    })
+}
+
 /// Brings the style engine up to date with the document and runs `f` on it.
+/// The sheets are collected again only when something they come from may
+/// have changed; the styles follow the document by themselves (the engine
+/// reads the arena's journal).
 pub(crate) fn with_engine<R>(page: &PageState, f: impl FnOnce(&mut StyleEngine, &Dom) -> R) -> R {
     let dom = page.dom.borrow();
     let mut engine = page.styles.engine.borrow_mut();
     let engine = engine.get_or_insert_with(|| StyleEngine::new(&media::device(page)));
     let version = (dom.version(), page.styles.edits.get());
-    if page.styles.version.get() != Some(version) {
+    let seen = page.styles.version.get();
+    if seen != Some(version) {
         engine.set_quirks_mode(dom.quirks_mode());
-        let sheets = collect_sheets(page, &dom);
-        let keyed: Vec<(u64, &str)> = sheets.iter().map(|(key, text)| (*key, &**text)).collect();
-        engine.set_author_stylesheets(&keyed);
-        engine.invalidate();
+        let stale = match seen {
+            Some((dom_version, edits)) => {
+                edits != version.1 || sheets_may_have_changed(&dom, dom_version)
+            }
+            None => true,
+        };
+        if stale {
+            let started = Instant::now();
+            let sheets = collect_sheets(page, &dom);
+            let keyed: Vec<(u64, &str)> =
+                sheets.iter().map(|(key, text)| (*key, &**text)).collect();
+            engine.set_author_stylesheets(&keyed);
+            crate::layout::log_step("sheets", started);
+        }
         page.styles.version.set(Some(version));
     }
     f(engine, &dom)
 }
 
+/// Brings every element's style up to date: only what changed is
+/// restyled, unless the sheets did.
+pub(crate) fn restyle(engine: &mut StyleEngine, dom: &Dom) {
+    if engine.is_fresh(dom) {
+        return;
+    }
+    let started = Instant::now();
+    let (full, _) = engine.restyle_counts();
+    engine.restyle(dom);
+    let what = if engine.restyle_counts().0 > full {
+        "restyle"
+    } else {
+        "restyle-incremental"
+    };
+    crate::layout::log_step(what, started);
+}
+
+/// How many times the page styled its whole document, and how many
+/// incremental restyles it did.
+#[cfg(test)]
+pub(crate) fn restyle_counts(page: &PageState) -> (u64, u64) {
+    page.styles
+        .engine
+        .borrow()
+        .as_ref()
+        .map_or((0, 0), StyleEngine::restyle_counts)
+}
+
 /// Runs `f` with every element's style resolved for the document as it is
-/// now (restyling only when the document or the sheets changed).
+/// now.
 pub(crate) fn with_styles<R>(page: &PageState, f: impl FnOnce(&StyleEngine, &Dom) -> R) -> R {
     with_engine(page, |engine, dom| {
-        let version = (dom.version(), page.styles.edits.get());
-        if page.styles.styled.get() != Some(version) {
-            engine.restyle(dom);
-            page.styles.styled.set(Some(version));
-        }
+        restyle(engine, dom);
         f(engine, dom)
     })
 }

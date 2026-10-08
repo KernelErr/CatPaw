@@ -27,6 +27,7 @@ use slotmap::{SlotMap, new_key_type};
 use style::properties::ComputedValues;
 use style::servo_arc::Arc;
 
+pub use construct::is_replaced;
 pub use query::{HitTarget, ScrollMetrics};
 
 new_key_type! {

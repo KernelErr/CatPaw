@@ -1,6 +1,7 @@
 //! The page's layout: built from the current styles when something asks
-//! for geometry, kept until the document, the style sheets or a scroll
-//! position change.
+//! for geometry, kept until a scroll position changes or the style sheets
+//! or the document change in a way that shows (the arena's journal and
+//! the style engine say which changes do).
 //!
 //! Boxes live in document coordinates; the CSSOM View answers in viewport
 //! coordinates, which subtract the window's scroll position (except for
@@ -8,11 +9,14 @@
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
+use std::sync::OnceLock;
+use std::time::Instant;
 
 use catpaw_dom::QuirksMode;
-use catpaw_dom::{Dom, NodeId};
+use catpaw_dom::{Change, Dom, NodeId, NodeKind};
 use catpaw_js::{EventTargetRef, ObjectId};
 use catpaw_layout::{BuildInput, LayoutTree, Rect, Viewport};
+use catpaw_style::StyleEngine;
 
 use crate::generated::{self as web, InterfaceId};
 use crate::page::{Cx, PageState};
@@ -22,39 +26,142 @@ use crate::{element, events, stylesheets};
 #[derive(Default)]
 pub(crate) struct Layouts {
     tree: RefCell<Option<LayoutTree>>,
-    /// What the tree was built for: DOM version, CSSOM edits, scroll version.
-    version: Cell<Option<(u64, u64, u64)>>,
+    /// The DOM version, CSSOM edit count and scroll version the tree is
+    /// known to be up to date with: it was built then, or nothing that
+    /// changed since matters to it.
+    current: Cell<Option<(u64, u64, u64)>>,
     /// Scroll positions of scroll containers other than the viewport.
     scroll_offsets: RefCell<HashMap<NodeId, (f32, f32)>>,
     /// Bumped whenever an element's scroll position changes.
     scroll_version: Cell<u64>,
+    /// How many times a tree was built.
+    builds: Cell<u64>,
 }
 
-/// Runs `f` with a layout that reflects the document as it is now.
+/// Whether `CATPAW_RENDER_STATS` asks for each step of rendering work
+/// (restyles, layouts, index rebuilds) to be logged to stderr with its
+/// duration, for profiling.
+fn stats_enabled() -> bool {
+    static ON: OnceLock<bool> = OnceLock::new();
+    *ON.get_or_init(|| std::env::var_os("CATPAW_RENDER_STATS").is_some_and(|v| v != "0"))
+}
+
+/// Logs a step of rendering work begun at `started`, when asked to.
+pub(crate) fn log_step(what: &str, started: Instant) {
+    if stats_enabled() {
+        let ms = started.elapsed().as_secs_f64() * 1000.0;
+        eprintln!("[render] {what} {ms:.2}ms");
+    }
+}
+
+/// Runs `f` with a layout that reflects the document as it is now. The
+/// tree is built again only when something it shows may have changed:
+/// a computed style, a rendered part of the tree or of its text, what
+/// sizes a replaced element, a scroll position.
 pub(crate) fn with_layout<R>(page: &PageState, f: impl FnOnce(&LayoutTree, &Dom) -> R) -> R {
     stylesheets::with_engine(page, |engine, dom| {
-        let version = (
+        let stamp = (
             dom.version(),
             page.styles.edits.get(),
             page.layouts.scroll_version.get(),
         );
-        if page.layouts.version.get() != Some(version) || page.layouts.tree.borrow().is_none() {
-            engine.restyle(dom);
-            let fonts = catpaw_text::shared_fonts();
-            let scroll_offsets = page.layouts.scroll_offsets.borrow();
-            let tree = LayoutTree::build(BuildInput {
-                dom,
-                styles: engine,
-                fonts: &fonts,
-                viewport: viewport(page),
-                scroll_offsets: &scroll_offsets,
-            });
-            drop(scroll_offsets);
-            *page.layouts.tree.borrow_mut() = Some(tree);
-            page.layouts.version.set(Some(version));
+        let current = page.layouts.current.get();
+        if current != Some(stamp) || page.layouts.tree.borrow().is_none() {
+            stylesheets::restyle(engine, dom);
+            let restyled = engine.take_restyled();
+            let still_valid = match (current, page.layouts.tree.borrow().as_ref()) {
+                (Some((since, _, scrolled)), Some(tree)) => {
+                    scrolled == stamp.2
+                        && !restyled.full
+                        && !restyled
+                            .elements
+                            .iter()
+                            .any(|&el| shown(tree, engine, dom, el))
+                        && !layout_affected(tree, engine, dom, since)
+                }
+                _ => false,
+            };
+            if !still_valid {
+                let started = Instant::now();
+                let fonts = catpaw_text::shared_fonts();
+                let scroll_offsets = page.layouts.scroll_offsets.borrow();
+                let tree = LayoutTree::build(BuildInput {
+                    dom,
+                    styles: engine,
+                    fonts: &fonts,
+                    viewport: viewport(page),
+                    scroll_offsets: &scroll_offsets,
+                });
+                drop(scroll_offsets);
+                *page.layouts.tree.borrow_mut() = Some(tree);
+                page.layouts.builds.set(page.layouts.builds.get() + 1);
+                log_step("layout", started);
+            }
+            page.layouts.current.set(Some(stamp));
         }
         let tree = page.layouts.tree.borrow();
         f(tree.as_ref().expect("layout was just built"), dom)
+    })
+}
+
+/// Whether an element is shown in the tree, or would be now.
+fn shown(tree: &LayoutTree, engine: &StyleEngine, dom: &Dom, el: NodeId) -> bool {
+    tree.box_of(el).is_some()
+        || tree.inline_style(el).is_some()
+        || (dom.contains(el) && dom.is_connected(el) && !engine.is_display_none(dom, el))
+}
+
+/// Whether the changes to the document since it was at `since` can have
+/// changed the tree, other than through the computed styles (which the
+/// style engine reports): children or text of something rendered, or the
+/// attributes a replaced element is sized by, or which children a shadow
+/// root's slots take.
+fn layout_affected(tree: &LayoutTree, engine: &StyleEngine, dom: &Dom, since: u64) -> bool {
+    let Some(changes) = dom.changes_since(since) else {
+        return true;
+    };
+    // Whether what is inside `node` may be rendered: an element not in a
+    // `display: none` subtree, a document or a shadow root.
+    let renders_content = |node: NodeId| match dom.kind(node) {
+        NodeKind::Element(_) => !engine.is_display_none(dom, node),
+        _ => true,
+    };
+    // A select is sized by the text of its options, which are not shown.
+    let in_shown_select = |node: NodeId| {
+        std::iter::once(node)
+            .chain(dom.ancestors(node))
+            .any(|a| dom.is_html_element(a, "select") && shown(tree, engine, dom, a))
+    };
+    changes.iter().any(|change| match *change {
+        Change::Inserted { parent, .. } | Change::Removed { parent, .. } => {
+            dom.contains(parent)
+                && dom.is_connected(parent)
+                && (renders_content(parent) || in_shown_select(parent))
+        }
+        Change::Data(node) => {
+            if !dom.contains(node) || !dom.is_connected(node) {
+                return false;
+            }
+            match dom.kind(node) {
+                NodeKind::Text(_) => dom
+                    .parent(node)
+                    .is_some_and(|p| renders_content(p) || in_shown_select(p)),
+                NodeKind::Element(el) => {
+                    let slotting = el.shadow_root.is_some()
+                        || dom.is_html_element(node, "slot")
+                        || dom
+                            .parent_element(node)
+                            .and_then(|p| dom.element(p))
+                            .is_some_and(|p| p.shadow_root.is_some());
+                    (catpaw_layout::is_replaced(dom, node) && shown(tree, engine, dom, node))
+                        || (slotting && renders_content(node))
+                }
+                // A document's URL or quirks mode (the latter restyles
+                // everything), comments, doctypes: nothing rendered.
+                _ => false,
+            }
+        }
+        Change::Freed(_) => false,
     })
 }
 
@@ -537,5 +644,162 @@ impl web::DOMRectListImpl for crate::Web {
         index: u32,
     ) -> catpaw_js::Fallible<Option<ObjectId>> {
         <Self as web::DOMRectListImpl>::item(cx, this, index)
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod tests {
+    use catpaw_dom::{Attr, LocalName, QualName, ns};
+    use url::Url;
+
+    use super::*;
+    use crate::page::PageConfig;
+
+    /// A page whose document is `html`, without script.
+    pub(crate) fn page_with(html: &str) -> PageState {
+        let page = PageState::new(
+            Url::parse("https://example.test/dir/page.html").unwrap(),
+            PageConfig {
+                viewport_width: 800,
+                viewport_height: 600,
+                ..PageConfig::default()
+            },
+        );
+        let document = page.dom.borrow().document();
+        catpaw_dom::parse_document_into(&page.dom, document, html, &Default::default());
+        page
+    }
+
+    pub(crate) fn find(page: &PageState, id: &str) -> NodeId {
+        let dom = page.dom.borrow();
+        dom.descendants(dom.document())
+            .find(|&n| dom.attr(n, "id") == Some(id))
+            .unwrap()
+    }
+
+    pub(crate) fn set_attr(page: &PageState, el: NodeId, local: &str, value: &str) {
+        page.dom
+            .borrow_mut()
+            .element_mut(el)
+            .unwrap()
+            .set_attr(QualName::new(None, ns!(), LocalName::from(local)), value);
+    }
+
+    fn height(page: &PageState, id: &str) -> f32 {
+        bounding_client_rect(page, find(page, id)).height
+    }
+
+    fn builds(page: &PageState) -> u64 {
+        page.layouts.builds.get()
+    }
+
+    /// The first element of the document with this local name.
+    fn first(page: &PageState, local: &str) -> NodeId {
+        let dom = page.dom.borrow();
+        dom.descendants(dom.document())
+            .find(|&n| dom.is_html_element(n, local))
+            .unwrap()
+    }
+
+    const DOCUMENT: &str = r#"<!doctype html><html><head><title>t</title></head>
+        <body style="margin:0"><div id=a style="height:50px"></div>
+        <p id=p>text</p><img id=img width=10 height=20><div id=hidden hidden><b id=b>x</b></div>"#;
+
+    #[test]
+    fn writes_nothing_shown_depends_on_keep_the_layout() {
+        let page = page_with(DOCUMENT);
+        assert_eq!(height(&page, "a"), 50.0);
+        assert_eq!(builds(&page), 1);
+        let restyles = stylesheets::restyle_counts(&page);
+
+        // Bookkeeping does not even move the version.
+        let version = page.dom.borrow().version();
+        let a = find(&page, "a");
+        page.dom.borrow_mut().set_script_already_started(a, true);
+        page.dom
+            .borrow_mut()
+            .set_custom_element_state(a, catpaw_dom::CustomElementState::Failed);
+        assert_eq!(page.dom.borrow().version(), version);
+        assert_eq!(height(&page, "a"), 50.0);
+
+        // An attribute no selector reads, the same value again, the title,
+        // a script in the head, what is inside `display: none`: the tree
+        // stays.
+        set_attr(&page, a, "data-x", "1");
+        set_attr(&page, a, "style", "height:50px");
+        let title = first(&page, "title");
+        {
+            let mut dom = page.dom.borrow_mut();
+            let text = dom.first_child(title).unwrap();
+            dom.node_mut(text).kind = NodeKind::Text("another title".into());
+            let head = dom.parent(title).unwrap();
+            let script = dom.create_html_element("script", vec![Attr::html("src", "x.js")]);
+            dom.append_child(head, script);
+        }
+        set_attr(&page, find(&page, "b"), "class", "y");
+        assert_eq!(height(&page, "a"), 50.0);
+        assert_eq!(builds(&page), 1, "nothing shown changed");
+        assert_eq!(
+            stylesheets::restyle_counts(&page).0,
+            restyles.0,
+            "no restyle from scratch"
+        );
+    }
+
+    #[test]
+    fn writes_that_show_differently_rebuild_the_layout() {
+        let page = page_with(DOCUMENT);
+        assert_eq!(height(&page, "a"), 50.0);
+        assert_eq!(builds(&page), 1);
+        let restyles = stylesheets::restyle_counts(&page).0;
+
+        // A style attribute.
+        set_attr(&page, find(&page, "a"), "style", "height:70px");
+        assert_eq!(height(&page, "a"), 70.0);
+        assert_eq!(builds(&page), 2);
+
+        // The attributes a replaced element is sized by.
+        set_attr(&page, find(&page, "img"), "height", "30");
+        assert_eq!(height(&page, "img"), 30.0);
+        assert_eq!(builds(&page), 3);
+
+        // Text that is shown.
+        let line = height(&page, "p");
+        let p = find(&page, "p");
+        {
+            let mut dom = page.dom.borrow_mut();
+            let text = dom.first_child(p).unwrap();
+            dom.node_mut(text).kind = NodeKind::Text("text ".repeat(400));
+        }
+        assert!(height(&page, "p") > line);
+        assert_eq!(builds(&page), 4);
+
+        // Something shown again.
+        let hidden = find(&page, "hidden");
+        page.dom
+            .borrow_mut()
+            .element_mut(hidden)
+            .unwrap()
+            .remove_attr("hidden");
+        assert!(height(&page, "b") > 0.0);
+        assert_eq!(builds(&page), 5);
+
+        // A new element.
+        let body = first(&page, "body");
+        {
+            let mut dom = page.dom.borrow_mut();
+            let div = dom.create_html_element(
+                "div",
+                vec![Attr::html("id", "new"), Attr::html("style", "height:5px")],
+            );
+            dom.append_child(body, div);
+        }
+        assert_eq!(height(&page, "new"), 5.0);
+        assert_eq!(builds(&page), 6);
+        assert_eq!(
+            stylesheets::restyle_counts(&page).0,
+            restyles,
+            "every restyle was incremental"
+        );
     }
 }

@@ -22,7 +22,7 @@ use markup5ever::interface::{
 use markup5ever::{Attribute, LocalName, Namespace, QualName, ns};
 use url::Url;
 
-use crate::arena::{Attr, DoctypeData, Dom, FragmentKind, NodeId, NodeKind};
+use crate::arena::{Attr, DoctypeData, Dom, ElementData, FragmentKind, NodeId, NodeKind};
 
 /// Options for [`parse_html`].
 #[derive(Debug, Clone)]
@@ -197,15 +197,13 @@ impl TreeSink for Sink {
 
     fn create_element(&self, name: QualName, attrs: Vec<Attribute>, flags: ElementFlags) -> NodeId {
         self.with(|dom| {
-            let id = dom.create_element(name, convert_attrs(attrs));
+            let mut data = ElementData::new(name, convert_attrs(attrs));
+            data.mathml_annotation_xml_integration_point =
+                flags.mathml_annotation_xml_integration_point;
+            let id = dom.create(NodeKind::Element(data));
             if flags.template {
                 let contents = dom.create_fragment(FragmentKind::TemplateContents { host: id });
                 dom.element_mut(id).unwrap().template_contents = Some(contents);
-            }
-            if flags.mathml_annotation_xml_integration_point {
-                dom.element_mut(id)
-                    .unwrap()
-                    .mathml_annotation_xml_integration_point = true;
             }
             id
         })
@@ -263,11 +261,7 @@ impl TreeSink for Sink {
     }
 
     fn mark_script_already_started(&self, node: &NodeId) {
-        self.with(|dom| {
-            if let Some(el) = dom.element_mut(*node) {
-                el.script_already_started = true;
-            }
-        });
+        self.with(|dom| dom.set_script_already_started(*node, true));
     }
 
     fn get_template_contents(&self, target: &NodeId) -> NodeId {

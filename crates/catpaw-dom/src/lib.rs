@@ -12,8 +12,8 @@ pub mod serialize;
 pub mod xpath;
 
 pub use arena::{
-    Attr, CustomElementState, DoctypeData, DocumentData, Dom, ElementData, FragmentKind, Node,
-    NodeId, NodeKind, TreeChange,
+    Attr, Change, CustomElementState, DoctypeData, DocumentData, Dom, ElementData, FragmentKind,
+    Node, NodeId, NodeKind, TreeChange,
 };
 pub use html::{
     HtmlParseOptions, HtmlStream, ParseResult, WriteQueue, parse_document_into,
