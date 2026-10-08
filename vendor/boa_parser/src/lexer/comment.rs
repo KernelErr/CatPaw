@@ -28,7 +28,11 @@ impl<R> Tokenizer<R> for SingleLineComment {
         R: ReadChar,
     {
         // Skip either to the end of the line or to the end of the input
-        while let Some(ch) = cursor.peek_char()? {
+        loop {
+            cursor.take_ascii_while(|_| true)?;
+            let Some(ch) = cursor.peek_char()? else {
+                break;
+            };
             let tried_ch = char::try_from(ch);
             match tried_ch {
                 Ok(c) if c == '\r' || c == '\n' || c == '\u{2028}' || c == '\u{2029}' => break,
@@ -67,7 +71,11 @@ impl<R> Tokenizer<R> for MultiLineComment {
         R: ReadChar,
     {
         let mut new_line = false;
-        while let Some(ch) = cursor.next_char()? {
+        loop {
+            cursor.take_ascii_while(|byte| byte != b'*')?;
+            let Some(ch) = cursor.next_char()? else {
+                break;
+            };
             let tried_ch = char::try_from(ch);
             match tried_ch {
                 Ok(c) if c == '*' && cursor.next_if(0x2F /* / */)? => {

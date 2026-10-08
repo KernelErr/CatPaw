@@ -238,6 +238,35 @@ impl<R: ReadChar> Cursor<R> {
         }
     }
 
+    /// Consumes the characters that are ASCII, not line terminators and accepted by
+    /// `accept`, exactly as calling `next_char` for each would; stops before the
+    /// first other character. `accept` sees each character and may keep it.
+    ///
+    /// Runs of identifier characters, white space, comments and string contents
+    /// take this path instead of the general one, character by character.
+    #[inline]
+    pub(super) fn take_ascii_while<F>(&mut self, mut accept: F) -> Result<(), Error>
+    where
+        F: FnMut(u8) -> bool,
+    {
+        loop {
+            let Some(ch) = self.peek_char()? else {
+                return Ok(());
+            };
+            // Line terminators move to the next line: `next_char` takes those.
+            if ch >= 0x80 || ch == 0x0A || ch == 0x0D {
+                return Ok(());
+            }
+            #[allow(clippy::cast_possible_truncation)]
+            if !accept(ch as u8) {
+                return Ok(());
+            }
+            self.peeked = [self.peeked[1], self.peeked[2], self.peeked[3], None];
+            self.source_collector.collect_code_point(ch);
+            self.next_column();
+        }
+    }
+
     /// Retrieves the next UTF-8 character.
     #[inline]
     pub(crate) fn next_char(&mut self) -> Result<Option<u32>, Error> {

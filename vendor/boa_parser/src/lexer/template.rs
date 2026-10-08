@@ -205,6 +205,13 @@ impl<R> Tokenizer<R> for TemplateLiteral {
     {
         let mut buf = Vec::new();
         loop {
+            cursor.take_ascii_while(|byte| {
+                let plain = !matches!(byte, b'`' | b'$' | b'\\');
+                if plain {
+                    buf.push(u16::from(byte));
+                }
+                plain
+            })?;
             let ch = cursor.next_char()?.ok_or_else(|| {
                 Error::from(io::Error::new(
                     ErrorKind::UnexpectedEof,

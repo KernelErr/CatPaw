@@ -118,7 +118,18 @@ impl StringLiteral {
         let mut buf = Vec::new();
         let mut escape_sequence = EscapeSequence::empty();
 
+        let quote = match terminator {
+            StringTerminator::SingleQuote => b'\'',
+            StringTerminator::DoubleQuote => b'"',
+        };
         loop {
+            cursor.take_ascii_while(|byte| {
+                let plain = byte != quote && byte != b'\\';
+                if plain {
+                    buf.push(u16::from(byte));
+                }
+                plain
+            })?;
             let ch_start_pos = cursor.pos();
             let ch = cursor.next_char()?;
 

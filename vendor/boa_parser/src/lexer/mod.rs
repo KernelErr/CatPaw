@@ -237,6 +237,8 @@ impl<R> Lexer<R> {
         // Ignore whitespace
         if is_whitespace(next_ch) {
             loop {
+                self.cursor
+                    .take_ascii_while(|byte| matches!(byte, b' ' | b'\t' | 0x0B | 0x0C))?;
                 start = self.cursor.pos_group();
                 let Some(next) = self.cursor.next_char()? else {
                     return Ok(None);

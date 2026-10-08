@@ -66,7 +66,10 @@ is always the interner's). `next_char` shifts its look-ahead without a
 rotate and counts lines and columns as plain integers, building a
 `Position` (with its non-zero checks) only when a token asks for one;
 `src/source/utf8.rs` decodes ASCII inline and multibyte characters out of
-line.
+line. Runs of ASCII identifier characters, white space, comment text and
+string and template contents go through `Cursor::take_ascii_while`, which
+does exactly what `next_char` does for such characters without its
+general line-terminator and look-ahead handling.
 
 `src/parser/expression/mod.rs`: the binary operators from `|` to `*` were
 parsed by one function per precedence level (`BitwiseORExpression` down
