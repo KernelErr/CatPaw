@@ -70,7 +70,7 @@ impl GroupState {
             return Ok(false);
         };
         let node = aim.node;
-        Ok(agent::with_styles(&state, |engine, dom| {
+        let unhidden = agent::with_styles(&state, |engine, dom| {
             let oracle = EngineOracle {
                 engine,
                 page: &state,
@@ -79,7 +79,10 @@ impl GroupState {
                 && !std::iter::once(node)
                     .chain(dom.ancestors(node))
                     .any(|n| is_hidden(dom, n, &oracle))
-        }))
+        });
+        // Shown takes a box with size too, as a click needs one.
+        Ok(unhidden
+            && agent::element_rect(&state, node).is_some_and(|(_, _, w, h)| w > 0.0 && h > 0.0))
     }
 
     /// Whether what `p` waits for is so now: text shown or gone, a target

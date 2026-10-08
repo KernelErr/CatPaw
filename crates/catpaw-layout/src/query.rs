@@ -241,6 +241,11 @@ impl LayoutTree {
             right = right.max(context.layout.full_width() + inset.right);
             bottom = bottom.max(context.height + inset.bottom);
         }
+        // The children's margin boxes, and what each shows past its own
+        // box without clipping it (a child of fixed height whose content
+        // runs on): layout measured that from the child's padding box.
+        let mut children_right = f32::NEG_INFINITY;
+        let mut children_bottom = f32::NEG_INFINITY;
         for child in &b.children {
             let c = &self.boxes[*child];
             if c.positioning == Positioning::Fixed {
@@ -248,9 +253,36 @@ impl LayoutTree {
             }
             let rel_x = c.origin.0 + scroll.0 - client.x;
             let rel_y = c.origin.1 + scroll.1 - client.y;
-            right = right.max(rel_x + c.layout.size.width + c.layout.margin.right);
-            bottom = bottom.max(rel_y + c.layout.size.height + c.layout.margin.bottom);
+            let mut end_x = rel_x + c.layout.size.width + c.layout.margin.right;
+            let mut end_y = rel_y + c.layout.size.height + c.layout.margin.bottom;
+            // Only what reaches past the child's border box counts: within
+            // it, the margin box stands (negative margins shrink it).
+            if !self.clips_overflow(*child) {
+                let overflow = c.layout.scrollable_overflow_rect;
+                let past_x = rel_x + c.layout.border.left + overflow.right;
+                let past_y = rel_y + c.layout.border.top + overflow.bottom;
+                if past_x > rel_x + c.layout.size.width {
+                    end_x = end_x.max(past_x);
+                }
+                if past_y > rel_y + c.layout.size.height {
+                    end_y = end_y.max(past_y);
+                }
+            }
+            children_right = children_right.max(end_x);
+            children_bottom = children_bottom.max(end_y);
         }
+        // A scroll container's content reaches its end padding past the
+        // last box (CSS Overflow 3), so that scrolling to the end shows it.
+        let style = b.style.get_box();
+        let scrolls =
+            |o: Overflow| matches!(o, Overflow::Hidden | Overflow::Scroll | Overflow::Auto);
+        let padding = if scrolls(style.overflow_x) || scrolls(style.overflow_y) {
+            b.layout.padding
+        } else {
+            taffy::Rect::zero()
+        };
+        right = right.max(children_right + padding.right);
+        bottom = bottom.max(children_bottom + padding.bottom);
         ScrollMetrics {
             client,
             scroll_width: right.max(0.0),

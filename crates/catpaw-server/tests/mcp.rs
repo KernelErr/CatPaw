@@ -163,6 +163,10 @@ function poll() { fetch('/poll').catch(() => {}); setTimeout(poll, 200); }
 poll();
 </script>"#;
 
+/// An app shell one viewport tall whose content runs on past it, a button
+/// placed off the page, and one with no size.
+const REACH: &str = r#"<!doctype html><title>Reach</title><body style="margin:0"><div style="height:100vh"><div style="height:1200px"></div><button id=low onclick="this.textContent='Done'">Low</button></div><button style="position:absolute;left:-5000px;top:0">Away</button><button id=flat style="width:0;height:0;padding:0;border:0;overflow:hidden">Flat</button>"#;
+
 /// Serves `pages` by path (the query is ignored), a thread per
 /// connection; `/slow…` answers after 300 ms and `/hang…` after 3 s.
 fn serve(pages: HashMap<&'static str, &'static str>) -> u16 {
@@ -246,6 +250,7 @@ impl Client {
             ("/long", LONG),
             ("/drag", DRAG),
             ("/p5", P5),
+            ("/reach", REACH),
             ("/data.csv", "id,name\n1,Ada\n"),
             ("/poll", "ok"),
         ]));
@@ -465,6 +470,36 @@ fn popups_become_tabs() {
     );
     let list = client.ok("tabs", json!({"op": "list"}));
     assert!(!list.contains("t1") && !list.contains("t3"), "{list}");
+}
+
+#[test]
+fn clicks_reach_below_the_fold_and_say_why_they_cannot() {
+    let mut client = Client::new();
+    let url = format!("{}/reach", client.base);
+    let page = client.ok("navigate", json!({"url": url}));
+    let low = ref_of(&page, "button \"Low\"");
+    let done = client.ok("click", json!({"target": low}));
+    assert!(done.contains("\"Done\""), "{done}");
+
+    let away = ref_of(&page, "button \"Away\"");
+    let error = client.error("click", json!({"target": away}));
+    assert!(
+        error.contains("lies outside what the page can scroll to"),
+        "{error}"
+    );
+    assert!(error.contains("advice: it sits outside"), "{error}");
+
+    // Shown takes a box with size, as a click does.
+    let (text, failed) = client.call(
+        "wait",
+        json!({"for": "visible", "target": "css:#flat", "timeoutMs": 300}),
+    );
+    assert!(failed, "{text}");
+    let (text, failed) = client.call(
+        "wait",
+        json!({"for": "visible", "target": "css:#low", "timeoutMs": 300}),
+    );
+    assert!(!failed, "{text}");
 }
 
 #[test]

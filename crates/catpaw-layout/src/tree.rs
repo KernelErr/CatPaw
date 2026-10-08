@@ -340,11 +340,15 @@ impl LayoutTree {
 
         self.boxes[id].inline = Some(context);
         let mut output = LayoutOutput::from_outer_size(outer);
+        // Measured from the padding box, as Taffy measures scrollable
+        // overflow.
+        let border_x = border.left + border.right;
+        let border_y = border.top + border.bottom;
         output.scrollable_overflow_rect = taffy::Rect {
             left: 0.0,
             top: 0.0,
-            right: overflow_width.max(outer.width),
-            bottom: overflow_height.max(outer.height),
+            right: (overflow_width.max(outer.width) - border_x).max(0.0),
+            bottom: (overflow_height.max(outer.height) - border_y).max(0.0),
         };
         output.baselines.first = first_baseline;
         output.baselines.last = last_baseline;
@@ -378,11 +382,12 @@ impl LayoutTree {
         layout.border = border;
         layout.margin = margin;
         if layout.scrollable_overflow_rect == taffy::Rect::ZERO {
+            // The padding box: measured from it, like Taffy's.
             layout.scrollable_overflow_rect = taffy::Rect {
                 left: 0.0,
                 top: 0.0,
-                right: size.width,
-                bottom: size.height,
+                right: (size.width - border.left - border.right).max(0.0),
+                bottom: (size.height - border.top - border.bottom).max(0.0),
             };
         }
     }

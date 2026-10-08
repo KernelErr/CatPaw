@@ -123,6 +123,11 @@ impl GroupState {
                 Failure::new(ErrorCode::NotActionable, format!("{what} is not visible"))
                     .with(advice::NOT_VISIBLE)
             }
+            ActionError::Input(InputError::OutOfReach) => Failure::new(
+                ErrorCode::NotActionable,
+                format!("{what} lies outside what the page can scroll to"),
+            )
+            .with(advice::OUT_OF_REACH),
             ActionError::Input(InputError::NotEditable) => Failure::new(
                 ErrorCode::NotActionable,
                 format!("{what} does not take this input"),

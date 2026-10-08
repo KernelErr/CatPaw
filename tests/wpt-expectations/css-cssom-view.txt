@@ -687,13 +687,7 @@ css/cssom-view/scrollParent.html	scrollParent returns the nearest scroll contain
 css/cssom-view/scrollParent.html	scrollParent skips ancestors with `display: contents`.
 css/cssom-view/scrollTo-zoom.html	-
 css/cssom-view/scrollTop-display-change.html	-
-css/cssom-view/scrollWidthHeight-child-border-within-padding.tentative.html	Container with overflow:both — child border crossing content edge extends scrollable area by inline/block padding
-css/cssom-view/scrollWidthHeight-child-border-within-padding.tentative.html	Container with overflow:clip-x — child border crossing content edge extends scrollable area by inline/block padding
-css/cssom-view/scrollWidthHeight-child-border-within-padding.tentative.html	Container with overflow:clip-y — child border crossing content edge extends scrollable area by inline/block padding
-css/cssom-view/scrollWidthHeight-child-border-within-padding.tentative.html	Container with overflow:x-only — child border crossing content edge extends scrollable area by inline/block padding
-css/cssom-view/scrollWidthHeight-child-border-within-padding.tentative.html	Container with overflow:y-only — child border crossing content edge extends scrollable area by inline/block padding
 css/cssom-view/scrollWidthHeight-contain-layout.html	-
-css/cssom-view/scrollWidthHeight-flex-column-padding-001.html	flex-direction:column scrollHeight includes block-axis padding around overflowing items
 css/cssom-view/scrollWidthHeight-flex-column-padding-001.html	flex-direction:column-reverse scrollHeight includes block-axis padding around overflowing items
 css/cssom-view/scrollWidthHeight-negative-margin-001.html	scrollWidth/Height with negative margins: overflow: auto;
 css/cssom-view/scrollWidthHeight-negative-margin-001.html	scrollWidth/Height with negative margins: overflow: clip;

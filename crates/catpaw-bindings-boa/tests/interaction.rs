@@ -121,6 +121,26 @@ fn page_coordinates_add_the_scroll() {
 }
 
 #[test]
+fn content_overflowing_a_fixed_height_wrapper_can_be_scrolled_to() {
+    // The wrapper is one viewport tall and lets its content run on, as
+    // many app shells do: the document scrolls to the end of the content.
+    let mut page = load(
+        r#"<!doctype html><body style="margin:0"><div style="height:100vh"><div style="height:900px"></div><button id=low style="display:block;width:100px;height:40px">low</button></div><button id=away style="position:absolute;left:-5000px;top:0;width:50px;height:20px">away</button>
+        <script>var clicked = 0; document.getElementById('low').onclick = function () { clicked++; };</script>"#,
+    );
+    assert_eq!(
+        eval(&mut page, "document.documentElement.scrollHeight"),
+        "940"
+    );
+    let low = find(&page, "low");
+    page.with_cx(|cx| input::click_element(cx, low).expect("click"));
+    assert_eq!(eval(&mut page, "clicked + ' at ' + scrollY"), "1 at 340");
+    let away = find(&page, "away");
+    let result = page.with_cx(|cx| input::click_element(cx, away));
+    assert_eq!(result, Err(input::InputError::OutOfReach));
+}
+
+#[test]
 fn occluded_and_hidden_elements_refuse_clicks() {
     let mut page = load(
         r#"<!doctype html><body style="margin:0"><button id=under style="position:absolute;left:0;top:0;width:100px;height:40px">under</button><div id=over style="position:absolute;left:0;top:0;width:200px;height:200px"></div><button id=gone style="display:none">gone</button>"#,

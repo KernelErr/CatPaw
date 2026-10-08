@@ -25,6 +25,9 @@ pub enum InputError {
     Detached,
     /// The element has no box or an empty one.
     NotVisible,
+    /// The element has a box, but scrolling cannot bring it into the
+    /// viewport (it sits past the page's scrollable area).
+    OutOfReach,
     /// Another element covers the point aimed at.
     Occluded { by: NodeId },
     /// The element does not take text.
@@ -40,6 +43,9 @@ impl std::fmt::Display for InputError {
         match self {
             InputError::Detached => f.write_str("the element is not in the document"),
             InputError::NotVisible => f.write_str("the element is not visible"),
+            InputError::OutOfReach => {
+                f.write_str("the element lies outside what the page can scroll to")
+            }
             InputError::Occluded { .. } => f.write_str("another element covers it"),
             InputError::NotEditable => f.write_str("the element does not take text"),
             InputError::Disabled => f.write_str("the element is disabled"),
@@ -630,7 +636,7 @@ fn aim_in_view(cx: &Cx<'_>, el: NodeId) -> Result<(f32, f32), InputError> {
         || rect.x >= viewport.width
         || rect.y >= viewport.height;
     if outside {
-        return Err(InputError::NotVisible);
+        return Err(InputError::OutOfReach);
     }
     let x = (rect.x + rect.width / 2.0).clamp(0.0, viewport.width - 1.0);
     let y = (rect.y + rect.height / 2.0).clamp(0.0, viewport.height - 1.0);
@@ -669,8 +675,13 @@ pub fn drag_element(cx: &mut Cx<'_>, el: NodeId, onto: NodeId) -> Result<(), Inp
     // must still show at the scroll that leaves.
     aim(cx, el)?;
     aim(cx, onto)?;
-    let from = aim_in_view(cx, el)?;
-    let to = aim_in_view(cx, onto)?;
+    // Each can be scrolled to; what fails now is showing both at once.
+    let together = |e: InputError| match e {
+        InputError::OutOfReach => InputError::NotVisible,
+        other => other,
+    };
+    let from = aim_in_view(cx, el).map_err(together)?;
+    let to = aim_in_view(cx, onto).map_err(together)?;
     let target = pointer_move(cx, from.0, from.1).ok_or(InputError::NotVisible)?;
     // The press must land on what is dragged.
     if !shows(&cx.dom(), target, el) {

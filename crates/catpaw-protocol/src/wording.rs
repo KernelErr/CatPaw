@@ -75,6 +75,7 @@ pub mod advice {
         "advice: dismiss what covers it (a banner or dialog), or scroll; then retry";
     pub const NOT_VISIBLE: &str =
         "advice: it has no size on screen; open the menu or section that holds it first";
+    pub const OUT_OF_REACH: &str = "advice: it sits outside what the page can scroll to; scroll the box that holds it (act scroll on that box), or click with force:true";
     pub const DISABLED: &str = "advice: something on the page has to enable it first";
     pub const MOVING: &str =
         "advice: it is animating; wait({\"for\":\"settled\"}), or click with force:true";

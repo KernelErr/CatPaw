@@ -292,7 +292,11 @@ impl GroupState {
                 }
                 // Forced: the element gets the click, whatever covers it.
                 None if force => match input::click_element_with(cx, aim.node, how) {
-                    Err(InputError::Occluded { .. } | InputError::NotVisible) => {
+                    Err(
+                        InputError::Occluded { .. }
+                        | InputError::NotVisible
+                        | InputError::OutOfReach,
+                    ) => {
                         catpaw_web::activation::click(cx, aim.node, true);
                         Ok(())
                     }
