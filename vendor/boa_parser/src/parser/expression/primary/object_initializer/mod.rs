@@ -237,7 +237,7 @@ where
                         )));
                     }
 
-                    return Ok(PropertyDefinitionNode::MethodDefinition(
+                    return Ok(PropertyDefinitionNode::MethodDefinition(Box::new(
                         ObjectMethodDefinition::new(
                             property_name,
                             params,
@@ -245,7 +245,7 @@ where
                             MethodDefinitionKind::AsyncGenerator,
                             start_linear_pos,
                         ),
-                    ));
+                    )));
                 }
                 let (class_element_name, params, body) =
                     AsyncMethod::new(self.allow_yield, self.allow_await).parse(cursor, interner)?;
@@ -265,7 +265,7 @@ where
                     )));
                 }
 
-                return Ok(PropertyDefinitionNode::MethodDefinition(
+                return Ok(PropertyDefinitionNode::MethodDefinition(Box::new(
                     ObjectMethodDefinition::new(
                         property_name,
                         params,
@@ -273,7 +273,7 @@ where
                         MethodDefinitionKind::Async,
                         start_linear_pos,
                     ),
-                ));
+                )));
             }
             _ => {}
         }
@@ -301,7 +301,7 @@ where
                 )));
             }
 
-            return Ok(PropertyDefinitionNode::MethodDefinition(
+            return Ok(PropertyDefinitionNode::MethodDefinition(Box::new(
                 ObjectMethodDefinition::new(
                     property_name,
                     params,
@@ -309,7 +309,7 @@ where
                     MethodDefinitionKind::Generator,
                     start_linear_pos,
                 ),
-            ));
+            )));
         }
 
         let set_or_get_escaped_position = match token.kind() {
@@ -376,7 +376,7 @@ where
                     )));
                 }
 
-                Ok(PropertyDefinitionNode::MethodDefinition(
+                Ok(PropertyDefinitionNode::MethodDefinition(Box::new(
                     ObjectMethodDefinition::new(
                         property_name,
                         FormalParameterList::default(),
@@ -384,7 +384,7 @@ where
                         MethodDefinitionKind::Get,
                         start_linear_pos,
                     ),
-                ))
+                )))
             }
             // MethodDefinition[?Yield, ?Await] -> set ClassElementName[?Yield, ?Await] ( PropertySetParameterList ) { FunctionBody[~Yield, ~Await] }
             PropertyNameNode::Literal(str) if str == Sym::SET && !ordinary_method => {
@@ -455,7 +455,7 @@ where
                     )));
                 }
 
-                Ok(PropertyDefinitionNode::MethodDefinition(
+                Ok(PropertyDefinitionNode::MethodDefinition(Box::new(
                     ObjectMethodDefinition::new(
                         property_name,
                         params,
@@ -463,7 +463,7 @@ where
                         MethodDefinitionKind::Set,
                         start_linear_pos,
                     ),
-                ))
+                )))
             }
             // MethodDefinition[?Yield, ?Await] -> ClassElementName[?Yield, ?Await] ( UniqueFormalParameters[~Yield, ~Await] ) { FunctionBody[~Yield, ~Await] }
             _ => {
@@ -520,7 +520,7 @@ where
                     )));
                 }
 
-                Ok(PropertyDefinitionNode::MethodDefinition(
+                Ok(PropertyDefinitionNode::MethodDefinition(Box::new(
                     ObjectMethodDefinition::new(
                         property_name,
                         params,
@@ -528,7 +528,7 @@ where
                         MethodDefinitionKind::Ordinary,
                         start_linear_pos,
                     ),
-                ))
+                )))
             }
         }
     }

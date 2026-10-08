@@ -78,7 +78,7 @@ fn check_object_short_function() {
             .into(),
             Literal::new(true, Span::new((2, 8), (2, 12))).into(),
         ),
-        PropertyDefinition::MethodDefinition(ObjectMethodDefinition::new(
+        PropertyDefinition::MethodDefinition(Box::new(ObjectMethodDefinition::new(
             Identifier::new(
                 interner.get_or_intern_static("b", utf16!("b")),
                 Span::new((3, 5), (3, 6)),
@@ -88,7 +88,7 @@ fn check_object_short_function() {
             FunctionBody::new(StatementList::default(), Span::new((3, 9), (3, 11))),
             MethodDefinitionKind::Ordinary,
             PSEUDO_LINEAR_POS,
-        )),
+        ))),
     ];
 
     check_script_parser(
@@ -144,7 +144,7 @@ fn check_object_short_function_arguments() {
             .into(),
             Literal::new(true, Span::new((2, 8), (2, 12))).into(),
         ),
-        PropertyDefinition::MethodDefinition(ObjectMethodDefinition::new(
+        PropertyDefinition::MethodDefinition(Box::new(ObjectMethodDefinition::new(
             Identifier::new(
                 interner.get_or_intern_static("b", utf16!("b")),
                 Span::new((3, 5), (3, 6)),
@@ -154,7 +154,7 @@ fn check_object_short_function_arguments() {
             FunctionBody::new(StatementList::default(), Span::new((3, 13), (3, 15))),
             MethodDefinitionKind::Ordinary,
             PSEUDO_LINEAR_POS,
-        )),
+        ))),
     ];
 
     check_script_parser(
@@ -195,7 +195,7 @@ fn check_object_getter() {
             .into(),
             Literal::new(true, Span::new((2, 8), (2, 12))).into(),
         ),
-        PropertyDefinition::MethodDefinition(ObjectMethodDefinition::new(
+        PropertyDefinition::MethodDefinition(Box::new(ObjectMethodDefinition::new(
             Identifier::new(
                 interner.get_or_intern_static("b", utf16!("b")),
                 Span::new((3, 9), (3, 10)),
@@ -205,7 +205,7 @@ fn check_object_getter() {
             FunctionBody::new(StatementList::default(), Span::new((3, 13), (3, 15))),
             MethodDefinitionKind::Get,
             PSEUDO_LINEAR_POS,
-        )),
+        ))),
     ];
 
     check_script_parser(
@@ -260,7 +260,7 @@ fn check_object_setter() {
             .into(),
             Literal::new(true, Span::new((2, 8), (2, 12))).into(),
         ),
-        PropertyDefinition::MethodDefinition(ObjectMethodDefinition::new(
+        PropertyDefinition::MethodDefinition(Box::new(ObjectMethodDefinition::new(
             Identifier::new(
                 interner.get_or_intern_static("b", utf16!("b")),
                 Span::new((3, 9), (3, 10)),
@@ -270,7 +270,7 @@ fn check_object_setter() {
             FunctionBody::new(StatementList::default(), Span::new((3, 17), (3, 19))),
             MethodDefinitionKind::Set,
             PSEUDO_LINEAR_POS,
-        )),
+        ))),
     ];
 
     check_script_parser(
@@ -302,7 +302,7 @@ fn check_object_setter() {
 fn check_object_short_function_get() {
     let interner = &mut Interner::default();
 
-    let object_properties = vec![PropertyDefinition::MethodDefinition(
+    let object_properties = vec![PropertyDefinition::MethodDefinition(Box::new(
         ObjectMethodDefinition::new(
             Identifier::new(Sym::GET, Span::new((2, 5), (2, 8))).into(),
             FormalParameterList::default(),
@@ -310,7 +310,7 @@ fn check_object_short_function_get() {
             MethodDefinitionKind::Ordinary,
             PSEUDO_LINEAR_POS,
         ),
-    )];
+    ))];
 
     check_script_parser(
         indoc! {"
@@ -340,7 +340,7 @@ fn check_object_short_function_get() {
 fn check_object_short_function_set() {
     let interner = &mut Interner::default();
 
-    let object_properties = vec![PropertyDefinition::MethodDefinition(
+    let object_properties = vec![PropertyDefinition::MethodDefinition(Box::new(
         ObjectMethodDefinition::new(
             Identifier::new(Sym::SET, Span::new((2, 5), (2, 8))).into(),
             FormalParameterList::default(),
@@ -348,7 +348,7 @@ fn check_object_short_function_set() {
             MethodDefinitionKind::Ordinary,
             PSEUDO_LINEAR_POS,
         ),
-    )];
+    ))];
 
     check_script_parser(
         indoc! {"
@@ -527,7 +527,7 @@ fn check_object_spread() {
 fn check_async_method() {
     let interner = &mut Interner::default();
 
-    let object_properties = vec![PropertyDefinition::MethodDefinition(
+    let object_properties = vec![PropertyDefinition::MethodDefinition(Box::new(
         ObjectMethodDefinition::new(
             Identifier::new(
                 interner.get_or_intern_static("dive", utf16!("dive")),
@@ -539,7 +539,7 @@ fn check_async_method() {
             MethodDefinitionKind::Async,
             PSEUDO_LINEAR_POS,
         ),
-    )];
+    ))];
 
     check_script_parser(
         indoc! {"
@@ -569,7 +569,7 @@ fn check_async_method() {
 fn check_async_generator_method() {
     let interner = &mut Interner::default();
 
-    let object_properties = vec![PropertyDefinition::MethodDefinition(
+    let object_properties = vec![PropertyDefinition::MethodDefinition(Box::new(
         ObjectMethodDefinition::new(
             Identifier::new(
                 interner.get_or_intern_static("vroom", utf16!("vroom")),
@@ -581,7 +581,7 @@ fn check_async_generator_method() {
             MethodDefinitionKind::AsyncGenerator,
             PSEUDO_LINEAR_POS,
         ),
-    )];
+    ))];
 
     check_script_parser(
         indoc! {"
@@ -633,7 +633,7 @@ fn check_async_gen_method_lineterminator() {
 fn check_async_ordinary_method() {
     let interner = &mut Interner::default();
 
-    let object_properties = vec![PropertyDefinition::MethodDefinition(
+    let object_properties = vec![PropertyDefinition::MethodDefinition(Box::new(
         ObjectMethodDefinition::new(
             Identifier::new(
                 interner.get_or_intern_static("async", utf16!("async")),
@@ -645,7 +645,7 @@ fn check_async_ordinary_method() {
             MethodDefinitionKind::Ordinary,
             PSEUDO_LINEAR_POS,
         ),
-    )];
+    ))];
 
     check_script_parser(
         indoc! {r#"

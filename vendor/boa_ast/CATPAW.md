@@ -56,6 +56,19 @@ and the copying version is now built on it.
 `src/lib.rs`: `Sym::to_js_string` narrows short Latin-1 names on the stack
 instead of in a temporary `Vec`.
 
+`src/expression/mod.rs`, `src/statement/mod.rs`,
+`src/expression/literal/object.rs`: the function expression variants of
+`Expression` (and `TaggedTemplate`) held their node inline, which made
+every `Expression` 192 bytes: every boxed subexpression (a `Binary` has
+two) allocated 192 bytes and every parse result moved that much. They are
+now boxed, as `ClassExpression` already was, and `Expression` is 56 bytes.
+Likewise `Statement::{Try, Switch, ForInLoop, ForOfLoop}` (464 to 200
+bytes per statement) and `PropertyDefinition::MethodDefinition`. The
+`From` conversions box, so most code is unchanged; the parser, the
+bytecode compiler and the parser tests construct and match the boxed
+variants. This is about 18% of the CPU cycles of a parse (5% of the
+instructions: the gain is memory traffic).
+
 `src/scope_analyzer.rs`, `src/operations/mod.rs`: when a function needs no
 function scope otherwise, the scope analyzer looked for `super` and
 `new.target` in its parameters and body with four walks; one walk per

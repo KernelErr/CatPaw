@@ -77,13 +77,13 @@ pub enum Statement {
     ForLoop(ForLoop),
 
     /// See [`ForInLoop`].
-    ForInLoop(ForInLoop),
+    ForInLoop(Box<ForInLoop>),
 
     /// See [`ForOfLoop`].
-    ForOfLoop(ForOfLoop),
+    ForOfLoop(Box<ForOfLoop>),
 
     /// See[`Switch`].
-    Switch(Switch),
+    Switch(Box<Switch>),
 
     /// See [`Continue`].
     Continue(Continue),
@@ -101,7 +101,7 @@ pub enum Statement {
     Throw(Throw),
 
     /// See [`Try`].
-    Try(Try),
+    Try(Box<Try>),
 
     /// See [`With`].
     With(With),

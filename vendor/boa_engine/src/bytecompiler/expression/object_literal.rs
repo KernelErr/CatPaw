@@ -72,7 +72,7 @@ impl ByteCompiler<'_> {
                     };
                     match m.name() {
                         PropertyName::Literal(name) => {
-                            let method = self.object_method(m.into(), kind);
+                            let method = self.object_method(m.as_ref().into(), kind);
                             self.bytecode
                                 .emit_set_home_object(method.variable(), dst.variable());
                             let index = self.get_or_insert_name(name.sym());
@@ -100,7 +100,7 @@ impl ByteCompiler<'_> {
                         PropertyName::Computed(name_node) => {
                             self.compile_object_literal_computed_method(
                                 name_node,
-                                m.into(),
+                                m.as_ref().into(),
                                 kind,
                                 dst,
                             );
