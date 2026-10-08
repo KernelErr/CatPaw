@@ -42,6 +42,7 @@ pub enum InterfaceId {
     DOMRectReadOnly,
     DOMStringMap,
     DOMTokenList,
+    DataTransfer,
     Event,
     EventTarget,
     File,
@@ -235,6 +236,7 @@ pub enum InterfaceId {
     WheelEvent,
     XMLDocument,
     XMLHttpRequest,
+    DragEvent,
     HTMLAnchorElement,
     HTMLAreaElement,
     HTMLAudioElement,
@@ -268,8 +270,8 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 243;
-    pub const ALL: [InterfaceId; 243] = [
+    pub const COUNT: usize = 245;
+    pub const ALL: [InterfaceId; 245] = [
         InterfaceId::AbortController,
         InterfaceId::AbstractRange,
         InterfaceId::Blob,
@@ -290,6 +292,7 @@ impl InterfaceId {
         InterfaceId::DOMRectReadOnly,
         InterfaceId::DOMStringMap,
         InterfaceId::DOMTokenList,
+        InterfaceId::DataTransfer,
         InterfaceId::Event,
         InterfaceId::EventTarget,
         InterfaceId::File,
@@ -483,6 +486,7 @@ impl InterfaceId {
         InterfaceId::WheelEvent,
         InterfaceId::XMLDocument,
         InterfaceId::XMLHttpRequest,
+        InterfaceId::DragEvent,
         InterfaceId::HTMLAnchorElement,
         InterfaceId::HTMLAreaElement,
         InterfaceId::HTMLAudioElement,
@@ -537,6 +541,7 @@ impl InterfaceId {
             InterfaceId::DOMRectReadOnly => "DOMRectReadOnly",
             InterfaceId::DOMStringMap => "DOMStringMap",
             InterfaceId::DOMTokenList => "DOMTokenList",
+            InterfaceId::DataTransfer => "DataTransfer",
             InterfaceId::Event => "Event",
             InterfaceId::EventTarget => "EventTarget",
             InterfaceId::File => "File",
@@ -730,6 +735,7 @@ impl InterfaceId {
             InterfaceId::WheelEvent => "WheelEvent",
             InterfaceId::XMLDocument => "XMLDocument",
             InterfaceId::XMLHttpRequest => "XMLHttpRequest",
+            InterfaceId::DragEvent => "DragEvent",
             InterfaceId::HTMLAnchorElement => "HTMLAnchorElement",
             InterfaceId::HTMLAreaElement => "HTMLAreaElement",
             InterfaceId::HTMLAudioElement => "HTMLAudioElement",
@@ -785,6 +791,7 @@ impl InterfaceId {
             "DOMRectReadOnly" => InterfaceId::DOMRectReadOnly,
             "DOMStringMap" => InterfaceId::DOMStringMap,
             "DOMTokenList" => InterfaceId::DOMTokenList,
+            "DataTransfer" => InterfaceId::DataTransfer,
             "Event" => InterfaceId::Event,
             "EventTarget" => InterfaceId::EventTarget,
             "File" => InterfaceId::File,
@@ -978,6 +985,7 @@ impl InterfaceId {
             "WheelEvent" => InterfaceId::WheelEvent,
             "XMLDocument" => InterfaceId::XMLDocument,
             "XMLHttpRequest" => InterfaceId::XMLHttpRequest,
+            "DragEvent" => InterfaceId::DragEvent,
             "HTMLAnchorElement" => InterfaceId::HTMLAnchorElement,
             "HTMLAreaElement" => InterfaceId::HTMLAreaElement,
             "HTMLAudioElement" => InterfaceId::HTMLAudioElement,
@@ -1034,6 +1042,7 @@ impl InterfaceId {
             InterfaceId::DOMRectReadOnly => None,
             InterfaceId::DOMStringMap => None,
             InterfaceId::DOMTokenList => None,
+            InterfaceId::DataTransfer => None,
             InterfaceId::Event => None,
             InterfaceId::EventTarget => None,
             InterfaceId::File => Some(InterfaceId::Blob),
@@ -1229,6 +1238,7 @@ impl InterfaceId {
             InterfaceId::WheelEvent => Some(InterfaceId::MouseEvent),
             InterfaceId::XMLDocument => Some(InterfaceId::Document),
             InterfaceId::XMLHttpRequest => Some(InterfaceId::XMLHttpRequestEventTarget),
+            InterfaceId::DragEvent => Some(InterfaceId::MouseEvent),
             InterfaceId::HTMLAnchorElement => Some(InterfaceId::HTMLElement),
             InterfaceId::HTMLAreaElement => Some(InterfaceId::HTMLElement),
             InterfaceId::HTMLAudioElement => Some(InterfaceId::HTMLMediaElement),
@@ -2492,6 +2502,38 @@ pub struct DOMPointInit {
     pub y: f64,
     pub z: f64,
     pub w: f64,
+}
+
+#[derive(Clone, Debug)]
+pub struct DragEventInit {
+    pub bubbles: bool,
+    pub cancelable: bool,
+    pub composed: bool,
+    pub view: Option<WindowRef>,
+    pub detail: i32,
+    pub which: u32,
+    pub ctrl_key: bool,
+    pub shift_key: bool,
+    pub alt_key: bool,
+    pub meta_key: bool,
+    pub modifier_alt_graph: bool,
+    pub modifier_caps_lock: bool,
+    pub modifier_fn: bool,
+    pub modifier_fn_lock: bool,
+    pub modifier_hyper: bool,
+    pub modifier_num_lock: bool,
+    pub modifier_scroll_lock: bool,
+    pub modifier_super: bool,
+    pub modifier_symbol: bool,
+    pub modifier_symbol_lock: bool,
+    pub screen_x: i32,
+    pub screen_y: i32,
+    pub client_x: i32,
+    pub client_y: i32,
+    pub button: i16,
+    pub buttons: u16,
+    pub related_target: Option<EventTargetRef>,
+    pub data_transfer: Option<ObjectId>,
 }
 
 #[derive(Clone, Debug)]
@@ -3996,6 +4038,19 @@ pub trait DOMTokenListImpl {
     fn value(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
     fn set_value(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
     fn indexed_get(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<String>>;
+}
+
+pub trait DataTransferImpl {
+    fn drop_effect(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_drop_effect(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+    fn effect_allowed(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn set_effect_allowed(cx: &mut Cx<'_>, this: ObjectId, value: String) -> Fallible<()>;
+    fn types(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<String>>;
+    fn get_data(cx: &mut Cx<'_>, this: ObjectId, format: String) -> Fallible<String>;
+    fn set_data(cx: &mut Cx<'_>, this: ObjectId, format: String, data: String) -> Fallible<()>;
+    fn clear_data(cx: &mut Cx<'_>, this: ObjectId, format: Option<String>) -> Fallible<()>;
+    fn files(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn constructor(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
 }
 
 pub trait EventImpl {
@@ -6098,6 +6153,15 @@ pub trait XMLHttpRequestImpl {
     fn response(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
     fn response_text(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
     fn constructor(cx: &mut Cx<'_>) -> Fallible<ObjectId>;
+}
+
+pub trait DragEventImpl {
+    fn data_transfer(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<ObjectId>>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        type_: String,
+        event_init_dict: DragEventInit,
+    ) -> Fallible<ObjectId>;
 }
 
 pub trait HTMLAnchorElementImpl {

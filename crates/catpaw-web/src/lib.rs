@@ -26,6 +26,7 @@ mod cors;
 pub mod crypto;
 mod cssom;
 pub mod custom_elements;
+mod dnd;
 mod document;
 pub mod element;
 mod encoding;

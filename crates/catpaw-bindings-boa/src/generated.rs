@@ -831,6 +831,179 @@ impl IntoJs for web::DOMPointInit {
     }
 }
 
+impl FromJs for web::DragEventInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "DragEventInit")?;
+        Ok(Self {
+            bubbles: match rt::dictionary_member(&obj, "bubbles", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            cancelable: match rt::dictionary_member(&obj, "cancelable", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            composed: match rt::dictionary_member(&obj, "composed", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            view: match rt::dictionary_member(&obj, "view", ctx)? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(rt::window_from_js((&m), ctx)?)
+                    }
+                }
+                None => None,
+            },
+            detail: match rt::dictionary_member(&obj, "detail", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            which: match rt::dictionary_member(&obj, "which", ctx)? {
+                Some(m) => (&m).to_u32(ctx)?,
+                None => (0) as u32,
+            },
+            ctrl_key: match rt::dictionary_member(&obj, "ctrlKey", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            shift_key: match rt::dictionary_member(&obj, "shiftKey", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            alt_key: match rt::dictionary_member(&obj, "altKey", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            meta_key: match rt::dictionary_member(&obj, "metaKey", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_alt_graph: match rt::dictionary_member(&obj, "modifierAltGraph", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_caps_lock: match rt::dictionary_member(&obj, "modifierCapsLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_fn: match rt::dictionary_member(&obj, "modifierFn", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_fn_lock: match rt::dictionary_member(&obj, "modifierFnLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_hyper: match rt::dictionary_member(&obj, "modifierHyper", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_num_lock: match rt::dictionary_member(&obj, "modifierNumLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_scroll_lock: match rt::dictionary_member(&obj, "modifierScrollLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_super: match rt::dictionary_member(&obj, "modifierSuper", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_symbol: match rt::dictionary_member(&obj, "modifierSymbol", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            modifier_symbol_lock: match rt::dictionary_member(&obj, "modifierSymbolLock", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            screen_x: match rt::dictionary_member(&obj, "screenX", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            screen_y: match rt::dictionary_member(&obj, "screenY", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            client_x: match rt::dictionary_member(&obj, "clientX", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            client_y: match rt::dictionary_member(&obj, "clientY", ctx)? {
+                Some(m) => (&m).to_i32(ctx)?,
+                None => (0) as i32,
+            },
+            button: match rt::dictionary_member(&obj, "button", ctx)? {
+                Some(m) => (&m).to_int16(ctx)?,
+                None => (0) as i16,
+            },
+            buttons: match rt::dictionary_member(&obj, "buttons", ctx)? {
+                Some(m) => (&m).to_uint16(ctx)?,
+                None => (0) as u16,
+            },
+            related_target: match rt::dictionary_member(&obj, "relatedTarget", ctx)? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(rt::event_target_from_js((&m), ctx)?)
+                    }
+                }
+                None => None,
+            },
+            data_transfer: match rt::dictionary_member(&obj, "dataTransfer", ctx)? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(rt::object_from_js((&m), I::DataTransfer, ctx)?)
+                    }
+                }
+                None => None,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::DragEventInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "bubbles", self.bubbles, ctx)?;
+        rt::set_member(&obj, "cancelable", self.cancelable, ctx)?;
+        rt::set_member(&obj, "composed", self.composed, ctx)?;
+        rt::set_member(&obj, "view", self.view, ctx)?;
+        rt::set_member(&obj, "detail", self.detail, ctx)?;
+        rt::set_member(&obj, "which", self.which, ctx)?;
+        rt::set_member(&obj, "ctrlKey", self.ctrl_key, ctx)?;
+        rt::set_member(&obj, "shiftKey", self.shift_key, ctx)?;
+        rt::set_member(&obj, "altKey", self.alt_key, ctx)?;
+        rt::set_member(&obj, "metaKey", self.meta_key, ctx)?;
+        rt::set_member(&obj, "modifierAltGraph", self.modifier_alt_graph, ctx)?;
+        rt::set_member(&obj, "modifierCapsLock", self.modifier_caps_lock, ctx)?;
+        rt::set_member(&obj, "modifierFn", self.modifier_fn, ctx)?;
+        rt::set_member(&obj, "modifierFnLock", self.modifier_fn_lock, ctx)?;
+        rt::set_member(&obj, "modifierHyper", self.modifier_hyper, ctx)?;
+        rt::set_member(&obj, "modifierNumLock", self.modifier_num_lock, ctx)?;
+        rt::set_member(&obj, "modifierScrollLock", self.modifier_scroll_lock, ctx)?;
+        rt::set_member(&obj, "modifierSuper", self.modifier_super, ctx)?;
+        rt::set_member(&obj, "modifierSymbol", self.modifier_symbol, ctx)?;
+        rt::set_member(&obj, "modifierSymbolLock", self.modifier_symbol_lock, ctx)?;
+        rt::set_member(&obj, "screenX", self.screen_x, ctx)?;
+        rt::set_member(&obj, "screenY", self.screen_y, ctx)?;
+        rt::set_member(&obj, "clientX", self.client_x, ctx)?;
+        rt::set_member(&obj, "clientY", self.client_y, ctx)?;
+        rt::set_member(&obj, "button", self.button, ctx)?;
+        rt::set_member(&obj, "buttons", self.buttons, ctx)?;
+        rt::set_member(&obj, "relatedTarget", self.related_target, ctx)?;
+        rt::set_member(&obj, "dataTransfer", self.data_transfer, ctx)?;
+        Ok(obj.into())
+    }
+}
+
 impl FromJs for web::ElementCreationOptions {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let obj = rt::dictionary_object(v, "ElementCreationOptions")?;
@@ -7702,6 +7875,196 @@ pub mod dom_token_list {
             attribute_like: false,
             unenumerable_names: false,
         }),
+    };
+}
+
+pub mod data_transfer {
+    use super::*;
+
+    fn get_drop_effect(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::DataTransfer, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DataTransferImpl>::drop_effect(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_drop_effect(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::DataTransfer, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DataTransferImpl>::set_drop_effect(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_effect_allowed(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::DataTransfer, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DataTransferImpl>::effect_allowed(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_effect_allowed(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::DataTransfer, ctx)?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DataTransferImpl>::set_effect_allowed(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_types(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::DataTransfer, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::DataTransferImpl>::types(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_files(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "files", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_object(this_js, I::DataTransfer, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::DataTransferImpl>::files(cx, this));
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "files", &v, ctx);
+        Ok(v)
+    }
+
+    fn op_set_drag_image(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        rt::count_stub(ctx, "DataTransfer.setDragImage");
+        let _ = ctx;
+        Ok(JsValue::undefined())
+    }
+
+    fn op_get_data(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::DataTransfer, ctx)?;
+        rt::require_args(args, 1, "DataTransfer.getData")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DataTransferImpl>::get_data(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_set_data(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::DataTransfer, ctx)?;
+        rt::require_args(args, 2, "DataTransfer.setData")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DataTransferImpl>::set_data(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_clear_data(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::DataTransfer, ctx)?;
+        let a0 = if args.len() > 0 && !args[0].is_undefined() {
+            Some(rt::string_from_js(rt::arg(args, 0), ctx)?)
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DataTransferImpl>::clear_data(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "DataTransfer")?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::DataTransferImpl>::constructor(cx));
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::DataTransfer, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::DataTransfer,
+        name: "DataTransfer",
+        parent: None,
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
+        constructor: Some(ctor),
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "dropEffect",
+                getter: get_drop_effect,
+                setter: Some(set_drop_effect),
+            },
+            rt::AttrDef {
+                name: "effectAllowed",
+                getter: get_effect_allowed,
+                setter: Some(set_effect_allowed),
+            },
+            rt::AttrDef {
+                name: "types",
+                getter: get_types,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "files",
+                getter: get_files,
+                setter: None,
+            },
+        ],
+        ops: &[
+            rt::OpDef {
+                name: "setDragImage",
+                func: op_set_drag_image,
+                length: 3,
+            },
+            rt::OpDef {
+                name: "getData",
+                func: op_get_data,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "setData",
+                func: op_set_data,
+                length: 2,
+            },
+            rt::OpDef {
+                name: "clearData",
+                func: op_clear_data,
+                length: 0,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
     };
 }
 
@@ -53412,6 +53775,58 @@ pub mod xml_http_request {
     };
 }
 
+pub mod drag_event {
+    use super::*;
+
+    fn get_data_transfer(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::DragEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DragEventImpl>::data_transfer(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "DragEvent")?;
+        rt::require_args(args, 1, "DragEvent constructor")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::DragEventInit as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::DragEventImpl>::constructor(cx, a0, a1)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::DragEvent, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::DragEvent,
+        name: "DragEvent",
+        parent: Some(I::MouseEvent),
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[rt::AttrDef {
+            name: "dataTransfer",
+            getter: get_data_transfer,
+            setter: None,
+        }],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod html_anchor_element {
     use super::*;
 
@@ -57689,6 +58104,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &dom_rect_read_only::DEF,
     &dom_string_map::DEF,
     &dom_token_list::DEF,
+    &data_transfer::DEF,
     &event::DEF,
     &event_target::DEF,
     &file::DEF,
@@ -57882,6 +58298,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &wheel_event::DEF,
     &xml_document::DEF,
     &xml_http_request::DEF,
+    &drag_event::DEF,
     &html_anchor_element::DEF,
     &html_area_element::DEF,
     &html_audio_element::DEF,

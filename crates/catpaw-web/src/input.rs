@@ -1,6 +1,6 @@
 //! Trusted input: the pointer and keyboard sequences a user's actions
 //! turn into, with their default actions (focus, activation, typing,
-//! implicit submission, sequential focus navigation).
+//! implicit submission, sequential focus navigation, drag and drop).
 //!
 //! Positions are viewport coordinates. A click at a point hits what the
 //! layout finds there; a click on an element scrolls it into view, aims at
@@ -16,7 +16,7 @@ use crate::events::{self, Event};
 use crate::generated::{self as web, InterfaceId};
 use crate::page::Cx;
 use crate::ui_events::{self, Input as InputData, Keyboard, Pointer, UiEvent};
-use crate::{activation, element, forms, layout};
+use crate::{activation, dnd, element, forms, layout};
 
 /// Why an action on an element could not be carried out.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -72,7 +72,15 @@ fn trusted(cx: &Cx<'_>, id: ObjectId) -> ObjectId {
     id
 }
 
-fn mouse_state(cx: &Cx<'_>, x: f32, y: f32, button: i16, buttons: u16, detail: i32) -> UiEvent {
+/// The state of a mouse or pointer event of the pointer at `x`, `y`.
+pub(crate) fn mouse_state(
+    cx: &Cx<'_>,
+    x: f32,
+    y: f32,
+    button: i16,
+    buttons: u16,
+    detail: i32,
+) -> UiEvent {
     UiEvent {
         has_view: true,
         detail,
@@ -325,33 +333,100 @@ fn target_at(cx: &Cx<'_>, x: f32, y: f32) -> Option<NodeId> {
     })
 }
 
-/// Moves the pointer to a point: `mouseover`/`mouseout` and the enter and
-/// leave events where the element under it changes, then `mousemove`.
-pub fn pointer_move(cx: &mut Cx<'_>, x: f32, y: f32) -> Option<NodeId> {
+/// An element and the elements it is in, innermost first: what the
+/// pointer is over when it is over the element.
+fn hover_chain(dom: &Dom, el: NodeId) -> Vec<NodeId> {
+    std::iter::once(el)
+        .chain(dom.ancestors(el))
+        .filter(|&n| dom.is_element(n))
+        .collect()
+}
+
+/// Makes `target` the element under the pointer at `x`, `y` (with
+/// `buttons` held): `pointerout` and `mouseout` at the one before and the
+/// leave events at each element the pointer left, then `pointerover` and
+/// `mouseover` at the new one and the enter events at each element it
+/// entered, outermost first.
+fn hover(cx: &mut Cx<'_>, target: NodeId, x: f32, y: f32, buttons: u16) {
+    let previous = cx.page.input.hover.get().filter(|&p| cx.dom().contains(p));
+    if previous == Some(target) {
+        return;
+    }
+    cx.page.input.hover.set(Some(target));
+    let (left, entered) = {
+        let dom = cx.dom();
+        let before = previous.map(|p| hover_chain(&dom, p)).unwrap_or_default();
+        let after = hover_chain(&dom, target);
+        let left: Vec<NodeId> = before
+            .iter()
+            .copied()
+            .filter(|n| !after.contains(n))
+            .collect();
+        let entered: Vec<NodeId> = after
+            .iter()
+            .rev()
+            .copied()
+            .filter(|n| !before.contains(n))
+            .collect();
+        (left, entered)
+    };
+    if let Some(old) = previous {
+        let mut state = mouse_state(cx, x, y, 0, buttons, 0);
+        state.related_target = Some(EventTargetRef::Node(target));
+        fire_pointer(cx, old, "pointerout", true, state.clone());
+        for &n in &left {
+            fire_pointer(cx, n, "pointerleave", false, state.clone());
+        }
+        fire_pointer(cx, old, "mouseout", true, state.clone());
+        for &n in &left {
+            fire_pointer(cx, n, "mouseleave", false, state.clone());
+        }
+    }
+    let mut state = mouse_state(cx, x, y, 0, buttons, 0);
+    state.related_target = previous.map(EventTargetRef::Node);
+    fire_pointer(cx, target, "pointerover", true, state.clone());
+    for &n in &entered {
+        fire_pointer(cx, n, "pointerenter", false, state.clone());
+    }
+    fire_pointer(cx, target, "mouseover", true, state.clone());
+    for &n in &entered {
+        fire_pointer(cx, n, "mouseenter", false, state.clone());
+    }
+}
+
+/// Moves the pointer to a point with `buttons` held: the over, out, enter
+/// and leave events where the element under it changes, then
+/// `pointermove` and `mousemove`.
+fn move_pointer(cx: &mut Cx<'_>, x: f32, y: f32, buttons: u16) -> Option<NodeId> {
     let target = target_at(cx, x, y)?;
     cx.page.input.pointer.set((x, y));
-    let previous = cx.page.input.hover.get().filter(|&p| cx.dom().contains(p));
-    if previous != Some(target) {
-        cx.page.input.hover.set(Some(target));
-        if let Some(old) = previous {
-            let mut state = mouse_state(cx, x, y, 0, 0, 0);
-            state.related_target = Some(EventTargetRef::Node(target));
-            fire_pointer(cx, old, "pointerout", true, state.clone());
-            fire_pointer(cx, old, "pointerleave", false, state.clone());
-            fire_pointer(cx, old, "mouseout", true, state.clone());
-            fire_pointer(cx, old, "mouseleave", false, state);
-        }
-        let mut state = mouse_state(cx, x, y, 0, 0, 0);
-        state.related_target = previous.map(EventTargetRef::Node);
-        fire_pointer(cx, target, "pointerover", true, state.clone());
-        fire_pointer(cx, target, "pointerenter", false, state.clone());
-        fire_pointer(cx, target, "mouseover", true, state.clone());
-        fire_pointer(cx, target, "mouseenter", false, state);
-    }
-    let state = mouse_state(cx, x, y, 0, 0, 0);
+    hover(cx, target, x, y, buttons);
+    let state = mouse_state(cx, x, y, 0, buttons, 0);
     fire_pointer(cx, target, "pointermove", true, state.clone());
     fire_pointer(cx, target, "mousemove", true, state);
     Some(target)
+}
+
+/// Moves the pointer to a point: `mouseover`/`mouseout` and the enter and
+/// leave events where the element under it changes, then `mousemove`.
+pub fn pointer_move(cx: &mut Cx<'_>, x: f32, y: f32) -> Option<NodeId> {
+    move_pointer(cx, x, y, 0)
+}
+
+/// A drag of the page's own took the pointer over: its pointer events end
+/// with `pointercancel`, then `pointerout` and `pointerleave` at what it
+/// was over. The next move starts over.
+fn cancel_pointer(cx: &mut Cx<'_>, x: f32, y: f32) {
+    let Some(old) = cx.page.input.hover.take().filter(|&p| cx.dom().contains(p)) else {
+        return;
+    };
+    let left = hover_chain(&cx.dom(), old);
+    let state = mouse_state(cx, x, y, 0, 0, 0);
+    fire_pointer(cx, old, "pointercancel", false, state.clone());
+    fire_pointer(cx, old, "pointerout", true, state.clone());
+    for n in left {
+        fire_pointer(cx, n, "pointerleave", false, state.clone());
+    }
 }
 
 /// The element that takes focus when `el` is pressed: the nearest
@@ -539,74 +614,118 @@ fn aim(cx: &mut Cx<'_>, el: NodeId) -> Result<(f32, f32), InputError> {
         web::ScrollLogicalPosition::Nearest,
         web::ScrollLogicalPosition::Nearest,
     );
+    aim_in_view(cx, el)
+}
+
+/// Where to click an element as the page is scrolled now: the centre of
+/// its first box, which must be in the viewport and show the element there.
+fn aim_in_view(cx: &Cx<'_>, el: NodeId) -> Result<(f32, f32), InputError> {
     let rect = layout::client_rects(cx.page, el)
         .into_iter()
         .find(|r| r.width > 0.0 && r.height > 0.0)
         .ok_or(InputError::NotVisible)?;
     let viewport = layout::viewport(cx.page);
+    let outside = rect.x + rect.width <= 0.0
+        || rect.y + rect.height <= 0.0
+        || rect.x >= viewport.width
+        || rect.y >= viewport.height;
+    if outside {
+        return Err(InputError::NotVisible);
+    }
     let x = (rect.x + rect.width / 2.0).clamp(0.0, viewport.width - 1.0);
     let y = (rect.y + rect.height / 2.0).clamp(0.0, viewport.height - 1.0);
     let hit = layout::element_from_point(cx.page, x, y);
     match hit {
-        Some(hit) if hit == el || cx.dom().ancestors(hit).any(|a| a == el) => Ok((x, y)),
-        // A label's control or a control's label count as the element.
-        Some(hit) if cx.dom().ancestors(el).any(|a| a == hit) => Ok((x, y)),
+        Some(hit) if shows(&cx.dom(), hit, el) => Ok((x, y)),
         Some(by) => Err(InputError::Occluded { by }),
         None => Err(InputError::NotVisible),
     }
 }
 
+/// Whether the element `hit` at a point counts as `el` being there: it is
+/// `el`, inside it, or around it (a label and its control count as one).
+fn shows(dom: &Dom, hit: NodeId, el: NodeId) -> bool {
+    hit == el || dom.ancestors(hit).any(|a| a == el) || dom.ancestors(el).any(|a| a == hit)
+}
+
+/// Moves of the pointer between the press and the release of a drag: some
+/// libraries wait for several.
+const DRAG_STEPS: u32 = 5;
+
 /// Drags `el` onto `onto` with the left button: down at the centre of the
-/// one, moves there in steps (some libraries wait for several), up at the
-/// centre of the other. Both must fit in the viewport at once. Pages that
-/// use HTML drag and drop (`draggable`, `dragstart`, `drop`) need a
-/// `DataTransfer`, which is not there yet.
+/// one, across in steps, up at the centre of the other, which must be what
+/// the pointer is over then (or the dragged element itself, which pages
+/// often move along with the pointer). Both must show in the viewport at
+/// once.
+///
+/// A draggable element (`draggable=true`, a link, an image) goes as HTML
+/// drag and drop has it, from `dragstart` to `dragend` with a
+/// `DataTransfer`, the pointer events cancelled and no mouse events on the
+/// way; when the drop would miss `onto`, the drag is cancelled instead.
+/// Anything else (or a drag a `mousedown` or `dragstart` listener
+/// cancelled) goes as mouse events only.
 pub fn drag_element(cx: &mut Cx<'_>, el: NodeId, onto: NodeId) -> Result<(), InputError> {
-    // Aiming at the drop target may scroll the dragged one away: settle on
-    // a scroll where aiming at either moves nothing.
-    let mut points = None;
-    for _ in 0..3 {
-        let from = aim(cx, el)?;
-        let to = aim(cx, onto)?;
-        if aim(cx, el)? == from {
-            points = Some((from, to));
-            break;
-        }
-    }
-    let (from, to) = points.ok_or(InputError::NotVisible)?;
+    // Aiming at the drop target may scroll the dragged element away: both
+    // must still show at the scroll that leaves.
+    aim(cx, el)?;
+    aim(cx, onto)?;
+    let from = aim_in_view(cx, el)?;
+    let to = aim_in_view(cx, onto)?;
     let target = pointer_move(cx, from.0, from.1).ok_or(InputError::NotVisible)?;
     // The press must land on what is dragged.
-    {
-        let dom = cx.dom();
-        let on_it = target == el
-            || dom.ancestors(target).any(|a| a == el)
-            || dom.ancestors(el).any(|a| a == target);
-        if !on_it {
-            return Err(InputError::Occluded { by: target });
-        }
+    if !shows(&cx.dom(), target, el) {
+        return Err(InputError::Occluded { by: target });
     }
     let down = mouse_state(cx, from.0, from.1, 0, 1, 1);
-    if fire_pointer(cx, target, "pointerdown", true, down.clone()) {
-        fire_pointer(cx, target, "mousedown", true, down);
-    }
-    const STEPS: u32 = 5;
-    for step in 1..=STEPS {
-        let t = step as f32 / STEPS as f32;
-        let (x, y) = (from.0 + (to.0 - from.0) * t, from.1 + (to.1 - from.1) * t);
-        let Some(over) = target_at(cx, x, y) else {
-            continue;
+    // A cancelled `pointerdown` leaves out `mousedown`; a cancelled
+    // `mousedown` keeps the element from being dragged.
+    let pressed = !fire_pointer(cx, target, "pointerdown", true, down.clone())
+        || fire_pointer(cx, target, "mousedown", true, down);
+    let point = |step: u32| {
+        let t = step as f32 / DRAG_STEPS as f32;
+        (from.0 + (to.0 - from.0) * t, from.1 + (to.1 - from.1) * t)
+    };
+    // Released over `end`, the drop reached `onto`.
+    let landed = |dom: &Dom, end: NodeId| shows(dom, end, onto) || shows(dom, end, el);
+    let source = if pressed {
+        dnd::drag_source(&cx.dom(), target)
+    } else {
+        None
+    };
+    if let Some(mut drag) = source.and_then(|source| dnd::Drag::start(cx, source, from)) {
+        cancel_pointer(cx, from.0, from.1);
+        for step in 1..=DRAG_STEPS {
+            let (x, y) = point(step);
+            cx.page.input.pointer.set((x, y));
+            let under = target_at(cx, x, y);
+            if !drag.step(cx, (x, y), under) {
+                // The page cancelled the drag: it ends there.
+                drag.finish(cx, false);
+                return Ok(());
+            }
+        }
+        let end = drag.current();
+        let lands = end.is_some_and(|end| landed(&cx.dom(), end));
+        drag.finish(cx, lands);
+        return match end {
+            Some(_) if lands => Ok(()),
+            Some(by) => Err(InputError::Occluded { by }),
+            None => Err(InputError::NotVisible),
         };
-        cx.page.input.pointer.set((x, y));
-        cx.page.input.hover.set(Some(over));
-        let held = mouse_state(cx, x, y, 0, 1, 0);
-        fire_pointer(cx, over, "pointermove", true, held.clone());
-        fire_pointer(cx, over, "mousemove", true, held);
+    }
+    for step in 1..=DRAG_STEPS {
+        let (x, y) = point(step);
+        move_pointer(cx, x, y, 1);
     }
     let end = target_at(cx, to.0, to.1).ok_or(InputError::NotVisible)?;
     let up = mouse_state(cx, to.0, to.1, 0, 0, 1);
     fire_pointer(cx, end, "pointerup", true, up.clone());
     fire_pointer(cx, end, "mouseup", true, up);
-    Ok(())
+    if landed(&cx.dom(), end) {
+        Ok(())
+    } else {
+        Err(InputError::Occluded { by: end })
+    }
 }
 
 /// Moves the pointer over an element.

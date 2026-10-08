@@ -105,6 +105,11 @@ impl web::FileListImpl for Web {
     }
 }
 
+/// A `FileList` with no files (what a drag of an element carries).
+pub(crate) fn empty_file_list(cx: &Cx<'_>) -> ObjectId {
+    cx.page.alloc(FileListObject { files: Vec::new() })
+}
+
 /// The `FileList` of a file input: the same object until the choice
 /// changes.
 pub(crate) fn file_list(cx: &mut Cx<'_>, input: NodeId) -> ObjectId {

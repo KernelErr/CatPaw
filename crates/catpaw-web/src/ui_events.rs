@@ -27,6 +27,8 @@ pub struct UiEvent {
     /// The window's scroll position when a user's pointer made the event;
     /// `None` for one script made.
     pub scroll: Option<(f32, f32)>,
+    /// A drag event's `DataTransfer`, which the event pins.
+    pub data_transfer: Option<ObjectId>,
     pub button: i16,
     pub buttons: u16,
     pub related_target: Option<EventTargetRef>,
@@ -539,6 +541,22 @@ impl web::MouseEventImpl for Web {
         let flags = (init.bubbles, init.cancelable, init.composed);
         let state = mouse_state!(init);
         Ok(make(cx, InterfaceId::MouseEvent, type_, flags, state))
+    }
+}
+
+impl web::DragEventImpl for Web {
+    fn data_transfer(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<ObjectId>> {
+        ui(cx, this, |s| s.data_transfer)
+    }
+
+    fn constructor(cx: &mut Cx<'_>, type_: String, init: web::DragEventInit) -> Fallible<ObjectId> {
+        let flags = (init.bubbles, init.cancelable, init.composed);
+        let mut state = mouse_state!(init);
+        state.data_transfer = init.data_transfer;
+        if let Some(transfer) = init.data_transfer {
+            cx.pin(transfer);
+        }
+        Ok(make(cx, InterfaceId::DragEvent, type_, flags, state))
     }
 }
 

@@ -96,9 +96,17 @@ pub struct Event {
     pub data: EventData,
 }
 
-platform_object!(Event, |e| e.iface);
+platform_object!(Event, |e| e.iface, pinned = |e| e.held());
 
 impl Event {
+    /// The objects the event pins: a drag event's `DataTransfer`.
+    fn held(&self) -> Vec<ObjectId> {
+        match &self.data {
+            EventData::Ui(state) => state.data_transfer.into_iter().collect(),
+            _ => Vec::new(),
+        }
+    }
+
     /// An initialized, untrusted event of the base `Event` interface.
     pub fn new(type_: impl Into<String>, bubbles: bool, cancelable: bool, time_stamp: f64) -> Self {
         Self {

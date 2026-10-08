@@ -202,6 +202,18 @@ members = [
   "pointerType", "isPrimary",
 ]
 
+# HTML drag and drop: what a drag of an element carries, and the events
+# that carry it. Nothing is drawn while dragging, so `setDragImage` does
+# nothing; no files are dragged, and there is no `items` list.
+[interfaces.DataTransfer]
+constructor = true
+members = ["dropEffect", "effectAllowed", "types", "getData", "setData", "clearData", "files"]
+stubs = ["setDragImage"]
+
+[interfaces.DragEvent]
+constructor = true
+members = ["dataTransfer"]
+
 [interfaces.MutationObserver]
 constructor = true
 members = ["observe", "disconnect", "takeRecords"]
