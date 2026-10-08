@@ -1,9 +1,9 @@
 //! Fitting a snapshot into a byte budget.
 //!
-//! Over budget, a snapshot first shows only the start of long texts
-//! (`… [+1830 chars]`), then only the start of its long lists, as much as
-//! fits (`[more=460 nodes after e212]`), then folds containers, deepest
-//! first and those with the fewest things to act on first
+//! Over budget, a snapshot first shows only the start of long texts and
+//! names (`… [+1830 chars]`), then only the start of its long lists, as
+//! much as fits (`[more=460 nodes after e212]`), then folds containers,
+//! deepest first and those with the fewest things to act on first
 //! (`[collapsed=12]`). Whatever still does not fit is cut at the end. The
 //! ref of a folded container, as `root` (with `after` for a list), shows
 //! what was left out.
@@ -11,7 +11,7 @@
 use std::collections::HashMap;
 
 use crate::a11y::is_interactive;
-use crate::snapshot::{Format, LineKind, SnapLine, cap_text, render_line};
+use crate::snapshot::{Format, LineKind, SnapLine, cap_name, cap_text, render_line};
 
 /// Items of a long list shown before the rest is left out.
 const LIST_HEAD: usize = 10;
@@ -42,13 +42,18 @@ fn line_ref(line: &SnapLine) -> Option<u32> {
     }
 }
 
-/// A line with its text, when long, cut to its start.
-fn capped(line: &SnapLine) -> SnapLine {
+/// A line with its name and text, when long, cut to their start.
+pub(crate) fn capped(line: &SnapLine) -> SnapLine {
     let mut line = line.clone();
     if let LineKind::Text(t) | LineKind::Element { text: Some(t), .. } = &mut line.kind
         && let Some(short) = cap_text(t)
     {
         *t = short;
+    }
+    if let LineKind::Element { name, .. } = &mut line.kind
+        && let Some(short) = cap_name(name)
+    {
+        *name = short;
     }
     line
 }
@@ -66,7 +71,7 @@ pub fn fit(lines: &[SnapLine], format: Format, max: usize) -> Fitted {
             hidden: 0,
         };
     }
-    // Long texts show their start first.
+    // Long texts and names show their start first.
     let lines: Vec<SnapLine> = lines.iter().map(capped).collect();
     let n = lines.len();
     let sizes: Vec<usize> = lines.iter().map(size).collect();
@@ -304,6 +309,30 @@ mod tests {
         let shown = render_lines(&fitted.lines, Format::Compact);
         assert!(shown.contains("… [+300 chars]"), "{shown}");
         assert!(shown.contains("text: short"), "{shown}");
+    }
+
+    #[test]
+    fn long_names_are_cut_with_long_texts() {
+        let long = format!(
+            "A Guide to Small Batch Jams, {}and More",
+            "Jellies, ".repeat(12)
+        );
+        let lines = vec![
+            el(0, 1, "list", ""),
+            el(1, 2, "link", &long),
+            el(1, 3, "link", "Short"),
+        ];
+        let whole = render_lines(&lines, Format::Compact).len();
+        let all = fit(&lines, Format::Compact, whole);
+        assert_eq!(all.lines, lines, "within budget, names stay whole");
+        let fitted = fit(&lines, Format::Compact, whole - 1);
+        assert_eq!(fitted.hidden, 0);
+        let shown = render_lines(&fitted.lines, Format::Compact);
+        let cut = long.chars().count() - 99;
+        assert!(
+            shown.contains(&format!("… [+{cut} chars]\"\n  e3 link \"Short\"")),
+            "{shown}"
+        );
     }
 
     #[test]

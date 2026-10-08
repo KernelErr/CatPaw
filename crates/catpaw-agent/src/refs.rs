@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use catpaw_dom::{Dom, NodeId};
 
 use crate::a11y::{role_for, subtree_text};
-use crate::snapshot::truncate;
+use crate::snapshot::cap_name;
 use crate::visibility::StyleOracle;
 
 /// What a ref points at.
@@ -411,7 +411,8 @@ impl<'a> RefScope<'a> {
             None | Some("none") => "generic",
             Some(role) => role,
         };
-        let name = truncate(&subtree_text(dom, node, oracle), 100);
+        let text = subtree_text(dom, node, oracle);
+        let name = cap_name(&text).unwrap_or(text);
         self.refs.get_or_assign(key, role, &name, None)
     }
 }

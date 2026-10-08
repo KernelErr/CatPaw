@@ -3,7 +3,7 @@ ok navigate → https://the-internet.herokuapp.com/login (200)
 # s1 title="The Internet"
 e1 link "Fork me on GitHub"
 e2 heading "Login Page" [level=2]
-e3 heading "This is where you can log into the secure area. Enter tomsmith for the username and SuperSecretPass…" [level=4]
+e3 heading "This is where you can log into the secure area. Enter tomsmith for the username and SuperSecretPassword! for the password. If the information is wrong you should see error messages." [level=4]
 e4 textbox "Username"
 e5 textbox "Password"
 e6 button "Login"

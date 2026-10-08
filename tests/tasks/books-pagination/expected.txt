@@ -271,7 +271,7 @@ e249 list
     e260 paragraph: In stock
     e261 button "Add to basket"
   e262 article
-    e263 link "Foolproof Preserving: A Guide to Small Batch Jams, Jellies, Pickles, Condiments, and More: A Foolpr…"
+    e263 link "Foolproof Preserving: A Guide to Small Batch Jams, Jellies, Pickles, Condiments, and More: A Foolproof Guide to Making Small Batch Jams, Jellies, Pickles, Condiments, and More"
     e264 link "Foolproof Preserving: A Guide ..." [heading=3]
     e265 paragraph: £30.52
     e266 paragraph: In stock
@@ -295,7 +295,7 @@ e249 list
     e284 paragraph: In stock
     e285 button "Add to basket"
   e286 article
-    e287 link "America's Cradle of Quarterbacks: Western Pennsylvania's Football Factory from Johnny Unitas to Joe…"
+    e287 link "America's Cradle of Quarterbacks: Western Pennsylvania's Football Factory from Johnny Unitas to Joe Montana"
     e288 link "America's Cradle of Quarterbacks: ..." [heading=3]
     e289 paragraph: £22.50
     e290 paragraph: In stock

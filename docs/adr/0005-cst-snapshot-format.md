@@ -154,3 +154,19 @@ for news it did not have. These replace the points above they name.
    `eX` is an item of without naming its root. (Amends point 7.)
 7. **What a tab keeps.** A tab keeps its latest snapshot of each filter
    to diff against. (Replaces the "last eight" of point 4.)
+
+## Amendment (2026-10-08): after the second review
+
+A second look found names cut whatever the budget, and stale refs
+followed to rows that only looked alike. These replace the points above
+they name.
+
+1. **Names stay whole**, as texts do (point 1 above): whole in the model
+   diffs compare, and on the line while the snapshot fits its budget;
+   over budget, long names are cut with the long texts, to their start
+   and `… [+N chars]`. A ref keeps a long name so cut, to be named by in
+   errors and results. A diff shows a changed long name by the stretch
+   where it changed, and the texts of its `+` and `-` lines whole; a
+   diff that has to fit a budget cuts long names and texts as a
+   snapshot does. (Names were cut at 100 characters, and diff texts at
+   120 with a bare `…`.)

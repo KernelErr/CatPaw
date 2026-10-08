@@ -15,11 +15,16 @@
 //! ```
 //!
 //! Diff lines always use the compact form, whatever form snapshots use.
+//! Names and texts are whole, as in snapshots; a diff that has to fit a
+//! budget shows long ones by their start ([`diff_within`]).
 
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
 
-use crate::snapshot::{Format, LineKind, SnapLine, attr_value, quote, render_line, truncate};
+use crate::budget::capped;
+use crate::snapshot::{
+    Format, LineKind, SnapLine, attr_value, cap_name, cap_text, quote, render_line, truncate,
+};
 
 /// A snapshot's lines as a tree.
 struct Tree<'a> {
@@ -279,6 +284,29 @@ fn lcs<T: PartialEq>(a: &[T], b: &[T]) -> Vec<(usize, usize)> {
 
 /// Compares two snapshots of one document.
 pub fn diff(old: &[SnapLine], new: &[SnapLine]) -> Diff {
+    compare(old, new, false)
+}
+
+/// [`diff`], fitted into `max` bytes when it can be: a longer diff shows
+/// long names and texts by their start (`… [+N chars]`), as a snapshot
+/// over its budget does.
+pub fn diff_within(old: &[SnapLine], new: &[SnapLine], max: usize) -> Diff {
+    let whole = compare(old, new, false);
+    if whole.lines.iter().map(|l| l.len() + 1).sum::<usize>() <= max {
+        return whole;
+    }
+    compare(old, new, true)
+}
+
+/// [`diff`]; with `cap`, long names and texts are cut to their start.
+fn compare(old: &[SnapLine], new: &[SnapLine], cap: bool) -> Diff {
+    // What a diff shows of a line, or of a text.
+    let shown = |line: &SnapLine| if cap { capped(line) } else { line.clone() };
+    let text_shown = |t: &str| {
+        cap.then(|| cap_text(t))
+            .flatten()
+            .unwrap_or_else(|| t.to_string())
+    };
     let a = Tree::new(old);
     let b = Tree::new(new);
     let old_refs: HashSet<u32> = a.by_ref.keys().copied().collect();
@@ -353,7 +381,7 @@ pub fn diff(old: &[SnapLine], new: &[SnapLine]) -> Diff {
     }
 
     for &j in &added {
-        let line = &b.lines[j];
+        let line = &shown(&b.lines[j]);
         let mut text = format!("+ {}", head(line));
         match replaces.get(&j) {
             Some(&i) => {
@@ -372,7 +400,7 @@ pub fn diff(old: &[SnapLine], new: &[SnapLine]) -> Diff {
         }
         let depth = line.depth;
         for k in j + 1..j + 1 + b.descendants(j) {
-            let mut child = b.lines[k].clone();
+            let mut child = shown(&b.lines[k]);
             child.depth = child.depth - depth + 1;
             text.push('\n');
             render_line(&mut text, &child, Format::Compact);
@@ -384,7 +412,7 @@ pub fn diff(old: &[SnapLine], new: &[SnapLine]) -> Diff {
         if replaced_old.contains(&i) {
             continue;
         }
-        let mut text = format!("- {}", label(&a.lines[i]));
+        let mut text = format!("- {}", label(&shown(&a.lines[i])));
         let below = a.descendants(i);
         if below > 0 {
             let _ = write!(
@@ -463,7 +491,7 @@ pub fn diff(old: &[SnapLine], new: &[SnapLine]) -> Diff {
                 j as f64 + 0.25,
                 format!(
                     "> {} (now {})",
-                    label(new_line),
+                    label(&shown(new_line)),
                     position(b.parent_ref(j), b.previous_element(j))
                 ),
             ));
@@ -480,18 +508,21 @@ pub fn diff(old: &[SnapLine], new: &[SnapLine]) -> Diff {
         } else {
             text.push_str(role);
         }
+        // Whole names are compared; a long one that changed shows where.
         if old_name != name {
-            let _ = write!(text, " {} → {}", quote(old_name), quote(name));
+            let (old, new) = excerpts(old_name, name, 120);
+            let _ = write!(text, " {} → {}", quote(&old), quote(&new));
         } else if !name.is_empty() {
-            let _ = write!(text, " {}", quote(name));
+            let short = cap.then(|| cap_name(name)).flatten();
+            let _ = write!(text, " {}", quote(short.as_deref().unwrap_or(name)));
         }
         text.push_str(&attrs_changed);
         if old_text != new_text {
             let _ = write!(
                 text,
                 ": {} → {}",
-                old_text.unwrap_or("-"),
-                new_text.unwrap_or("-")
+                old_text.map_or("-".to_string(), text_shown),
+                new_text.map_or("-".to_string(), text_shown)
             );
         }
         out.changed += 1;
@@ -541,14 +572,14 @@ pub fn diff(old: &[SnapLine], new: &[SnapLine]) -> Diff {
                 out.added += 1;
                 items.push((
                     new_texts[nj].0 as f64,
-                    format!("+ {prefix}text[{nj}] {}", quote(&truncate(news[nj], 120))),
+                    format!("+ {prefix}text[{nj}] {}", quote(&text_shown(news[nj]))),
                 ));
             }
             for &oi in &gap_old[common..] {
                 out.removed += 1;
                 items.push((
                     old_key(old_texts[oi].0),
-                    format!("- {prefix}text[{oi}] {}", quote(&truncate(olds[oi], 120))),
+                    format!("- {prefix}text[{oi}] {}", quote(&text_shown(olds[oi]))),
                 ));
             }
             i0 = i1 + 1;
@@ -563,8 +594,11 @@ pub fn diff(old: &[SnapLine], new: &[SnapLine]) -> Diff {
 
 /// Excerpts of two texts, at most `max` characters each, from a little
 /// before where they first differ (`…` marks what is left out), so that a
-/// change far into a long text shows.
+/// change far into a long text shows; texts that short are whole.
 fn excerpts(old: &str, new: &str, max: usize) -> (String, String) {
+    if old.chars().count() <= max && new.chars().count() <= max {
+        return (old.to_string(), new.to_string());
+    }
     let first = old
         .chars()
         .zip(new.chars())
@@ -677,6 +711,53 @@ mod tests {
         assert!(text.contains("old end\" → \"…"), "{text}");
         assert!(text.ends_with("new end\"\n"), "{text}");
         assert!(text.contains("\"…aaa"), "{text}");
+    }
+
+    #[test]
+    fn names_and_texts_are_whole_unless_a_budget_needs_room() {
+        let start = "Enter tomsmith for the username and SuperSecretPassword! ".repeat(2);
+        let added = "word ".repeat(60);
+        let old = vec![
+            el(0, 1, "main", ""),
+            el(1, 2, "heading", &format!("{start}for the password.")),
+        ];
+        let new = vec![
+            el(0, 1, "main", ""),
+            el(1, 2, "heading", &format!("{start}for the passphrase.")),
+            text(1, added.trim()),
+        ];
+        let d = diff(&old, &new);
+        // A change past the 100th character shows, where it is.
+        let changed = &d.lines[0];
+        assert!(changed.starts_with("~ e2 heading \"…"), "{changed}");
+        assert!(
+            changed.ends_with(
+                "Password! for the password.\" → \"…erSecretPassword! for the passphrase.\""
+            ),
+            "{changed}"
+        );
+        // A shorter one is whole, wherever it changed.
+        let short = |name: &str| vec![el(0, 1, "button", name)];
+        assert_eq!(
+            diff(
+                &short("Add Sauce Labs Backpack (black) to cart"),
+                &short("Add Sauce Labs Backpack (black) to bag")
+            )
+            .lines,
+            [
+                "~ e1 button \"Add Sauce Labs Backpack (black) to cart\" → \"Add Sauce Labs Backpack (black) to bag\""
+            ]
+        );
+        // An added text is whole.
+        assert_eq!(d.lines[1], format!("+ e1 text[0] \"{}\"", added.trim()));
+        // A diff that has to fit shows long texts by their start.
+        assert_eq!(diff_within(&old, &new, 1000), d);
+        let fitted = diff_within(&old, &new, 300);
+        assert!(
+            fitted.lines[1].ends_with(" word… [+100 chars]\""),
+            "{fitted:?}"
+        );
+        assert_eq!(fitted.lines[0], d.lines[0]);
     }
 
     #[test]

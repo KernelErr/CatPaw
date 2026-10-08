@@ -125,7 +125,9 @@ pub struct SnapshotOptions {
     pub max_depth: Option<usize>,
     /// Soft character budget; the output is cut with a `[truncated ...]` line.
     pub max_chars: Option<usize>,
-    /// Longest accessible name emitted before truncation with an ellipsis.
+    /// Longest name a ref is known by in errors and results; a longer one
+    /// is cut to its start (`… [+N chars]`). Lines show names whole until
+    /// a budget needs room.
     pub max_name_len: usize,
     pub extra: ExtraAttrs,
 }
@@ -138,14 +140,16 @@ impl Default for SnapshotOptions {
             root: None,
             max_depth: None,
             max_chars: None,
-            max_name_len: 100,
+            max_name_len: MAX_NAME_LEN,
             extra: ExtraAttrs::default(),
         }
     }
 }
 
-/// Longest text leaf shown; longer prose is for the read views.
+/// Longest text leaf shown over budget; longer prose is for the read views.
 const MAX_TEXT_LEN: usize = 200;
+/// Longest name shown over budget, and kept for a ref to be known by.
+const MAX_NAME_LEN: usize = 100;
 /// Longest control value shown.
 const MAX_VALUE_LEN: usize = 80;
 /// A select lists its options when it has at most this many,
@@ -1108,9 +1112,19 @@ pub fn tidy_text(text: &str) -> Option<String> {
 /// A long text as a snapshot over its budget shows it: its start, and how
 /// much more there is (`… [+1830 chars]`). `None` when it is short.
 pub fn cap_text(text: &str) -> Option<String> {
+    cap(text, MAX_TEXT_LEN)
+}
+
+/// A long name as a snapshot over its budget shows it, and as a ref is
+/// known by: its start and `… [+N chars]`. `None` when it is short.
+pub fn cap_name(name: &str) -> Option<String> {
+    cap(name, MAX_NAME_LEN)
+}
+
+fn cap(text: &str, max: usize) -> Option<String> {
     let count = text.chars().count();
-    (count > MAX_TEXT_LEN).then(|| {
-        let shown = MAX_TEXT_LEN - 1;
+    (count > max).then(|| {
+        let shown = max.saturating_sub(1);
         let mut out: String = text.chars().take(shown).collect();
         out.push_str(&format!("… [+{} chars]", count - shown));
         out
@@ -1514,7 +1528,7 @@ impl Emitter<'_> {
         }
         let role = node.role.unwrap_or("generic");
         let role = if role == "none" { "generic" } else { role };
-        let name = truncate(&node.name, self.options.max_name_len);
+        let name = node.name.clone();
         let key = RefKey {
             frame: self.frame,
             epoch: self.epoch,
@@ -1524,11 +1538,11 @@ impl Emitter<'_> {
             [only] if name.is_empty() => only.text.clone(),
             _ => None,
         };
-        // A nameless element is known by its text in errors and results.
-        let known_as = match &inline {
-            Some(text) => truncate(text, self.options.max_name_len),
-            None => name.clone(),
-        };
+        // A nameless element is known by its text in errors and results,
+        // a long name by its start.
+        let known_as = inline.as_deref().unwrap_or(&name);
+        let known_as =
+            cap(known_as, self.options.max_name_len).unwrap_or_else(|| known_as.to_string());
         let r = self.refs.get_or_assign(key, role, &known_as, parent);
         let children: &[AxNode] = if inline.is_some() {
             &[]
@@ -1872,6 +1886,29 @@ e5 main
             capped.chars().count(),
             199 + "… [+300 chars]".chars().count()
         );
+    }
+
+    #[test]
+    fn long_names_stay_whole_in_the_model() {
+        let long = "This is where you can log into the secure area. Enter tomsmith for the \
+                    username and SuperSecretPassword! for the password.";
+        let r = parse_html(&format!("<h4>{long}</h4>"), &Default::default());
+        let oracle = AttributeOracle;
+        let mut refs = RefTable::new();
+        let snapshot =
+            Snapshotter::new(&r.dom, &oracle, &mut refs).snapshot(&SnapshotOptions::default());
+        assert!(
+            snapshot
+                .text
+                .contains(&format!("e1 heading \"{long}\" [level=4]")),
+            "{}",
+            snapshot.text
+        );
+        // A ref is known by the start of a long name.
+        let known = &refs.entry(1).unwrap().name;
+        assert_eq!(known.chars().count(), 99 + "… [+23 chars]".chars().count());
+        assert!(known.ends_with("SuperSecretPass… [+23 chars]"), "{known}");
+        assert_eq!(cap_name("Login"), None);
     }
 
     #[test]
