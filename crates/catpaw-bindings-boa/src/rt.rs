@@ -504,7 +504,15 @@ impl Runtime {
         };
         if !known || self.live_wrapper(id, ctx).is_none() {
             self.objects.borrow_mut().remove(&id);
-            self.page.free_object(id);
+            self.free(id, ctx);
+        }
+    }
+
+    /// Frees a platform object, and lets go of what it alone kept alive
+    /// (a `FormData`'s files, a `FileList`'s).
+    fn free(&self, id: ObjectId, ctx: &mut Context) {
+        for released in self.page.free_object(id) {
+            self.unroot_object(released, ctx);
         }
     }
 
@@ -522,7 +530,7 @@ impl Runtime {
                 continue;
             }
             self.objects.borrow_mut().remove(&id);
-            self.page.free_object(id);
+            self.free(id, ctx);
         }
         // `deref` keeps its results alive until the kept-objects list is
         // cleared; without this nothing would ever become collectable.

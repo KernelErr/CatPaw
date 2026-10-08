@@ -328,6 +328,54 @@ fn a_file_input_takes_one_file_unless_multiple() {
     );
 }
 
+/// Collects garbage and counts the page's platform objects.
+fn objects_alive(page: &mut BoaPage) -> usize {
+    page.with_cx(|cx| cx.script.collect_garbage());
+    page.page().object_count()
+}
+
+#[test]
+fn files_go_once_nothing_holds_them() {
+    let (mut page, _) = load(
+        r#"<!doctype html><form id=form method=post action=/form enctype=multipart/form-data><input type=file id=up name=up><input type=file name=none></form>"#,
+    );
+    let up = find(&page, "up");
+    choose(&mut page, up, &["a.txt"]);
+    let before = objects_alive(&mut page);
+    // Each entry list has the chosen file and an empty one for the input
+    // with none, held while the list is.
+    eval(
+        &mut page,
+        "var kept = new FormData(document.getElementById('form')); for (var i = 0; i < 200; i++) new FormData(document.getElementById('form'));",
+    );
+    for _ in 0..20 {
+        eval(&mut page, "document.getElementById('form').submit()");
+        page.page().navigation.borrow_mut().take();
+    }
+    let after = objects_alive(&mut page);
+    assert!(
+        after < before + 20,
+        "{after} objects alive after the entry lists went (started with {before})"
+    );
+    // A choice made again lets the files of the one before go.
+    for i in 0..50 {
+        choose(&mut page, up, &[&format!("{i}.txt")]);
+    }
+    let after = objects_alive(&mut page);
+    assert!(
+        after < before + 20,
+        "{after} objects alive after choosing again (started with {before})"
+    );
+    // What script holds stays.
+    assert_eq!(
+        eval(
+            &mut page,
+            "[kept.get('up').name, kept.get('none').size, document.getElementById('up').files[0].name].join(' ')"
+        ),
+        "a.txt 0 49.txt"
+    );
+}
+
 #[test]
 fn object_urls_resolve_in_the_page() {
     let (mut page, _) = load(FIXTURE);

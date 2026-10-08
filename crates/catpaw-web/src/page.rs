@@ -35,10 +35,17 @@ pub trait PlatformObject: Any {
     fn interface(&self) -> InterfaceId;
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
+    /// The objects this one holds a pin on ([`Cx::pin`]) for as long as it
+    /// lives (a `FormData`'s files): freeing it releases them.
+    fn pinned(&self) -> Vec<ObjectId> {
+        Vec::new()
+    }
 }
 
 /// Implements [`PlatformObject`] for a type with a fixed interface, or one
-/// read from a field (`platform_object!(Event, |e| e.iface)`).
+/// read from a field (`platform_object!(Event, |e| e.iface)`), and the
+/// objects it pins
+/// (`platform_object!(FileListObject, FileList, pinned = |l| l.files.clone())`).
 #[macro_export]
 macro_rules! platform_object {
     ($ty:ty, |$this:ident| $iface:expr) => {
@@ -55,8 +62,33 @@ macro_rules! platform_object {
             }
         }
     };
+    ($ty:ty, |$this:ident| $iface:expr, pinned = |$holder:ident| $pinned:expr) => {
+        impl $crate::page::PlatformObject for $ty {
+            fn interface(&self) -> $crate::generated::InterfaceId {
+                let $this = self;
+                $iface
+            }
+            fn as_any(&self) -> &dyn std::any::Any {
+                self
+            }
+            fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+                self
+            }
+            fn pinned(&self) -> Vec<::catpaw_js::ObjectId> {
+                let $holder = self;
+                $pinned
+            }
+        }
+    };
     ($ty:ty, $iface:ident) => {
         $crate::platform_object!($ty, |_this| $crate::generated::InterfaceId::$iface);
+    };
+    ($ty:ty, $iface:ident, pinned = |$holder:ident| $pinned:expr) => {
+        $crate::platform_object!(
+            $ty,
+            |_this| $crate::generated::InterfaceId::$iface,
+            pinned = |$holder| $pinned
+        );
     };
 }
 
@@ -662,14 +694,22 @@ impl PageState {
     }
 
     /// Frees an object. Called by the script backend once the object's
-    /// wrapper is unreachable and nothing pins it.
-    pub fn free_object(&self, id: ObjectId) {
-        let removed = self.objects.borrow_mut().remove(id);
-        if removed.is_some() {
-            self.listeners
-                .borrow_mut()
-                .remove(&EventTargetRef::Object(id));
-        }
+    /// wrapper is unreachable and nothing pins it. The pins the object
+    /// held go with it; returned are the objects that were its last pin,
+    /// which the backend lets go of in turn ([`Cx::unpin`]'s part).
+    pub fn free_object(&self, id: ObjectId) -> Vec<ObjectId> {
+        let Some(removed) = self.objects.borrow_mut().remove(id) else {
+            return Vec::new();
+        };
+        self.listeners
+            .borrow_mut()
+            .remove(&EventTargetRef::Object(id));
+        removed
+            .object
+            .pinned()
+            .into_iter()
+            .filter(|&held| self.adjust_pins(held, -1) == Some(0))
+            .collect()
     }
 
     pub fn is_pinned(&self, id: ObjectId) -> bool {

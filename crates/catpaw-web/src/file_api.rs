@@ -84,10 +84,10 @@ fn new_file(cx: &Cx<'_>, bytes: Vec<u8>, type_: &str, name: &str, last_modified:
 
 /// What a file input chose (`input.files`).
 pub struct FileListObject {
-    /// Pinned for as long as the page lives: script may hold the list.
+    /// Pinned for as long as the list lives.
     files: Vec<ObjectId>,
 }
-platform_object!(FileListObject, FileList);
+platform_object!(FileListObject, FileList, pinned = |l| l.files.clone());
 
 impl web::FileListImpl for Web {
     fn item(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<ObjectId>> {
@@ -500,7 +500,20 @@ pub(crate) enum Entry {
 pub struct FormDataObject {
     entries: Vec<(String, Entry)>,
 }
-platform_object!(FormDataObject, FormData);
+platform_object!(FormDataObject, FormData, pinned = |f| f.files());
+
+impl FormDataObject {
+    /// The files of the entries, which the entries pin.
+    fn files(&self) -> Vec<ObjectId> {
+        self.entries
+            .iter()
+            .filter_map(|(_, entry)| match entry {
+                Entry::File(id) => Some(*id),
+                Entry::Text(_) => None,
+            })
+            .collect()
+    }
+}
 
 fn form_data<R>(
     cx: &Cx<'_>,
