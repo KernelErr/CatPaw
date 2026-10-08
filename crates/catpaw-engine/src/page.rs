@@ -722,6 +722,41 @@ impl Page {
         self.nets().flat_map(|net| net.held_requests()).collect()
     }
 
+    /// The held requests of `frames` and of the workers they started.
+    pub fn held_requests_in(&self, frames: &[FrameId]) -> Vec<crate::net::HeldRequestInfo> {
+        let top = frames.contains(&FrameId(0)).then_some(&self.net);
+        let of_frames = self
+            .frames
+            .iter()
+            .filter(|f| frames.contains(&f.id))
+            .map(|f| &f.net);
+        let of_workers = self
+            .workers
+            .iter()
+            .filter(|w| {
+                self.frame_of_scope(w.owner)
+                    .is_some_and(|f| frames.contains(&f))
+            })
+            .map(|w| &w.net);
+        top.into_iter()
+            .chain(of_frames)
+            .chain(of_workers)
+            .flat_map(|net| net.held_requests())
+            .collect()
+    }
+
+    /// The frame a scope belongs to: itself, or the frame that started a
+    /// worker (through the workers that started it).
+    fn frame_of_scope(&self, mut scope: ScopeId) -> Option<FrameId> {
+        for _ in 0..64 {
+            match scope {
+                ScopeId::Frame(frame) => return Some(frame),
+                ScopeId::Worker(key) => scope = self.workers.iter().find(|w| w.key == key)?.owner,
+            }
+        }
+        None
+    }
+
     /// Sends the held requests named (and the rest of their fetches); the
     /// page sees their answers when it next runs. Returns how many were
     /// still held.

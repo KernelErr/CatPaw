@@ -37,14 +37,17 @@ use crate::target::{self, Target};
 pub(crate) const SNAPSHOT_TOKENS: u32 = 4000;
 /// The budget of a read view when the call gives none, in tokens.
 const READ_TOKENS: u32 = 6000;
-/// The most a script result may take, in characters.
-const EVAL_CHARS: usize = 4000;
+/// The most a script result may take, in bytes.
+const EVAL_BYTES: usize = 4000;
 /// Console errors listed after an action; the rest are counted.
 const CONSOLE_LINES: usize = 3;
 /// Snapshot ids a tab remembers log positions for (`logs({since})`).
 const MARKS: usize = 32;
 /// Events a tab keeps for `logs({kind: "events"})`.
 const EVENTS: usize = 500;
+/// Page events kept for results not given yet (those of tabs nobody acts
+/// on are dropped oldest first).
+const INBOX: usize = 1000;
 
 /// Bytes in `tokens` by the fixed estimate (3.5 bytes a token): the same
 /// input always gets the same budget.
@@ -209,6 +212,37 @@ impl Tab {
     }
 }
 
+/// What an action can use, to tell apart elements a target matches and to
+/// take a label for its control.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum Use {
+    Any,
+    /// Something to type into.
+    Text,
+    /// Something to check or uncheck.
+    Check,
+    /// Something to choose options of.
+    Choose,
+}
+
+impl Use {
+    /// Whether an element of `role` (`editable`: taking text as a rich
+    /// text editor does) is what the action uses.
+    fn fits(self, role: &str, editable: bool) -> bool {
+        match self {
+            Use::Any => true,
+            Use::Text => {
+                editable || matches!(role, "textbox" | "searchbox" | "combobox" | "spinbutton")
+            }
+            Use::Check => matches!(
+                role,
+                "checkbox" | "radio" | "switch" | "menuitemcheckbox" | "menuitemradio"
+            ),
+            Use::Choose => matches!(role, "combobox" | "listbox"),
+        }
+    }
+}
+
 /// A node an action is aimed at.
 #[derive(Debug, Clone, Copy)]
 struct Aim {
@@ -221,10 +255,37 @@ struct Aim {
     retargeted: Option<u32>,
 }
 
+/// A handed-over tab as the hand-off page shows it.
+#[derive(Debug, Clone)]
+pub(crate) struct HandState {
+    pub url: String,
+    pub title: String,
+    /// What the page holds for the user to decide: hold numbers and what
+    /// each would do.
+    pub held: Vec<(u64, String)>,
+}
+
+/// A page event taken in, kept for the next result of the tab it
+/// concerns.
+struct Absorbed {
+    /// That tab; `None` when the page does not say (a request it refused,
+    /// a download, a hold it dropped, a popup that closed): the next
+    /// result of any tab gives it.
+    tab: Option<u32>,
+    /// The tab a popup became, or the tab that closed.
+    which: Option<u32>,
+    event: catpaw_engine::PageEvent,
+}
+
 /// The tabs of one browsing-context group and the page they live in.
 pub(crate) struct GroupState {
     page: Page,
     tabs: BTreeMap<u32, Tab>,
+    /// Page events not reported yet.
+    inbox: Vec<Absorbed>,
+    /// Tabs with the user, and the hold number their hand-off began at:
+    /// what the page holds in them from then on is the user's to decide.
+    handoff_marks: BTreeMap<u32, u64>,
     next_tab: Arc<AtomicU32>,
     /// Where relative paths of uploaded files start.
     files_root: Option<PathBuf>,
@@ -242,11 +303,7 @@ pub(crate) struct GroupSetup {
 fn install_gates(page: &mut Page, policy: &Policy) {
     let navigations = policy.clone();
     page.set_navigation_gate(Some(Box::new(
-        move |request: &GateRequest<'_>| match navigations.navigation(
-            request.method,
-            request.url,
-            request.top_level,
-        ) {
+        move |request: &GateRequest<'_>| match navigations.navigation(request.method, request.url) {
             Verdict::Allow => Gate::Allow,
             Verdict::Confirm => Gate::Hold,
             Verdict::Block(reason) => Gate::Deny(reason),
@@ -332,6 +389,8 @@ impl GroupState {
         Ok(Self {
             page,
             tabs,
+            inbox: Vec::new(),
+            handoff_marks: BTreeMap::new(),
             next_tab,
             files_root: setup.files_root,
         })
@@ -403,12 +462,87 @@ impl GroupState {
         self.page.screenshot_of(root, false)
     }
 
+    /// A hand-off of `tab` begins: what its page holds from now on is
+    /// shown to the user, who lets it go or not on the hand-off page.
+    pub(crate) fn begin_handoff(&mut self, tab: u32) {
+        let mark = self.page.hold_watermark();
+        self.handoff_marks.insert(tab, mark);
+    }
+
+    /// What the page holds in a handed-over tab since the hand-off began:
+    /// hold numbers and what each would do.
+    fn hand_held(&self, tab: u32) -> Vec<(u64, String)> {
+        let Some(&mark) = self.handoff_marks.get(&tab) else {
+            return Vec::new();
+        };
+        let frames: Vec<FrameId> = self.frames_of(tab).iter().map(|f| f.id).collect();
+        let typed = self.user_values(tab);
+        let mut held: Vec<(u64, String)> = self
+            .page
+            .held_navigations()
+            .iter()
+            .filter(|h| h.id >= mark && frames.contains(&h.frame))
+            .map(|h| (h.id, act::describe_held(h, &typed)))
+            .collect();
+        held.extend(
+            self.page
+                .held_requests_in(&frames)
+                .into_iter()
+                .filter(|r| r.id >= mark)
+                .map(|r| {
+                    let what = format!("send → {} {}", r.method, truncate(r.url.as_str(), 160));
+                    (r.id, what)
+                }),
+        );
+        held.sort_by_key(|(id, _)| *id);
+        held
+    }
+
+    /// What the user typed into the tab's fields during a hand-off (the
+    /// values shown masked).
+    fn user_values(&self, tab: u32) -> Vec<String> {
+        self.frames_of(tab)
+            .iter()
+            .filter_map(|f| self.page.frame_state(f.id))
+            .flat_map(|state| agent::user_values(state))
+            .collect()
+    }
+
+    /// Whether a tab's fields hold what the user typed during a hand-off.
+    pub(crate) fn holds_user_input(&self, tab: u32) -> bool {
+        !self.user_values(tab).is_empty()
+    }
+
+    /// Where a handed-over tab is: its URL, title, and what it holds for
+    /// the user to decide.
+    fn hand_state(&self, tab: u32) -> Result<HandState, String> {
+        let root = self
+            .tabs
+            .get(&tab)
+            .map(|t| t.root)
+            .ok_or("the tab is closed")?;
+        let state = self.page.frame_state(root).ok_or("the tab is closed")?;
+        Ok(HandState {
+            url: state.url.borrow().to_string(),
+            title: title_of(state),
+            held: self.hand_held(tab),
+        })
+    }
+
+    /// Where a handed-over tab is now (for the hand-off page).
+    pub(crate) fn hand_view(&mut self, tab: u32) -> Result<HandState, String> {
+        self.absorb_events();
+        self.hand_state(tab)
+    }
+
     /// Input from the user during a hand-off; where the tab is after it.
+    /// What the input makes the page hold waits for the user's decision
+    /// ([`GroupState::hand_decide`]).
     pub(crate) fn hand_input(
         &mut self,
         tab: u32,
         input: crate::handoff::Input,
-    ) -> Result<(String, String), String> {
+    ) -> Result<HandState, String> {
         use crate::handoff::Input;
         use catpaw_web::input;
         let root = self
@@ -416,8 +550,13 @@ impl GroupState {
             .get(&tab)
             .map(|t| t.root)
             .ok_or("the tab is closed")?;
-        let mark = self.page.hold_watermark();
         let typing = matches!(input, Input::Text(_) | Input::Key(_));
+        // The field typed into, before the input moves focus on (a code
+        // box that passes it to the next).
+        let typed_into = self
+            .page
+            .frame_state(root)
+            .and_then(|state| agent::focused(state));
         self.page
             .input_in(root, move |cx| match input {
                 Input::Click { x, y } => {
@@ -434,45 +573,57 @@ impl GroupState {
             .map_err(|e| e.to_string())?;
         // What the user types stays theirs: the field's value is masked in
         // what the agent reads until the agent sets it itself.
-        if typing
-            && let Some(state) = self.page.frame_state(root)
-            && let Some(node) = agent::focused(state)
-        {
-            agent::mask_value(state, node);
+        if typing && let Some(state) = self.page.frame_state(root) {
+            for node in typed_into.into_iter().chain(agent::focused(state)) {
+                agent::mask_value(state, node);
+            }
         }
-        // What the user does is theirs to decide: what the policy held
-        // because of this input goes (what it refused stays refused, and
-        // what the agent left held waits for its own confirmation).
-        let navigations: Vec<u64> = self
-            .page
-            .held_navigations()
-            .iter()
-            .filter(|h| h.id >= mark)
-            .map(|h| h.id)
+        self.absorb_events();
+        self.hand_state(tab)
+    }
+
+    /// The user's decision on the hand-off page about what the tab holds:
+    /// let it go, or drop it. Only holds of this hand-off are touched.
+    pub(crate) fn hand_decide(
+        &mut self,
+        tab: u32,
+        ids: &[u64],
+        allow: bool,
+    ) -> Result<HandState, String> {
+        let ids: Vec<u64> = self
+            .hand_held(tab)
+            .into_iter()
+            .map(|(id, _)| id)
+            .filter(|id| ids.contains(id))
             .collect();
-        let requests: Vec<u64> = self
-            .page
-            .held_requests()
-            .iter()
-            .filter(|r| r.id >= mark)
-            .map(|r| r.id)
-            .collect();
-        if !navigations.is_empty() || !requests.is_empty() {
-            self.page.release_held_requests(&requests);
+        if allow {
+            let navigations: Vec<u64> = self
+                .page
+                .held_navigations()
+                .iter()
+                .filter(|h| ids.contains(&h.id))
+                .map(|h| h.id)
+                .collect();
+            self.page.release_held_requests(&ids);
             for id in navigations {
                 self.page.release_held(id).map_err(|e| e.to_string())?;
             }
             self.page.settle(&action_limits());
+        } else {
+            self.drop_holds(&ids);
         }
-        let state = self.page.frame_state(root).ok_or("the tab is closed")?;
-        let url = state.url.borrow().to_string();
-        Ok((url, title_of(state)))
+        self.absorb_events();
+        self.hand_state(tab)
     }
 
     /// The result of a hand-off given back: what happened meanwhile
     /// (navigations, new tabs) and the whole page as it is now.
     pub(crate) fn after_handoff(&mut self, tab: u32, status: String, view: View) -> CallResult {
-        let base = self.baseline(tab);
+        let mut base = self.baseline(tab);
+        // What the page still holds from the hand-off is asked about now.
+        if let Some(mark) = self.handoff_marks.remove(&tab) {
+            base.watermark = mark;
+        }
         let report = self.finish(tab, &base);
         self.page_result(
             tab,
@@ -539,6 +690,36 @@ impl GroupState {
 
     /// Resolves a target to a node of the tab, with a ref for it.
     fn aim(&mut self, tab: u32, text: &str) -> Result<Aim, Failure> {
+        self.aim_for(tab, text, Use::Any)
+    }
+
+    /// [`GroupState::aim`] for an action that uses what `wants` says: of
+    /// elements a text matches, the one it can use, and for a label, the
+    /// control the label stands for.
+    fn aim_for(&mut self, tab: u32, text: &str, wants: Use) -> Result<Aim, Failure> {
+        let aim = self.aim_at(tab, text, wants)?;
+        Ok(match wants {
+            Use::Any => aim,
+            _ => self.through_label(tab, aim),
+        })
+    }
+
+    /// A label as the control it stands for.
+    fn through_label(&mut self, tab: u32, aim: Aim) -> Aim {
+        let Some(state) = self.page.frame_state(aim.frame).cloned() else {
+            return aim;
+        };
+        match agent::labeled_control(&state, aim.node) {
+            Some(control) => Aim {
+                node: control,
+                r: self.ref_for(tab, aim.frame, control).unwrap_or(aim.r),
+                ..aim
+            },
+            None => aim,
+        }
+    }
+
+    fn aim_at(&mut self, tab: u32, text: &str, wants: Use) -> Result<Aim, Failure> {
         let target = target::parse(text)?;
         let (root, state) = self.root_state(tab)?;
         let frames = self.frames_of(tab);
@@ -630,8 +811,8 @@ impl GroupState {
                     }
                 }
             }
-            Target::Named(role, name) => self.locate(tab, Some(&role), &name),
-            Target::Text(text) => self.locate(tab, None, &text),
+            Target::Named(role, name) => self.locate(tab, Some(&role), &name, wants),
+            Target::Text(text) => self.locate(tab, None, &text, wants),
             Target::Point(x, y) => {
                 // Into the frame under the point, as a click goes.
                 let (mut frame, mut state, mut point) = (root, state, (x, y));
@@ -789,9 +970,52 @@ impl GroupState {
         self.page
             .close_popup(root)
             .map_err(|e| Failure::new(ErrorCode::NoTab, e.to_string()))?;
-        self.page.take_events();
+        // What the page did before stays to be reported; what the closed
+        // tab did goes with it, but for the popups it opened (and its own
+        // closing is no news to the agent that asked for it).
+        self.absorb_events();
         self.tabs.remove(&tab);
+        self.inbox.retain_mut(|a| {
+            if matches!(a.event, catpaw_engine::PageEvent::PopupClosed { .. }) {
+                return a.which != Some(tab);
+            }
+            if a.tab != Some(tab) {
+                return true;
+            }
+            a.tab = None;
+            matches!(a.event, catpaw_engine::PageEvent::PopupOpened { .. })
+        });
         Ok(())
+    }
+
+    /// The frame an `iframe` element shows, when `node` of `frame` is one
+    /// with a document: a root there means that document.
+    fn hosted_frame(&self, frame: FrameId, node: NodeId) -> Option<FrameId> {
+        self.page
+            .frames()
+            .iter()
+            .find(|f| f.parent == Some(frame) && f.element == Some(node) && !f.popup)
+            .map(|f| f.id)
+    }
+
+    /// Whether `frame` is `ancestor` or inside it.
+    fn frame_within(&self, frame: FrameId, ancestor: FrameId) -> bool {
+        let frames = self.page.frames();
+        let mut at = Some(frame);
+        for _ in 0..64 {
+            match at {
+                Some(f) if f == ancestor => return true,
+                Some(f) => at = frames.iter().find(|i| i.id == f).and_then(|i| i.parent),
+                None => return false,
+            }
+        }
+        false
+    }
+
+    /// The requests held in a tab's frames (and their workers).
+    fn held_requests_of(&self, tab: u32) -> Vec<catpaw_engine::HeldRequestInfo> {
+        let frames: Vec<FrameId> = self.frames_of(tab).iter().map(|f| f.id).collect();
+        self.page.held_requests_in(&frames)
     }
 }
 

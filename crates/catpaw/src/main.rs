@@ -238,8 +238,9 @@ struct McpArgs {
     /// may repeat.
     #[arg(long = "trust", value_name = "HOST")]
     trusted: Vec<String>,
-    /// Let tabs show pages of this domain (with its subdomains) only; may
-    /// repeat.
+    /// Let tabs show documents (pages, popups, frames) of this domain (with
+    /// its subdomains) only; the requests pages make for resources and data
+    /// are not limited. May repeat.
     #[arg(long = "allowed-domain", value_name = "DOMAIN")]
     allowed_domains: Vec<String>,
     /// The file with the key that approves confirmations on the local
@@ -393,7 +394,8 @@ fn keygen(args: KeygenArgs) -> Result<()> {
         );
     }
     let key = KeyPair::generate().context("generating an Ed25519 key")?;
-    std::fs::write(&args.out, key.to_json())
+    // A private key: only its owner may read it.
+    catpaw_server::profile::write_whole(&args.out, &key.to_json())
         .with_context(|| format!("writing {}", args.out.display()))?;
     eprintln!("wrote private key to {}", args.out.display());
     eprintln!("kid (JWK thumbprint): {}", key.kid);
@@ -806,8 +808,6 @@ fn describe_stop(report: &catpaw_engine::LoopReport) -> String {
     }
 }
 
-/// `fetch --js`: load the page in the engine, let its scripts run until it
-/// settles, then print the requested view of the resulting document.
 /// Runs one `--action` specification.
 fn run_action(page: &mut catpaw_engine::Page, spec: &str) -> Result<()> {
     let spec = spec.trim();
@@ -855,6 +855,8 @@ fn run_action(page: &mut catpaw_engine::Page, spec: &str) -> Result<()> {
     Ok(())
 }
 
+/// `fetch --js`: load the page in the engine, let its scripts run until it
+/// settles, then print the requested view of the resulting document.
 fn fetch_with_scripts(args: FetchArgs) -> Result<()> {
     let url = parse_url(&args.url)?;
     let options = PageOptions {

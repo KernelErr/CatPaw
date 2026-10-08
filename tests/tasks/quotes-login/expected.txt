@@ -24,7 +24,7 @@ ok type e4 textbox [value=- → ***]
 
 > click {"target":"button \"Login\""}
 needs_confirmation c1: click e5 button "Login" would submit → POST https://quotes.toscrape.com/login (fields: csrf_token=***, username=catpaw, password=***)
-  ask the user to approve at http://127.0.0.1:PORT/confirm/c1 (expires in 10m); once they approve, repeat: click {"confirmation":"c1","target":"button \"Login\""}
+  ask the user to approve at http://127.0.0.1:PORT/confirm/c1 (expires in 10m); then repeat (it waits up to 45s for them): click {"confirmation":"c1","target":"button \"Login\""}
 
 > (user) approve c1
 approved

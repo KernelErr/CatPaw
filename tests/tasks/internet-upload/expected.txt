@@ -12,7 +12,7 @@ e7 link "Elemental Selenium"
 
 > act {"files":["hello.txt"],"kind":"upload","target":"css:#file-upload"}
 needs_confirmation c1: upload hello.txt (19 B) into e4 button
-  ask the user to approve at http://127.0.0.1:PORT/confirm/c1 (expires in 10m); once they approve, repeat: act {"confirmation":"c1","files":["hello.txt"],"kind":"upload","target":"css:#file-upload"}
+  ask the user to approve at http://127.0.0.1:PORT/confirm/c1 (expires in 10m); then repeat (it waits up to 45s for them): act {"confirmation":"c1","files":["hello.txt"],"kind":"upload","target":"css:#file-upload"}
 
 > (user) approve c1
 approved
@@ -23,7 +23,7 @@ ok upload e4 button ← hello.txt (19 B)
 
 > click {"target":"button \"Upload\""}
 needs_confirmation c2: click e5 button "Upload" would submit → POST https://the-internet.herokuapp.com/upload (fields: file=(file hello.txt))
-  ask the user to approve at http://127.0.0.1:PORT/confirm/c2 (expires in 10m); once they approve, repeat: click {"confirmation":"c2","target":"button \"Upload\""}
+  ask the user to approve at http://127.0.0.1:PORT/confirm/c2 (expires in 10m); then repeat (it waits up to 45s for them): click {"confirmation":"c2","target":"button \"Upload\""}
 
 > (user) approve c2
 approved

@@ -11,7 +11,8 @@
 // no call, since the last snapshot already shows what it reads, and
 // neither does the user's approval of a confirmation or the call CatPaw
 // repeats once it is given. The checks run after the steps and are not
-// counted. Each task runs three times, and the median run counts.
+// counted. Each task runs until it passed three times (six tries at
+// most), and the median passing run counts.
 //
 //   npm install --prefix <dir> @playwright/mcp@<version>
 //   node tools/baseline/playwright-mcp.mjs <dir>/node_modules/.bin/playwright-mcp [--local] [task ids]
@@ -185,7 +186,7 @@ async function run(task) {
           break;
         case 'act':
           if (args.kind === 'scroll') {
-            await call('browser_evaluate', { function: `() => window.scrollBy(${args.dx ?? 0}, ${args.dy ?? 0})` });
+            await call('browser_evaluate', { function: `() => window.scrollBy(0, ${args.dy ?? 0})` });
           } else if (args.kind === 'check' || args.kind === 'uncheck') {
             await call('browser_click', element(args));
           } else if (args.kind === 'upload') {

@@ -11,7 +11,7 @@ pub mod params;
 pub mod tools;
 pub mod wording;
 
-pub use tools::{OPTIONAL_TOOLS, TOOLS, ToolDef, tool};
+pub use tools::{OPTIONAL_TOOLS, TOOLS, ToolDef};
 
 /// What `initialize` tells the host about using the tools (MCP
 /// `instructions`; hosts usually put it in the system prompt).
@@ -30,6 +30,32 @@ type replaces a field's value unless append is true; fill sets several fields at
 ";
 /// The protocol versions this server speaks, newest first.
 pub const PROTOCOL_VERSIONS: &[&str] = &["2025-06-18", "2025-03-26", "2024-11-05"];
+
+/// A JSON value as one line with the keys of every object sorted: how
+/// arguments are compared (a repeated call is recognised by them) and
+/// quoted back to the agent. It does not depend on serde_json keeping
+/// insertion order, which a feature enabled anywhere in a build turns on.
+pub fn canonical(value: &serde_json::Value) -> String {
+    match value {
+        serde_json::Value::Object(map) => {
+            let mut keys: Vec<&String> = map.keys().collect();
+            keys.sort();
+            let fields: Vec<String> = keys
+                .into_iter()
+                .map(|k| {
+                    let key = serde_json::Value::String(k.clone());
+                    format!("{key}:{}", canonical(&map[k]))
+                })
+                .collect();
+            format!("{{{}}}", fields.join(","))
+        }
+        serde_json::Value::Array(items) => {
+            let items: Vec<String> = items.iter().map(canonical).collect();
+            format!("[{}]", items.join(","))
+        }
+        other => other.to_string(),
+    }
+}
 
 /// The tool list and instructions as one JSON document (what
 /// `protocol.json` holds).
@@ -64,6 +90,12 @@ mod tests {
                 .unwrap_or_else(|e| panic!("{} example: {e}", def.name));
             params::check(def.name, example).unwrap_or_else(|e| panic!("{}: {e}", def.name));
         }
+    }
+
+    #[test]
+    fn canonical_json_sorts_keys_at_every_level() {
+        let value = serde_json::json!({"b": [{"z": 1, "a": "x\"y"}], "a": null});
+        assert_eq!(canonical(&value), r#"{"a":null,"b":[{"a":"x\"y","z":1}]}"#);
     }
 
     #[test]

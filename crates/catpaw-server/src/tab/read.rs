@@ -10,7 +10,7 @@ use catpaw_protocol::params::{self, LogKind, LogLevel, ReadView};
 use catpaw_protocol::wording::{ErrorCode, advice};
 use catpaw_web::agent;
 
-use super::pending::short_url;
+use super::pending::{kind_word, outcome_word, short_url};
 use super::{GroupState, READ_TOKENS, floor_char_boundary, resolve_ref, token_bytes};
 use crate::oracle::EngineOracle;
 use crate::output::{CallResult, Failure, ToolOutput};
@@ -85,7 +85,11 @@ impl GroupState {
                 let entry = self.tabs.get_mut(&tab).expect("root_state found the tab");
                 entry.sync(page);
                 let (frame, node, _) = resolve_ref(page, &mut entry.refs, text, &allowed)?;
-                (frame, Some(node))
+                // An `iframe` as root reads the document inside it.
+                match self.hosted_frame(frame, node) {
+                    Some(inner) => (inner, None),
+                    None => (frame, Some(node)),
+                }
             }
             None => (top, None),
         };
@@ -96,11 +100,21 @@ impl GroupState {
             _ => None,
         };
         let main = p.main;
-        let (mut full, mut found) = self.read_frame(tab, frame, root, view, find.as_ref(), main)?;
-        // The whole tab: the frames inside it follow, each under the line
-        // of its frame element.
-        if p.root.is_none() {
-            for inner in frames.iter().filter(|f| f.id != top) {
+        let (mut full, mut found) = if view == ReadView::Download {
+            (self.download_text(p.query.as_deref())?, 0)
+        } else {
+            self.read_frame(tab, frame, root, view, find.as_ref(), main)?
+        };
+        // A whole document (the tab's, or a frame's given as root): the
+        // frames inside it follow, each under the line of its frame
+        // element.
+        if root.is_none() && view != ReadView::Download {
+            let inside: Vec<_> = frames
+                .iter()
+                .filter(|f| f.id != frame && self.frame_within(f.id, frame))
+                .cloned()
+                .collect();
+            for inner in inside.iter() {
                 let (part, hits) =
                     self.read_frame(tab, inner.id, None, view, find.as_ref(), main)?;
                 if part.trim().is_empty() {
@@ -197,6 +211,53 @@ impl GroupState {
         Ok(ToolOutput::ok(text))
     }
 
+    /// A file a navigation brought (the latest, or the one `name` names),
+    /// as text: a line saying what it is, then its content when it is text.
+    fn download_text(&self, name: Option<&str>) -> Result<String, Failure> {
+        let downloads = self.page.downloads();
+        let chosen = match name {
+            Some(name) => downloads.iter().rev().find(|d| d.name == name),
+            None => downloads.last(),
+        };
+        let Some(file) = chosen else {
+            let kept: Vec<String> = downloads.iter().map(|d| quote(&d.name)).collect();
+            let message = match (name, kept.is_empty()) {
+                (_, true) => "no file was downloaded in this tab's group".to_string(),
+                (Some(name), false) => {
+                    format!(
+                        "no download is called {}; kept: {}",
+                        quote(name),
+                        kept.join(", ")
+                    )
+                }
+                (None, false) => unreachable!("a list that is not empty has a last"),
+            };
+            return Err(Failure::new(ErrorCode::NotFound, message));
+        };
+        let size = crate::files::size(file.size as u64);
+        let kind = if file.mime.is_empty() {
+            String::new()
+        } else {
+            format!("{}, ", file.mime)
+        };
+        let mut text = format!("{} ({kind}{size})", quote(&file.name));
+        if file.bytes.len() < file.size {
+            let _ = write!(
+                text,
+                ", first {} kept",
+                crate::files::size(file.bytes.len() as u64)
+            );
+        }
+        match std::str::from_utf8(&file.bytes) {
+            Ok(content) if !content.contains('\0') => {
+                text.push('\n');
+                text.push_str(content);
+            }
+            _ => text.push_str("\n(not text)"),
+        }
+        Ok(text)
+    }
+
     /// One frame's document (or a subtree of it) in a read view; with
     /// `find`, the number of matches too.
     fn read_frame(
@@ -228,6 +289,8 @@ impl GroupState {
                 root,
             };
             match view {
+                // Read from the page's downloads, not a document.
+                ReadView::Download => String::new(),
                 ReadView::Markdown => catpaw_agent::markdown(dom, &oracle, Some(scope), &options),
                 ReadView::Text => catpaw_agent::text_with(
                     dom,
@@ -281,7 +344,7 @@ impl GroupState {
     }
 
     pub(crate) fn logs(&mut self, tab: u32, p: params::Logs) -> CallResult {
-        let (frame, state) = self.root_state(tab)?;
+        let (_, state) = self.root_state(tab)?;
         let entry = self.tabs.get(&tab).expect("root_state found the tab");
         let since = match &p.since {
             Some(text) => {
@@ -345,25 +408,13 @@ impl GroupState {
                     .into_iter()
                     .filter(|r| matches(r.url.as_str()))
                     .map(|r| {
-                        let outcome = match (r.status, &r.error, r.finished) {
-                            (Some(status), _, _) => status.to_string(),
-                            (None, Some(e), _) => format!("failed ({})", truncate(e, 80)),
-                            (None, None, true) => "failed".to_string(),
-                            (None, None, false) => "pending".to_string(),
-                        };
                         format!(
-                            "{} {} {outcome} ({:?})",
+                            "{} {} {} ({})",
                             r.method,
                             short_url(&r.url, Some(&page_url)),
-                            r.kind
+                            outcome_word(&r, true),
+                            kind_word(r.kind)
                         )
-                        .replace("(Xhr)", "(xhr)")
-                        .replace("(Fetch)", "(fetch)")
-                        .replace("(Document)", "(document)")
-                        .replace("(Script)", "(script)")
-                        .replace("(Style)", "(stylesheet)")
-                        .replace("(Beacon)", "(beacon)")
-                        .replace("(Other)", "(other)")
                     })
                     .collect()
             }
@@ -378,7 +429,6 @@ impl GroupState {
                     .collect()
             }
         };
-        let _ = frame;
         let total = lines.len();
         let shown = &lines[total.saturating_sub(limit)..];
         let kind = match p.kind {

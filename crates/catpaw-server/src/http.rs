@@ -3,6 +3,7 @@
 
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpStream;
+use std::time::{Duration, Instant};
 
 pub(crate) struct Request {
     pub method: String,
@@ -27,6 +28,35 @@ const MAX_HEADERS: usize = 100;
 /// The largest body a request may have.
 const MAX_BODY: usize = 16 * 1024;
 
+/// The longest a client may take to send a request: one that sends it a
+/// byte at a time does not keep a connection (one of a few) for long.
+const REQUEST_TIME: Duration = if cfg!(test) {
+    Duration::from_millis(800)
+} else {
+    Duration::from_secs(10)
+};
+
+/// A stream read until a deadline.
+struct Deadline<'a> {
+    stream: &'a TcpStream,
+    until: Instant,
+}
+
+impl Read for Deadline<'_> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        let left = self.until.saturating_duration_since(Instant::now());
+        if left.is_zero() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::TimedOut,
+                "the request took too long",
+            ));
+        }
+        self.stream.set_read_timeout(Some(left))?;
+        let mut stream = self.stream;
+        stream.read(buf)
+    }
+}
+
 /// One line, `None` when it is longer than [`MAX_LINE`].
 fn read_line(reader: &mut impl BufRead) -> std::io::Result<Option<String>> {
     let mut line = String::new();
@@ -38,7 +68,10 @@ fn read_line(reader: &mut impl BufRead) -> std::io::Result<Option<String>> {
 /// the status to refuse it with.
 pub(crate) fn read_request(stream: &TcpStream) -> std::io::Result<Result<Request, &'static str>> {
     const LONG_HEADERS: &str = "431 Request Header Fields Too Large";
-    let mut reader = BufReader::new(stream);
+    let mut reader = BufReader::new(Deadline {
+        stream,
+        until: Instant::now() + REQUEST_TIME,
+    });
     let Some(line) = read_line(&mut reader)? else {
         return Ok(Err("414 URI Too Long"));
     };

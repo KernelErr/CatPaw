@@ -73,7 +73,7 @@
       "annotations": {
         "readOnlyHint": true
       },
-      "description": "Show the current tab as a tree: one line per element worth reading or acting on, each with a ref (e12) that other tools take as target. Actions already return what changed; call this to see the whole page again, with another filter, or one part of it.\nExample: {\"filter\":\"interactive\"}",
+      "description": "Show the current tab as a tree: one line per element worth reading or acting on, each with a ref (e12) that other tools take as target. Actions already return what changed; call this for the whole page, another filter, or one part.\nExample: {\"filter\":\"interactive\"}",
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
@@ -248,7 +248,7 @@
       "title": "Type"
     },
     {
-      "description": "Set several fields at once: text for a text field or editable element (replacing it), true or false for a checkbox or radio button, an option label (or a list) for a select; submit presses Enter in the last field.\nExample: {\"fields\":[{\"target\":\"e3\",\"value\":\"Ada\"},{\"target\":\"e7\",\"value\":true}]}",
+      "description": "Set several fields at once: text (replacing what is there), true or false for a checkbox or radio button, an option label (or a list) for a select; submit presses Enter in the last field.\nExample: {\"fields\":[{\"target\":\"e3\",\"value\":\"Ada\"},{\"target\":\"e7\",\"value\":true}]}",
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
@@ -368,7 +368,7 @@
       "title": "Press key"
     },
     {
-      "description": "Choose an option of a <select> by its visible label (or value); an array chooses several in a multiple select. When nothing matches, the error lists the options.\nExample: {\"target\":\"e8\",\"option\":\"Price (low to high)\"}",
+      "description": "Choose an option of a <select> by its visible label (or value); an array chooses several. When nothing matches, the error lists the options.\nExample: {\"target\":\"e8\",\"option\":\"Price (low to high)\"}",
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
@@ -421,7 +421,7 @@
       "title": "Select option"
     },
     {
-      "description": "Less common element actions: hover, check, uncheck, focus, clear (empty a field), scroll (target into view, or the page by dy pixels; one screen down by default), upload (choose local files in a file input), drag (target onto to).\nExample: {\"kind\":\"check\",\"target\":\"e14\"}",
+      "description": "Other actions: hover, check, uncheck, focus, clear (empty a field), scroll (the page by dy pixels, a screen by default; target alone: into view; target and dy: the box holding it), upload (local files into a file input), drag (target onto to).\nExample: {\"kind\":\"check\",\"target\":\"e14\"}",
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
@@ -436,7 +436,7 @@
             "type": "string"
           },
           "dy": {
-            "description": "Page scroll in pixels; negative scrolls up",
+            "description": "Pixels to scroll; negative scrolls up",
             "type": "number"
           },
           "files": {
@@ -491,7 +491,7 @@
       "annotations": {
         "readOnlyHint": true
       },
-      "description": "Read the current tab as text rather than a tree. markdown: the content, links as [text](ref:e12); text: plain text; links: ref, text and URL per line; forms: fields with refs, values and options; tables: Markdown tables with row refs; find: where query (text or /regex/) occurs, with refs; html: the markup. Long output stops at maxTokens and says which offset continues it.\nExample: {\"view\":\"markdown\"}",
+      "description": "Read the current tab as text rather than a tree. markdown: the content, links as [text](ref:e12); text: plain text; links: ref, text and URL per line; forms: fields with refs, values and options; tables: Markdown tables with row refs; find: where query (text or /regex/) occurs, with refs; html: the markup; download: the latest download as text (query names another). Long output stops at maxTokens and says which offset continues it.\nExample: {\"view\":\"markdown\"}",
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
@@ -509,7 +509,7 @@
             "type": "integer"
           },
           "query": {
-            "description": "For find",
+            "description": "For find, or a download's name",
             "type": "string"
           },
           "root": {
@@ -524,7 +524,8 @@
               "forms",
               "tables",
               "find",
-              "html"
+              "html",
+              "download"
             ],
             "type": "string"
           }
@@ -610,7 +611,7 @@
       "title": "Tabs"
     },
     {
-      "description": "Let the page run until it settles, a text appears or goes, an element is visible, the URL contains a string, or ms milliseconds pass; or until the user gives back a tab handed over with handoff. Time the page spends only waiting on timers passes at once. Returns what changed.\nExample: {\"for\":\"text\",\"text\":\"Order placed\"}",
+      "description": "Let the page run until it settles, a text appears or goes, an element is visible, the URL contains a string, or ms milliseconds pass; or until the user gives back a handed-over tab. Time the page spends only waiting on timers passes at once. Returns what changed.\nExample: {\"for\":\"text\",\"text\":\"Order placed\"}",
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
@@ -666,7 +667,7 @@
       "title": "Wait"
     },
     {
-      "description": "Hand the current tab to the user, on a page they open in their own browser: to log in, pass a check meant for a person, or do anything you should not do or see. Then wait({\"for\":\"handoff\"}) until they give it back; you see the page, not what they typed.\nExample: {\"reason\":\"Log in to your account\"}",
+      "description": "Hand the current tab to the user, on a page they open in their own browser: to log in, pass a check meant for a person, or do anything you should not do or see. Then wait({\"for\":\"handoff\"}) until they give it back; you see the page, with what they typed masked.\nExample: {\"reason\":\"Log in to your account\"}",
       "inputSchema": {
         "additionalProperties": false,
         "properties": {

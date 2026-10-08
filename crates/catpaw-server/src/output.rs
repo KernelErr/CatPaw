@@ -43,6 +43,10 @@ pub struct Failure {
     pub code: ErrorCode,
     pub message: String,
     pub more: Vec<String>,
+    /// What the call started before it failed that the policy holds (a
+    /// script that submitted a form, then threw), and holds that went:
+    /// asked about and told all the same.
+    pub(crate) left: Option<Box<(Option<Held>, Vec<u64>)>>,
 }
 
 impl Failure {
@@ -51,7 +55,20 @@ impl Failure {
             code,
             message: message.into(),
             more: Vec::new(),
+            left: None,
         }
+    }
+
+    /// What the call left held and dropped before it failed.
+    pub(crate) fn holding(mut self, held: Option<Held>, dropped: Vec<u64>) -> Self {
+        self.left = (held.is_some() || !dropped.is_empty()).then(|| Box::new((held, dropped)));
+        self
+    }
+
+    /// Whether the call left something for the session to ask or tell
+    /// about.
+    pub(crate) fn holds(&self) -> bool {
+        self.left.is_some()
     }
 
     /// Adds a line under the error line.
@@ -74,9 +91,12 @@ impl Failure {
             text.push('\n');
             text.push_str(line);
         }
+        let (held, dropped_holds) = self.left.as_deref().cloned().unwrap_or_default();
         ToolOutput {
             text,
             is_error: true,
+            held,
+            dropped_holds,
             ..ToolOutput::default()
         }
     }

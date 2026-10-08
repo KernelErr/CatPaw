@@ -213,6 +213,43 @@ fn a_held_script_request_waits_without_keeping_the_page_busy() {
 }
 
 #[test]
+fn a_held_preflight_is_given_as_the_request_it_prepares() {
+    let (port, log) = serve(HashMap::from([(
+        "/app",
+        "<!doctype html><title>waiting</title>",
+    )]));
+    let url = Url::parse(&format!("http://127.0.0.1:{port}/app")).unwrap();
+    let seen = log.clone();
+    let mut options = options();
+    options.limits.settle = Some(Default::default());
+    let gated = options.clone();
+    let blank = Url::parse(&format!("http://127.0.0.1:{port}/blank")).unwrap();
+    with_html(blank, String::new(), gated, move |page| {
+        page.set_request_gate(Some(Rc::new(|request: &catpaw_web::net::NetRequest| {
+            if request.method == "PUT" {
+                Gate::Hold
+            } else {
+                Gate::Allow
+            }
+        })));
+        page.goto(url).unwrap();
+        // A request to another origin with a header of its own needs a
+        // preflight: that is what waits, and letting it go lets the PUT go.
+        page.eval(&format!(
+            "fetch('http://localhost:{port}/api', {{method: 'PUT', headers: {{'X-Thing': '1'}}, body: 'x'}}); 1"
+        ))
+        .unwrap();
+        page.settle(&options.limits);
+        let held = page.held_requests();
+        assert_eq!(held.len(), 1, "{held:?}");
+        assert_eq!(held[0].method, "PUT", "{held:?}");
+        assert_eq!(count(&seen, "OPTIONS /api"), 0);
+        assert_eq!(count(&seen, "PUT /api"), 0);
+    })
+    .unwrap();
+}
+
+#[test]
 fn a_dropped_script_request_fails_for_the_page() {
     let (port, log) = serve(HashMap::from([(
         "/app",

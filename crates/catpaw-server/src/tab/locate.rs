@@ -17,7 +17,7 @@ use catpaw_engine::FrameId;
 use catpaw_protocol::wording::{ErrorCode, advice};
 use catpaw_web::agent;
 
-use super::{Aim, GroupState};
+use super::{Aim, GroupState, Use};
 use crate::oracle::EngineOracle;
 use crate::output::Failure;
 
@@ -28,12 +28,13 @@ fn normalize(text: &str) -> String {
         .to_lowercase()
 }
 
-/// A candidate: its ref, whether it matched exactly, and whether it is
-/// something to act on.
+/// A candidate: its ref, whether it matched exactly, whether it is
+/// something to act on, and whether the action can use it.
 struct Candidate {
     r: u32,
     exact: bool,
     actionable: bool,
+    fits: bool,
 }
 
 impl GroupState {
@@ -42,6 +43,7 @@ impl GroupState {
         tab: u32,
         role: Option<&str>,
         text: &str,
+        wants: Use,
     ) -> Result<Aim, Failure> {
         let needle = normalize(text);
         let cut = role.and(needle.strip_suffix('…'));
@@ -100,6 +102,7 @@ impl GroupState {
                             exact,
                             actionable: is_interactive(line_role)
                                 || attrs.iter().any(|(k, _)| *k == "clickable"),
+                            fits: wants.fits(line_role, editable),
                         });
                     }
                 }
@@ -124,6 +127,7 @@ impl GroupState {
                         r,
                         exact,
                         actionable: false,
+                        fits: wants == Use::Any,
                     });
                 }
             }
@@ -180,6 +184,11 @@ impl GroupState {
                 ),
             )
             .with(advice::FULL_NAME));
+        }
+        // Then the one the action can use (the field, not its label), then
+        // the one thing to act on.
+        if found.len() > 1 && wants != Use::Any && found.iter().filter(|c| c.fits).count() == 1 {
+            found.retain(|c| c.fits);
         }
         if found.len() > 1 && found.iter().filter(|c| c.actionable).count() == 1 {
             found.retain(|c| c.actionable);

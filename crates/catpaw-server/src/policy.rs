@@ -8,7 +8,9 @@
 //! `evaluate`. `open` asks for nothing, for test runs. Trusted hosts need
 //! no approval for what is sent to them; uploads ask whatever the host,
 //! since the files are the user's. Allowed domains, when set, are the only
-//! ones a tab may show (every redirect hop included).
+//! ones whose documents a tab may show: its page, the popups it opens and
+//! the frames within them, every redirect hop included. They do not limit
+//! the requests a page makes for its scripts, styles, images and data.
 
 use url::Url;
 
@@ -46,8 +48,8 @@ pub struct Policy {
     /// Hosts (with their subdomains) whose navigations and requests need
     /// no approval.
     pub trusted: Vec<String>,
-    /// When not empty, the only domains (with their subdomains) a tab may
-    /// show.
+    /// When not empty, the only domains (with their subdomains) whose
+    /// documents a tab may show, frames included.
     pub allowed_domains: Vec<String>,
 }
 
@@ -82,15 +84,11 @@ fn sends_data(method: &str) -> bool {
 }
 
 impl Policy {
-    /// A navigation about to load `url` with `method`; `top_level` for a
-    /// tab's own document (not a frame within it).
-    pub fn navigation(&self, method: &str, url: &Url, top_level: bool) -> Verdict {
+    /// A navigation about to load `url` with `method`, of a tab or of a
+    /// frame within it.
+    pub fn navigation(&self, method: &str, url: &Url) -> Verdict {
         let web = matches!(url.scheme(), "http" | "https");
-        if top_level
-            && web
-            && !self.allowed_domains.is_empty()
-            && !covers(&self.allowed_domains, url)
-        {
+        if web && !self.allowed_domains.is_empty() && !covers(&self.allowed_domains, url) {
             let host = url.host_str().unwrap_or_default();
             return Verdict::Block(format!("{host} is not an allowed domain"));
         }
@@ -105,9 +103,11 @@ impl Policy {
     }
 
     /// A request script makes to `url`, from a page of `origin` (its
-    /// `Origin` header, when it sent one).
+    /// `Origin` header, when it sent one). A WebSocket sends data however
+    /// it opens: whatever the page writes to it, once it is open.
     pub fn request(&self, method: &str, url: &Url, origin: Option<&str>) -> Verdict {
-        if self.preset != Preset::Strict || !sends_data(method) || covers(&self.trusted, url) {
+        let sends = sends_data(method) || matches!(url.scheme(), "ws" | "wss");
+        if self.preset != Preset::Strict || !sends || covers(&self.trusted, url) {
             return Verdict::Allow;
         }
         let same_site = origin
@@ -149,8 +149,8 @@ mod tests {
     fn posting_asks_and_reading_does_not() {
         let policy = Policy::default();
         let post = url("https://shop.example/checkout");
-        assert_eq!(policy.navigation("POST", &post, true), Verdict::Confirm);
-        assert_eq!(policy.navigation("GET", &post, true), Verdict::Allow);
+        assert_eq!(policy.navigation("POST", &post), Verdict::Confirm);
+        assert_eq!(policy.navigation("GET", &post), Verdict::Allow);
         assert_eq!(policy.upload(), Verdict::Confirm);
         assert_eq!(policy.evaluate(), Verdict::Allow);
         assert_eq!(
@@ -161,7 +161,7 @@ mod tests {
             preset: Preset::Open,
             ..Policy::default()
         };
-        assert_eq!(open.navigation("POST", &post, true), Verdict::Allow);
+        assert_eq!(open.navigation("POST", &post), Verdict::Allow);
         assert_eq!(open.upload(), Verdict::Allow);
     }
 
@@ -181,6 +181,19 @@ mod tests {
             Verdict::Confirm
         );
         assert_eq!(policy.request("POST", &api, None), Verdict::Confirm);
+        let socket = url("wss://live.tracker.example/socket");
+        assert_eq!(
+            policy.request("GET", &socket, Some("https://www.shop.example")),
+            Verdict::Confirm
+        );
+        assert_eq!(
+            policy.request(
+                "GET",
+                &url("wss://live.shop.example/"),
+                Some("https://www.shop.example")
+            ),
+            Verdict::Allow
+        );
         assert_eq!(policy.request("GET", &api, None), Verdict::Allow);
         assert_eq!(policy.evaluate(), Verdict::Confirm);
     }
@@ -193,21 +206,21 @@ mod tests {
             ..Policy::default()
         };
         assert_eq!(
-            policy.navigation("POST", &url("https://www.httpbin.org/post"), true),
+            policy.navigation("POST", &url("https://www.httpbin.org/post")),
             Verdict::Allow
         );
         assert_eq!(
-            policy.navigation("GET", &url("https://docs.example.com/"), true),
+            policy.navigation("GET", &url("https://docs.example.com/")),
             Verdict::Allow
         );
         assert_eq!(
-            policy.navigation("GET", &url("https://notexample.com/"), true),
+            policy.navigation("GET", &url("https://notexample.com/")),
             Verdict::Block("notexample.com is not an allowed domain".into())
         );
-        // Frames load what the page asks for.
+        // A frame is a document the tab shows too.
         assert_eq!(
-            policy.navigation("GET", &url("https://ads.example.net/"), false),
-            Verdict::Allow
+            policy.navigation("GET", &url("https://ads.example.net/")),
+            Verdict::Block("ads.example.net is not an allowed domain".into())
         );
     }
 }

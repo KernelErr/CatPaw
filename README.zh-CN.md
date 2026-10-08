@@ -73,7 +73,7 @@ cargo build --release -p catpaw
 ./target/release/catpaw setup cursor -- --policy strict
 ```
 
-工具有 `navigate`、`snapshot`、`click`、`type`、`press`、`select`、`act`（hover、check、uncheck、focus、clear、scroll、upload、drag）、`wait`、`read`（markdown、text、links、forms、tables、find、html）、`screenshot`、`evaluate`、`tabs`、`logs` 和 `handoff`；页面打开的窗口成为新 tab。元素用 ref 指代，ref 在元素离开页面前一直有效。每个动作在页面稳定后（统计与轮询不在等待之列）返回发生了什么以及页面上变了什么：
+工具有 `navigate`、`snapshot`、`click`、`type`、`press`、`select`、`act`（hover、check、uncheck、focus、clear、scroll、upload、drag）、`wait`、`read`（markdown、text、links、forms、tables、find、html、download）、`screenshot`、`evaluate`、`tabs`、`logs` 和 `handoff`；页面打开的窗口成为新 tab。元素用 ref 指代，ref 在元素离开页面前一直有效。每个动作在页面稳定后（统计与轮询不在等待之列）返回发生了什么以及页面上变了什么：
 
 ```text
 ok click e16 button "Add to cart"
@@ -87,7 +87,7 @@ ok click e16 button "Add to cart"
 
 错误会说明下一步怎么做（`error StaleRef e13 button "Remove" (removed)`，随后是可能的替代 ref 和一行 `advice:`）。格式与协议见 [ADR 0005](docs/adr/0005-cst-snapshot-format.md) 和 [ADR 0006](docs/adr/0006-agent-protocol.md)；`cargo run -p xtask --features engine -- snapshot-bench` 在真实页面上测量快照大小。
 
-有副作用的操作要等用户批准。默认策略下，会发送数据的导航（表单提交）和上传会停下来，返回 `needs_confirmation c1: click e8 button "Login" would submit → POST https://…/authenticate (fields: username=tomsmith, password=***)`。宿主支持 MCP elicitation 时当场询问用户；否则用户在结果给出的本地页面上用 agent 看不到的密钥批准，agent 再带上 `confirmation: "c1"` 重发同一调用：被挂起的提交只发送一次，不会重新点击。`--policy strict` 还会在脚本向其他站点发送数据和 `evaluate` 之前询问，`--policy open` 什么都不问，`--trust <host>` 与 `--allowed-domain <domain>` 可以调整这两者。网站需要真人操作时（登录、面向人类的验证），`handoff` 把这个 tab 交给用户，在用户自己的浏览器里的本地页面上操作；`wait({"for":"handoff"})` 在用户完成后返回，带回此时的页面，但不包含用户输入的任何内容。`--flight-log <dir>` 记录每次调用（`--flight-screens` 为每个动作加一张截图；输入的密码只记录长度），`--profile <dir>` 在会话之间保留 cookie、localStorage、checkpoint 和记录，`--tools session` 增加保存与恢复 checkpoint 的工具。`act` 的 `kind: "upload"` 在文件输入框中选择本地文件。
+有副作用的操作要等用户批准。默认策略下，会发送数据的导航（表单提交）和上传会停下来，返回 `needs_confirmation c1: click e8 button "Login" would submit → POST https://…/authenticate (fields: username=tomsmith, password=***)`。宿主支持 MCP elicitation 时当场询问用户；否则用户在结果给出的本地页面上用 agent 看不到的密钥批准，agent 再带上 `confirmation: "c1"` 重发同一调用：被挂起的提交只发送一次，不会重新点击。`--policy strict` 还会在脚本向其他站点发送数据和 `evaluate` 之前询问，`--policy open` 什么都不问。`--trust <host>` 让发往该主机的内容不必询问；`--allowed-domain <domain>` 把 tab 能显示的文档（页面、弹窗和 frame）限制在该域名内，但不限制页面为加载资源和数据发出的请求。网站需要真人操作时（登录、面向人类的验证），`handoff` 把这个 tab 交给用户，在用户自己的浏览器里的本地页面上操作，页面要发出的任何内容都先在那里等用户允许；`wait({"for":"handoff"})` 在用户完成后返回，带回此时的页面，用户输入的内容一律遮蔽。`--flight-log <dir>` 记录每次调用（`--flight-screens` 为每个动作加一张截图；输入的密码只记录长度），`--profile <dir>` 在会话之间保留 cookie、localStorage、checkpoint 和记录，`--tools session` 增加保存与恢复 checkpoint 的工具。`act` 的 `kind: "upload"` 在文件输入框中选择本地文件。
 
 `--record-har run.har.zst` 记录会话的全部流量，`--replay-har run.har.zst` 不联网地按记录作答；再加上 `--random-seed` 和 `--time-origin`，回放结果逐字节一致。[`tests/tasks/`](tests/tasks/) 里有 18 个练习站点上的任务（Sauce Demo、Books 与 Quotes to Scrape、the-internet、TodoMVC、httpbin），每个都带录制的流量和 agent 看到的完整记录；CI 不联网地把每个任务回放两次，两次都必须与记录逐字节相同。下表是 agent 完成每个任务读到的内容，与 Playwright MCP 走同样步骤的对比：
 

@@ -232,6 +232,15 @@ pub struct RefusedRequest {
 }
 
 /// A header of a request, by name.
+/// The method of the request a CORS preflight prepares, when `request` is
+/// one.
+fn prepared_method(request: &NetRequest) -> Option<String> {
+    if !request.method.eq_ignore_ascii_case("OPTIONS") {
+        return None;
+    }
+    header(request, "access-control-request-method").map(|m| m.to_ascii_uppercase())
+}
+
 fn header<'a>(request: &'a NetRequest, name: &str) -> Option<&'a str> {
     request
         .headers
@@ -462,14 +471,15 @@ impl EngineNet {
         self.hold_ids.get() + 1
     }
 
-    /// The requests the gate holds here.
+    /// The requests the gate holds here. A held preflight is given as the
+    /// request it prepares: letting it go lets that request go.
     pub fn held_requests(&self) -> Vec<HeldRequestInfo> {
         self.held
             .borrow()
             .iter()
             .map(|h| HeldRequestInfo {
                 id: h.id,
-                method: h.request.method.clone(),
+                method: prepared_method(&h.request).unwrap_or_else(|| h.request.method.clone()),
                 url: h.request.url.clone(),
             })
             .collect()
@@ -533,11 +543,9 @@ impl EngineNet {
             return None;
         }
         let gate = self.gate.borrow().clone()?;
-        if request.method.eq_ignore_ascii_case("OPTIONS")
-            && let Some(method) = header(request, "access-control-request-method")
-        {
+        if let Some(method) = prepared_method(request) {
             let prepared = NetRequest {
-                method: method.to_ascii_uppercase(),
+                method,
                 ..request.clone()
             };
             return Some(gate(&prepared));

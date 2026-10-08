@@ -48,6 +48,14 @@ impl Session {
         let group = self.groups.get(self.routes.get(&tab)?)?;
         group.call(move |g| g.screen(tab)).ok().flatten()
     }
+    /// Whether a tab's fields hold what the user typed in a hand-off.
+    pub(super) fn holds_user_input(&self, tab: u32) -> bool {
+        self.routes
+            .get(&tab)
+            .and_then(|g| self.groups.get(g))
+            .and_then(|g| g.call(move |g| g.holds_user_input(tab)).ok())
+            .unwrap_or(false)
+    }
     pub(super) fn current_tab(&self) -> Result<u32, Failure> {
         self.current
             .ok_or_else(|| Failure::new(ErrorCode::NoTab, "no tab is open").with(advice::NO_TAB))
@@ -70,6 +78,14 @@ impl Session {
         self.openers.insert(tab, None);
         self.current = Some(tab);
         Ok(tab)
+    }
+    /// Runs `f` on the current tab's group (see [`Session::on_tab`]).
+    pub(super) fn on_current(
+        &mut self,
+        f: impl FnOnce(&mut GroupState, u32, View) -> CallResult + Send + 'static,
+    ) -> CallResult {
+        let tab = self.current_tab()?;
+        self.on_tab(tab, f)
     }
     /// Runs `f` on the group of `tab`, then catches up with the tabs the
     /// call opened or closed.

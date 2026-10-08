@@ -39,8 +39,6 @@ pub struct ActionOptions {
     pub snapshot: Option<SnapshotMode>,
     pub dialog: Option<DialogChoice>,
     pub prompt_text: Option<String>,
-    /// The confirmation (`cN`) a re-issued call carries.
-    pub confirmation: Option<String>,
 }
 
 macro_rules! action_options {
@@ -51,7 +49,6 @@ macro_rules! action_options {
                     snapshot: self.snapshot,
                     dialog: self.dialog,
                     prompt_text: self.prompt_text.clone(),
-                    confirmation: self.confirmation.clone(),
                 }
             }
         }
@@ -281,6 +278,8 @@ pub enum ReadView {
     Tables,
     Find,
     Html,
+    /// A file a navigation brought, as text.
+    Download,
 }
 
 impl ReadView {
@@ -293,6 +292,7 @@ impl ReadView {
             ReadView::Tables => "tables",
             ReadView::Find => "find",
             ReadView::Html => "html",
+            ReadView::Download => "download",
         }
     }
 }
@@ -441,6 +441,73 @@ pub enum Call {
     Session(Session),
 }
 
+impl Call {
+    /// The confirmation (`cN`) a re-issued call carries.
+    pub fn confirmation(&self) -> Option<&str> {
+        match self {
+            Call::Navigate(p) => p.confirmation.as_deref(),
+            Call::Click(p) => p.confirmation.as_deref(),
+            Call::Type(p) => p.confirmation.as_deref(),
+            Call::Fill(p) => p.confirmation.as_deref(),
+            Call::Press(p) => p.confirmation.as_deref(),
+            Call::Select(p) => p.confirmation.as_deref(),
+            Call::Act(p) => p.confirmation.as_deref(),
+            Call::Evaluate(p) => p.confirmation.as_deref(),
+            Call::Snapshot(_)
+            | Call::Read(_)
+            | Call::Screenshot(_)
+            | Call::Tabs(_)
+            | Call::Wait(_)
+            | Call::Logs(_)
+            | Call::Handoff(_)
+            | Call::Session(_) => None,
+        }
+    }
+
+    /// Whether the call works on the current tab's page: reading it counts.
+    pub fn uses_page(&self) -> bool {
+        match self {
+            Call::Navigate(_)
+            | Call::Snapshot(_)
+            | Call::Click(_)
+            | Call::Type(_)
+            | Call::Fill(_)
+            | Call::Press(_)
+            | Call::Select(_)
+            | Call::Act(_)
+            | Call::Read(_)
+            | Call::Screenshot(_)
+            | Call::Evaluate(_)
+            | Call::Logs(_) => true,
+            Call::Wait(p) => p.until != WaitFor::Handoff,
+            Call::Tabs(_) | Call::Handoff(_) | Call::Session(_) => false,
+        }
+    }
+
+    /// Whether the call may change a page or the context (cookies,
+    /// storage, the tabs open), as opposed to only reading them.
+    pub fn changes_page(&self) -> bool {
+        match self {
+            Call::Navigate(_)
+            | Call::Click(_)
+            | Call::Type(_)
+            | Call::Fill(_)
+            | Call::Press(_)
+            | Call::Select(_)
+            | Call::Act(_)
+            | Call::Evaluate(_)
+            | Call::Wait(_) => true,
+            Call::Tabs(p) => p.op != TabsOp::List,
+            Call::Session(p) => p.op != SessionOp::List,
+            Call::Snapshot(_)
+            | Call::Read(_)
+            | Call::Screenshot(_)
+            | Call::Logs(_)
+            | Call::Handoff(_) => false,
+        }
+    }
+}
+
 fn args<T: DeserializeOwned>(value: serde_json::Value) -> Result<T, String> {
     let value = match value {
         serde_json::Value::Null => serde_json::Value::Object(Default::default()),
@@ -498,6 +565,24 @@ mod tests {
         ));
         let err = parse("click", serde_json::Value::Null).unwrap_err();
         assert!(err.contains("missing field `target`"), "{err}");
+    }
+
+    #[test]
+    fn calls_say_what_they_touch() {
+        let call = |name: &str, args| parse(name, args).unwrap();
+        let click = call("click", json!({"target": "e1", "confirmation": "c2"}));
+        assert_eq!(click.confirmation(), Some("c2"));
+        assert!(click.uses_page() && click.changes_page());
+        let read = call("read", json!({"view": "text"}));
+        assert_eq!(read.confirmation(), None);
+        assert!(read.uses_page() && !read.changes_page());
+        let handoff_wait = call("wait", json!({"for": "handoff"}));
+        assert!(!handoff_wait.uses_page() && handoff_wait.changes_page());
+        assert!(call("wait", json!({"for": "settled"})).uses_page());
+        assert!(!call("tabs", json!({"op": "list"})).changes_page());
+        assert!(call("tabs", json!({"op": "close"})).changes_page());
+        assert!(!call("session", json!({"op": "list"})).changes_page());
+        assert!(call("session", json!({"op": "restore", "name": "a"})).changes_page());
     }
 
     #[test]

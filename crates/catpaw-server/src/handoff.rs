@@ -18,10 +18,11 @@ use serde_json::{Value, json};
 
 use crate::http::{Request, escape, respond, respond_bytes};
 use crate::local::Pages;
-use crate::tab::GroupState;
+use crate::tab::{GroupState, HandState};
 
-/// How long a hand-off nobody waits for keeps its page.
-const LIFETIME: Duration = Duration::from_secs(1800);
+/// How long a hand-off nobody waits for keeps its page, and how long one
+/// given back waits for the agent.
+pub(crate) const LIFETIME: Duration = Duration::from_secs(1800);
 
 /// What the user does to the tab.
 #[derive(Debug, Clone)]
@@ -49,11 +50,41 @@ impl Driver {
         self.group.call(move |g| g.screen(tab)).ok().flatten()
     }
 
-    fn input(&self, input: Input) -> Result<(String, String), String> {
+    fn input(&self, input: Input) -> Result<HandState, String> {
         let tab = self.tab;
         self.group
             .call(move |g| g.hand_input(tab, input))
             .map_err(|_| "the tab is gone".to_string())?
+    }
+
+    fn state(&self) -> Result<HandState, String> {
+        let tab = self.tab;
+        self.group
+            .call(move |g| g.hand_view(tab))
+            .map_err(|_| "the tab is gone".to_string())?
+    }
+
+    fn decide(&self, ids: Vec<u64>, allow: bool) -> Result<HandState, String> {
+        let tab = self.tab;
+        self.group
+            .call(move |g| g.hand_decide(tab, &ids, allow))
+            .map_err(|_| "the tab is gone".to_string())?
+    }
+}
+
+/// A handed-over tab's state as the hand-off page reads it.
+fn state_json(state: Result<HandState, String>) -> Value {
+    match state {
+        Ok(state) => json!({
+            "url": state.url,
+            "title": state.title,
+            "held": state
+                .held
+                .iter()
+                .map(|(id, what)| json!({"id": id, "what": what}))
+                .collect::<Vec<_>>(),
+        }),
+        Err(error) => json!({"error": error}),
     }
 }
 
@@ -61,9 +92,27 @@ struct Handoff {
     tab: u32,
     reason: String,
     token: String,
-    done: bool,
+    /// When the user gave the tab back.
+    done: Option<Instant>,
     started: Instant,
     driver: Driver,
+}
+
+impl Handoff {
+    /// Over without the agent: the user kept the tab past the lifetime,
+    /// or gave it back that long ago.
+    fn lapsed(&self) -> bool {
+        self.done.unwrap_or(self.started).elapsed() >= LIFETIME
+    }
+}
+
+/// Where a hand-off stands.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Standing {
+    WithUser(u32),
+    GivenBack(u32),
+    /// The user did not give the tab back within the lifetime.
+    Lapsed(u32),
 }
 
 #[derive(Default)]
@@ -84,6 +133,13 @@ pub struct Handoffs {
     store: SharedStore,
 }
 
+impl Store {
+    /// Forgets the hand-offs that are over without the agent.
+    fn prune(&mut self) {
+        self.items.retain(|_, h| !h.lapsed());
+    }
+}
+
 impl Handoffs {
     pub fn new() -> Self {
         Self::default()
@@ -102,10 +158,9 @@ impl Handoffs {
         group: GroupCaller<GroupState>,
     ) -> std::io::Result<(u32, String)> {
         self.close_for_tab(tab);
-        let mut bytes = [0u8; 16];
-        getrandom::fill(&mut bytes).map_err(|e| std::io::Error::other(e.to_string()))?;
-        let token: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
+        let token = crate::local::random_hex(16)?;
         let mut store = lock(&self.store);
+        store.prune();
         store.next += 1;
         let id = store.next;
         store.items.insert(
@@ -114,7 +169,7 @@ impl Handoffs {
                 tab,
                 reason: reason.to_string(),
                 token: token.clone(),
-                done: false,
+                done: None,
                 started: Instant::now(),
                 driver: Driver { group, tab },
             },
@@ -122,15 +177,26 @@ impl Handoffs {
         Ok((id, format!("/handoff/h{id}?t={token}")))
     }
 
-    /// The tab of hand-off `hN` and whether the user gave it back.
-    pub fn state(&self, id: u32) -> Option<(u32, bool)> {
-        lock(&self.store).items.get(&id).map(|h| (h.tab, h.done))
+    /// Where hand-off `hN` stands; one that lapsed is forgotten once said.
+    pub(crate) fn state(&self, id: u32) -> Option<Standing> {
+        let mut store = lock(&self.store);
+        let handoff = store.items.get(&id)?;
+        let standing = match handoff.done {
+            Some(_) => Standing::GivenBack(handoff.tab),
+            None if handoff.lapsed() => Standing::Lapsed(handoff.tab),
+            None => Standing::WithUser(handoff.tab),
+        };
+        if handoff.lapsed() {
+            store.items.remove(&id);
+        }
+        Some(standing)
     }
 
     /// The latest hand-off not waited for yet (given back or not), of
     /// `tab` when there is one.
     pub fn open(&self, tab: Option<u32>) -> Option<u32> {
         let store = lock(&self.store);
+        let store = &*store;
         tab.and_then(|tab| {
             store
                 .items
@@ -147,7 +213,7 @@ impl Handoffs {
         lock(&self.store)
             .items
             .iter()
-            .find(|(_, h)| h.tab == tab && !h.done && h.started.elapsed() < LIFETIME)
+            .find(|(_, h)| h.tab == tab && h.done.is_none() && !h.lapsed())
             .map(|(id, _)| *id)
     }
 
@@ -186,14 +252,14 @@ pub(crate) fn handle(
         lock(&pages.handoffs)
             .items
             .get(&id)
-            .filter(|h| h.started.elapsed() < LIFETIME)
+            .filter(|h| !h.lapsed())
             .map(|h| {
                 (
                     id,
                     h.token.clone(),
                     h.reason.clone(),
                     h.tab,
-                    h.done,
+                    h.done.is_some(),
                     h.driver.clone(),
                 )
             })
@@ -264,15 +330,31 @@ pub(crate) fn handle(
                     );
                 }
             };
-            let body = match driver.input(input) {
-                Ok((url, title)) => json!({"url": url, "title": title}),
-                Err(error) => json!({"error": error}),
-            };
+            let body = state_json(driver.input(input));
+            respond(stream, "200 OK", "application/json", &[], &body.to_string())
+        }
+        ("GET", "state") => {
+            let body = state_json(driver.state());
+            respond(stream, "200 OK", "application/json", &[], &body.to_string())
+        }
+        // The user lets go, or drops, what the page holds.
+        ("POST", "decide") if !done => {
+            let decision: Value = serde_json::from_slice(&request.body).unwrap_or(Value::Null);
+            let ids: Vec<u64> = decision["ids"]
+                .as_array()
+                .map(|ids| ids.iter().filter_map(Value::as_u64).collect())
+                .unwrap_or_default();
+            let allow = decision["allow"] == json!(true);
+            pages.journal(
+                "handoff-decision",
+                json!({"id": format!("h{id}"), "holds": ids, "allowed": allow}),
+            );
+            let body = state_json(driver.decide(ids, allow));
             respond(stream, "200 OK", "application/json", &[], &body.to_string())
         }
         ("POST", "done") => {
             if let Some(handoff) = lock(&pages.handoffs).items.get_mut(&id) {
-                handoff.done = true;
+                handoff.done.get_or_insert_with(Instant::now);
             }
             pages.journal("handoff-given-back", json!({"id": format!("h{id}")}));
             respond(stream, "200 OK", "application/json", &[], "{\"done\":true}")
@@ -286,7 +368,7 @@ fn viewer(id: u32, tab: u32, reason: &str, done: bool, key_file: &str) -> String
     let status = if done {
         "<p class=note>This tab was given back to the agent.</p>".to_string()
     } else {
-        "<p class=note>Click the page to click it, type while it is selected, scroll over it. The agent does not see what you type: fields you typed into show to it masked.</p>".to_string()
+        "<p class=note>Click the page to click it, type while it is selected, scroll over it. The agent does not see what you type: fields you typed into show to it masked. Anything the page would send waits above for you to allow it.</p>".to_string()
     };
     format!(
         r#"<!doctype html><html lang=en><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
@@ -302,34 +384,70 @@ input{{font:inherit;padding:.35rem;width:min(28rem,100%)}}
 #screen{{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:.4rem;cursor:pointer;outline-offset:2px}}
 #screen:focus{{outline:2px solid var(--accent)}}
 .note{{font-size:.85rem;opacity:.75}}
+#held{{border:1px solid var(--accent);border-radius:.4rem;padding:.5rem .75rem;margin:.5rem 0}}
+#held li{{overflow-wrap:anywhere}} #held .block{{background:transparent;color:inherit}}
 </style>
 <header><div><h1>Hand-off h{id}: tab t{tab}</h1><div class=why>{reason}</div></div><button id=done>Done, give it back</button></header>
-<div id=keyrow hidden><p><label>Approval key <input id=key type=password autocomplete=off></label> <button id=use>Use</button><br><small>From <code>{key_file}</code>; this browser remembers it.</small></p></div>
+<div id=keyrow hidden><p><label>Approval key <input id=key type=password autocomplete=off></label> <button id=use>Use</button><br><small>From <code>{key_file}</code>. This browser keeps a pass for this session only. <label><input id=remember type=checkbox> Remember the key itself here</label></small></p></div>
 <div id=where></div>
+<div id=held hidden><p>The page would:</p><ul id=heldlist></ul><button id=allow>Allow</button> <button id=block class=block>Block</button></div>
 <img id=screen tabindex=0 alt="The tab the agent handed over">
 {status}
 <script>
 const base = location.pathname, q = location.search;
 const img = document.getElementById('screen'), where = document.getElementById('where');
 let key = null;
-try {{ key = localStorage.getItem('catpaw-approval-key'); }} catch (e) {{}}
+try {{ key = localStorage.getItem('catpaw-approval-key') || localStorage.getItem('catpaw-session-token'); }} catch (e) {{}}
 const keyrow = document.getElementById('keyrow');
 function askKey() {{ keyrow.hidden = false; }}
-document.getElementById('use').onclick = () => {{
-  key = document.getElementById('key').value.trim();
-  try {{ localStorage.setItem('catpaw-approval-key', key); }} catch (e) {{}}
+function forget() {{
+  try {{ localStorage.removeItem('catpaw-approval-key'); localStorage.removeItem('catpaw-session-token'); }} catch (e) {{}}
+  key = null;
+}}
+document.getElementById('use').onclick = async () => {{
+  const typed = document.getElementById('key').value.trim();
+  try {{
+    const r = await fetch('/session', {{method: 'POST', headers: {{'Content-Type': 'application/json'}}, body: JSON.stringify({{key: typed}})}});
+    if (!r.ok) {{ askKey(); return; }}
+    key = (await r.json()).token;
+    localStorage.setItem('catpaw-session-token', key);
+    if (document.getElementById('remember').checked) localStorage.setItem('catpaw-approval-key', typed);
+  }} catch (e) {{}}
   keyrow.hidden = true;
   refresh();
+  state();
 }};
 if (!key) askKey();
 const headers = () => ({{'X-CatPaw-Key': key || '', 'Content-Type': 'application/json'}});
-let chain = Promise.resolve(), shown = null, loading = false;
+let chain = Promise.resolve(), shown = null, loading = false, heldIds = [];
+const held = document.getElementById('held'), heldlist = document.getElementById('heldlist');
+function show(s) {{
+  if (s.url) where.textContent = (s.title ? s.title + ' · ' : '') + s.url;
+  const items = s.held || [];
+  heldIds = items.map(h => h.id);
+  heldlist.replaceChildren(...items.map(h => {{ const li = document.createElement('li'); li.textContent = h.what; return li; }}));
+  held.hidden = items.length === 0;
+}}
+async function state() {{
+  if (!key) return;
+  try {{ const r = await fetch(base + '/state' + q, {{cache: 'no-store', headers: headers()}}); if (r.ok) show(await r.json()); }} catch (e) {{}}
+}}
+function decide(allow) {{
+  const ids = heldIds;
+  chain = chain.then(async () => {{
+    const r = await fetch(base + '/decide' + q, {{method: 'POST', headers: headers(), body: JSON.stringify({{ids, allow}})}});
+    if (r.ok) show(await r.json());
+    await refresh();
+  }}).catch(() => {{}});
+}}
+document.getElementById('allow').onclick = () => decide(true);
+document.getElementById('block').onclick = () => decide(false);
 async function refresh() {{
   if (loading || !key) return;
   loading = true;
   try {{
     const r = await fetch(base + '/screen' + q, {{cache: 'no-store', headers: headers()}});
-    if (r.status === 403) {{ key = null; try {{ localStorage.removeItem('catpaw-approval-key'); }} catch (e) {{}} askKey(); return; }}
+    if (r.status === 403) {{ forget(); askKey(); return; }}
     if (r.ok) {{
       const next = URL.createObjectURL(await r.blob());
       img.onload = () => {{ if (shown) URL.revokeObjectURL(shown); shown = next; }};
@@ -341,7 +459,7 @@ function send(input) {{
   if (!key) {{ askKey(); return; }}
   chain = chain.then(async () => {{
     const r = await fetch(base + '/input' + q, {{method: 'POST', headers: headers(), body: JSON.stringify(input)}});
-    if (r.ok) {{ const s = await r.json(); if (s.url) where.textContent = (s.title ? s.title + ' · ' : '') + s.url; }}
+    if (r.ok) show(await r.json());
     await refresh();
   }}).catch(() => {{}});
 }}
@@ -367,7 +485,8 @@ document.getElementById('done').addEventListener('click', async () => {{
   if (r.ok) document.body.innerHTML = '<p class=note>Given back to the agent. You can close this tab.</p>';
 }});
 refresh();
-setInterval(refresh, 1000);
+state();
+setInterval(() => {{ refresh(); state(); }}, 1000);
 </script></html>"#,
         reason = escape(reason),
         key_file = escape(key_file),

@@ -27,6 +27,17 @@ pub fn mask_value(page: &PageState, el: NodeId) {
     page.masked_values.borrow_mut().insert(el);
 }
 
+/// The values of the controls [`mask_value`] masks (those not empty):
+/// what the user typed, which nothing the agent reads should show.
+pub fn user_values(page: &PageState) -> Vec<String> {
+    let masked: Vec<NodeId> = page.masked_values.borrow().iter().copied().collect();
+    masked
+        .into_iter()
+        .filter_map(|el| raw_control_value(page, el))
+        .filter(|value| !value.is_empty())
+        .collect()
+}
+
 /// Ends [`mask_value`] for a control the agent itself sets.
 pub fn unmask_value(page: &PageState, el: NodeId) {
     page.masked_values.borrow_mut().remove(&el);
@@ -135,10 +146,63 @@ pub fn with_styles<R>(page: &PageState, f: impl FnOnce(&StyleEngine, &Dom) -> R)
     crate::stylesheets::with_styles(page, f)
 }
 
-/// A number that changes whenever what the page shows may have: its
-/// document, its style sheets, a scroll position.
+/// A number that changes whenever what an agent is shown of the page may
+/// have: its document, style sheets and scroll positions, what controls
+/// hold (values, checks, options, files, what is masked), focus, the URL,
+/// the viewport, and which elements listen for clicks.
 pub fn shown_version(page: &PageState) -> u64 {
-    crate::layout::geometry_version(page)
+    use std::hash::{DefaultHasher, Hash, Hasher};
+    fn hash_of(value: impl Hash) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        value.hash(&mut hasher);
+        hasher.finish()
+    }
+    // Unordered collections add up their items' hashes: the same contents
+    // give the same number in any order.
+    let controls = page
+        .form_state
+        .borrow()
+        .iter()
+        .map(|(node, s)| hash_of((node, &s.value, s.checked, s.selected, s.no_fallback)))
+        .fold(0u64, u64::wrapping_add);
+    let files = page
+        .file_lists
+        .borrow()
+        .iter()
+        .map(hash_of)
+        .fold(0u64, u64::wrapping_add);
+    let masked = page
+        .masked_values
+        .borrow()
+        .iter()
+        .map(hash_of)
+        .fold(0u64, u64::wrapping_add);
+    let listeners = page
+        .listeners
+        .borrow()
+        .iter()
+        .flat_map(|(target, list)| {
+            list.iter()
+                .filter(|l| !l.removed.get() && ACTIVATION_EVENTS.contains(&&*l.type_))
+                .map(move |l| {
+                    let set = match &l.kind {
+                        ListenerKind::Listener(_) => true,
+                        ListenerKind::Handler(handler) => handler.is_some(),
+                    };
+                    hash_of((target, &*l.type_, set))
+                })
+        })
+        .fold(0u64, u64::wrapping_add);
+    hash_of((
+        crate::layout::geometry_version(page),
+        controls,
+        files,
+        masked,
+        listeners,
+        page.document_state.borrow().focused,
+        page.url.borrow().as_str(),
+        (page.config.viewport_width, page.config.viewport_height),
+    ))
 }
 
 /// Lets go of the layout kept for a document that is being replaced.
@@ -194,6 +258,16 @@ pub fn scroll_within(cx: &mut Cx<'_>, el: NodeId, dy: f32) -> f32 {
     let before = window_scroll(cx.page).1;
     scroll_by(cx, 0.0, dy);
     window_scroll(cx.page).1 - before
+}
+
+/// The control a `label` element stands for (its `for`, else the control
+/// inside it); `None` for anything else.
+pub fn labeled_control(page: &PageState, label: NodeId) -> Option<NodeId> {
+    let dom = page.dom.borrow();
+    if !dom.is_html_element(label, "label") {
+        return None;
+    }
+    crate::forms::labeled_control(&dom, label)
 }
 
 /// The options of a `select`, in order (those inside `optgroup`s too).

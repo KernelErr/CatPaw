@@ -68,6 +68,7 @@ pub mod advice {
     pub const HANDED_OVER: &str =
         "advice: wait({\"for\":\"handoff\"}) until the user gives the tab back, or use another tab";
     pub const HANDOFF: &str = "advice: the user still has the tab; wait({\"for\":\"handoff\"}) again once they say they are done";
+    pub const HANDOFF_LAPSED: &str = "advice: the tab is back as the user left it; take a snapshot, or call handoff again if they still need it";
     pub const NOT_EDITABLE: &str =
         "advice: type into a text field or editable element; click the one that takes the text";
     pub const OCCLUDED: &str =
@@ -125,4 +126,18 @@ pub mod consequence {
     pub const CONSOLE: &str = "console";
     pub const BLOCKED: &str = "blocked";
     pub const NOT_SETTLED: &str = "not-settled";
+
+    /// The order consequence lines come in, whatever the order things
+    /// happened in.
+    pub const ORDER: &[&str] = &[
+        NAVIGATION_FAILED,
+        BLOCKED,
+        POPUP,
+        TAB_CLOSED,
+        DOWNLOAD,
+        DIALOG,
+        NETWORK,
+        CONSOLE,
+        NOT_SETTLED,
+    ];
 }

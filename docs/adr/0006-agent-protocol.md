@@ -22,7 +22,9 @@ of the model on every turn.
    lines are read on a thread of their own, so that a call can ask the
    client (`elicitation/create`) and read its answer while it runs;
    requests that arrive meanwhile wait their turn, pings are answered at
-   once, and a cancelled call gets no answer. A line that is not UTF-8
+   once (while a call runs on a page, as a `wait` of up to 120 s does,
+   they are answered when it returns), and a cancelled call gets no
+   answer. A line that is not UTF-8
    gets a parse error and the session goes on. SIGINT or SIGTERM (or
    stdout closing) ends the session once the call under way returns,
    writing what it keeps (recording, cookies, storage, profile); a second
@@ -33,7 +35,9 @@ of the model on every turn.
    `act` (hover, check, uncheck, focus, clear, scroll — the window, or
    inside an element with a target and `dy` — upload, drag),
    `wait`,
-   `read` (markdown, text, links, forms, tables, find, html), `screenshot`,
+   `read` (markdown, text, links, forms, tables, find, html, and download:
+   the text of a file a navigation brought, which stays in memory),
+   `screenshot`,
    `evaluate`, `tabs`, `logs` and `handoff`; `session` (checkpoints) is
    listed only when the server is started with `--tools session`. Frequent actions are tools of
    their own because their required fields differ: a schema that requires
@@ -81,7 +85,8 @@ of the model on every turn.
    `(same document)` for `pushState`. A lone change to that element ends
    the line (`ok type e2 textbox "Name" [value=- → Ada]`). Lines starting
    with `!` report consequences in a fixed order (navigation failures,
-   new tabs, closed tabs, downloads, dialogs, requests the page made —
+   what the policy blocked, new tabs, closed tabs, downloads, dialogs,
+   requests the page made —
    a polling timer's routine ones only counted — console errors, and what
    kept the page busy when it did not settle). What changed on the page
    follows (decision 9). Errors say what to try next on an `advice:`
@@ -94,9 +99,10 @@ of the model on every turn.
    appears; defaults are not printed (a snapshot's header gives only what
    is not the usual: a URL the status line did not give, the title, an
    unusual viewport, scroll, focus, a filter other than the default,
-   counts when the budget left nodes out, `settled=no`); all wording comes
-   from one table
-   (`catpaw_protocol::wording`); estimators and limits are constants. A
+   counts when the budget left nodes out, `settled=no`); fixed words,
+   codes and advice come from one table (`catpaw_protocol::wording`), and
+   messages that carry details are put together the same way every time;
+   estimators and limits are constants. A
    page that did not change gives a snapshot identical but for its `sN`,
    so hosts' prompt caches keep hitting.
 7. **Sessions, groups and tabs.** A session is one browsing context
@@ -109,9 +115,11 @@ of the model on every turn.
    key or script) and choosing files to upload; `strict` adds script
    requests that send data to another site and `evaluate`; `open` asks
    for nothing (test runs). `--trust <host>` exempts a host,
-   `--allowed-domain <domain>` limits what tabs may show (anything else is
-   `blocked policy: …`; every redirect hop of a document is judged as the
-   first). Navigations and script requests (synchronous ones, and
+   `--allowed-domain <domain>` limits the documents tabs may show: pages,
+   popups and frames, every redirect hop judged as the first (anything
+   else is `blocked policy: …`, or `! blocked frame …` for a frame). It
+   does not limit the requests a page makes for its scripts, styles,
+   images and data. Navigations and script requests (synchronous ones, and
    WebSocket connections, are refused rather than held: they cannot wait)
    are held where they would leave for the network, after the action ran,
    so an approved action is let go and never carried out again; uploads
@@ -231,18 +239,26 @@ of the model on every turn.
     carries a token; acting needs the approval key as well, so the link
     alone lets nobody act): a screenshot of the tab, kept current, that
     passes the user's clicks, typing, keys and scrolling to it, and a Done
-    button. What the user does is theirs to decide, so what the policy
-    would hold for an input of theirs goes through (what it refuses stays
-    refused); what the agent's own calls held stays held. Until the tab is
-    given back, the agent's calls on it are `error Busy`. The agent calls
-    `wait({for: "handoff"})`, which returns once the user is done (or after
-    50 seconds, to be called again; at most 30 minutes; it answers pings,
-    stops when cancelled, and notices a tab that closed), with what
-    happened meanwhile (`→ https://…/welcome (POST, 200)`) and the whole
-    page; it never learns what was typed (fields the user filled show
-    `***`), and the journal keeps no hand-off input. For logins, checks
-    meant for a person (ADR 0003), and anything else the agent should not
-    do or see.
+    button. Whatever the page would send while the user has the tab (a
+    form they submit, a request a script makes) waits on that page, which
+    names it, with what they typed masked, for the user to allow or block:
+    a click of theirs never sends what a script the agent planted would
+    send behind it. What the agent's own calls held stays held, and what
+    is still held when the tab comes back is asked about as after any
+    call. Until the tab is given back, the agent's calls on it (switching
+    to it, and repeating a confirmed call there) are `error Busy`. The
+    agent calls `wait({for: "handoff"})`, which returns once the user is
+    done (or after 50 seconds, to be called again; at most 30 minutes; it
+    answers pings, stops when cancelled, and notices a tab that closed),
+    with what happened meanwhile (`→ https://…/welcome (POST, 200)`, a
+    popup the user opened) and the whole page. What the user typed into
+    fields shows `***` in snapshots, reads and confirmations until the
+    agent sets the field itself (adding to it keeps it masked), and an
+    `evaluate` in a page that holds it asks the user first, since a script
+    could read it; the journal keeps no hand-off input. A hand-off the
+    user keeps past 30 minutes lapses, and the tab is the agent's again.
+    For logins, checks meant for a person (ADR 0003), and anything else
+    the agent should not do or see.
 16. **Setting up a host.** `catpaw setup claude-code|codex|cursor` prints
     the command or configuration that registers `catpaw mcp --stdio`
     (with any `catpaw mcp` options after `--`); `--write` writes it:

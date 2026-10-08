@@ -35,11 +35,6 @@ impl ToolDef {
     }
 }
 
-/// The definition of the tool called `name`, optional ones included.
-pub fn tool(name: &str) -> Option<&'static ToolDef> {
-    TOOLS.iter().chain(OPTIONAL_TOOLS).find(|t| t.name == name)
-}
-
 /// Tools listed only when the server is asked to (`--tools session`).
 pub static OPTIONAL_TOOLS: &[ToolDef] = &[ToolDef {
     name: "session",
@@ -68,7 +63,7 @@ pub static TOOLS: &[ToolDef] = &[
     ToolDef {
         name: "snapshot",
         title: "Snapshot",
-        description: "Show the current tab as a tree: one line per element worth reading or acting on, each with a ref (e12) that other tools take as target. Actions already return what changed; call this to see the whole page again, with another filter, or one part of it.\nExample: {\"filter\":\"interactive\"}",
+        description: "Show the current tab as a tree: one line per element worth reading or acting on, each with a ref (e12) that other tools take as target. Actions already return what changed; call this for the whole page, another filter, or one part.\nExample: {\"filter\":\"interactive\"}",
         schema: r#"{"type":"object","properties":{
 "filter":{"type":"string","enum":["interesting","interactive","all"],"description":"interesting (default): controls, headings, landmarks and text; interactive: controls only; all: every element"},
 "root":{"type":"string","description":"Ref of a subtree to show alone (a [collapsed] one, say)"},
@@ -116,7 +111,7 @@ pub static TOOLS: &[ToolDef] = &[
     ToolDef {
         name: "fill",
         title: "Fill form",
-        description: "Set several fields at once: text for a text field or editable element (replacing it), true or false for a checkbox or radio button, an option label (or a list) for a select; submit presses Enter in the last field.\nExample: {\"fields\":[{\"target\":\"e3\",\"value\":\"Ada\"},{\"target\":\"e7\",\"value\":true}]}",
+        description: "Set several fields at once: text (replacing what is there), true or false for a checkbox or radio button, an option label (or a list) for a select; submit presses Enter in the last field.\nExample: {\"fields\":[{\"target\":\"e3\",\"value\":\"Ada\"},{\"target\":\"e7\",\"value\":true}]}",
         schema: r#"{"type":"object","properties":{
 "fields":{"type":"array","minItems":1,"maxItems":50,"items":{"type":"object","properties":{
 "target":{"type":"string","description":"Ref (e12), text:<visible text>, role \"name\" or css:<selector>"},
@@ -148,7 +143,7 @@ pub static TOOLS: &[ToolDef] = &[
     ToolDef {
         name: "select",
         title: "Select option",
-        description: "Choose an option of a <select> by its visible label (or value); an array chooses several in a multiple select. When nothing matches, the error lists the options.\nExample: {\"target\":\"e8\",\"option\":\"Price (low to high)\"}",
+        description: "Choose an option of a <select> by its visible label (or value); an array chooses several. When nothing matches, the error lists the options.\nExample: {\"target\":\"e8\",\"option\":\"Price (low to high)\"}",
         schema: r#"{"type":"object","properties":{
 "target":{"type":"string","description":"Ref (e12), text:<visible text>, role \"name\" or css:<selector>"},
 "option":{"anyOf":[{"type":"string"},{"type":"array","items":{"type":"string"}}]},
@@ -162,11 +157,11 @@ pub static TOOLS: &[ToolDef] = &[
     ToolDef {
         name: "act",
         title: "Other action",
-        description: "Less common element actions: hover, check, uncheck, focus, clear (empty a field), scroll (target into view, or the page by dy pixels; one screen down by default), upload (choose local files in a file input), drag (target onto to).\nExample: {\"kind\":\"check\",\"target\":\"e14\"}",
+        description: "Other actions: hover, check, uncheck, focus, clear (empty a field), scroll (the page by dy pixels, a screen by default; target alone: into view; target and dy: the box holding it), upload (local files into a file input), drag (target onto to).\nExample: {\"kind\":\"check\",\"target\":\"e14\"}",
         schema: r#"{"type":"object","properties":{
 "kind":{"type":"string","enum":["hover","check","uncheck","focus","clear","scroll","upload","drag"]},
 "target":{"type":"string","description":"Ref (e12), text:<visible text>, role \"name\" or css:<selector>"},
-"dy":{"type":"number","description":"Page scroll in pixels; negative scrolls up"},
+"dy":{"type":"number","description":"Pixels to scroll; negative scrolls up"},
 "files":{"type":"array","items":{"type":"string"},"description":"For upload: paths of local files"},
 "to":{"type":"string","description":"For drag: where to drop it (a target)"},
 "snapshot":{"type":"string","enum":["diff","full","none"]},
@@ -179,10 +174,10 @@ pub static TOOLS: &[ToolDef] = &[
     ToolDef {
         name: "read",
         title: "Read",
-        description: "Read the current tab as text rather than a tree. markdown: the content, links as [text](ref:e12); text: plain text; links: ref, text and URL per line; forms: fields with refs, values and options; tables: Markdown tables with row refs; find: where query (text or /regex/) occurs, with refs; html: the markup. Long output stops at maxTokens and says which offset continues it.\nExample: {\"view\":\"markdown\"}",
+        description: "Read the current tab as text rather than a tree. markdown: the content, links as [text](ref:e12); text: plain text; links: ref, text and URL per line; forms: fields with refs, values and options; tables: Markdown tables with row refs; find: where query (text or /regex/) occurs, with refs; html: the markup; download: the latest download as text (query names another). Long output stops at maxTokens and says which offset continues it.\nExample: {\"view\":\"markdown\"}",
         schema: r#"{"type":"object","properties":{
-"view":{"type":"string","enum":["markdown","text","links","forms","tables","find","html"]},
-"query":{"type":"string","description":"For find"},
+"view":{"type":"string","enum":["markdown","text","links","forms","tables","find","html","download"]},
+"query":{"type":"string","description":"For find, or a download's name"},
 "root":{"type":"string","description":"Ref of the part to read"},
 "main":{"type":"boolean","description":"markdown and text: only the main content, when the page marks it"},
 "offset":{"type":"integer","minimum":0},
@@ -224,7 +219,7 @@ pub static TOOLS: &[ToolDef] = &[
     ToolDef {
         name: "wait",
         title: "Wait",
-        description: "Let the page run until it settles, a text appears or goes, an element is visible, the URL contains a string, or ms milliseconds pass; or until the user gives back a tab handed over with handoff. Time the page spends only waiting on timers passes at once. Returns what changed.\nExample: {\"for\":\"text\",\"text\":\"Order placed\"}",
+        description: "Let the page run until it settles, a text appears or goes, an element is visible, the URL contains a string, or ms milliseconds pass; or until the user gives back a handed-over tab. Time the page spends only waiting on timers passes at once. Returns what changed.\nExample: {\"for\":\"text\",\"text\":\"Order placed\"}",
         schema: r#"{"type":"object","properties":{
 "for":{"type":"string","enum":["settled","text","gone","visible","url","time","handoff"]},
 "text":{"type":"string","description":"For text and gone"},
@@ -239,7 +234,7 @@ pub static TOOLS: &[ToolDef] = &[
     ToolDef {
         name: "handoff",
         title: "Hand over to the user",
-        description: "Hand the current tab to the user, on a page they open in their own browser: to log in, pass a check meant for a person, or do anything you should not do or see. Then wait({\"for\":\"handoff\"}) until they give it back; you see the page, not what they typed.\nExample: {\"reason\":\"Log in to your account\"}",
+        description: "Hand the current tab to the user, on a page they open in their own browser: to log in, pass a check meant for a person, or do anything you should not do or see. Then wait({\"for\":\"handoff\"}) until they give it back; you see the page, with what they typed masked.\nExample: {\"reason\":\"Log in to your account\"}",
         schema: r#"{"type":"object","properties":{
 "reason":{"type":"string","description":"What to ask the user to do"}
 },"additionalProperties":false}"#,

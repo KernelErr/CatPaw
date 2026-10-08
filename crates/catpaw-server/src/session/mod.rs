@@ -5,8 +5,8 @@
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
-use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use catpaw_agent::Format;
@@ -18,7 +18,7 @@ use serde_json::{Value, json};
 
 use crate::confirm::{ApprovalConfig, Confirmations, Stage, State};
 use crate::handoff::Handoffs;
-use crate::journal::{Journal, JournalConfig, redact};
+use crate::journal::{CallRecord, Journal, JournalConfig, SharedJournal};
 use crate::local::{LocalServer, Pages};
 use crate::output::{CallResult, Failure, ToolOutput};
 use crate::policy::{Policy, Verdict};
@@ -33,6 +33,9 @@ mod tabs;
 use approval::fingerprint;
 use checkpoint::Checkpoint;
 use tabs::{Group, parse_tab};
+
+/// The shortest time between two saves of the profile after calls.
+const PROFILE_EVERY: std::time::Duration = std::time::Duration::from_secs(2);
 
 /// How a session starts.
 #[derive(Clone, Debug)]
@@ -112,17 +115,6 @@ impl Host for NoHost {
     }
 }
 
-/// Whether a call changes pages or the context (and so may need the
-/// profile saved, or a screenshot in the journal).
-fn acts(name: &str, arguments: &Value) -> bool {
-    match name {
-        "navigate" | "click" | "type" | "fill" | "press" | "select" | "act" | "evaluate"
-        | "wait" | "session" => true,
-        "tabs" => arguments["op"] != json!("list"),
-        _ => false,
-    }
-}
-
 pub struct Session {
     net: SharedNet,
     options: PageOptions,
@@ -142,8 +134,12 @@ pub struct Session {
     /// The approval page and the hand-off viewer, once one was needed.
     local: Option<LocalServer>,
     /// Shared with the local pages, which record decisions as they come.
-    journal: Option<Arc<Mutex<Journal>>>,
+    journal: Option<SharedJournal>,
     profile: Option<Profile>,
+    /// When the profile was last saved after a call.
+    profile_saved: Option<Instant>,
+    /// A call changed what the profile keeps since it was last saved.
+    profile_dirty: bool,
     /// Whether a failure to save the profile was reported already.
     profile_failed: bool,
     checkpoints: BTreeMap<String, Checkpoint>,
@@ -222,8 +218,10 @@ impl Session {
             confirmations: Confirmations::new(config.approval),
             handoffs: Handoffs::new(),
             local: None,
-            journal: journal.map(|j| Arc::new(Mutex::new(j))),
+            journal: journal.map(SharedJournal::new),
             profile,
+            profile_saved: None,
+            profile_dirty: false,
             profile_failed: false,
             checkpoints: BTreeMap::new(),
             tools: config.tools,
@@ -240,8 +238,10 @@ impl Session {
             let approvals = self.confirmations.shared();
             let handoffs = self.handoffs.shared();
             let journal = self.journal.clone();
+            let token = crate::local::random_hex(32)?;
             self.local = Some(LocalServer::start(config.port, |port| Pages {
                 key,
+                token,
                 key_file,
                 port,
                 approvals,
@@ -256,19 +256,6 @@ impl Session {
     /// The optional tools this session offers.
     pub fn optional_tools(&self) -> &[String] {
         &self.tools
-    }
-
-    /// Where the journal is being written, when there is one.
-    pub fn journal_dir(&self) -> Option<PathBuf> {
-        self.journal
-            .as_ref()
-            .and_then(|j| j.lock().ok().map(|j| j.dir().to_path_buf()))
-    }
-
-    /// Approves or declines confirmation `cN` as the user (for embedders
-    /// that ask the user their own way); `false` when it is not pending.
-    pub fn decide(&mut self, id: u32, approve: bool) -> bool {
-        self.confirmations.decide(id, approve)
     }
 
     /// Writes cookies and storage to the profile, when there is one.
@@ -317,7 +304,11 @@ impl Session {
     ) -> ToolOutput {
         let started = Instant::now();
         let fingerprint = fingerprint(name, &arguments);
-        let mut output = match params::parse(name, arguments.clone()) {
+        let parsed = params::parse(name, arguments.clone());
+        // Whether the call may have changed pages or the context (and so
+        // the profile is saved, and the journal keeps a screen).
+        let acted = parsed.as_ref().is_ok_and(Call::changes_page);
+        let mut output = match parsed {
             Ok(Call::Session(_)) if !self.tools.iter().any(|t| t == "session") => {
                 Failure::bad_argument("no tool is called \"session\"").render()
             }
@@ -327,7 +318,7 @@ impl Session {
             },
             Err(message) => Failure::bad_argument(message).render(),
         };
-        self.after_call(name, &arguments, &mut output, started);
+        self.after_call(name, &arguments, &mut output, started, acted);
         output
     }
 
@@ -338,20 +329,10 @@ impl Session {
         arguments: &Value,
         output: &mut ToolOutput,
         started: Instant,
+        acted: bool,
     ) {
-        let acted = acts(name, arguments);
-        let screens = self
-            .journal
-            .as_ref()
-            .and_then(|j| j.lock().ok().map(|j| j.keeps_screens()));
-        if let Some(screens) = screens {
-            let first = output.text.lines().next().unwrap_or("");
-            let consequences: Vec<&str> = output
-                .text
-                .lines()
-                .filter(|l| l.starts_with("! "))
-                .take(10)
-                .collect();
+        if let Some(journal) = self.journal.clone() {
+            let screens = journal.lock().keeps_screens();
             let url = self
                 .current
                 .and_then(|tab| self.place_of(tab))
@@ -360,37 +341,36 @@ impl Session {
                 (true, Some(tab)) => self.screen_of(tab),
                 _ => None,
             };
-            let tab = self.current.map(|t| format!("t{t}"));
-            if let Some(journal) = &self.journal
-                && let Ok(mut journal) = journal.lock()
-            {
-                let seq = journal.write(
-                    "call",
-                    json!({
-                        "tool": name,
-                        "args": redact(name, arguments, output.secret_input),
-                        "tab": tab,
-                        "result": first.split_whitespace().next().unwrap_or(""),
-                        "line": first,
-                        "chars": output.text.len(),
-                        "ms": started.elapsed().as_millis() as u64,
-                        "url": url,
-                        "consequences": consequences,
-                    }),
-                );
-                if let Some(png) = screen {
-                    journal.screen(seq, &png);
-                }
-                // Said once, where the agent (and so the user) sees it.
-                if let Some(e) = journal.take_error() {
-                    eprintln!("catpaw: writing the journal: {e}");
-                    output
-                        .text
-                        .push_str(&format!("\n! journal: not written ({e})"));
-                }
+            let mut journal = journal.lock();
+            journal.record_call(CallRecord {
+                tool: name,
+                args: arguments,
+                secret_input: output.secret_input,
+                tab: self.current,
+                url,
+                text: &output.text,
+                took: started.elapsed(),
+                screen,
+            });
+            // Said once, where the agent (and so the user) sees it.
+            if let Some(e) = journal.take_error() {
+                eprintln!("catpaw: writing the journal: {e}");
+                output
+                    .text
+                    .push_str(&format!("\n! journal: not written ({e})"));
             }
         }
+        // Saved at most every few seconds while calls come (and whatever the
+        // time when the session ends): saving gathers every tab's storage.
+        let due = self
+            .profile_saved
+            .is_none_or(|at| at.elapsed() >= PROFILE_EVERY);
         if acted && self.profile.is_some() {
+            self.profile_dirty = true;
+        }
+        if self.profile_dirty && due {
+            self.profile_saved = Some(Instant::now());
+            self.profile_dirty = false;
             match self.save_profile() {
                 Ok(()) => self.profile_failed = false,
                 // Said once, where the agent (and so the user) sees it.
@@ -407,14 +387,12 @@ impl Session {
     }
 
     fn journal(&mut self, kind: &str, fields: Value) {
-        if let Some(journal) = &self.journal
-            && let Ok(mut journal) = journal.lock()
-        {
-            journal.write(kind, fields);
+        if let Some(journal) = &self.journal {
+            journal.lock().write(kind, fields);
         }
     }
 
-    fn dispatch(&mut self, call: Call) -> CallResult {
+    fn dispatch(&mut self, call: Call, host: &mut dyn Host) -> CallResult {
         match call {
             Call::Navigate(p) => {
                 let tab = match self.current {
@@ -430,59 +408,34 @@ impl Session {
                         params::Format::Aria => Format::Aria,
                     };
                 }
-                let tab = self.current_tab()?;
-                self.on_tab(tab, move |g, tab, view| g.snapshot(tab, p, view))
+                self.on_current(move |g, tab, view| g.snapshot(tab, p, view))
             }
-            Call::Click(p) => {
-                let tab = self.current_tab()?;
-                self.on_tab(tab, move |g, tab, view| g.click(tab, p, view))
-            }
-            Call::Type(p) => {
-                let tab = self.current_tab()?;
-                self.on_tab(tab, move |g, tab, view| g.type_text(tab, p, view))
-            }
-            Call::Fill(p) => {
-                let tab = self.current_tab()?;
-                self.on_tab(tab, move |g, tab, view| g.fill(tab, p, view))
-            }
-            Call::Press(p) => {
-                let tab = self.current_tab()?;
-                self.on_tab(tab, move |g, tab, view| g.press(tab, p, view))
-            }
-            Call::Select(p) => {
-                let tab = self.current_tab()?;
-                self.on_tab(tab, move |g, tab, view| g.select(tab, p, view))
-            }
-            Call::Act(p) => {
-                let tab = self.current_tab()?;
-                self.on_tab(tab, move |g, tab, view| g.act(tab, p, view))
-            }
-            Call::Read(p) => {
-                let tab = self.current_tab()?;
-                self.on_tab(tab, move |g, tab, _| g.read(tab, p))
-            }
-            Call::Screenshot(p) => {
-                let tab = self.current_tab()?;
-                self.on_tab(tab, move |g, tab, _| g.screenshot(tab, p))
-            }
+            Call::Click(p) => self.on_current(move |g, tab, view| g.click(tab, p, view)),
+            Call::Type(p) => self.on_current(move |g, tab, view| g.type_text(tab, p, view)),
+            Call::Fill(p) => self.on_current(move |g, tab, view| g.fill(tab, p, view)),
+            Call::Press(p) => self.on_current(move |g, tab, view| g.press(tab, p, view)),
+            Call::Select(p) => self.on_current(move |g, tab, view| g.select(tab, p, view)),
+            Call::Act(p) => self.on_current(move |g, tab, view| g.act(tab, p, view)),
+            Call::Read(p) => self.on_current(move |g, tab, _| g.read(tab, p)),
+            Call::Screenshot(p) => self.on_current(move |g, tab, _| g.screenshot(tab, p)),
             Call::Evaluate(p) => {
-                let tab = self.current_tab()?;
-                self.on_tab(tab, move |g, tab, _| g.evaluate(tab, p, &action_limits()))
+                self.on_current(move |g, tab, _| g.evaluate(tab, p, &action_limits()))
             }
             Call::Tabs(p) => self.tabs(p),
-            Call::Wait(p) if p.until == params::WaitFor::Handoff => {
-                self.wait_handoff(p, &mut NoHost)
-            }
-            Call::Wait(p) => {
-                let tab = self.current_tab()?;
-                self.on_tab(tab, move |g, tab, view| g.wait(tab, p, view))
-            }
+            Call::Wait(p) if p.until == params::WaitFor::Handoff => self.wait_handoff(p, host),
+            Call::Wait(p) => self.on_current(move |g, tab, view| g.wait(tab, p, view)),
             Call::Handoff(p) => self.handoff(p),
-            Call::Logs(p) => {
-                let tab = self.current_tab()?;
-                self.on_tab(tab, move |g, tab, _| g.logs(tab, p))
-            }
+            Call::Logs(p) => self.on_current(move |g, tab, _| g.logs(tab, p)),
             Call::Session(p) => self.session_tool(p),
+        }
+    }
+}
+
+impl Drop for Session {
+    /// What a call changed since the profile was last saved is kept.
+    fn drop(&mut self) {
+        if self.profile_dirty {
+            let _ = self.save_profile();
         }
     }
 }

@@ -156,7 +156,7 @@ cargo build --release -p catpaw
 
 The tools are `navigate`, `snapshot`, `click`, `type`, `press`, `select`,
 `act` (hover, check, uncheck, focus, clear, scroll, upload, drag), `wait`, `read`
-(markdown, text, links, forms, tables, find, html), `screenshot`,
+(markdown, text, links, forms, tables, find, html, download), `screenshot`,
 `evaluate`, `tabs`, `logs` and `handoff`; windows a page opens become tabs. Elements
 are named by refs that stay valid until the element leaves the page. An
 action answers with what happened and what changed on the page, once the
@@ -191,12 +191,15 @@ user approves on a local page whose address the result gives, with a key
 the agent never sees, and the agent repeats the call with
 `confirmation: "c1"`: the held submission goes, once, and nothing is
 clicked again. `--policy strict` also asks before scripts send data to
-other sites and before `evaluate`, `--policy open` asks for nothing, and
-`--trust <host>` and `--allowed-domain <domain>` adjust either.
+other sites and before `evaluate`, and `--policy open` asks for nothing.
+`--trust <host>` exempts a host from asking, and `--allowed-domain
+<domain>` limits the documents tabs show (pages, popups and frames, not
+the requests a page makes for its resources and data) to that domain.
 When a site needs a person (a login, a check meant for humans),
-`handoff` gives the user the tab on a local page in their own browser, and
+`handoff` gives the user the tab on a local page in their own browser,
+where anything the page would send waits for them to allow it, and
 `wait({"for":"handoff"})` returns once they are done, with the page as it
-is then and nothing of what they typed.
+is then and what they typed masked.
 `--flight-log <dir>` keeps a journal of every call (`--flight-screens`
 adds a screenshot per action; typed passwords are kept as their length),
 `--profile <dir>` keeps cookies, localStorage, checkpoints and the journal

@@ -25,6 +25,12 @@ const ORDER: &str = r#"<!doctype html><title>Order</title>
 </form>
 <label>Password <input type=password id=pw></label>"#;
 
+const OPENER: &str = r#"<!doctype html><title>Opener</title>
+<button id=open onclick="window.open('/closer')">Open</button>"#;
+
+const CLOSER: &str = r#"<!doctype html><title>Closer</title>
+<button id=close onclick="window.close()">Close</button>"#;
+
 const LOGIN: &str = r#"<!doctype html><title>Sign in</title>
 <form method=post action=/welcome>
   <label>User <input id=user name=user></label>
@@ -97,6 +103,10 @@ fn serve() -> (u16, Log) {
                     LOGIN.to_string()
                 } else if path == "/two-posts" {
                     TWO_POSTS.to_string()
+                } else if path == "/opener" {
+                    OPENER.to_string()
+                } else if path == "/closer" {
+                    CLOSER.to_string()
                 } else {
                     format!("<!doctype html><title>Done</title><h1>{method} {path}</h1>")
                 };
@@ -637,15 +647,34 @@ fn the_user_takes_over_and_gives_back() {
         "/input",
         &json!({"kind": "text", "text": "s3cret"}).to_string(),
     );
-    let (_, moved) = user_side(
+    let (_, entered) = user_side(
         "POST",
         "/input",
         &json!({"kind": "key", "key": "Enter"}).to_string(),
     );
+    // What the page would send waits on the user's page, what they typed
+    // masked there too: an input alone sends nothing.
+    let entered: Value = serde_json::from_slice(&entered).unwrap();
+    let held = entered["held"].as_array().cloned().unwrap_or_default();
+    assert_eq!(held.len(), 1, "{entered}");
+    let what = held[0]["what"].as_str().unwrap();
+    assert!(
+        what.starts_with(&format!("submit → POST {}/welcome", client.base)),
+        "{what}"
+    );
+    assert!(what.contains("user=***, pass=***"), "{what}");
+    assert!(
+        posts(&client.log).is_empty(),
+        "nothing sent before the user allows it"
+    );
+    let (_, state) = user_side("GET", "/state", "");
+    assert!(String::from_utf8_lossy(&state).contains("submit → POST"));
+    let decision = json!({"ids": [held[0]["id"].clone()], "allow": true}).to_string();
+    let (_, moved) = user_side("POST", "/decide", &decision);
     let moved = String::from_utf8_lossy(&moved).into_owned();
     assert!(
-        moved.contains("/welcome"),
-        "the user's own submission goes: {moved}"
+        moved.contains("/welcome") && moved.contains("\"held\":[]"),
+        "the user's own submission goes once they allow it: {moved}"
     );
     assert_eq!(user_side("POST", "/done", "").0, "HTTP/1.1 200 OK");
 
@@ -671,6 +700,132 @@ fn the_user_takes_over_and_gives_back() {
     assert!(
         none.starts_with("error BadArgument no hand-off is open"),
         "{none}"
+    );
+}
+
+#[test]
+fn a_handed_over_tab_is_the_users_until_given_back() {
+    let mut client = Client::new("handoff-guard", |_| {});
+    let url = format!("{}/login", client.base);
+    client.call("navigate", json!({ "url": url }));
+    // A listener the agent plants before handing over: whatever the user
+    // clicks submits the form.
+    client.call(
+        "evaluate",
+        json!({"script": "document.getElementById('user').addEventListener('click', () => document.forms[0].submit())"}),
+    );
+    let at = client.call(
+        "evaluate",
+        json!({"script": "(() => { const r = document.getElementById('user').getBoundingClientRect(); return (r.x + r.width / 2) + ',' + (r.y + r.height / 2); })()"}),
+    );
+    let (x, y) = at.lines().last().unwrap().split_once(',').unwrap();
+    let (x, y): (f64, f64) = (x.parse().unwrap(), y.parse().unwrap());
+    let started = client.call("handoff", json!({"reason": "Sign in"}));
+    let link = started
+        .split_whitespace()
+        .find(|w| w.contains("/handoff/h1?t="))
+        .unwrap()
+        .to_string();
+    let key = client.key();
+    let user_side = |method: &str, suffix: &str, body: &str| {
+        handoff_request(&link, Some(&key), method, suffix, body)
+    };
+
+    // The agent keeps off the tab meanwhile, switching to it included.
+    let switch = client.call("tabs", json!({"op": "switch", "tab": "t1"}));
+    assert!(
+        switch.starts_with("error Busy t1 is with the user"),
+        "{switch}"
+    );
+
+    // The planted submission waits for the user, who blocks it.
+    let (_, clicked) = user_side(
+        "POST",
+        "/input",
+        &json!({"kind": "click", "x": x, "y": y}).to_string(),
+    );
+    let clicked: Value = serde_json::from_slice(&clicked).unwrap();
+    let held = clicked["held"].as_array().cloned().unwrap_or_default();
+    assert_eq!(held.len(), 1, "{clicked}");
+    let decision = json!({"ids": [held[0]["id"].clone()], "allow": false}).to_string();
+    let (_, blocked) = user_side("POST", "/decide", &decision);
+    assert!(String::from_utf8_lossy(&blocked).contains("\"held\":[]"));
+    assert!(
+        posts(&client.log).is_empty(),
+        "a blocked submission never goes"
+    );
+    user_side(
+        "POST",
+        "/input",
+        &json!({"kind": "text", "text": "ada"}).to_string(),
+    );
+    assert_eq!(user_side("POST", "/done", "").0, "HTTP/1.1 200 OK");
+    let back = client.call("wait", json!({"for": "handoff"}));
+    assert!(back.starts_with("ok wait handoff h1: given back"), "{back}");
+    assert!(!back.contains("ada"), "{back}");
+
+    // What the agent adds to the user's text keeps it masked, and a
+    // script in a page holding it asks first.
+    let added = client.call(
+        "type",
+        json!({"target": "css:#user", "text": "!", "append": true}),
+    );
+    assert!(!added.contains("ada"), "{added}");
+    let script = client.call(
+        "evaluate",
+        json!({"script": "document.getElementById('user').value"}),
+    );
+    assert!(
+        script.starts_with("needs_confirmation c")
+            && script.contains("a page that holds what you typed in the hand-off"),
+        "{script}"
+    );
+}
+
+#[test]
+fn tabs_the_page_opens_or_closes_in_a_hand_off_are_followed() {
+    let mut client = Client::new("handoff-popups", |_| {});
+    let url = format!("{}/opener", client.base);
+    client.call("navigate", json!({ "url": url }));
+    let centre = |client: &mut Client, id: &str| -> (f64, f64) {
+        let text = client.call(
+            "evaluate",
+            json!({"script": format!("(() => {{ const r = document.getElementById('{id}').getBoundingClientRect(); return (r.x + r.width / 2) + ',' + (r.y + r.height / 2); }})()")}),
+        );
+        let (x, y) = text.lines().last().unwrap().split_once(',').unwrap();
+        (x.parse().unwrap(), y.parse().unwrap())
+    };
+    let open = centre(&mut client, "open");
+    let started = client.call("handoff", json!({}));
+    let link = started
+        .split_whitespace()
+        .find(|w| w.contains("/handoff/h1?t="))
+        .unwrap()
+        .to_string();
+    let key = client.key();
+    let click = |at: (f64, f64)| json!({"kind": "click", "x": at.0, "y": at.1}).to_string();
+    handoff_request(&link, Some(&key), "POST", "/input", &click(open));
+    // The popup the user opened is a tab at once.
+    let list = client.call("tabs", json!({"op": "list"}));
+    assert!(list.contains("t2 "), "{list}");
+    handoff_request(&link, Some(&key), "POST", "/done", "");
+    let back = client.call("wait", json!({"for": "handoff"}));
+    assert!(back.contains("! popup t2 "), "{back}");
+
+    // A popup the page closes while the user has it ends the wait.
+    client.call("tabs", json!({"op": "switch", "tab": "t2"}));
+    let close = centre(&mut client, "close");
+    let started = client.call("handoff", json!({}));
+    let link = started
+        .split_whitespace()
+        .find(|w| w.contains("/handoff/h2?t="))
+        .unwrap()
+        .to_string();
+    handoff_request(&link, Some(&key), "POST", "/input", &click(close));
+    let gone = client.call("wait", json!({"for": "handoff", "timeoutMs": 20000}));
+    assert!(
+        gone.starts_with("error NoTab t2 closed during hand-off h2"),
+        "{gone}"
     );
 }
 

@@ -7,7 +7,8 @@
 use std::fs::{File, OpenOptions};
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::sync::{Arc, Mutex, MutexGuard};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde_json::{Value, json};
 
@@ -27,6 +28,37 @@ pub struct Journal {
     /// The first write that failed, until reported.
     failed: Option<String>,
     reported: bool,
+}
+
+/// A journal the session and its local pages write to.
+#[derive(Clone)]
+pub(crate) struct SharedJournal(Arc<Mutex<Journal>>);
+
+impl SharedJournal {
+    pub fn new(journal: Journal) -> Self {
+        Self(Arc::new(Mutex::new(journal)))
+    }
+
+    /// The journal, also after a thread panicked while writing it: the
+    /// records after that are kept all the same.
+    pub fn lock(&self) -> MutexGuard<'_, Journal> {
+        self.0.lock().unwrap_or_else(|e| e.into_inner())
+    }
+}
+
+/// A tool call as the journal keeps it.
+pub(crate) struct CallRecord<'a> {
+    pub tool: &'a str,
+    pub args: &'a Value,
+    /// The call typed into a password field: the text is kept as a length.
+    pub secret_input: bool,
+    pub tab: Option<u32>,
+    pub url: Option<String>,
+    /// The result's text.
+    pub text: &'a str,
+    pub took: Duration,
+    /// The tab after the call, when screens are kept.
+    pub screen: Option<Vec<u8>>,
 }
 
 fn now_ms() -> u64 {
@@ -114,6 +146,36 @@ impl Journal {
         self.seq
     }
 
+    /// Writes a tool call: its arguments (what was typed into a password
+    /// field as a length), its result line and consequences, how long it
+    /// took, and the screen after it.
+    pub(crate) fn record_call(&mut self, call: CallRecord<'_>) {
+        let first = call.text.lines().next().unwrap_or("");
+        let consequences: Vec<&str> = call
+            .text
+            .lines()
+            .filter(|l| l.starts_with("! "))
+            .take(10)
+            .collect();
+        let seq = self.write(
+            "call",
+            json!({
+                "tool": call.tool,
+                "args": redact(call.tool, call.args, call.secret_input),
+                "tab": call.tab.map(|t| format!("t{t}")),
+                "result": first.split_whitespace().next().unwrap_or(""),
+                "line": first,
+                "bytes": call.text.len(),
+                "ms": call.took.as_millis() as u64,
+                "url": call.url,
+                "consequences": consequences,
+            }),
+        );
+        if let Some(png) = call.screen {
+            self.screen(seq, &png);
+        }
+    }
+
     /// Keeps a screenshot under the record `seq`.
     pub fn screen(&mut self, seq: u64, png: &[u8]) {
         let dir = self.dir.join("screens");
@@ -178,6 +240,44 @@ mod tests {
         assert_eq!(lines[1]["seq"], 2);
         assert_eq!(lines[1]["args"]["text"], "(7 characters)");
         assert!(!text.contains("hunter2"));
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = |p: &Path| std::fs::metadata(p).unwrap().permissions().mode() & 0o777;
+            assert_eq!(mode(journal.dir()), 0o700);
+            assert_eq!(mode(&journal.dir().join("journal.jsonl")), 0o600);
+        }
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn a_call_record_keeps_the_result_line_and_consequences() {
+        let root = std::env::temp_dir().join(format!("catpaw-journal-call-{}", std::process::id()));
+        let mut journal = Journal::open(
+            &JournalConfig {
+                dir: root.clone(),
+                screens: false,
+            },
+            json!({}),
+        )
+        .unwrap();
+        journal.record_call(CallRecord {
+            tool: "click",
+            args: &json!({"target": "e2"}),
+            secret_input: false,
+            tab: Some(1),
+            url: Some("https://example.com/".into()),
+            text: "ok click e2 button \"Go\"\n! network POST /api 200\n# s2 changed=1",
+            took: Duration::from_millis(12),
+            screen: None,
+        });
+        let text = std::fs::read_to_string(journal.dir().join("journal.jsonl")).unwrap();
+        let call: Value = serde_json::from_str(text.lines().nth(1).unwrap()).unwrap();
+        assert_eq!(call["type"], "call");
+        assert_eq!(call["tab"], "t1");
+        assert_eq!(call["result"], "ok");
+        assert_eq!(call["consequences"], json!(["! network POST /api 200"]));
+        assert_eq!(call["ms"], 12);
         let _ = std::fs::remove_dir_all(root);
     }
 }

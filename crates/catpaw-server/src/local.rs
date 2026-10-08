@@ -1,26 +1,28 @@
 //! The pages a session serves on 127.0.0.1 for its user: the approval page
 //! and the hand-off viewer (ADR 0006, decisions 8 and 15).
 //!
-//! One server per session, started when a page is first needed. It takes
-//! a port that stays the same between sessions while it is free, so the
-//! browser that remembered the approval key (in its storage for that
-//! origin, never in a cookie, which every port of the host would receive)
-//! keeps it. Every state-changing request needs the key; requests for
-//! other host names (DNS rebinding) or from other origins are refused. It
-//! answers a limited number of connections at a time and stops with the
-//! session.
+//! One server per session, started when a page is first needed. Every
+//! state-changing request needs the approval key, or the token the
+//! session gives for it: the pages keep that token in the browser's
+//! storage for this origin (never in a cookie, which every port of the
+//! host would receive), and it is worth nothing once the session ends.
+//! The key itself is kept there only when the user asks; the port stays
+//! the same between sessions while it is free, so the browser finds it
+//! again. Requests for other host names (DNS rebinding) or from other
+//! origins are refused. It answers a limited number of connections at a
+//! time, each for a limited time, and stops with the session.
 
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::time::Duration;
 
 use serde_json::Value;
 
 use crate::http::{Request, read_request, refuse_unread, respond};
-use crate::journal::Journal;
+use crate::journal::SharedJournal;
 
 /// The port tried first, so that the page's origin (and the key the
 /// browser keeps for it) stays the same between sessions.
@@ -28,14 +30,24 @@ pub const DEFAULT_PORT: u16 = 47115;
 /// Connections handled at once; more are turned away.
 const MAX_CONNECTIONS: usize = 16;
 
+/// `bytes` random bytes in hex: keys and tokens of the local pages.
+pub(crate) fn random_hex(bytes: usize) -> std::io::Result<String> {
+    let mut buf = vec![0u8; bytes];
+    getrandom::fill(&mut buf).map_err(|e| std::io::Error::other(e.to_string()))?;
+    Ok(buf.iter().map(|b| format!("{b:02x}")).collect())
+}
+
 /// What the pages share with the session.
 pub(crate) struct Pages {
     pub key: String,
+    /// What the pages keep in place of the key: good for this session
+    /// only.
+    pub token: String,
     pub key_file: PathBuf,
     pub port: u16,
     pub approvals: crate::confirm::SharedStore,
     pub handoffs: crate::handoff::SharedStore,
-    pub journal: Option<Arc<Mutex<Journal>>>,
+    pub journal: Option<SharedJournal>,
 }
 
 impl Pages {
@@ -47,10 +59,10 @@ impl Pages {
         ]
     }
 
-    /// Whether the request carries the approval key: in `X-CatPaw-Key`,
-    /// as a bearer token, or as `key` in its form or JSON body.
-    pub fn key_given(&self, request: &Request) -> bool {
-        let given = request
+    /// What the request gives as its key: `X-CatPaw-Key`, a bearer token,
+    /// or `key` in its form or JSON body.
+    fn given(request: &Request) -> Option<String> {
+        request
             .header("x-catpaw-key")
             .map(str::to_string)
             .or_else(|| {
@@ -59,16 +71,46 @@ impl Pages {
                     .and_then(|v| v.strip_prefix("Bearer "))
                     .map(|v| v.trim().to_string())
             })
-            .or_else(|| body_field(request, "key"));
-        given.is_some_and(|key| constant_time_eq(key.trim().as_bytes(), self.key.as_bytes()))
+            .or_else(|| body_field(request, "key"))
+            .map(|key| key.trim().to_string())
+    }
+
+    /// Whether the request carries the approval key or this session's
+    /// token for it.
+    pub fn key_given(&self, request: &Request) -> bool {
+        Self::given(request).is_some_and(|key| {
+            constant_time_eq(key.as_bytes(), self.key.as_bytes())
+                | constant_time_eq(key.as_bytes(), self.token.as_bytes())
+        })
+    }
+
+    /// `POST /session` with the key: this session's token, for the pages
+    /// to keep in place of the key.
+    fn session_token(&self, stream: TcpStream, request: &Request) -> std::io::Result<()> {
+        let key = Self::given(request).unwrap_or_default();
+        if request.method != "POST" || !constant_time_eq(key.as_bytes(), self.key.as_bytes()) {
+            return respond(
+                stream,
+                "403 Forbidden",
+                "application/json",
+                &[],
+                "{\"error\":\"wrong key\"}\n",
+            );
+        }
+        let body = serde_json::json!({ "token": self.token });
+        respond(
+            stream,
+            "200 OK",
+            "application/json",
+            &[],
+            &format!("{body}\n"),
+        )
     }
 
     /// Writes a journal record, when the session keeps a journal.
     pub fn journal(&self, kind: &str, fields: Value) {
-        if let Some(journal) = &self.journal
-            && let Ok(mut journal) = journal.lock()
-        {
-            journal.write(kind, fields);
+        if let Some(journal) = &self.journal {
+            journal.lock().write(kind, fields);
         }
     }
 }
@@ -199,6 +241,9 @@ fn handle(stream: TcpStream, pages: &Pages) -> std::io::Result<()> {
         return respond(stream, "403 Forbidden", "text/plain", &[], "wrong origin\n");
     }
     let path = request.path.split('?').next().unwrap_or("").to_string();
+    if path == "/session" {
+        return pages.session_token(stream, &request);
+    }
     if let Some(rest) = path.strip_prefix("/confirm/") {
         return crate::confirm::handle(stream, &request, rest, pages);
     }

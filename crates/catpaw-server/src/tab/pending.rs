@@ -5,9 +5,10 @@ use std::fmt::Write as _;
 
 use catpaw_agent::snapshot::truncate;
 use catpaw_engine::{
-    FrameId, Initiator, PendingReport, PendingRequest, RequestClass, StopReason, TimerClass,
+    FrameId, Initiator, PendingReport, RequestClass, RequestRecord, StopReason, TimerClass,
 };
 use catpaw_protocol::wording::{advice, consequence};
+use catpaw_web::net::RequestKind;
 use url::Url;
 
 use super::GroupState;
@@ -41,6 +42,18 @@ pub(super) fn summary(report: &PendingReport) -> Option<String> {
     (!parts.is_empty()).then(|| parts.join(","))
 }
 
+/// What kept a page busy, in a word, from how its last run stopped: for a
+/// `pending=` with nothing else to name.
+pub(super) fn stop_word(stop: Option<StopReason>) -> &'static str {
+    match stop {
+        Some(StopReason::VirtualBudget) => "timers",
+        Some(StopReason::WallBudget) => "time-limit",
+        Some(StopReason::StepBudget) => "tasks",
+        Some(StopReason::Navigation) => "navigation",
+        _ => "frames-or-workers",
+    }
+}
+
 /// A URL as short as it can be told: the path when it is on the page's
 /// origin, else host and path.
 pub(super) fn short_url(url: &Url, page: Option<&Url>) -> String {
@@ -58,9 +71,9 @@ pub(super) fn short_url(url: &Url, page: Option<&Url>) -> String {
     truncate(&out, 100)
 }
 
-fn kind_word(request: &PendingRequest) -> &'static str {
-    use catpaw_web::net::RequestKind;
-    match request.kind {
+/// What made a request, in a word: `fetch`, `xhr`, `stylesheet`, ...
+pub(super) fn kind_word(kind: RequestKind) -> &'static str {
+    match kind {
         RequestKind::Fetch => "fetch",
         RequestKind::Xhr => "xhr",
         RequestKind::Script => "script",
@@ -68,6 +81,17 @@ fn kind_word(request: &PendingRequest) -> &'static str {
         RequestKind::Document => "document",
         RequestKind::Beacon => "beacon",
         RequestKind::Other => "request",
+    }
+}
+
+/// How a request ended: its status, `failed` (with the error when
+/// `detail`), or `pending`.
+pub(super) fn outcome_word(request: &RequestRecord, detail: bool) -> String {
+    match (request.status, &request.error, request.finished) {
+        (Some(status), _, _) => status.to_string(),
+        (None, Some(e), _) if detail => format!("failed ({})", truncate(e, 80)),
+        (None, _, true) | (None, Some(_), false) => "failed".to_string(),
+        (None, None, false) => "pending".to_string(),
     }
 }
 
@@ -112,7 +136,7 @@ impl GroupState {
                 let mut line = format!(
                     "  {} {} {} {} ({:.1}s",
                     request.class.as_str(),
-                    kind_word(request),
+                    kind_word(request.kind),
                     request.method,
                     short_url(&request.url, page_url.as_ref()),
                     request.age.as_secs_f64()

@@ -948,6 +948,19 @@ fn downloads_scrolling_and_editors() {
     assert!(saved.contains("! download \"saved.html\""), "{saved}");
     let title = client.ok("evaluate", json!({"script": "document.title"}));
     assert_eq!(title, "ok evaluate\nFive", "the page stays");
+    // The files are there to read, the latest or one by name.
+    let read = client.ok("read", json!({"view": "download", "query": "data.csv"}));
+    assert_eq!(
+        read,
+        "ok read download\n\"data.csv\" (text/csv, 14 B)\nid,name\n1,Ada"
+    );
+    let latest = client.ok("read", json!({"view": "download"}));
+    assert!(latest.contains("\"saved.html\""), "{latest}");
+    let (missing, _) = client.call("read", json!({"view": "download", "query": "nope.txt"}));
+    assert!(
+        missing.starts_with("error NotFound no download is called \"nope.txt\""),
+        "{missing}"
+    );
 
     let inside = client.ok(
         "act",

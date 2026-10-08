@@ -119,16 +119,15 @@ impl GroupState {
         let url = state.url.borrow().to_string();
         let viewport = agent::viewport(&state);
         let (sx, sy) = agent::window_scroll(&state);
-        let start = root_node.map(|(frame, _, _)| frame).unwrap_or(top);
-        let (lines, total) = self.frame_lines(
-            tab,
-            start,
-            root_node.map(|(_, node, _)| node),
-            filter,
-            extra,
-            &frames,
-            0,
-        )?;
+        // An `iframe` as root shows the document inside it.
+        let (start, start_node) = match root_node {
+            Some((frame, node, _)) => match self.hosted_frame(frame, node) {
+                Some(inner) => (inner, None),
+                None => (frame, Some(node)),
+            },
+            None => (top, None),
+        };
+        let (lines, total) = self.frame_lines(tab, start, start_node, filter, extra, &frames, 0)?;
         let title = super::title_of(&state);
         // Focus on an element the page no longer shows says nothing.
         let focus = self.focus_ref(tab, top, &frames).filter(|&focused| {
@@ -318,13 +317,19 @@ impl GroupState {
             Some(t) => self.page.is_settled_in(t.root),
             None => self.page.is_settled(),
         };
-        let pending = if settled {
-            None
-        } else {
-            self.tabs
-                .get(&tab)
-                .and_then(|t| self.page.pending_of(t.root))
+        // A page not settled always says why, if only by how its run
+        // stopped.
+        let pending = match self.tabs.get(&tab).map(|t| t.root) {
+            Some(_) if settled => None,
+            Some(root) => self
+                .page
+                .pending_of(root)
                 .and_then(|p| super::pending::summary(&p))
+                .or_else(|| {
+                    let stop = self.page.frame_report(root).map(|r| r.stop);
+                    Some(super::pending::stop_word(stop).to_string())
+                }),
+            None => None,
         };
         (settled, pending)
     }
@@ -347,6 +352,18 @@ impl GroupState {
         full: Option<&str>,
     ) -> Result<String, Failure> {
         let model = self.model(tab, request.filter, request.extra, request.root.as_deref())?;
+        self.full_text_of(tab, request, view, full, model)
+    }
+
+    /// [`GroupState::full_text`] of a model built already (for the request).
+    fn full_text_of(
+        &mut self,
+        tab: u32,
+        request: &SnapRequest,
+        view: View,
+        full: Option<&str>,
+        model: Model,
+    ) -> Result<String, Failure> {
         let (settled, pending) = self.settledness(tab);
         let challenge = self.challenge(tab);
         let entry = self.tabs.get_mut(&tab).expect("model found the tab");
@@ -457,6 +474,51 @@ impl GroupState {
         }
     }
 
+    /// A diff of a page that shows what its last snapshot (with the same
+    /// filter) showed: no changes, and no model built to find that out.
+    fn unchanged_view(
+        &mut self,
+        tab: u32,
+        request: &SnapRequest,
+        view: View,
+    ) -> Result<Option<PageView>, Failure> {
+        if request.extra != ExtraAttrs::default() {
+            return Ok(None);
+        }
+        let version = self.shown_versions(tab);
+        let unchanged = self.tabs.get(&tab).is_some_and(|entry| {
+            entry
+                .history
+                .iter()
+                .rev()
+                .find(|s| s.filter == request.filter)
+                .is_some_and(|s| s.version == version)
+        });
+        if !unchanged {
+            return Ok(None);
+        }
+        let (settled, pending) = self.settledness(tab);
+        let challenge = self.challenge(tab);
+        let entry = self.tabs.get_mut(&tab).expect("checked above");
+        let id = entry.take_id();
+        let header = Header {
+            id,
+            tab: (view.tabs > 1).then(|| format!("t{}", entry.id)),
+            settled: (!settled).then_some(false),
+            pending,
+            challenge,
+            stats: Some(catpaw_agent::diff(&[], &[]).stats()),
+            ..Header::default()
+        };
+        let quiet = header.tab.is_none() && header.settled.is_none() && header.challenge.is_none();
+        let text = header.render();
+        self.mark(tab, id);
+        Ok(Some(PageView {
+            text: text.trim_end().to_string(),
+            quiet: quiet.then(Vec::new),
+        }))
+    }
+
     /// [`GroupState::diff_view`] as text.
     fn diff_or_full(
         &mut self,
@@ -478,6 +540,11 @@ impl GroupState {
         request: &SnapRequest,
         view: View,
     ) -> Result<PageView, Failure> {
+        if let Some(unchanged) = self.unchanged_view(tab, request, view)? {
+            return Ok(unchanged);
+        }
+        // The whole page goes out in place of a diff built from the same
+        // model: it is built once.
         let model = self.model(tab, request.filter, request.extra, None)?;
         let entry = self.tabs.get(&tab).expect("model found the tab");
         let baseline = entry
@@ -487,12 +554,12 @@ impl GroupState {
             .find(|s| s.filter == request.filter);
         let Some(baseline) = baseline else {
             return self
-                .full_text(tab, request, view, Some("no-baseline"))
+                .full_text_of(tab, request, view, Some("no-baseline"), model)
                 .map(PageView::whole);
         };
         if baseline.epoch != model.epoch {
             return self
-                .full_text(tab, request, view, Some("navigated"))
+                .full_text_of(tab, request, view, Some("navigated"), model)
                 .map(PageView::whole);
         }
         let diff = catpaw_agent::diff(&baseline.lines, &model.lines);
@@ -500,7 +567,7 @@ impl GroupState {
         let diff_len: usize = diff.lines.iter().map(|l| l.len() + 1).sum();
         if diff_len * 10 > rendered_len(&model.lines, view.format) * 6 || diff_len > budget {
             return self
-                .full_text(tab, request, view, Some("large"))
+                .full_text_of(tab, request, view, Some("large"), model)
                 .map(PageView::whole);
         }
         let (same_url, title_changed, scroll_from, focus_from) = (

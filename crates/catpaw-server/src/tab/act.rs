@@ -16,10 +16,10 @@ use catpaw_web::page::Cx;
 use catpaw_web::{agent, input};
 use url::Url;
 
-use super::pending::short_url;
+use super::pending::{outcome_word, short_url};
 use super::{
-    Aim, CONSOLE_LINES, EVAL_CHARS, GroupState, Tab, View, floor_char_boundary, is_live, parse_url,
-    png_size,
+    Absorbed, Aim, CONSOLE_LINES, EVAL_BYTES, GroupState, INBOX, Tab, Use, View,
+    floor_char_boundary, is_live, parse_url, png_size,
 };
 use crate::output::{CallResult, Failure, Held, ToolOutput};
 
@@ -86,9 +86,9 @@ fn secret_field(name: &str) -> bool {
         })
 }
 
-/// The fields of a submission's body, `name=value` (secrets masked,
-/// values cut short), as many as fit.
-fn describe_fields(kind: &str, body: &[u8]) -> String {
+/// The fields of a submission's body, `name=value` (secrets and what the
+/// user typed in a hand-off masked, values cut short), as many as fit.
+fn describe_fields(kind: &str, body: &[u8], typed: &[String]) -> String {
     let mut fields: Vec<(String, String)> = Vec::new();
     let lower = kind.to_ascii_lowercase();
     if lower.starts_with("application/x-www-form-urlencoded") {
@@ -124,7 +124,7 @@ fn describe_fields(kind: &str, body: &[u8]) -> String {
         .iter()
         .take(8)
         .map(|(name, value)| {
-            let value = if secret_field(name) {
+            let value = if secret_field(name) || typed.contains(value) {
                 "***".to_string()
             } else {
                 truncate(value, 40)
@@ -150,13 +150,14 @@ fn about_ignored_host(text: &str, policy: &SettlePolicy) -> bool {
         .any(|url| policy.ignores_host(&url))
 }
 
-/// What a held navigation would do, for the confirmation.
-fn describe_held(held: &HeldNavigation) -> String {
+/// What a held navigation would do, for the confirmation (`typed`: what
+/// the user typed in a hand-off, which shows masked).
+pub(super) fn describe_held(held: &HeldNavigation, typed: &[String]) -> String {
     let request = &held.request;
     let target = format!("{} {}", request.method, truncate(request.url.as_str(), 160));
     match &request.body {
         Some((kind, body)) => {
-            let fields = describe_fields(kind, body);
+            let fields = describe_fields(kind, body, typed);
             if fields.is_empty() {
                 format!("submit → {target}")
             } else {
@@ -375,16 +376,65 @@ impl GroupState {
         }
     }
 
+    /// Takes in what the page did since it was last asked: popups become
+    /// tabs and closed ones go at once; the events wait in the inbox for the
+    /// next result of the tab they concern.
+    pub(super) fn absorb_events(&mut self) {
+        for event in self.page.take_events() {
+            let (tab, which) = match &event {
+                PageEvent::PopupOpened { frame, opener, .. } => {
+                    let id = self.next_tab.fetch_add(1, Ordering::SeqCst);
+                    let opener = self.tab_of_frame(*opener);
+                    let epoch = self.page.document_epoch(*frame).unwrap_or(0);
+                    self.tabs.insert(id, Tab::new(id, *frame, opener, epoch));
+                    (opener, Some(id))
+                }
+                PageEvent::PopupClosed { frame } => {
+                    let closed = self.tabs.values().find(|t| t.root == *frame).map(|t| t.id);
+                    if let Some(id) = closed {
+                        self.tabs.remove(&id);
+                    }
+                    (None, closed)
+                }
+                PageEvent::Navigated { frame, .. }
+                | PageEvent::NavigationFailed { frame, .. }
+                | PageEvent::NavigationHeld { frame, .. }
+                | PageEvent::NavigationBlocked { frame, .. } => (self.tab_of_frame(*frame), None),
+                PageEvent::HoldDropped { .. }
+                | PageEvent::RequestBlocked { .. }
+                | PageEvent::Download { .. } => (None, None),
+            };
+            self.inbox.push(Absorbed { tab, which, event });
+        }
+        if self.inbox.len() > INBOX {
+            self.inbox.drain(..self.inbox.len() - INBOX);
+        }
+    }
+
+    /// The events of the inbox for a result of `tab`: its own, those that
+    /// name no tab, and those of tabs that are gone.
+    fn take_inbox(&mut self, tab: u32) -> Vec<Absorbed> {
+        let (mine, others): (Vec<_>, Vec<_>) =
+            std::mem::take(&mut self.inbox).into_iter().partition(|a| {
+                a.tab
+                    .is_none_or(|t| t == tab || !self.tabs.contains_key(&t))
+            });
+        self.inbox = others;
+        mine
+    }
+
     /// Collects what happened since `base`: navigations of the tab, tabs
     /// opened and closed, dialogs, requests, console errors, and what kept
     /// the page busy.
     pub(super) fn finish(&mut self, tab: u32, base: &Baseline) -> Report {
+        self.absorb_events();
         let mut report = Report::default();
         let root = self.tabs.get(&tab).map(|t| t.root);
         let mut events = Vec::new();
         let mut held_ids = Vec::new();
         let mut held_what = Vec::new();
-        for event in self.page.take_events() {
+        let typed = self.user_values(tab);
+        for Absorbed { which, event, .. } in self.take_inbox(tab) {
             match event {
                 PageEvent::Navigated {
                     frame,
@@ -402,7 +452,7 @@ impl GroupState {
                     // One the page replaced before the action ended is gone.
                     if let Some(held) = self.page.held_navigations().iter().find(|h| h.id == id) {
                         held_ids.push(id);
-                        held_what.push(describe_held(held));
+                        held_what.push(describe_held(held, &typed));
                     }
                 }
                 PageEvent::HoldDropped { id } => report.dropped.push(id),
@@ -418,9 +468,18 @@ impl GroupState {
                         truncate(url.as_str(), 160)
                     ));
                 }
-                PageEvent::NavigationBlocked { url, reason, .. } => {
+                PageEvent::NavigationBlocked { frame, url, reason } if Some(frame) == root => {
                     events.push(format!("blocked {url}: {reason}"));
                     report.blocked = Some((url, reason));
+                }
+                // A frame the policy kept from loading: the page goes on.
+                PageEvent::NavigationBlocked { url, reason, .. } => {
+                    events.push(format!("blocked frame {url}: {reason}"));
+                    report.lines.push(format!(
+                        "! {} frame {} ({reason})",
+                        consequence::BLOCKED,
+                        truncate(url.as_str(), 160)
+                    ));
                 }
                 PageEvent::NavigationFailed { frame, url, error } if Some(frame) == root => {
                     events.push(format!("navigation failed {url}: {error}"));
@@ -429,11 +488,8 @@ impl GroupState {
                         consequence::NAVIGATION_FAILED
                     ));
                 }
-                PageEvent::PopupOpened { frame, opener, url } => {
-                    let id = self.next_tab.fetch_add(1, Ordering::SeqCst);
-                    let opener = self.tab_of_frame(opener);
-                    let epoch = self.page.document_epoch(frame).unwrap_or(0);
-                    self.tabs.insert(id, Tab::new(id, frame, opener, epoch));
+                PageEvent::PopupOpened { url, .. } => {
+                    let Some(id) = which else { continue };
                     events.push(format!("popup t{id} {url}"));
                     report.lines.push(format!(
                         "! {} t{id} {} (switch with tabs)",
@@ -460,15 +516,12 @@ impl GroupState {
                         crate::files::size(size as u64)
                     ));
                 }
-                PageEvent::PopupClosed { frame } => {
-                    let closed = self.tabs.values().find(|t| t.root == frame).map(|t| t.id);
-                    if let Some(id) = closed {
-                        self.tabs.remove(&id);
-                        events.push(format!("tab closed t{id}"));
-                        report
-                            .lines
-                            .push(format!("! {} t{id}", consequence::TAB_CLOSED));
-                    }
+                PageEvent::PopupClosed { .. } => {
+                    let Some(id) = which else { continue };
+                    events.push(format!("tab closed t{id}"));
+                    report
+                        .lines
+                        .push(format!("! {} t{id}", consequence::TAB_CLOSED));
                 }
                 _ => {}
             }
@@ -518,16 +571,11 @@ impl GroupState {
                 !routine
             })
             .map(|r| {
-                let outcome = match (r.status, &r.error, r.finished) {
-                    (Some(status), _, _) => status.to_string(),
-                    (None, Some(_), _) => "failed".to_string(),
-                    (None, None, true) => "failed".to_string(),
-                    (None, None, false) => "pending".to_string(),
-                };
                 format!(
-                    "{} {} {outcome}",
+                    "{} {} {}",
                     r.method,
-                    short_url(&r.url, page_url.as_ref())
+                    short_url(&r.url, page_url.as_ref()),
+                    outcome_word(&r, false)
                 )
             })
             .collect();
@@ -569,11 +617,10 @@ impl GroupState {
                 ));
             }
         }
-        // The requests the action left held (older ones belong to earlier
-        // confirmations).
+        // The requests the action left held in the tab (older ones belong to
+        // earlier confirmations).
         let requests: Vec<_> = self
-            .page
-            .held_requests()
+            .held_requests_of(tab)
             .into_iter()
             .filter(|r| r.id >= base.watermark)
             .collect();
@@ -595,6 +642,17 @@ impl GroupState {
                 what: held_what.join(", and "),
             });
         }
+        // In a fixed order, each kind in the order it happened.
+        report.lines.sort_by_key(|line| {
+            let word = line
+                .strip_prefix("! ")
+                .and_then(|rest| rest.split_whitespace().next())
+                .unwrap_or("");
+            consequence::ORDER
+                .iter()
+                .position(|w| *w == word)
+                .unwrap_or(consequence::ORDER.len())
+        });
         if let Some(root) = root {
             report.lines.extend(self.not_settled(root));
         }
@@ -1035,7 +1093,7 @@ impl GroupState {
     pub(crate) fn type_text(&mut self, tab: u32, p: params::Type, view: View) -> CallResult {
         let options = p.options();
         let aim = match &p.target {
-            Some(target) => self.aim(tab, target)?,
+            Some(target) => self.aim_for(tab, target, Use::Text)?,
             None => {
                 let (root, state) = self.root_state(tab)?;
                 let node = agent::focused(&state).ok_or_else(|| {
@@ -1065,7 +1123,9 @@ impl GroupState {
         });
         let text = p.text;
         let (append, submit) = (p.append, p.submit);
-        if let Some(state) = self.page.frame_state(aim.frame) {
+        // A value the agent sets in full is its own; one it adds to still
+        // holds what the user typed.
+        if !append && let Some(state) = self.page.frame_state(aim.frame) {
             agent::unmask_value(state, aim.node);
         }
         let mut output = self.act_on(tab, aim, status, &options, view, move |cx, aim| {
@@ -1106,7 +1166,12 @@ impl GroupState {
         let mut shown = Vec::new();
         let mut secret = false;
         for field in &p.fields {
-            let aim = self.aim(tab, &field.target)?;
+            let wants = match &field.value {
+                params::FillValue::Checked(_) => Use::Check,
+                params::FillValue::Options(_) => Use::Choose,
+                params::FillValue::Text(_) => Use::Text,
+            };
+            let aim = self.aim_for(tab, &field.target, wants)?;
             let what = self.aimed(tab, &aim);
             let state = self
                 .page
@@ -1273,7 +1338,7 @@ impl GroupState {
 
     pub(crate) fn select(&mut self, tab: u32, p: params::Select, view: View) -> CallResult {
         let options = p.options();
-        let aim = self.aim(tab, &p.target)?;
+        let aim = self.aim_for(tab, &p.target, Use::Choose)?;
         let state = self
             .page
             .frame_state(aim.frame)
@@ -1312,7 +1377,12 @@ impl GroupState {
         let target = p
             .target
             .ok_or_else(|| Failure::bad_argument(format!("{} needs a target", kind.as_str())))?;
-        let aim = self.aim(tab, &target)?;
+        let wants = match kind {
+            params::ActKind::Check | params::ActKind::Uncheck => Use::Check,
+            params::ActKind::Clear => Use::Text,
+            _ => Use::Any,
+        };
+        let aim = self.aim_for(tab, &target, wants)?;
         let what = self.aimed(tab, &aim);
         let mut aria_checked = None;
         if matches!(kind, params::ActKind::Check | params::ActKind::Uncheck) {
@@ -1571,8 +1641,8 @@ impl GroupState {
                     text.push_str(line);
                 }
                 text.push('\n');
-                if value.len() > EVAL_CHARS {
-                    let cut = floor_char_boundary(&value, EVAL_CHARS);
+                if value.len() > EVAL_BYTES {
+                    let cut = floor_char_boundary(&value, EVAL_BYTES);
                     let _ = write!(
                         text,
                         "{}\n[truncated at {cut} of {} bytes]",
@@ -1582,7 +1652,11 @@ impl GroupState {
                 } else {
                     text.push_str(&value);
                 }
-                Ok(ToolOutput::ok(text))
+                Ok(ToolOutput {
+                    held: report.held,
+                    dropped_holds: report.dropped,
+                    ..ToolOutput::ok(text)
+                })
             }
             Err(e) => {
                 let mut failure = Failure::new(
@@ -1592,7 +1666,7 @@ impl GroupState {
                 for line in report.lines {
                     failure = failure.with(line);
                 }
-                Err(failure)
+                Err(failure.holding(report.held, report.dropped))
             }
         }
     }

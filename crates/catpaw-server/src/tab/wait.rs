@@ -82,6 +82,31 @@ impl GroupState {
         }))
     }
 
+    /// Whether what `p` waits for is so now: text shown or gone, a target
+    /// shown or gone, the URL. Settled and time are judged by the loop.
+    fn condition_met(
+        &mut self,
+        tab: u32,
+        root: FrameId,
+        p: &params::Wait,
+        needle: Option<&str>,
+    ) -> Result<bool, Failure> {
+        Ok(match p.until {
+            WaitFor::Text => self.visible_text(tab)?.contains(needle.unwrap_or("")),
+            WaitFor::Gone => match (needle, &p.target) {
+                (Some(needle), _) => !self.visible_text(tab)?.contains(needle),
+                (None, Some(target)) => !self.target_visible(tab, target)?,
+                (None, None) => true,
+            },
+            WaitFor::Visible => self.target_visible(tab, p.target.as_deref().unwrap_or(""))?,
+            WaitFor::Url => self
+                .page
+                .url_of(root)
+                .is_some_and(|u| u.as_str().contains(p.url.as_deref().unwrap_or(""))),
+            WaitFor::Settled | WaitFor::Time | WaitFor::Handoff => false,
+        })
+    }
+
     /// Page time of the tab's document: its epoch and clock.
     fn page_time(&self, root: FrameId) -> Option<(u64, f64)> {
         self.page
@@ -155,28 +180,13 @@ impl GroupState {
                 .map(|(_, met)| *met);
             let met = match (known, p.until) {
                 (Some(met), _) => met,
-                (None, WaitFor::Handoff) => true,
                 (None, WaitFor::Settled) => self.page.is_settled_in(root) && waited > 0.0,
-                (None, WaitFor::Text) => self
-                    .visible_text(tab)?
-                    .contains(needle.as_deref().unwrap_or("")),
-                (None, WaitFor::Gone) => match (&needle, &p.target) {
-                    (Some(needle), _) => !self.visible_text(tab)?.contains(needle.as_str()),
-                    (None, Some(target)) => !self.target_visible(tab, target)?,
-                    (None, None) => true,
-                },
-                (None, WaitFor::Visible) => {
-                    self.target_visible(tab, p.target.as_deref().unwrap_or(""))?
-                }
-                (None, WaitFor::Url) => self
-                    .page
-                    .url_of(root)
-                    .is_some_and(|u| u.as_str().contains(p.url.as_deref().unwrap_or(""))),
                 // An idle page has nothing for time to bring.
                 (None, WaitFor::Time) => {
                     waited.max(started.elapsed().as_secs_f64() * 1000.0) >= timeout_ms
                         || (ran && !self.page.last_run_progressed())
                 }
+                (None, _) => self.condition_met(tab, root, &p, needle.as_deref())?,
             };
             if shown {
                 checked = Some((version, met));
@@ -219,32 +229,10 @@ impl GroupState {
                 }
             } else if !self.page.last_run_progressed() && p.until != WaitFor::Time {
                 // Nothing is left to happen: check once more, then give up.
-                let met_now = match p.until {
-                    WaitFor::Text => self
-                        .visible_text(tab)?
-                        .contains(needle.as_deref().unwrap_or("")),
-                    WaitFor::Url => self
-                        .page
-                        .url_of(root)
-                        .is_some_and(|u| u.as_str().contains(p.url.as_deref().unwrap_or(""))),
-                    _ => false,
-                };
-                if !met_now && !matches!(p.until, WaitFor::Gone | WaitFor::Visible) {
-                    break Err(true);
+                if self.condition_met(tab, root, &p, needle.as_deref())? {
+                    break Ok(());
                 }
-                if matches!(p.until, WaitFor::Gone | WaitFor::Visible) {
-                    let again = match (p.until, &needle, &p.target) {
-                        (WaitFor::Gone, Some(n), _) => {
-                            !self.visible_text(tab)?.contains(n.as_str())
-                        }
-                        (WaitFor::Gone, None, Some(t)) => !self.target_visible(tab, t)?,
-                        (WaitFor::Visible, _, Some(t)) => self.target_visible(tab, t)?,
-                        _ => false,
-                    };
-                    if !again {
-                        break Err(true);
-                    }
-                }
+                break Err(true);
             }
         };
         // The slices ran without the settle policy: a short run under it

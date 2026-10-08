@@ -48,6 +48,7 @@ pub fn storage_json(storage: &Storage) -> String {
 
 /// Creates (or empties) a file only its owner can read: cookies,
 /// storage, keys and journals are as sensitive as the sessions they hold.
+/// One that was there already loses the access it gave others.
 pub(crate) fn private_file(path: &Path) -> std::io::Result<std::fs::File> {
     let mut options = std::fs::OpenOptions::new();
     options.write(true).create(true).truncate(true);
@@ -56,7 +57,13 @@ pub(crate) fn private_file(path: &Path) -> std::io::Result<std::fs::File> {
         use std::os::unix::fs::OpenOptionsExt;
         options.mode(0o600);
     }
-    options.open(path)
+    let file = options.open(path)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        file.set_permissions(std::fs::Permissions::from_mode(0o600))?;
+    }
+    Ok(file)
 }
 
 /// Creates a directory only its owner can enter; `AlreadyExists` when it
@@ -131,10 +138,6 @@ impl Profile {
         })
     }
 
-    pub fn dir(&self) -> &Path {
-        &self.dir
-    }
-
     pub fn journal_dir(&self) -> PathBuf {
         journal_dir(&self.dir)
     }
@@ -146,7 +149,14 @@ impl Profile {
     /// The saved cookie jar (JSON) and storage; nothing for a new profile.
     pub fn load(&self) -> Result<(Option<String>, Storage), String> {
         let cookies = match std::fs::read_to_string(self.dir.join("cookies.json")) {
-            Ok(text) => Some(text),
+            Ok(text) => {
+                // Checked here, so that a damaged file is said to be the
+                // profile's.
+                catpaw_net::CookieJar::new()
+                    .load_json(&text)
+                    .map_err(|e| format!("reading the profile's cookies: {e}"))?;
+                Some(text)
+            }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => None,
             Err(e) => return Err(format!("reading the profile's cookies: {e}")),
         };
@@ -169,6 +179,47 @@ impl Profile {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn what_a_profile_writes_only_its_owner_reads() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = std::env::temp_dir().join(format!("catpaw-profile-modes-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        // A file left readable by others stops being so.
+        std::fs::write(dir.join("cookies.json"), "[]").unwrap();
+        std::fs::set_permissions(
+            dir.join("cookies.json"),
+            std::fs::Permissions::from_mode(0o644),
+        )
+        .unwrap();
+        let profile = Profile::open(dir.clone()).unwrap();
+        profile.save("[]", &Storage::new()).unwrap();
+        for name in ["cookies.json", "storage.json"] {
+            let mode = std::fs::metadata(dir.join(name))
+                .unwrap()
+                .permissions()
+                .mode();
+            assert_eq!(mode & 0o777, 0o600, "{name}");
+        }
+        drop(profile);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_damaged_cookie_file_is_the_profiles() {
+        let dir =
+            std::env::temp_dir().join(format!("catpaw-profile-cookies-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("cookies.json"), "{not json").unwrap();
+        let profile = Profile::open(dir.clone()).unwrap();
+        let err = profile.load().unwrap_err();
+        drop(profile);
+        assert!(err.starts_with("reading the profile's cookies: "), "{err}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn storage_round_trips() {

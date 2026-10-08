@@ -309,9 +309,7 @@ pub(crate) fn load_or_make_key(path: &Path) -> std::io::Result<String> {
             return Ok(key);
         }
     }
-    let mut bytes = [0u8; 32];
-    getrandom::fill(&mut bytes).map_err(|e| std::io::Error::other(e.to_string()))?;
-    let key: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
+    let key = crate::local::random_hex(32)?;
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)?;
     }
@@ -430,29 +428,38 @@ fn approval_page(id: u32, confirmation: &Confirmation, state: &str, key_file: &P
     body.push_str(&format!(
         r#"<p><small>c{id}, expires in {minutes} min</small></p>
 <div id=keyrow><p><label>Approval key <input id=key type=password autocomplete=off></label><br>
-<small>From <code>{file}</code>. <label><input id=remember type=checkbox checked style="width:auto"> Remember it in this browser</label></small></p></div>
+<small>From <code>{file}</code>. This browser keeps a pass for this session only. <label><input id=remember type=checkbox style="width:auto"> Remember the key itself here (it then works for every session)</label></small></p></div>
 <p id=buttons><button id=approve>Approve</button><button id=decline>Decline</button></p>
 <p id=said></p>
 <script>
 const said = document.getElementById('said');
 const keyField = document.getElementById('key');
 let key = null;
-try {{ key = localStorage.getItem('catpaw-approval-key'); }} catch (e) {{}}
+try {{ key = localStorage.getItem('catpaw-approval-key') || localStorage.getItem('catpaw-session-token'); }} catch (e) {{}}
 if (key) document.getElementById('keyrow').hidden = true;
+function forget() {{
+  try {{ localStorage.removeItem('catpaw-approval-key'); localStorage.removeItem('catpaw-session-token'); }} catch (e) {{}}
+  key = null;
+}}
+async function keep(typed) {{
+  try {{
+    if (document.getElementById('remember').checked) localStorage.setItem('catpaw-approval-key', typed);
+    const r = await fetch('/session', {{method: 'POST', headers: {{'Content-Type': 'application/json'}}, body: JSON.stringify({{key: typed}})}});
+    if (r.ok) localStorage.setItem('catpaw-session-token', (await r.json()).token);
+  }} catch (e) {{}}
+}}
 async function decide(decision) {{
-  const k = key || keyField.value.trim();
+  const typed = key ? null : keyField.value.trim();
+  const k = key || typed;
   const r = await fetch(location.pathname, {{method: 'POST', headers: {{'Content-Type': 'application/json'}}, body: JSON.stringify({{decision, key: k}})}});
   const s = await r.json().catch(() => ({{}}));
   if (r.status === 403) {{
-    try {{ localStorage.removeItem('catpaw-approval-key'); }} catch (e) {{}}
-    key = null;
+    forget();
     document.getElementById('keyrow').hidden = false;
-    said.textContent = 'That key does not match.';
+    said.textContent = typed === null ? 'The pass this browser kept is from a session that ended: enter the key.' : 'That key does not match.';
     return;
   }}
-  if (r.ok && !key && document.getElementById('remember').checked) {{
-    try {{ localStorage.setItem('catpaw-approval-key', k); }} catch (e) {{}}
-  }}
+  if (r.ok && typed) await keep(typed);
   document.getElementById('buttons').hidden = true;
   said.textContent = s.state === 'approved' ? 'Approved. The agent can go on.'
     : s.state === 'declined' ? 'Declined. The agent is told so.'
@@ -516,6 +523,7 @@ mod tests {
         });
         let server = LocalServer::start(Some(0), |port| Pages {
             key: key.clone(),
+            token: "t".repeat(64),
             key_file: key_file.clone(),
             port,
             approvals: confirmations.shared(),
@@ -553,8 +561,34 @@ mod tests {
         );
         assert!(long.starts_with("HTTP/1.1 414"), "{long}");
         assert_eq!(confirmations.get(id).unwrap().state, State::Pending);
+        // A client that sends its request a byte at a time is cut off,
+        // and others are answered meanwhile.
+        let mut slow = TcpStream::connect(("127.0.0.1", port)).unwrap();
+        slow.write_all(b"GET /con").unwrap();
+        let started = std::time::Instant::now();
+        let meanwhile = raw(
+            port,
+            &format!("GET {path} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n\r\n"),
+        );
+        assert!(meanwhile.starts_with("HTTP/1.1 200"), "{meanwhile}");
+        let mut cut = false;
+        for _ in 0..50 {
+            std::thread::sleep(std::time::Duration::from_millis(100));
+            if slow.write_all(b"f").is_err() {
+                cut = true;
+                break;
+            }
+        }
+        assert!(cut, "the slow request was cut off");
+        assert!(started.elapsed() >= std::time::Duration::from_millis(700));
 
-        let typed = post(port, &path, "", &format!("decision=approve&key={key}"));
+        // The key buys this session's pass, which decides like the key.
+        let refused = post(port, "/session", "", "key=nope");
+        assert!(refused.starts_with("HTTP/1.1 403"), "{refused}");
+        let token = "t".repeat(64);
+        let pass = post(port, "/session", "", &format!("key={key}"));
+        assert!(pass.contains(&token), "{pass}");
+        let typed = post(port, &path, "", &format!("decision=approve&key={token}"));
         assert!(typed.starts_with("HTTP/1.1 200"), "{typed}");
         assert!(
             !typed.to_ascii_lowercase().contains("set-cookie"),

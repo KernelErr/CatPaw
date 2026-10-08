@@ -5,6 +5,7 @@
 use std::time::Duration;
 
 use super::*;
+use crate::handoff::Standing;
 
 /// How long one `wait({for: "handoff"})` waits by default: under the
 /// time hosts give a tool call; the agent waits again if the user needs
@@ -22,27 +23,6 @@ fn reason_phrase(reason: &str) -> String {
             first.to_lowercase().chain(reason.chars().skip(1)).collect()
         }
         _ => reason.to_string(),
-    }
-}
-
-/// Whether a call works on the current tab's page (and so must wait while
-/// the user has the tab).
-fn uses_page(call: &Call) -> bool {
-    match call {
-        Call::Navigate(_)
-        | Call::Snapshot(_)
-        | Call::Click(_)
-        | Call::Type(_)
-        | Call::Fill(_)
-        | Call::Press(_)
-        | Call::Select(_)
-        | Call::Act(_)
-        | Call::Read(_)
-        | Call::Screenshot(_)
-        | Call::Evaluate(_)
-        | Call::Logs(_) => true,
-        Call::Wait(p) => p.until != params::WaitFor::Handoff,
-        Call::Tabs(_) | Call::Handoff(_) | Call::Session(_) => false,
     }
 }
 
@@ -72,6 +52,11 @@ impl Session {
             .handoffs
             .start(tab, &reason, group)
             .map_err(unavailable)?;
+        // From here on, what the page holds is the user's to decide.
+        self.on_tab(tab, |g, tab, _| {
+            g.begin_handoff(tab);
+            Ok(ToolOutput::default())
+        })?;
         let url = self.local_url(&path).map_err(unavailable)?;
         self.journal(
             "handoff",
@@ -99,8 +84,18 @@ impl Session {
         let mut checked = Instant::now();
         let tab = loop {
             match self.handoffs.state(id) {
-                Some((tab, true)) => break tab,
-                Some((tab, false)) => {
+                Some(Standing::GivenBack(tab)) => break tab,
+                Some(Standing::Lapsed(tab)) => {
+                    return Err(Failure::new(
+                        ErrorCode::Timeout,
+                        format!(
+                            "h{id} lapsed: the user did not give t{tab} back within {}",
+                            crate::confirm::span(crate::handoff::LIFETIME)
+                        ),
+                    )
+                    .with(advice::HANDOFF_LAPSED));
+                }
+                Some(Standing::WithUser(tab)) => {
                     // A tab the page closed (a popup) takes its hand-off.
                     if checked.elapsed() >= Duration::from_secs(1) {
                         checked = Instant::now();
@@ -139,21 +134,27 @@ impl Session {
     }
 
     /// Refuses a call on a tab the user has: the agent neither acts on it
-    /// nor reads it until it is given back.
+    /// nor reads it (switching to it shows it) until it is given back.
     pub(super) fn refuse_handed_over(&self, call: &Call) -> Result<(), Failure> {
-        let busy = |tab: u32| self.handoffs.with_user(tab).map(|h| (tab, h));
-        let held = match call {
-            Call::Tabs(p) if p.op == params::TabsOp::Close => p
+        let tab = match call {
+            Call::Tabs(p) if matches!(p.op, params::TabsOp::Close | params::TabsOp::Switch) => p
                 .tab
                 .as_deref()
                 .and_then(|t| parse_tab(t).ok())
-                .or(self.current)
-                .and_then(busy),
-            call if uses_page(call) => self.current.and_then(busy),
+                .or(self.current),
+            call if call.uses_page() => self.current,
             _ => None,
         };
-        match held {
-            Some((tab, h)) => Err(Failure::new(
+        match tab {
+            Some(tab) => self.refuse_with_user(tab),
+            None => Ok(()),
+        }
+    }
+
+    /// `error Busy` when `tab` is with the user.
+    pub(super) fn refuse_with_user(&self, tab: u32) -> Result<(), Failure> {
+        match self.handoffs.with_user(tab) {
+            Some(h) => Err(Failure::new(
                 ErrorCode::Busy,
                 format!("t{tab} is with the user (hand-off h{h})"),
             )

@@ -36,11 +36,6 @@ impl McpServer {
         &self.session
     }
 
-    /// The session, to change.
-    pub fn session_mut(&mut self) -> &mut Session {
-        &mut self.session
-    }
-
     /// The tools this server lists: the standard ones and the optional
     /// ones the session offers.
     fn tools(&self) -> impl Iterator<Item = &'static ToolDef> + '_ {
@@ -202,51 +197,80 @@ pub fn serve_stdio_with(
         })?;
     let stopping = Arc::new(AtomicBool::new(false));
     stop_on_signal(lines_tx, stopping.clone());
-    // Lines that came while a call waited for an answer of the client's.
-    let mut queue: VecDeque<String> = VecDeque::new();
-    let mut asked = 0;
-    let outcome = loop {
-        if stopping.load(Ordering::SeqCst) {
-            break Ok(());
-        }
-        let line = match queue.pop_front() {
-            Some(line) => line,
-            None => match lines_rx.recv() {
-                Ok(Line::Message(line)) => line,
-                Ok(Line::End) | Err(_) => break Ok(()),
-            },
-        };
-        if line.trim().is_empty() {
-            continue;
-        }
-        let current = serde_json::from_str::<Value>(&line)
-            .ok()
-            .and_then(|v| v.get("id").cloned());
-        let mut host = StdioHost {
-            lines: &lines_rx,
-            queue: &mut queue,
-            asked: &mut asked,
-            current,
-            cancelled: false,
-            ended: false,
-        };
-        let reply = server.handle_line_with(&line, &mut host);
-        let (cancelled, ended) = (host.cancelled, host.ended);
-        // A cancelled request is not answered (the client stopped
-        // waiting for it).
-        if let Some(reply) = reply.filter(|_| !cancelled)
-            && let Err(e) = write_line(&reply)
-        {
-            break Err(e);
-        }
-        if ended {
-            break Ok(());
-        }
-    };
+    let outcome = server.serve_lines(&mut Stdio { lines: lines_rx }, &stopping);
     // Whatever ended the session, what it keeps (recordings, cookies,
     // storage, the profile) is written.
     on_exit(&server.session);
     outcome
+}
+
+/// Lines of JSON-RPC to and from a client: stdin and stdout here; any
+/// transport of whole messages serves the same way.
+pub(crate) trait LineTransport {
+    /// Sends one message.
+    fn send(&mut self, line: &str) -> std::io::Result<()>;
+    /// The next message, waiting up to `wait` (however long, when `None`).
+    fn recv(&mut self, wait: Option<Duration>) -> Received;
+}
+
+/// What waiting for a message brought.
+pub(crate) enum Received {
+    Line(String),
+    TimedOut,
+    /// The client is gone, or the server was asked to stop.
+    Ended,
+}
+
+impl McpServer {
+    /// Answers messages from `transport` until it ends or `stopping` is
+    /// set.
+    pub(crate) fn serve_lines(
+        &mut self,
+        transport: &mut dyn LineTransport,
+        stopping: &AtomicBool,
+    ) -> std::io::Result<()> {
+        // Messages that came while a call waited for an answer of the
+        // client's.
+        let mut queue: VecDeque<String> = VecDeque::new();
+        let mut asked = 0;
+        loop {
+            if stopping.load(Ordering::SeqCst) {
+                return Ok(());
+            }
+            let line = match queue.pop_front() {
+                Some(line) => line,
+                None => match transport.recv(None) {
+                    Received::Line(line) => line,
+                    Received::TimedOut => continue,
+                    Received::Ended => return Ok(()),
+                },
+            };
+            if line.trim().is_empty() {
+                continue;
+            }
+            let current = serde_json::from_str::<Value>(&line)
+                .ok()
+                .and_then(|v| v.get("id").cloned());
+            let mut host = LineHost {
+                transport: &mut *transport,
+                queue: &mut queue,
+                asked: &mut asked,
+                current,
+                cancelled: false,
+                ended: false,
+            };
+            let reply = self.handle_line_with(&line, &mut host);
+            let (cancelled, ended) = (host.cancelled, host.ended);
+            // A cancelled request is not answered (the client stopped
+            // waiting for it).
+            if let Some(reply) = reply.filter(|_| !cancelled) {
+                transport.send(&reply)?;
+            }
+            if ended {
+                return Ok(());
+            }
+        }
+    }
 }
 
 /// What the reading thread hands the loop.
@@ -254,6 +278,31 @@ enum Line {
     Message(String),
     /// Stdin closed, or the process was asked to stop.
     End,
+}
+
+/// Stdin, read on a thread of its own, and stdout.
+struct Stdio {
+    lines: mpsc::Receiver<Line>,
+}
+
+impl LineTransport for Stdio {
+    fn send(&mut self, line: &str) -> std::io::Result<()> {
+        write_line(line)
+    }
+
+    fn recv(&mut self, wait: Option<Duration>) -> Received {
+        let line = match wait {
+            Some(wait) => match self.lines.recv_timeout(wait) {
+                Err(mpsc::RecvTimeoutError::Timeout) => return Received::TimedOut,
+                other => other.ok(),
+            },
+            None => self.lines.recv().ok(),
+        };
+        match line {
+            Some(Line::Message(line)) => Received::Line(line),
+            Some(Line::End) | None => Received::Ended,
+        }
+    }
 }
 
 /// Ends the session (cleanly: what it keeps is written) on SIGINT or
@@ -314,12 +363,12 @@ fn write_line(line: &str) -> std::io::Result<()> {
 /// the approval page takes over.
 const ELICIT_WAIT: Duration = Duration::from_secs(300);
 
-/// The host on the other end of stdin and stdout: asks its user with
-/// `elicitation/create`, and while a call waits reads stdin for answers,
-/// answering pings at once, noticing the call's cancellation and keeping
-/// other messages for later.
-struct StdioHost<'a> {
-    lines: &'a mpsc::Receiver<Line>,
+/// The client on the other end of a line transport: asks its user with
+/// `elicitation/create`, and while a call waits reads the transport for
+/// answers, answering pings at once, noticing the call's cancellation and
+/// keeping other messages for later.
+struct LineHost<'a> {
+    transport: &'a mut dyn LineTransport,
     queue: &'a mut VecDeque<String>,
     asked: &'a mut u64,
     /// The id of the request being answered (for cancellations).
@@ -340,22 +389,22 @@ enum Heard {
     Other,
 }
 
-impl StdioHost<'_> {
+impl LineHost<'_> {
     /// Reads one line, waiting up to `wait`; `None` when nothing came or
     /// the input ended.
     fn hear(&mut self, wait: Duration, answer_to: Option<&Value>) -> Option<Heard> {
-        let line = match self.lines.recv_timeout(wait) {
-            Ok(Line::Message(line)) => line,
-            Ok(Line::End) | Err(mpsc::RecvTimeoutError::Disconnected) => {
+        let line = match self.transport.recv(Some(wait)) {
+            Received::Line(line) => line,
+            Received::Ended => {
                 self.ended = true;
                 return None;
             }
-            Err(mpsc::RecvTimeoutError::Timeout) => return None,
+            Received::TimedOut => return None,
         };
         Some(match jsonrpc::parse(&line) {
             Ok(Incoming::Response { id, body }) if Some(&id) == answer_to => Heard::Answer(body),
             Ok(Incoming::Request { id, method, .. }) if method == "ping" => {
-                let _ = write_line(&jsonrpc::result(id, json!({})));
+                let _ = self.transport.send(&jsonrpc::result(id, json!({})));
                 Heard::Other
             }
             Ok(Incoming::Notification { method, params })
@@ -374,7 +423,7 @@ impl StdioHost<'_> {
     }
 }
 
-impl Host for StdioHost<'_> {
+impl Host for LineHost<'_> {
     fn approve(&mut self, message: &str) -> Approval {
         *self.asked += 1;
         let id = Value::String(format!("catpaw-ask-{}", self.asked));
@@ -397,7 +446,7 @@ impl Host for StdioHost<'_> {
                 },
             },
         });
-        if write_line(&request.to_string()).is_err() {
+        if self.transport.send(&request.to_string()).is_err() {
             return Approval::Unavailable;
         }
         let deadline = Instant::now() + ELICIT_WAIT;
@@ -450,5 +499,119 @@ impl Host for NoElicit<'_> {
 
     fn pause(&mut self, wait: Duration) -> bool {
         self.0.pause(wait)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{Policy, Preset, SessionConfig};
+
+    /// Lines a test client sends, and what the server sent back.
+    struct Scripted {
+        incoming: VecDeque<String>,
+        sent: Vec<Value>,
+    }
+
+    impl LineTransport for Scripted {
+        fn send(&mut self, line: &str) -> std::io::Result<()> {
+            self.sent.push(serde_json::from_str(line).unwrap());
+            Ok(())
+        }
+
+        fn recv(&mut self, _wait: Option<Duration>) -> Received {
+            match self.incoming.pop_front() {
+                Some(line) => Received::Line(line),
+                None => Received::Ended,
+            }
+        }
+    }
+
+    fn call(id: u32, name: &str, arguments: Value) -> String {
+        json!({"jsonrpc": "2.0", "id": id, "method": "tools/call", "params": {"name": name, "arguments": arguments}}).to_string()
+    }
+
+    fn run(answer: Value) -> Vec<Value> {
+        let config = SessionConfig {
+            policy: Policy {
+                preset: Preset::Strict,
+                ..Policy::default()
+            },
+            ..SessionConfig::default()
+        };
+        let mut server = McpServer::new(Session::new(config).unwrap());
+        let lines = [
+            json!({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18", "capabilities": {"elicitation": {}}, "clientInfo": {"name": "test", "version": "0"}}}).to_string(),
+            call(2, "navigate", json!({"url": "about:blank"})),
+            call(3, "evaluate", json!({"script": "1 + 1"})),
+            // While the call waits for the user: a ping is answered at
+            // once, another request waits its turn.
+            json!({"jsonrpc": "2.0", "id": 99, "method": "ping"}).to_string(),
+            json!({"jsonrpc": "2.0", "id": 4, "method": "tools/list"}).to_string(),
+            json!({"jsonrpc": "2.0", "id": "catpaw-ask-1", "result": answer}).to_string(),
+        ];
+        let mut transport = Scripted {
+            incoming: lines.into_iter().collect(),
+            sent: Vec::new(),
+        };
+        server
+            .serve_lines(&mut transport, &AtomicBool::new(false))
+            .unwrap();
+        transport.sent
+    }
+
+    fn text(reply: &Value) -> &str {
+        reply["result"]["content"][0]["text"].as_str().unwrap_or("")
+    }
+
+    #[test]
+    fn a_waiting_call_answers_pings_and_keeps_other_requests_for_later() {
+        let sent = run(json!({"action": "decline"}));
+        let order: Vec<Value> = sent
+            .iter()
+            .map(|m| m.get("id").cloned().unwrap_or(Value::Null))
+            .collect();
+        assert_eq!(
+            order,
+            [
+                json!(1),
+                json!(2),
+                json!("catpaw-ask-1"),
+                json!(99),
+                json!(3),
+                json!(4)
+            ]
+        );
+        assert_eq!(sent[2]["method"], "elicitation/create");
+        assert!(
+            text(&sent[4]).starts_with("blocked user: declined c1"),
+            "{}",
+            sent[4]
+        );
+        assert!(sent[5]["result"]["tools"].is_array());
+    }
+
+    #[test]
+    fn a_cancelled_question_blocks_the_call() {
+        let sent = run(json!({"action": "cancel"}));
+        assert!(
+            text(&sent[4]).starts_with("blocked user: cancelled c1"),
+            "{}",
+            sent[4]
+        );
+    }
+
+    #[test]
+    fn only_an_explicit_yes_approves() {
+        let yes = json!({"action": "accept", "content": {"approve": true}});
+        assert_eq!(elicited(&json!({"result": yes})), Approval::Approved);
+        let no = json!({"action": "accept", "content": {"approve": false}});
+        assert_eq!(elicited(&json!({"result": no})), Approval::Declined);
+        let error = json!({"error": {"code": -32601, "message": "unknown method"}});
+        assert_eq!(elicited(&error), Approval::Unavailable);
+        assert_eq!(
+            elicited(&json!({"result": {"action": "?"}})),
+            Approval::Unavailable
+        );
     }
 }

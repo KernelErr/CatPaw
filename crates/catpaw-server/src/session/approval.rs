@@ -10,28 +10,9 @@
 use std::time::Duration;
 
 use super::*;
-use crate::confirm::{NewConfirmation, span};
+use catpaw_protocol::canonical;
 
-/// The arguments of a call as one canonical string (keys sorted), so a
-/// repeated call can be recognised.
-pub(super) fn canonical(value: &Value) -> String {
-    match value {
-        Value::Object(map) => {
-            let mut keys: Vec<&String> = map.keys().collect();
-            keys.sort();
-            let fields: Vec<String> = keys
-                .into_iter()
-                .map(|k| format!("{}:{}", Value::String(k.clone()), canonical(&map[k])))
-                .collect();
-            format!("{{{}}}", fields.join(","))
-        }
-        Value::Array(items) => {
-            let items: Vec<String> = items.iter().map(canonical).collect();
-            format!("[{}]", items.join(","))
-        }
-        other => other.to_string(),
-    }
-}
+use crate::confirm::{NewConfirmation, span};
 
 /// A call as a confirmation remembers it: the tool and its arguments,
 /// without `confirmation`.
@@ -57,18 +38,13 @@ fn repeat_call(name: &str, arguments: &Value, id: u32) -> String {
     format!("{name} {}", canonical(&args))
 }
 
-/// The confirmation a re-issued call carries.
-pub(super) fn confirmation_of(call: &Call) -> Option<&str> {
-    match call {
-        Call::Navigate(p) => p.confirmation.as_deref(),
-        Call::Click(p) => p.confirmation.as_deref(),
-        Call::Type(p) => p.confirmation.as_deref(),
-        Call::Fill(p) => p.confirmation.as_deref(),
-        Call::Press(p) => p.confirmation.as_deref(),
-        Call::Select(p) => p.confirmation.as_deref(),
-        Call::Act(p) => p.confirmation.as_deref(),
-        Call::Evaluate(p) => p.confirmation.as_deref(),
-        _ => None,
+/// ` (it waits up to 45s for them)`: how long a repeated call waits for
+/// the user's decision, when it waits.
+fn waits(wait: Duration) -> String {
+    if wait < Duration::from_secs(1) {
+        String::new()
+    } else {
+        format!(" (it waits up to {} for them)", span(wait))
     }
 }
 
@@ -99,52 +75,73 @@ impl Session {
         fingerprint: &str,
         host: &mut dyn Host,
     ) -> CallResult {
-        if let Some(id) = confirmation_of(&call) {
+        if let Some(id) = call.confirmation() {
             let id = id.to_string();
             return self.resume(name, arguments, &id, call, fingerprint, host);
         }
         self.refuse_handed_over(&call)?;
         self.refuse_key_upload(&call)?;
-        if let Call::Wait(p) = &call
-            && p.until == params::WaitFor::Handoff
-        {
-            return self.wait_handoff(p.clone(), host);
-        }
         if let Some(what) = self.ask_first(&call)? {
             let tab = self.current_tab()?;
-            let repeat = |id| repeat_call(name, arguments, id);
-            let id = self.confirmations.create(NewConfirmation {
-                tab,
-                fingerprint: fingerprint.to_string(),
-                what: what.clone(),
-                action: what.clone(),
-                stage: Stage::BeforeRunning,
-                holds: Vec::new(),
-                repeat: String::new(),
-            });
-            self.confirmations.set_repeat(id, repeat(id));
-            self.journal(
-                "confirmation",
-                json!({"id": format!("c{id}"), "what": what}),
+            let (id, repeat) = self.open_confirmation(
+                NewConfirmation {
+                    tab,
+                    fingerprint: fingerprint.to_string(),
+                    what: what.clone(),
+                    action: what.clone(),
+                    stage: Stage::BeforeRunning,
+                    holds: Vec::new(),
+                    repeat: String::new(),
+                },
+                name,
+                arguments,
             );
-            match host.approve(&approval_message(&what)) {
-                Approval::Approved => self.decided(id, true, "host"),
-                Approval::Declined => {
-                    self.decided(id, false, "host");
-                    return Ok(blocked(outcome::DECLINED, id));
-                }
-                Approval::Cancelled => {
-                    self.decided(id, false, "host");
-                    return Ok(blocked(outcome::CANCELLED, id));
-                }
+            match self.ask(id, &what, host) {
+                Approval::Approved => {}
+                Approval::Declined => return Ok(blocked(outcome::DECLINED, id)),
+                Approval::Cancelled => return Ok(blocked(outcome::CANCELLED, id)),
                 Approval::Unavailable => {
-                    self.confirmations.restart(id);
-                    return self.needs_confirmation(id, &what, "", &repeat(id));
+                    return self.needs_confirmation(id, &what, "", &repeat);
                 }
             }
         }
-        let output = self.dispatch(call)?;
+        let output = match self.dispatch(call, host) {
+            Ok(output) => output,
+            // A failed call that left something held is asked about too.
+            Err(failure) if failure.holds() => failure.render(),
+            Err(failure) => return Err(failure),
+        };
         self.after_action(name, arguments, output, fingerprint, host)
+    }
+
+    /// Opens a confirmation for the call being run: its id and the exact
+    /// call that resumes it.
+    fn open_confirmation(
+        &mut self,
+        new: NewConfirmation,
+        name: &str,
+        arguments: &Value,
+    ) -> (u32, String) {
+        let id = self.confirmations.create(new);
+        let repeat = repeat_call(name, arguments, id);
+        self.confirmations.set_repeat(id, repeat.clone());
+        (id, repeat)
+    }
+
+    /// Asks the host's user about confirmation `id`, and records the
+    /// answer; when the host cannot ask, the approval page takes over.
+    fn ask(&mut self, id: u32, what: &str, host: &mut dyn Host) -> Approval {
+        self.journal(
+            "confirmation",
+            json!({"id": format!("c{id}"), "what": what}),
+        );
+        let answer = host.approve(&approval_message(what));
+        match answer {
+            Approval::Approved => self.decided(id, true, "host"),
+            Approval::Declined | Approval::Cancelled => self.decided(id, false, "host"),
+            Approval::Unavailable => self.confirmations.restart(id),
+        }
+        answer
     }
 
     /// Records a decision and forgets the confirmation.
@@ -173,10 +170,19 @@ impl Session {
                 let into = self.describe_target(&target).unwrap_or(target);
                 Some(format!("upload {files} into {into}"))
             }
-            Call::Evaluate(p) if self.policy.evaluate() == Verdict::Confirm => Some(format!(
-                "run a script in the page: {}",
-                quote(&truncate(p.script.trim(), 200))
-            )),
+            Call::Evaluate(p) => {
+                let script = quote(&truncate(p.script.trim(), 200));
+                if self.policy.evaluate() == Verdict::Confirm {
+                    Some(format!("run a script in the page: {script}"))
+                } else if self.current.is_some_and(|tab| self.holds_user_input(tab)) {
+                    // A script could read what the user typed in a hand-off.
+                    Some(format!(
+                        "run a script in a page that holds what you typed in the hand-off: {script}"
+                    ))
+                } else {
+                    None
+                }
+            }
             _ => None,
         })
     }
@@ -244,7 +250,12 @@ impl Session {
             .text
             .split_once('\n')
             .unwrap_or((output.text.as_str(), ""));
-        let action = first.strip_prefix("ok ").unwrap_or(first).to_string();
+        // A failed call keeps its error line; the question names the tool.
+        let (action, rest) = if output.is_error {
+            (name.to_string(), output.text.as_str())
+        } else {
+            (first.strip_prefix("ok ").unwrap_or(first).to_string(), rest)
+        };
         // Nothing happened yet: a diff that says so is left out.
         let mut rest = rest
             .lines()
@@ -252,17 +263,19 @@ impl Session {
             .collect::<Vec<_>>()
             .join("\n");
         let what = format!("{action} would {}", held.what);
-        let id = self.confirmations.create(NewConfirmation {
-            tab,
-            fingerprint: fingerprint.to_string(),
-            what: what.clone(),
-            action: action.clone(),
-            stage: Stage::Held,
-            holds: held.ids.clone(),
-            repeat: repeat_call(name, arguments, 0),
-        });
-        let repeat = repeat_call(name, arguments, id);
-        self.confirmations.set_repeat(id, repeat.clone());
+        let (id, repeat) = self.open_confirmation(
+            NewConfirmation {
+                tab,
+                fingerprint: fingerprint.to_string(),
+                what: what.clone(),
+                action: action.clone(),
+                stage: Stage::Held,
+                holds: held.ids.clone(),
+                repeat: String::new(),
+            },
+            name,
+            arguments,
+        );
         for old in voided {
             let note = format!("! c{old} no longer applies: c{id} replaces it");
             rest = if rest.is_empty() {
@@ -271,13 +284,8 @@ impl Session {
                 format!("{note}\n{rest}")
             };
         }
-        self.journal(
-            "confirmation",
-            json!({"id": format!("c{id}"), "what": what}),
-        );
-        match host.approve(&approval_message(&what)) {
+        match self.ask(id, &what, host) {
             Approval::Approved => {
-                self.decided(id, true, "host");
                 let call = CallRef {
                     name,
                     arguments,
@@ -286,19 +294,14 @@ impl Session {
                 self.release(&call, tab, id, &action, &held.ids, host)
             }
             Approval::Declined => {
-                self.decided(id, false, "host");
                 self.drop_holds(tab, &held.ids);
                 Ok(blocked(outcome::DECLINED, id))
             }
             Approval::Cancelled => {
-                self.decided(id, false, "host");
                 self.drop_holds(tab, &held.ids);
                 Ok(blocked(outcome::CANCELLED, id))
             }
-            Approval::Unavailable => {
-                self.confirmations.restart(id);
-                self.needs_confirmation(id, &what, &rest, &repeat)
-            }
+            Approval::Unavailable => self.needs_confirmation(id, &what, &rest, &repeat),
         }
     }
 
@@ -306,11 +309,13 @@ impl Session {
     /// exact call to repeat.
     fn needs_confirmation(&mut self, id: u32, what: &str, rest: &str, repeat: &str) -> CallResult {
         let url = self.approval_url(id)?;
+        let config = self.confirmations.config();
         let mut text = format!(
-            "{} c{id}: {what}\n  {} {url} (expires in {}); once they approve, repeat: {repeat}",
+            "{} c{id}: {what}\n  {} {url} (expires in {}); then repeat{}: {repeat}",
             outcome::NEEDS_CONFIRMATION,
             outcome::ASK_USER,
-            span(self.confirmations.config().lifetime),
+            span(config.lifetime),
+            waits(config.decision_wait),
         );
         if !rest.is_empty() {
             text.push('\n');
@@ -358,6 +363,8 @@ impl Session {
                 confirmation.repeat
             )));
         }
+        // Nothing happens on a tab the user has, approved or not.
+        self.refuse_with_user(confirmation.tab)?;
         // An unanswered one waits a while for the user.
         let started = Instant::now();
         let wait = self.confirmations.config().decision_wait;
@@ -394,11 +401,12 @@ impl Session {
             State::Pending => {
                 let url = self.approval_url(id)?;
                 Ok(ToolOutput::ok(format!(
-                    "{} c{id} {}: {}\n  {} {url}; once they approve, repeat: {}",
+                    "{} c{id} {}: {}\n  {} {url}; then repeat{}: {}",
                     outcome::NEEDS_CONFIRMATION,
                     outcome::STILL_PENDING,
                     confirmation.what,
                     outcome::ASK_USER,
+                    waits(self.confirmations.config().decision_wait),
                     confirmation.repeat
                 )))
             }
@@ -442,7 +450,7 @@ impl Session {
                             ));
                         }
                         let previous = self.current.replace(confirmation.tab);
-                        let result = self.dispatch(call).and_then(|output| {
+                        let result = self.dispatch(call, host).and_then(|output| {
                             self.after_action(name, arguments, output, fingerprint, host)
                         });
                         if let Some(previous) = previous
