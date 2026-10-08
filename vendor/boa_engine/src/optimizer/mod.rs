@@ -104,46 +104,67 @@ impl<'context> Optimizer<'context> {
 
     /// Run the constant folding optimization on an expression.
     fn run_constant_folding_pass(&mut self, expr: &mut Expression) -> bool {
+        // CatPaw: one postorder walk reaches the fixed point. A node is folded after
+        // its children into a literal, into one of its children (already folded), or
+        // (a comma) into a node that folds no further, so another walk would find
+        // nothing to do. The published crate walked again to find that out, which
+        // for a script wrapped in a function expression meant walking the whole
+        // script once more. Debug builds still take that walk, to check.
         self.statistics.constant_folding_run_count += 1;
-
-        let mut has_changes = false;
-        for _ in 0..Self::MAX_PASS_ITERATIONS {
+        self.statistics.constant_folding_pass_count += 1;
+        let mut walker = Walker::new(|expr| -> PassAction<Expression> {
+            ConstantFolding::fold_expression(expr, self.context)
+        });
+        // NOTE: postoder traversal is optimal for constant folding,
+        // since it evaluates the tree bottom-up.
+        walker.walk_expression_postorder(expr);
+        let changed = walker.changed();
+        if changed {
+            // The walk that found nothing more to fold.
             self.statistics.constant_folding_pass_count += 1;
-            let mut walker = Walker::new(|expr| -> PassAction<Expression> {
-                ConstantFolding::fold_expression(expr, self.context)
-            });
-            // NOTE: postoder traversal is optimal for constant folding,
-            // since it evaluates the tree bottom-up.
-            walker.walk_expression_postorder(expr);
-            if !walker.changed() {
-                break;
+            #[cfg(debug_assertions)]
+            {
+                let mut check = Walker::new(|expr| -> PassAction<Expression> {
+                    ConstantFolding::fold_expression(expr, self.context)
+                });
+                check.walk_expression_postorder(expr);
+                debug_assert!(
+                    !check.changed(),
+                    "constant folding did not reach its fixed point in one walk"
+                );
             }
-            has_changes = true;
         }
-        has_changes
+        changed
     }
-
-    /// Maximum number of iterations for optimization passes.
-    /// This prevents infinite loops if a pass has a bug that keeps producing changes.
-    const MAX_PASS_ITERATIONS: usize = 10;
 
     /// Run the strength reduction optimization on an expression.
     fn run_strength_reduction_pass(&mut self, expr: &mut Expression) -> bool {
+        // CatPaw: one postorder walk reaches the fixed point, since a reduced node is
+        // a multiplication of operands already visited, which reduces no further; see
+        // `run_constant_folding_pass`.
         self.statistics.strength_reduction_run_count += 1;
-
-        let mut has_changes = false;
-        for _ in 0..Self::MAX_PASS_ITERATIONS {
+        self.statistics.strength_reduction_pass_count += 1;
+        let mut walker = Walker::new(|expr| -> PassAction<Expression> {
+            StrengthReduction::reduce_expression(expr)
+        });
+        walker.walk_expression_postorder(expr);
+        let changed = walker.changed();
+        if changed {
+            // The walk that found nothing more to reduce.
             self.statistics.strength_reduction_pass_count += 1;
-            let mut walker = Walker::new(|expr| -> PassAction<Expression> {
-                StrengthReduction::reduce_expression(expr)
-            });
-            walker.walk_expression_postorder(expr);
-            if !walker.changed() {
-                break;
+            #[cfg(debug_assertions)]
+            {
+                let mut check = Walker::new(|expr| -> PassAction<Expression> {
+                    StrengthReduction::reduce_expression(expr)
+                });
+                check.walk_expression_postorder(expr);
+                debug_assert!(
+                    !check.changed(),
+                    "strength reduction did not reach its fixed point in one walk"
+                );
             }
-            has_changes = true;
         }
-        has_changes
+        changed
     }
 
     fn run_all(&mut self, expr: &mut Expression) {

@@ -99,6 +99,14 @@ impl ToJsString for Sym {
     fn to_js_string(&self, interner: &Interner) -> JsString {
         let utf16 = interner.resolve_expect(*self).utf16();
         if interner.is_latin1(*self) {
+            // Short names are narrowed on the stack rather than in a temporary `Vec`.
+            let mut buffer = [0u8; 64];
+            if let Some(bytes) = buffer.get_mut(..utf16.len()) {
+                for (byte, &unit) in bytes.iter_mut().zip(utf16) {
+                    *byte = unit as u8;
+                }
+                return js_string!(JsStr::latin1(bytes));
+            }
             let bytes: Vec<u8> = utf16.iter().map(|&c| c as u8).collect();
             js_string!(JsStr::latin1(&bytes))
         } else {

@@ -14,7 +14,7 @@ use boa_ast::{
     },
     operations::{
         ContainsSymbol, LexicallyScopedDeclaration, bound_names, contains,
-        lexically_scoped_declarations, var_scoped_declarations,
+        lexically_scoped_declarations, var_scoped_declarations_ref,
     },
     scope::BindingLocator,
 };
@@ -1734,9 +1734,9 @@ impl SourceTextModule {
 
             // 18. Let code be module.[[ECMAScriptCode]].
             // 19. Let varDeclarations be the VarScopedDeclarations of code.
-            let var_declarations = var_scoped_declarations(source);
+            let var_declarations = var_scoped_declarations_ref(source);
             // 20. Let declaredVarNames be a new empty List.
-            let mut declared_var_names = Vec::new();
+            let mut declared_var_names = FxHashSet::default();
             // 21. For each element d of varDeclarations, do
             for var in var_declarations {
                 // a. For each element dn of the BoundNames of d, do
@@ -1758,7 +1758,7 @@ impl SourceTextModule {
                         );
 
                         // 3. Append dn to declaredVarNames.
-                        declared_var_names.push(name);
+                        declared_var_names.insert(name);
                     }
                 }
             }

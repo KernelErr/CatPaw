@@ -51,3 +51,33 @@ the `toLocale…` methods use when script names none. The published crate
 always takes the host's (`sys_locale`), so the same page printed numbers
 and dates differently from one machine to the next, and told sites what
 the machine was set to.
+
+## Parsing and compiling speed
+
+With the parser changes in `vendor/boa_parser` and `vendor/boa_ast`, these
+keep the compiled bytecode identical and make loading a script cheaper:
+
+`src/optimizer/mod.rs`: `Script::parse` runs constant folding and strength
+reduction over every expression statement, each pass repeated until a walk
+changes nothing. One postorder walk already reaches that fixed point (a
+node is rewritten after its children, into a literal, into one of its
+already rewritten children, or into a node the pass leaves alone), so the
+repeat walk never found anything; for a library wrapped in a function
+expression it walked the whole script twice more. Each pass now walks
+once; debug builds still take the second walk and assert that it changes
+nothing. Statistics count the passes as before. This is 6–7% of parsing a
+classic script.
+
+`src/bytecompiler/declarations.rs`, `src/module/source.rs`: the bytecode
+compiler, like the scope analyzer, copied every function declaration and
+variable initializer (whole function bodies) at each level of nesting to
+list a body's var-scoped declarations; it now borrows them
+(`var_scoped_declarations_ref`). Module var names were deduplicated by a
+linear search over a list of strings, quadratic for bundles with thousands
+of top-level names; they now go into a hash set.
+
+`src/bytecompiler/mod.rs`: `Sym::to_js_string` narrows short Latin-1
+names on the stack instead of in a temporary `Vec`.
+
+Together these take 7–14% off parsing and compiling the scripts of the
+recorded tasks (CPU instructions; most for the Sauce Demo module bundle).
