@@ -1,17 +1,24 @@
 //! Inline formatting contexts: the text, inline elements, atomic inline
 //! boxes and pseudo-element text of a block container, shaped and broken
 //! into lines by Parley.
+//!
+//! What goes into Parley is recorded first ([`Ops`]). Shaping is the
+//! costly part of a layout, so a context whose record equals one of the
+//! last layout's takes that one's shaped text ([`Shaped`]) instead of
+//! shaping it again.
 
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
 use catpaw_dom::{Dom, NodeId, NodeKind};
 use catpaw_style::StyleEngine;
+use catpaw_text::parley;
 use catpaw_text::parley::style::{
     FontFamily, FontFamilyName, FontFeatures, FontVariations, GenericFamily, LineHeight,
     OverflowWrap, StyleProperty, TextStyle, TextWrapMode, WhiteSpaceCollapse, WordBreak,
 };
-use catpaw_text::parley::{self, TreeBuilder};
 use catpaw_text::{Brush, Fonts};
 use style::computed_values::text_wrap_mode::T as StyloTextWrapMode;
 use style::computed_values::white_space_collapse::T as StyloWhiteSpaceCollapse;
@@ -52,6 +59,10 @@ pub(crate) struct InlineContext {
     /// once the lines are broken (lines beside floats sit lower than
     /// Parley's own height, a sum of line heights, says).
     pub height: f32,
+    /// What was pushed to Parley for it.
+    pub ops: Ops,
+    /// The box of the last layout whose shaped text it took, if it did.
+    pub reused_from: Option<BoxId>,
 }
 
 /// The brush of a run of text: the node whose text it is.
@@ -65,13 +76,215 @@ pub(crate) fn node_of_brush(brush: Brush) -> NodeId {
     slotmap::KeyData::from_ffi(brush.node).into()
 }
 
+/// One thing pushed to Parley's tree builder.
+#[derive(Clone)]
+enum Op {
+    /// A span in these computed values (compared by identity: the same
+    /// values make the same text style) and brush.
+    Span(Arc<ComputedValues>, Brush),
+    /// A span that only changes the brush.
+    BrushSpan(Brush),
+    Pop,
+    /// Text: what `Ops::text` holds up to this offset since the last text.
+    Text(usize),
+    /// An atomic inline box for this element. Parley only places it, so
+    /// what is inside does not matter to the shaping.
+    InlineBox(Option<NodeId>),
+}
+
+impl PartialEq for Op {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Op::Span(a, x), Op::Span(b, y)) => Arc::ptr_eq(a, b) && x == y,
+            (Op::BrushSpan(x), Op::BrushSpan(y)) => x == y,
+            (Op::Pop, Op::Pop) => true,
+            (Op::Text(a), Op::Text(b)) => a == b,
+            (Op::InlineBox(a), Op::InlineBox(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
+/// What an inline formatting context pushes to Parley, in order: equal
+/// records shape to equal layouts (the fonts do not change).
+#[derive(Clone)]
+pub(crate) struct Ops {
+    /// The style and brush of the root.
+    root: (Arc<ComputedValues>, Brush),
+    items: Vec<Op>,
+    /// The text of the `Text` items, end to end.
+    text: String,
+    /// A hash of all of it, filled in by `finish`.
+    pub hash: u64,
+}
+
+impl PartialEq for Ops {
+    fn eq(&self, other: &Self) -> bool {
+        self.hash == other.hash
+            && Arc::ptr_eq(&self.root.0, &other.root.0)
+            && self.root.1 == other.root.1
+            && self.items == other.items
+            && self.text == other.text
+    }
+}
+
+impl Ops {
+    fn new(style: Arc<ComputedValues>, brush: Brush) -> Self {
+        Self {
+            root: (style, brush),
+            items: Vec::new(),
+            text: String::new(),
+            hash: 0,
+        }
+    }
+
+    fn push_span(&mut self, style: &Arc<ComputedValues>, brush: Brush) {
+        self.items.push(Op::Span(style.clone(), brush));
+    }
+
+    fn push_brush_span(&mut self, brush: Brush) {
+        self.items.push(Op::BrushSpan(brush));
+    }
+
+    fn pop(&mut self) {
+        self.items.push(Op::Pop);
+    }
+
+    fn push_text(&mut self, text: &str) {
+        self.text.push_str(text);
+        self.items.push(Op::Text(self.text.len()));
+    }
+
+    fn push_inline_box(&mut self, node: Option<NodeId>) {
+        self.items.push(Op::InlineBox(node));
+    }
+
+    fn finish(&mut self) {
+        let mut hasher = DefaultHasher::new();
+        (self.root.0.heap_ptr() as usize).hash(&mut hasher);
+        self.root.1.hash(&mut hasher);
+        for op in &self.items {
+            match op {
+                Op::Span(style, brush) => {
+                    0u8.hash(&mut hasher);
+                    (style.heap_ptr() as usize).hash(&mut hasher);
+                    brush.hash(&mut hasher);
+                }
+                Op::BrushSpan(brush) => {
+                    1u8.hash(&mut hasher);
+                    brush.hash(&mut hasher);
+                }
+                Op::Pop => 2u8.hash(&mut hasher),
+                Op::Text(end) => {
+                    3u8.hash(&mut hasher);
+                    end.hash(&mut hasher);
+                }
+                Op::InlineBox(node) => {
+                    4u8.hash(&mut hasher);
+                    node.hash(&mut hasher);
+                }
+            }
+        }
+        self.text.hash(&mut hasher);
+        self.hash = hasher.finish();
+    }
+
+    /// Replays the record into Parley and shapes it. `boxes` are the
+    /// atomic boxes, in order.
+    fn shape(&self, fonts: &mut Fonts, boxes: &[BoxId]) -> (parley::Layout<Brush>, String) {
+        let Fonts { font_cx, layout_cx } = fonts;
+        let root = text_style(&self.root.0, self.root.1);
+        let mut builder = layout_cx.tree_builder(font_cx, 1.0, true, &root);
+        // White space is collapsed before, by the CSS rules; Parley gets
+        // the text as it should be shown.
+        builder.set_white_space_mode(WhiteSpaceCollapse::Preserve);
+        let mut text_start = 0;
+        let mut boxes = boxes.iter();
+        for op in &self.items {
+            match op {
+                Op::Span(style, brush) => {
+                    let mut span = text_style(style, *brush);
+                    span.brush = *brush;
+                    builder.push_style_span(span);
+                }
+                Op::BrushSpan(brush) => {
+                    builder.push_style_modification_span(&[StyleProperty::Brush(*brush)]);
+                }
+                Op::Pop => builder.pop_style_span(),
+                Op::Text(end) => {
+                    builder.push_text(&self.text[text_start..*end]);
+                    text_start = *end;
+                }
+                Op::InlineBox(_) => {
+                    let id = boxes.next().expect("one box per inline box");
+                    builder.push_inline_box(parley::InlineBox {
+                        id: slotmap::Key::data(id).as_ffi(),
+                        kind: parley::InlineBoxKind::InFlow,
+                        index: 0,
+                        width: 0.0,
+                        height: 0.0,
+                    });
+                }
+            }
+        }
+        builder.build()
+    }
+}
+
+/// A context's shaped text, kept from one layout to the next: its layout
+/// (with the lines last broken), the text Parley saw and the height of
+/// those lines, and the box it was in.
+struct Shaped {
+    layout: parley::Layout<Brush>,
+    text: String,
+    height: f32,
+    from: BoxId,
+}
+
+/// The shaped text of the last layout's inline contexts, by what was
+/// pushed to Parley for them.
+#[derive(Default)]
+pub(crate) struct ShapedCache {
+    /// By hash of the record; `None` stands for records that several
+    /// contexts had.
+    entries: HashMap<u64, Vec<(Ops, Option<Shaped>)>>,
+}
+
+impl ShapedCache {
+    /// Keeps the shaped text of the context of box `from`. Contexts with
+    /// equal records (which only identical content can make) are all
+    /// passed over, so that none takes another's lines.
+    pub(crate) fn insert(&mut self, from: BoxId, context: InlineContext) {
+        let list = self.entries.entry(context.ops.hash).or_default();
+        if let Some((_, shaped)) = list.iter_mut().find(|(ops, _)| *ops == context.ops) {
+            *shaped = None;
+            return;
+        }
+        let shaped = Shaped {
+            layout: context.layout,
+            text: context.text,
+            height: context.height,
+            from,
+        };
+        list.push((context.ops, Some(shaped)));
+    }
+
+    fn take(&mut self, ops: &Ops) -> Option<Shaped> {
+        let list = self.entries.get_mut(&ops.hash)?;
+        list.iter_mut().find(|(o, _)| o == ops)?.1.take()
+    }
+}
+
 impl InlineContext {
+    /// Records what `items` push to Parley and shapes it, or takes the
+    /// shaped text of an equal record from `shaped`.
     pub(crate) fn build(
         tree: &mut LayoutTree,
         dom: &Dom,
         styles: &StyleEngine,
         container: BoxId,
         items: Vec<InlineItem>,
+        shaped: Option<&mut ShapedCache>,
     ) -> Self {
         let root_style = tree.boxes[container].style.clone();
         let root_node = tree.boxes[container]
@@ -82,13 +295,8 @@ impl InlineContext {
                     .and_then(|p| tree.boxes[p].node)
             })
             .unwrap_or_else(|| dom.document());
-        let fonts = tree.fonts.clone();
-        let mut fonts = fonts.lock().unwrap_or_else(|e| e.into_inner());
         let mut inline_styles = std::mem::take(&mut tree.inline_styles);
         let node_box = std::mem::take(&mut tree.node_box);
-        let Fonts { font_cx, layout_cx } = &mut *fonts;
-        let root_text_style = text_style(&root_style, brush_for(root_node));
-        let mut builder = layout_cx.tree_builder(font_cx, 1.0, true, &root_text_style);
         let mut boxes = Vec::new();
         let mut state = Pusher {
             dom,
@@ -96,25 +304,51 @@ impl InlineContext {
             node_box: &node_box,
             inline_styles: &mut inline_styles,
             boxes: &mut boxes,
+            ops: Ops::new(root_style.clone(), brush_for(root_node)),
             transform: root_style.clone_text_transform(),
             ws: ws_mode(&root_style),
             prev_space: true,
             pending_space: false,
         };
-        // White space is collapsed here, by the CSS rules; Parley gets the
-        // text as it should be shown.
-        builder.set_white_space_mode(WhiteSpaceCollapse::Preserve);
         for item in items {
-            state.push_item(&mut builder, item);
+            state.push_item(item);
         }
-        let (layout, text) = builder.build();
+        let mut ops = state.ops;
         tree.inline_styles = inline_styles;
         tree.node_box = node_box;
+        // The atomic boxes go into the record as the elements they are.
+        let mut atomic = boxes.iter().map(|b| tree.boxes[*b].node);
+        for op in &mut ops.items {
+            if let Op::InlineBox(node) = op {
+                *node = atomic.next().flatten();
+            }
+        }
+        ops.finish();
+        if let Some(found) = shaped.and_then(|cache| cache.take(&ops)) {
+            let mut layout = found.layout;
+            // The same elements, in new boxes.
+            for (inline_box, id) in layout.inline_boxes_mut().iter_mut().zip(&boxes) {
+                inline_box.id = slotmap::Key::data(id).as_ffi();
+            }
+            return Self {
+                layout,
+                text: found.text,
+                boxes,
+                height: found.height,
+                ops,
+                reused_from: Some(found.from),
+            };
+        }
+        let fonts = tree.fonts.clone();
+        let mut fonts = fonts.lock().unwrap_or_else(|e| e.into_inner());
+        let (layout, text) = ops.shape(&mut fonts, &boxes);
         Self {
             layout,
             text,
             boxes,
             height: 0.0,
+            ops,
+            reused_from: None,
         }
     }
 }
@@ -127,6 +361,8 @@ struct Pusher<'a> {
     node_box: &'a HashMap<NodeId, BoxId>,
     inline_styles: &'a mut HashMap<NodeId, Arc<ComputedValues>>,
     boxes: &'a mut Vec<BoxId>,
+    /// What is pushed to Parley.
+    ops: Ops,
     transform: TextTransform,
     ws: Ws,
     /// The text so far ends in white space (or nothing yet): collapsible
@@ -161,7 +397,7 @@ fn is_collapsible(c: char) -> bool {
 }
 
 impl Pusher<'_> {
-    fn push_item(&mut self, builder: &mut TreeBuilder<'_, Brush>, item: InlineItem) {
+    fn push_item(&mut self, item: InlineItem) {
         match item {
             InlineItem::Text(node) => {
                 let text = self
@@ -175,16 +411,14 @@ impl Pusher<'_> {
                 match style {
                     Some(style) => {
                         self.inline_styles.insert(node, style.clone());
-                        let mut span = text_style(&style, brush);
-                        span.brush = brush;
-                        builder.push_style_span(span);
-                        self.push_text(builder, &text);
-                        builder.pop_style_span();
+                        self.ops.push_span(&style, brush);
+                        self.push_text(&text);
+                        self.ops.pop();
                     }
                     None => {
-                        builder.push_style_modification_span(&[StyleProperty::Brush(brush)]);
-                        self.push_text(builder, &text);
-                        builder.pop_style_span();
+                        self.ops.push_brush_span(brush);
+                        self.push_text(&text);
+                        self.ops.pop();
                     }
                 }
             }
@@ -194,54 +428,49 @@ impl Pusher<'_> {
                 let outer_ws = self.ws;
                 self.transform = style.clone_text_transform();
                 self.ws = ws_mode(&style);
-                builder.push_style_span(text_style(&style, brush_for(node)));
+                self.ops.push_span(&style, brush_for(node));
                 if self.dom.is_html_element(node, "br") {
                     // A forced break: spaces before it are dropped, as are
                     // those after it.
                     self.pending_space = false;
-                    builder.push_text("\n");
+                    self.ops.push_text("\n");
                     self.prev_space = true;
                 } else if self.dom.is_html_element(node, "wbr") {
-                    builder.push_text("\u{200B}");
+                    self.ops.push_text("\u{200B}");
                 } else {
                     if let Some(text) = self.pseudo(node, catpaw_style::Pseudo::Before) {
-                        self.push_pseudo(builder, text);
+                        self.push_pseudo(text);
                     }
                     for child in self.dom.rendered_children(node) {
                         match self.dom.kind(child) {
-                            NodeKind::Text(_) => self.push_item(builder, InlineItem::Text(child)),
-                            NodeKind::Element(_) => self.push_element_child(builder, child),
+                            NodeKind::Text(_) => self.push_item(InlineItem::Text(child)),
+                            NodeKind::Element(_) => self.push_element_child(child),
                             _ => {}
                         }
                     }
                     if let Some(text) = self.pseudo(node, catpaw_style::Pseudo::After) {
-                        self.push_pseudo(builder, text);
+                        self.push_pseudo(text);
                     }
                 }
-                builder.pop_style_span();
+                self.ops.pop();
                 self.transform = outer_transform;
                 self.ws = outer_ws;
             }
             InlineItem::Atomic(id) => {
-                self.flush_space(builder);
+                self.flush_space();
                 self.prev_space = false;
                 self.boxes.push(id);
-                builder.push_inline_box(parley::InlineBox {
-                    id: slotmap::Key::data(&id).as_ffi(),
-                    kind: parley::InlineBoxKind::InFlow,
-                    index: 0,
-                    width: 0.0,
-                    height: 0.0,
-                });
+                // Which element it is, is filled in when the record is done.
+                self.ops.push_inline_box(None);
             }
-            InlineItem::Pseudo(text) => self.push_pseudo(builder, text),
+            InlineItem::Pseudo(text) => self.push_pseudo(text),
         }
     }
 
     /// An element met inside an inline element: inline boxes recurse here;
     /// anything that generates a box of its own was already given one by
     /// the constructor and is placed as an atomic box.
-    fn push_element_child(&mut self, builder: &mut TreeBuilder<'_, Brush>, child: NodeId) {
+    fn push_element_child(&mut self, child: NodeId) {
         if let Some(&id) = self.node_box.get(&child) {
             // Out-of-flow boxes were hung off their containing block; the
             // rest are atomic inline boxes.
@@ -255,7 +484,7 @@ impl Pusher<'_> {
                     | Some(style::computed_values::position::T::Fixed)
             );
             if !out_of_flow {
-                self.push_item(builder, InlineItem::Atomic(id));
+                self.push_item(InlineItem::Atomic(id));
             }
             return;
         }
@@ -269,14 +498,14 @@ impl Pusher<'_> {
         if display.is_contents() {
             for grandchild in self.dom.rendered_children(child) {
                 match self.dom.kind(grandchild) {
-                    NodeKind::Text(_) => self.push_item(builder, InlineItem::Text(grandchild)),
-                    NodeKind::Element(_) => self.push_element_child(builder, grandchild),
+                    NodeKind::Text(_) => self.push_item(InlineItem::Text(grandchild)),
+                    NodeKind::Element(_) => self.push_element_child(grandchild),
                     _ => {}
                 }
             }
             return;
         }
-        self.push_item(builder, InlineItem::Element(child, style));
+        self.push_item(InlineItem::Element(child, style));
     }
 
     fn pseudo(&self, el: NodeId, pseudo: catpaw_style::Pseudo) -> Option<PseudoText> {
@@ -301,7 +530,7 @@ impl Pusher<'_> {
         })
     }
 
-    fn push_pseudo(&mut self, builder: &mut TreeBuilder<'_, Brush>, pseudo: PseudoText) {
+    fn push_pseudo(&mut self, pseudo: PseudoText) {
         self.inline_styles
             .entry(pseudo.owner)
             .or_insert_with(|| pseudo.style.clone());
@@ -309,24 +538,24 @@ impl Pusher<'_> {
         let outer_ws = self.ws;
         self.transform = pseudo.style.clone_text_transform();
         self.ws = ws_mode(&pseudo.style);
-        builder.push_style_span(text_style(&pseudo.style, brush_for(pseudo.owner)));
-        self.push_text(builder, &pseudo.text);
-        builder.pop_style_span();
+        self.ops.push_span(&pseudo.style, brush_for(pseudo.owner));
+        self.push_text(&pseudo.text);
+        self.ops.pop();
         self.transform = outer_transform;
         self.ws = outer_ws;
     }
 
     /// Pushes a text node's characters with the white space the
     /// `white-space-collapse` of its element leaves.
-    fn push_text(&mut self, builder: &mut TreeBuilder<'_, Brush>, text: &str) {
+    fn push_text(&mut self, text: &str) {
         let transformed = transform_text(text, self.transform);
         if transformed.is_empty() {
             return;
         }
         match self.ws {
             Ws::Preserve => {
-                self.flush_space(builder);
-                builder.push_text(&transformed);
+                self.flush_space();
+                self.ops.push_text(&transformed);
                 self.prev_space = transformed.ends_with('\n');
             }
             Ws::Collapse | Ws::PreserveBreaks => {
@@ -351,17 +580,17 @@ impl Pusher<'_> {
                     }
                 }
                 if !out.is_empty() {
-                    builder.push_text(&out);
+                    self.ops.push_text(&out);
                 }
             }
         }
     }
 
     /// Pushes the space that is waiting, in the current style.
-    fn flush_space(&mut self, builder: &mut TreeBuilder<'_, Brush>) {
+    fn flush_space(&mut self) {
         if self.pending_space {
             self.pending_space = false;
-            builder.push_text(" ");
+            self.ops.push_text(" ");
         }
     }
 }

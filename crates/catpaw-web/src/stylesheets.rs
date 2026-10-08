@@ -384,8 +384,8 @@ pub(crate) fn with_engine<R>(page: &PageState, f: impl FnOnce(&mut StyleEngine, 
             let sheets = collect_sheets(page, &dom);
             let keyed: Vec<(u64, &str)> =
                 sheets.iter().map(|(key, text)| (*key, &**text)).collect();
-            engine.set_author_stylesheets(&keyed);
-            crate::layout::log_step("sheets", started);
+            let changed = engine.set_author_stylesheets(&keyed);
+            crate::layout::log_step(if changed { "sheets-changed" } else { "sheets" }, started);
         }
         page.styles.version.set(Some(version));
     }

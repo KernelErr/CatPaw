@@ -1,5 +1,7 @@
 //! The style engine: device, stylist, stylesheets, and the restyle driver.
 
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::{Mutex, Once};
 
@@ -116,6 +118,12 @@ pub struct Restyled {
 /// says that everything may have changed.
 const RESTYLED_LIMIT: usize = 4096;
 
+/// How many anonymous box styles are kept before the engine starts over.
+const ANONYMOUS_LIMIT: usize = 1024;
+
+/// A parent style, and the style of an anonymous block box in it.
+type AnonymousStyle = (Arc<ComputedValues>, Arc<ComputedValues>);
+
 /// Computes styles for one document.
 ///
 /// The engine follows the document through the arena's journal of
@@ -152,6 +160,9 @@ pub struct StyleEngine {
     /// How many times the whole document was styled, and how many
     /// incremental restyles were done (for tests and profiling).
     counts: (u64, u64),
+    /// The styles of anonymous block boxes, by the address of their
+    /// parent's style (which each entry keeps alive).
+    anonymous: RefCell<HashMap<usize, AnonymousStyle>>,
 }
 
 impl StyleEngine {
@@ -183,6 +194,7 @@ impl StyleEngine {
             snapshotted: Vec::new(),
             restyled: Restyled::default(),
             counts: (0, 0),
+            anonymous: RefCell::new(HashMap::new()),
         }
     }
 
@@ -261,6 +273,7 @@ impl StyleEngine {
     /// document itself need no telling: the engine reads them from the
     /// arena's journal.
     pub fn invalidate(&mut self) {
+        self.anonymous.get_mut().clear();
         self.resolved.clear();
         self.table.clear_data();
         self.snapshots.clear();
@@ -523,19 +536,32 @@ impl StyleEngine {
 
     /// The style of an anonymous block box generated inside an element with
     /// `parent` style: inherited properties come from the parent, the rest
-    /// are initial, and `display` is `block`.
-    pub fn anonymous_block_style(&self, parent: &ComputedValues) -> Arc<ComputedValues> {
+    /// are initial, and `display` is `block`. The same parent style gets
+    /// the same `Arc` back, so that layout can tell the box unchanged.
+    pub fn anonymous_block_style(&self, parent: &Arc<ComputedValues>) -> Arc<ComputedValues> {
+        let key = parent.heap_ptr() as usize;
+        if let Some((_, style)) = self.anonymous.borrow().get(&key) {
+            return style.clone();
+        }
         let lock = self.table.lock().clone();
         let guard = lock.read();
         let guards = StylesheetGuards {
             author: &guard,
             ua_or_user: &guard,
         };
-        self.stylist.style_for_anonymous::<CatNode>(
+        let style = self.stylist.style_for_anonymous::<CatNode>(
             &guards,
             &PseudoElement::ServoAnonymousBox,
             parent,
-        )
+        );
+        let mut anonymous = self.anonymous.borrow_mut();
+        if anonymous.len() >= ANONYMOUS_LIMIT {
+            anonymous.clear();
+        }
+        // The parent is kept alive with its entry, so that its address
+        // stands for it.
+        anonymous.insert(key, (parent.clone(), style.clone()));
+        style
     }
 
     /// The element's primary computed style, if it was styled.

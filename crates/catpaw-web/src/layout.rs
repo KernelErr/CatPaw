@@ -85,17 +85,30 @@ pub(crate) fn with_layout<R>(page: &PageState, f: impl FnOnce(&LayoutTree, &Dom)
                 let started = Instant::now();
                 let fonts = catpaw_text::shared_fonts();
                 let scroll_offsets = page.layouts.scroll_offsets.borrow();
-                let tree = LayoutTree::build(BuildInput {
+                let input = BuildInput {
                     dom,
                     styles: engine,
                     fonts: &fonts,
                     viewport: viewport(page),
                     scroll_offsets: &scroll_offsets,
-                });
+                };
+                // What did not change is taken from the last tree.
+                let previous = page.layouts.tree.borrow_mut().take();
+                let tree = match previous {
+                    Some(previous) => LayoutTree::rebuild(previous, input),
+                    None => LayoutTree::build(input),
+                };
                 drop(scroll_offsets);
+                let reused = tree.reused();
                 *page.layouts.tree.borrow_mut() = Some(tree);
                 page.layouts.builds.set(page.layouts.builds.get() + 1);
                 log_step("layout", started);
+                if stats_enabled() {
+                    eprintln!(
+                        "[render] layout-reuse text-shaped={} text-kept={} boxes-kept={}",
+                        reused.reshaped, reused.shaped, reused.laid_out
+                    );
+                }
             }
             page.layouts.current.set(Some(stamp));
         }

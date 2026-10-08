@@ -622,9 +622,28 @@ impl LayoutPartialTree for LayoutTree {
     }
 }
 
+impl LayoutTree {
+    /// Drops what a subtree carried over from the last tree: its caches
+    /// answer for the inputs it had there, and it is asked for others.
+    fn forget_carried_over(&mut self, root: BoxId) {
+        let mut stack = vec![root];
+        while let Some(id) = stack.pop() {
+            let b = &mut self.boxes[id];
+            b.transplanted = false;
+            b.cache.clear();
+            stack.extend(b.children.iter().copied());
+        }
+    }
+}
+
 impl CacheTree for LayoutTree {
     fn cache_get(&mut self, id: NodeId, input: &LayoutInput) -> Option<LayoutOutput> {
-        self.boxes[BoxId::from_taffy(id)].cache.get(input)
+        let id = BoxId::from_taffy(id);
+        let hit = self.boxes[id].cache.get(input);
+        if hit.is_none() && self.boxes[id].transplanted {
+            self.forget_carried_over(id);
+        }
+        hit
     }
 
     fn cache_store(&mut self, id: NodeId, input: &LayoutInput, output: LayoutOutput) {

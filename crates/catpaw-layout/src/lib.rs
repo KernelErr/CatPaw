@@ -3,10 +3,13 @@
 //! (inline formatting contexts), and the geometry questions the page asks
 //! of it (`getBoundingClientRect`, `offsetWidth`, scroll sizes, hit tests).
 //!
-//! Layout is lazy and whole: the page builds a tree when something observes
-//! geometry and throws it away when the document changes. The tree keeps
-//! the computed styles it was built with, so it stays valid after the style
-//! engine moves on.
+//! Layout is lazy: the page builds a tree when something observes geometry,
+//! and builds it again when the document changed in a way that shows. The
+//! tree keeps the computed styles it was built with, so it stays valid
+//! after the style engine moves on. A tree built again takes from the last
+//! one what did not change ([`LayoutTree::rebuild`]): shaping text is most
+//! of the cost of a layout, and the subtrees laid out on their own keep
+//! their layout.
 //!
 //! Structure follows Blitz's layout (MIT OR Apache-2.0), with the box tree
 //! kept apart from the DOM.
@@ -14,6 +17,7 @@
 mod construct;
 mod inline;
 mod query;
+mod reuse;
 mod tree;
 
 use std::collections::HashMap;
@@ -98,7 +102,7 @@ impl Rect {
 }
 
 /// What a box is laid out as.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum BoxKind {
     /// A block container whose children are block-level boxes.
     Block,
@@ -112,7 +116,7 @@ pub enum BoxKind {
 }
 
 /// How an element is positioned, for hoisting and hit-testing.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Positioning {
     Static,
     Relative,
@@ -148,6 +152,12 @@ pub struct LayoutBox {
     pub(crate) intrinsic: Intrinsic,
     /// Document coordinates of the border box, filled after layout.
     pub(crate) origin: (f32, f32),
+    /// What the box and its subtree are laid out from, hashed: the same
+    /// in two trees means the same layout for the same inputs.
+    pub(crate) fingerprint: u64,
+    /// The layout (and Taffy's cache) of the box and its subtree were
+    /// carried over from the last tree, for the inputs they had there.
+    pub(crate) transplanted: bool,
 }
 
 /// The size of the viewport the tree is laid out in.
@@ -186,11 +196,39 @@ pub struct LayoutTree {
     pub(crate) viewport: Viewport,
     pub(crate) fonts: StdArc<Mutex<Fonts>>,
     pub(crate) scroll_offsets: HashMap<NodeId, (f32, f32)>,
+    /// What was taken from the last tree (see [`LayoutTree::reused`]).
+    pub(crate) reused: Reused,
+}
+
+/// What a tree built with [`LayoutTree::rebuild`] took from the last one.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Reused {
+    /// Inline formatting contexts that kept their shaped text.
+    pub shaped: usize,
+    /// Inline formatting contexts that were shaped.
+    pub reshaped: usize,
+    /// Boxes whose layout was carried over and kept.
+    pub laid_out: usize,
 }
 
 impl LayoutTree {
     /// Builds and lays out the tree for the document.
     pub fn build(input: BuildInput<'_>) -> Self {
+        Self::build_reusing(input, None)
+    }
+
+    /// Builds and lays out the tree for the document as it is now, taking
+    /// from `previous`, the tree of the same document before it changed,
+    /// what did not change: the shaped text of inline formatting contexts,
+    /// and the layout of the subtrees that are laid out on their own
+    /// (flex and grid items, atomic inline boxes, positioned boxes) for
+    /// the inputs they had then.
+    pub fn rebuild(previous: LayoutTree, input: BuildInput<'_>) -> Self {
+        let reuse = (previous.viewport == input.viewport).then(|| reuse::Reuse::new(previous));
+        Self::build_reusing(input, reuse)
+    }
+
+    fn build_reusing(input: BuildInput<'_>, mut reuse: Option<reuse::Reuse>) -> Self {
         let mut tree = Self {
             boxes: SlotMap::with_key(),
             root: None,
@@ -201,12 +239,28 @@ impl LayoutTree {
             viewport: input.viewport,
             fonts: input.fonts.clone(),
             scroll_offsets: input.scroll_offsets.clone(),
+            reused: Reused::default(),
         };
-        construct::build(&mut tree, input.dom, input.styles);
+        construct::build(
+            &mut tree,
+            input.dom,
+            input.styles,
+            reuse.as_mut().map(|r| &mut r.shaped),
+        );
+        reuse::fingerprint(&mut tree);
+        if let Some(reuse) = reuse {
+            reuse.transplant(&mut tree);
+        }
         tree::perform_layout(&mut tree);
         tree::layout_root_oof(&mut tree);
         query::place(&mut tree);
+        reuse::count_reused(&mut tree);
         tree
+    }
+
+    /// What this tree took from the last one, when it was rebuilt.
+    pub fn reused(&self) -> Reused {
+        self.reused
     }
 
     pub fn viewport(&self) -> Viewport {

@@ -12,7 +12,7 @@ use style::values::computed::Display;
 use style::values::computed::counters::{Content, ContentItem};
 use style::values::specified::box_::{DisplayInside, DisplayOutside};
 
-use crate::inline::{InlineContext, InlineItem, PseudoText};
+use crate::inline::{InlineContext, InlineItem, PseudoText, ShapedCache};
 use crate::{BoxId, BoxKind, Intrinsic, LayoutBox, LayoutTree, Positioning};
 
 /// Elements laid out as a leaf sized by their content rather than by their
@@ -43,14 +43,26 @@ pub fn is_replaced(dom: &Dom, el: NodeId) -> bool {
         )
 }
 
-pub(crate) fn build(tree: &mut LayoutTree, dom: &Dom, styles: &StyleEngine) {
+/// Builds the boxes of the document. Inline contexts take their shaped
+/// text from `shaped` where an equal one was shaped before.
+pub(crate) fn build(
+    tree: &mut LayoutTree,
+    dom: &Dom,
+    styles: &StyleEngine,
+    shaped: Option<&mut ShapedCache>,
+) {
     let Some(root) = dom.child_elements(dom.document()).next() else {
         return;
     };
     let Some(style) = styles.primary_style(root) else {
         return;
     };
-    let mut builder = Builder { tree, dom, styles };
+    let mut builder = Builder {
+        tree,
+        dom,
+        styles,
+        shaped,
+    };
     let root_box = builder.make_box(root, style, None);
     builder.tree.root = Some(root_box);
     builder.fill(root_box, root);
@@ -60,6 +72,7 @@ struct Builder<'a> {
     tree: &'a mut LayoutTree,
     dom: &'a Dom,
     styles: &'a StyleEngine,
+    shaped: Option<&'a mut ShapedCache>,
 }
 
 /// A child of a block container, before anonymous boxes are made.
@@ -118,6 +131,8 @@ impl Builder<'_> {
             inline: None,
             intrinsic,
             origin: (0.0, 0.0),
+            fingerprint: 0,
+            transplanted: false,
         });
         self.tree.node_box.insert(el, id);
         id
@@ -136,6 +151,8 @@ impl Builder<'_> {
             inline: None,
             intrinsic: Intrinsic::default(),
             origin: (0.0, 0.0),
+            fingerprint: 0,
+            transplanted: false,
         })
     }
 
@@ -190,6 +207,8 @@ impl Builder<'_> {
             inline: None,
             intrinsic: Intrinsic::default(),
             origin: (0.0, 0.0),
+            fingerprint: 0,
+            transplanted: false,
         });
         let has_text = !text.text.trim().is_empty();
         if has_text {
@@ -394,7 +413,14 @@ impl Builder<'_> {
     }
 
     fn make_inline_root(&mut self, container: BoxId, items: Vec<InlineItem>) {
-        let context = InlineContext::build(self.tree, self.dom, self.styles, container, items);
+        let context = InlineContext::build(
+            self.tree,
+            self.dom,
+            self.styles,
+            container,
+            items,
+            self.shaped.as_deref_mut(),
+        );
         // The atomic boxes the builder met, nested ones included, are the
         // root's Taffy children; out-of-flow boxes hung off it come after.
         let atomic = context.boxes.clone();
