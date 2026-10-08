@@ -1,52 +1,40 @@
 > navigate {"url":"https://httpbin.org/forms/post"}
 ok navigate → https://httpbin.org/forms/post (200)
 # s1
-e1 paragraph
-  e2 textbox "Customer name:"
-e3 paragraph
-  e4 textbox "Telephone:"
-e5 paragraph
-  e6 textbox "E-mail address:"
-e7 group "Pizza Size"
-  e8 paragraph
-    e9 radio "Small"
-  e10 paragraph
-    e11 radio "Medium"
-  e12 paragraph
-    e13 radio "Large"
-e14 group "Pizza Toppings"
-  e15 paragraph
-    e16 checkbox "Bacon"
-  e17 paragraph
-    e18 checkbox "Extra Cheese"
-  e19 paragraph
-    e20 checkbox "Onion"
-  e21 paragraph
-    e22 checkbox "Mushroom"
-e23 paragraph
-  e24 textbox "Preferred delivery time:"
-e25 paragraph
-  e26 textbox "Delivery instructions:"
-e27 button "Submit order"
+e1 textbox "Customer name:"
+e2 textbox "Telephone:"
+e3 textbox "E-mail address:"
+e4 group "Pizza Size"
+  e5 radio "Small"
+  e6 radio "Medium"
+  e7 radio "Large"
+e8 group "Pizza Toppings"
+  e9 checkbox "Bacon"
+  e10 checkbox "Extra Cheese"
+  e11 checkbox "Onion"
+  e12 checkbox "Mushroom"
+e13 textbox "Preferred delivery time:"
+e14 textbox "Delivery instructions:"
+e15 button "Submit order"
 
 > type {"target":"textbox \"Customer name:\"","text":"Ada Lovelace"}
-ok type e2 textbox "Customer name:" [value=- → "Ada Lovelace"]
+ok type e1 textbox "Customer name:" [value=- → "Ada Lovelace"]
 
 > act {"kind":"check","target":"radio \"Large\""}
-ok check e13 radio "Large" [- → checked]
+ok check e7 radio "Large" [- → checked]
 
 > act {"kind":"check","target":"checkbox \"Bacon\""}
-ok check e16 checkbox "Bacon" [- → checked]
+ok check e9 checkbox "Bacon" [- → checked]
 
 > click {"target":"button \"Submit order\""}
-needs_confirmation c1: click e27 button "Submit order" would submit → POST https://httpbin.org/post (fields: custname=Ada Lovelace, size=large, topping=bacon, 4 empty)
+needs_confirmation c1: click e15 button "Submit order" would submit → POST https://httpbin.org/post (fields: custname=Ada Lovelace, size=large, topping=bacon, 4 empty)
   ask the user to approve at http://127.0.0.1:PORT/confirm/c1 (expires in 10m); then repeat (it waits up to 45s for them): click {"confirmation":"c1","target":"button \"Submit order\""}
 
 > (user) approve c1
 approved
 
 > click {"confirmation":"c1","target":"button \"Submit order\""}
-ok click e27 button "Submit order" (confirmed c1) → https://httpbin.org/post (POST, 200)
+ok click e15 button "Submit order" (confirmed c1) → https://httpbin.org/post (POST, 200)
 # s6 full=navigated
 text: { "args": {}, "data": "", "files": {}, "form": { "comments": "", "custemail": "", "custname": "Ada Lovelace", "custtel": "", "delivery": "", "size": "large", "topping": "bacon" }, "headers": { "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Encoding": "gzip, deflate, br, zstd", "Accept-Language": "en-US,en;q=0.9", "Content-Length": "86", "Content-Type": "application/x-www-form-urlencoded", "Host": "httpbin.org", "Referer": "https://httpbin.org/forms/post", "User-Agent": "CatPaw/0.0.1", "X-Amzn-Trace-Id": "Root=1-6ac716a8-6966b15072ffd26b1fdebced" }, "json": null, "origin": "203.0.113.7", "url": "https://httpbin.org/post" }
 

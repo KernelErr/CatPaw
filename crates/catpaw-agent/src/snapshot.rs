@@ -1323,6 +1323,9 @@ fn elide_generic(node: AxNode) -> Vec<AxNode> {
         .flat_map(elide_generic)
         .collect();
     merge_text(&mut kids);
+    // A label's text beside its control goes before the rules below count
+    // children (a paragraph around a labelled field is that field).
+    drop_label_text(&mut kids);
     // After wrappers are gone, a name-from-content node whose children only
     // show its name again needs one of the two: an element to act on keeps
     // its name (a link around an image), a container keeps its children (a
@@ -1902,6 +1905,32 @@ e5 main
                 "e2 checkbox \"In stock\"",
                 "e3 paragraph: Ready",
                 "e4 generic [clickable]: Buy now",
+            ],
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn a_paragraph_around_a_labelled_field_is_that_field() {
+        let text = snap(
+            "<form><p><label>Customer name: <input name=custname></label></p>\
+             <fieldset><legend>Pizza Size</legend>\
+             <p><label><input type=radio name=size> Small </label></p>\
+             <p><label><input type=radio name=size> Large </label></p></fieldset>\
+             <p><label>Notes: <textarea name=notes></textarea></label> (optional)</p></form>",
+            Filter::Interesting,
+        );
+        let body: Vec<&str> = text.lines().skip(1).collect();
+        assert_eq!(
+            body,
+            [
+                "e1 textbox \"Customer name:\"",
+                "e2 group \"Pizza Size\"",
+                "  e3 radio \"Small\"",
+                "  e4 radio \"Large\"",
+                "e5 paragraph",
+                "  e6 textbox \"Notes:\"",
+                "  text: (optional)",
             ],
             "{text}"
         );
