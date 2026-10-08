@@ -63,7 +63,10 @@ Identifier names are read into a reused buffer instead of a fresh
 `String`, and are interned through a 2048-entry direct-mapped cache of
 recently seen names (validated against the interned text, so the symbol
 is always the interner's). `next_char` shifts its look-ahead without a
-rotate.
+rotate and counts lines and columns as plain integers, building a
+`Position` (with its non-zero checks) only when a token asks for one;
+`src/source/utf8.rs` decodes ASCII inline and multibyte characters out of
+line.
 
 `src/parser/expression/mod.rs`: the binary operators from `|` to `*` were
 parsed by one function per precedence level (`BitwiseORExpression` down

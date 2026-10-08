@@ -12,7 +12,11 @@ const NAME_CACHE_SIZE: usize = 2048;
 #[derive(Debug)]
 pub(super) struct Cursor<R> {
     iter: R,
-    pos: Position,
+    /// Line of the next character, from 1.
+    line: u32,
+    /// Column of the next character, from 1. (A `Position` is only built when one
+    /// is asked for, rather than for every character.)
+    column: u32,
     module: bool,
     strict: bool,
     peeked: [Option<u32>; 4],
@@ -28,13 +32,13 @@ impl<R> Cursor<R> {
     /// Gets the current position of the cursor in the source code.
     #[inline]
     pub(super) fn pos_group(&self) -> PositionGroup {
-        PositionGroup::new(self.pos, self.linear_pos())
+        PositionGroup::new(self.pos(), self.linear_pos())
     }
 
     /// Gets the current position of the cursor in the source code.
     #[inline]
     pub(super) const fn pos(&self) -> Position {
-        self.pos
+        Position::new(self.line, self.column)
     }
 
     /// Gets the current linear position of the cursor in the source code.
@@ -49,16 +53,16 @@ impl<R> Cursor<R> {
     }
 
     /// Advances the position to the next column.
+    #[inline]
     fn next_column(&mut self) {
-        let current_line = self.pos.line_number();
-        let next_column = self.pos.column_number() + 1;
-        self.pos = Position::new(current_line, next_column);
+        self.column += 1;
     }
 
     /// Advances the position to the next line.
+    #[inline]
     fn next_line(&mut self) {
-        let next_line = self.pos.line_number() + 1;
-        self.pos = Position::new(next_line, 1);
+        self.line += 1;
+        self.column = 1;
     }
 
     /// Returns if strict mode is currently active.
@@ -127,7 +131,8 @@ impl<R: ReadChar> Cursor<R> {
     pub(super) fn new(inner: R) -> Self {
         Self {
             iter: inner,
-            pos: Position::new(1, 1),
+            line: 1,
+            column: 1,
             strict: false,
             module: false,
             peeked: [None; 4],

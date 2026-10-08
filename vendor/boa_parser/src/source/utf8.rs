@@ -19,6 +19,7 @@ impl<R: Read> UTF8Input<R> {
 
 impl<R: Read> UTF8Input<R> {
     /// Retrieves the next byte
+    #[inline]
     fn next_byte(&mut self) -> io::Result<Option<u8>> {
         self.input.next().transpose()
     }
@@ -26,13 +27,20 @@ impl<R: Read> UTF8Input<R> {
 
 impl<R: Read> ReadChar for UTF8Input<R> {
     /// Retrieves the next unchecked char in u32 code point.
+    #[inline]
     fn next_char(&mut self) -> io::Result<Option<u32>> {
         // Decode UTF-8
-        let x = match self.next_byte()? {
-            Some(b) if b >= 128 => b,         // UTF-8 codepoint
-            b => return Ok(b.map(u32::from)), // ASCII or None
-        };
+        match self.next_byte()? {
+            Some(b) if b >= 128 => self.next_multibyte_char(b), // UTF-8 codepoint
+            b => Ok(b.map(u32::from)),                          // ASCII or None
+        }
+    }
+}
 
+impl<R: Read> UTF8Input<R> {
+    /// Decodes the rest of a multibyte character whose first byte is `x`.
+    #[inline(never)]
+    fn next_multibyte_char(&mut self, x: u8) -> io::Result<Option<u32>> {
         // Multibyte case follows
         // Decode from a byte combination out of: [[[x y] z] w]
         // NOTE: Performance is sensitive to the exact formulation here
