@@ -54,15 +54,20 @@ impl Sockets {
         self.count(page, CONNECTING)
     }
 
-    /// Sockets whose handshake is pending and began less than `within`
-    /// ago.
-    pub fn connecting_within(&self, page: &PageState, within: std::time::Duration) -> usize {
+    /// Sockets whose handshake is pending, began less than `within` ago
+    /// and goes to a URL `counts` accepts.
+    pub fn connecting_within(
+        &self,
+        page: &PageState,
+        within: std::time::Duration,
+        counts: impl Fn(&Url) -> bool,
+    ) -> usize {
         self.by_token
             .borrow()
             .values()
             .filter(|&&id| {
                 page.try_with::<WebSocketObject, _>(id, |s| {
-                    s.state.get() == CONNECTING && s.made.elapsed() < within
+                    s.state.get() == CONNECTING && s.made.elapsed() < within && counts(&s.url)
                 }) == Some(true)
             })
             .count()

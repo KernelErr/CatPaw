@@ -3,7 +3,7 @@
 
 use std::net::TcpListener;
 
-use catpaw_engine::{LoopLimits, PageOptions, with_html};
+use catpaw_engine::{LoopLimits, PageOptions, SettlePolicy, with_html};
 use catpaw_net::NetConfig;
 use futures_util::{SinkExt, StreamExt};
 use tokio_tungstenite::tungstenite::Message;
@@ -171,9 +171,8 @@ fn the_server_can_close_and_failures_are_reported() {
     });
 }
 
-#[test]
-fn a_handshake_that_hangs_stops_holding_the_page_up() {
-    // Takes connections and never answers them.
+/// Takes connections and never answers them; returns the port.
+fn silent_server() -> u16 {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let port = listener.local_addr().unwrap().port();
     std::thread::spawn(move || {
@@ -182,6 +181,12 @@ fn a_handshake_that_hangs_stops_holding_the_page_up() {
             held.push(stream);
         }
     });
+    port
+}
+
+#[test]
+fn a_handshake_that_hangs_stops_holding_the_page_up() {
+    let port = silent_server();
     let html = format!(
         "<!doctype html><title>start</title><script>const ws = new WebSocket('ws://127.0.0.1:{port}/'); document.title = 'waiting';</script>"
     );
@@ -199,4 +204,29 @@ fn a_handshake_that_hangs_stops_holding_the_page_up() {
     )
     .expect("the page runs");
     assert!(started.elapsed() < std::time::Duration::from_secs(9));
+}
+
+#[test]
+fn a_handshake_with_an_ignored_host_does_not_hold_the_page_up() {
+    let port = silent_server();
+    let html = format!(
+        "<!doctype html><script>const ws = new WebSocket('ws://127.0.0.1:{port}/');</script>"
+    );
+    let mut options = options();
+    // Waiting for the handshake would outlast the run's wall time.
+    options.limits.settle = Some(SettlePolicy {
+        asset_timeout: std::time::Duration::from_secs(60),
+        ignore_hosts: vec!["127.0.0.1".to_string()],
+        ..SettlePolicy::default()
+    });
+    with_html(
+        Url::parse("https://app.test/").unwrap(),
+        html,
+        options,
+        |page| {
+            assert!(page.is_settled(), "{:?}", page.report());
+            assert_eq!(page.eval("ws.readyState").unwrap(), "0", "still connecting");
+        },
+    )
+    .expect("the page runs");
 }

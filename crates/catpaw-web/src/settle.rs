@@ -531,8 +531,12 @@ pub(crate) fn blocking_requests(page: &PageState, policy: &SettlePolicy) -> usiz
         .filter(|(_, info)| classify_request(page, policy, info) == RequestClass::Relevant)
         .count();
     // A handshake that hangs (a socket a network drops) stops holding the
-    // page up after a while, as a slow asset does.
-    requests + page.sockets.connecting_within(page, policy.asset_timeout)
+    // page up after a while, as a slow asset does; one with an ignored
+    // host never holds it up, as requests to such hosts do not.
+    requests
+        + page
+            .sockets
+            .connecting_within(page, policy.asset_timeout, |url| !policy.ignores_host(url))
 }
 
 /// How a timer counts, `now` being the page clock.
