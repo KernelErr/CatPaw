@@ -23,7 +23,11 @@ catpaw-protocol = { path = "../crates/catpaw-protocol" }
 catpaw-server = { path = "../crates/catpaw-server", optional = true }
 catpaw-net = { path = "../crates/catpaw-net", optional = true }
 zstd = { workspace = true, optional = true }
+mimalloc = { version = "0.1", optional = true, default-features = false }
 
 [features]
 wpt = ["dep:catpaw-bindings-boa", "dep:catpaw-web", "dep:serde_json", "dep:url"]
-engine = ["dep:catpaw-server", "dep:catpaw-net", "dep:serde_json", "dep:url", "dep:zstd"]
+engine = ["dep:catpaw-server", "dep:catpaw-net", "dep:serde_json", "dep:url", "dep:zstd", "mimalloc"]
+# mimalloc as the global allocator, as the catpaw binary has it by default:
+# the engine runs here (task replays, snapshot sizes) as it does for agents.
+mimalloc = ["dep:mimalloc"]

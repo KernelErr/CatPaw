@@ -4998,6 +4998,7 @@ dependencies = [
  "catpaw-web",
  "catpaw-webidl",
  "clap",
+ "mimalloc",
  "serde_json",
  "url",
  "zstd",

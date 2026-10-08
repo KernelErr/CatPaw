@@ -16,6 +16,10 @@ mod wpt_handlers;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
+#[cfg(feature = "mimalloc")]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 #[derive(Parser)]
 #[command(name = "xtask", about = "CatPaw developer tasks")]
 struct Cli {
