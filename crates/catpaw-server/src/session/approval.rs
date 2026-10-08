@@ -13,6 +13,7 @@ use super::*;
 use catpaw_protocol::canonical;
 
 use crate::confirm::{NewConfirmation, span};
+use crate::output::Held;
 
 /// A call as a confirmation remembers it: the tool and its arguments,
 /// without `confirmation`.
@@ -57,6 +58,38 @@ struct CallRef<'a> {
     name: &'a str,
     arguments: &'a Value,
     fingerprint: &'a str,
+}
+
+/// What an approved confirmation lets go.
+struct Release<'a> {
+    tab: u32,
+    id: u32,
+    action: &'a str,
+    holds: Vec<u64>,
+    /// What the action left held, when its own result was not shown: what
+    /// it led to is told with what the approval leads to.
+    before: Option<Held>,
+}
+
+/// Whether a line is the header of a diff that found nothing changed.
+fn no_changes(line: &str) -> bool {
+    line.starts_with("# s") && line.ends_with(" no changes")
+}
+
+/// `output` with `lines` (those not empty) under its first line.
+fn with_lines(mut output: ToolOutput, lines: &[String]) -> ToolOutput {
+    let lines: Vec<&str> = lines
+        .iter()
+        .map(String::as_str)
+        .filter(|l| !l.is_empty())
+        .collect();
+    if !lines.is_empty() {
+        let end = output.text.find('\n').unwrap_or(output.text.len());
+        output
+            .text
+            .insert_str(end, &format!("\n{}", lines.join("\n")));
+    }
+    output
 }
 
 /// Says on a call's first line that it ran because confirmation `id` was
@@ -184,7 +217,12 @@ impl Session {
                     crate::files::describe_paths(self.router.setup.files_root.as_deref(), &paths)?;
                 let target = p.target.clone().unwrap_or_default();
                 let into = self.describe_target(&target).unwrap_or(target);
-                Some(format!("upload {files} into {into}"))
+                // Sending the form is asked about on its own; the page's
+                // scripts need no form to read what is chosen.
+                let them = if paths.len() == 1 { "it" } else { "them" };
+                Some(format!(
+                    "upload {files} into {into} (the page can read {them} right away, before any form is sent)"
+                ))
             }
             Call::Evaluate(p) => {
                 let script = quote(&truncate(p.script.trim(), 200));
@@ -276,12 +314,17 @@ impl Session {
         } else {
             (first.strip_prefix("ok ").unwrap_or(first).to_string(), rest)
         };
-        // Nothing happened yet: a diff that says so is left out.
+        // Nothing happened yet: a diff that says so is left out, and its
+        // snapshot taken back.
+        let unchanged = rest.lines().any(no_changes);
         let mut rest = rest
             .lines()
-            .filter(|l| !(l.starts_with("# s") && l.ends_with(" no changes")))
+            .filter(|l| !no_changes(l))
             .collect::<Vec<_>>()
             .join("\n");
+        if unchanged {
+            self.take_back(output.snapshot.take());
+        }
         let what = format!("{action} would {}", held.what);
         let (id, repeat) = self.open_confirmation(
             NewConfirmation {
@@ -296,33 +339,64 @@ impl Session {
             name,
             arguments,
         );
-        for old in voided {
-            let note = format!("! c{old} no longer applies: c{id} replaces it");
-            rest = if rest.is_empty() {
-                note
-            } else {
-                format!("{note}\n{rest}")
-            };
+        let notes: Vec<String> = voided
+            .into_iter()
+            .map(|old| format!("! c{old} no longer applies: c{id} replaces it"))
+            .collect();
+        if !notes.is_empty() {
+            rest = notes
+                .iter()
+                .map(String::as_str)
+                .chain((!rest.is_empty()).then_some(rest.as_str()))
+                .collect::<Vec<_>>()
+                .join("\n");
         }
+        // An answer given within the call: declined, the result says so
+        // and what the action did meanwhile, as the question would have;
+        // approved, it is what the approval led to, in place of the
+        // action's own (whose snapshot is taken back, so that the diff
+        // starts from the page last shown), with what the action led to
+        // before it was held.
         match self.ask(id, &what, host) {
             Approval::Approved => {
+                self.take_back(output.snapshot.take());
                 let call = CallRef {
                     name,
                     arguments,
                     fingerprint,
                 };
-                self.release(&call, tab, id, &action, &held.ids, host)
+                let release = Release {
+                    tab,
+                    id,
+                    action: &action,
+                    holds: held.ids.clone(),
+                    before: Some(held),
+                };
+                self.release(&call, release, host)
+                    .map(|output| with_lines(output, &notes))
             }
             Approval::Declined => {
                 self.drop_holds(tab, &held.ids);
-                Ok(blocked(outcome::DECLINED, id))
+                Ok(with_lines(blocked(outcome::DECLINED, id), &[rest]))
             }
             Approval::Cancelled => {
                 self.drop_holds(tab, &held.ids);
-                Ok(blocked(outcome::CANCELLED, id))
+                Ok(with_lines(blocked(outcome::CANCELLED, id), &[rest]))
             }
             Approval::Unavailable => self.needs_confirmation(id, &what, &rest, &repeat),
         }
+    }
+
+    /// Takes back the snapshot a result was to show, when the session
+    /// gives another in its place.
+    fn take_back(&mut self, snapshot: Option<(u32, u64)>) {
+        let Some((tab, id)) = snapshot else {
+            return;
+        };
+        let _ = self.on_tab(tab, move |g, tab, _| {
+            g.take_back(tab, id);
+            Ok(ToolOutput::default())
+        });
     }
 
     /// `needs_confirmation cN: …` with where the user approves it and the
@@ -457,14 +531,15 @@ impl Session {
                             arguments,
                             fingerprint,
                         };
-                        self.release(
-                            &call,
-                            confirmation.tab,
+                        // The question's result showed what the action did.
+                        let release = Release {
+                            tab: confirmation.tab,
                             id,
-                            &confirmation.action,
-                            &confirmation.holds,
-                            host,
-                        )
+                            action: &confirmation.action,
+                            holds: confirmation.holds.clone(),
+                            before: None,
+                        };
+                        self.release(&call, release, host)
                     }
                     Stage::BeforeRunning => {
                         // On the tab where it was asked, whichever is current.
@@ -498,16 +573,19 @@ impl Session {
     fn release(
         &mut self,
         call: &CallRef<'_>,
-        tab: u32,
-        id: u32,
-        action: &str,
-        holds: &[u64],
+        release: Release<'_>,
         host: &mut dyn Host,
     ) -> CallResult {
+        let Release {
+            tab,
+            id,
+            action,
+            holds,
+            before,
+        } = release;
         let status = format!("ok {action} (confirmed c{id})");
-        let ids = holds.to_vec();
         let output = self.on_tab(tab, move |g, tab, view| {
-            g.release_holds(tab, &ids, status, view)
+            g.release_holds(tab, &holds, status, view, before)
                 .map(|output| output.unwrap_or_default())
         })?;
         if output.text.is_empty() {

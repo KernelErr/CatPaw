@@ -17,6 +17,9 @@ pub struct ToolOutput {
     pub(crate) dropped_holds: Vec<u64>,
     /// The call typed into a password field (journals keep the length).
     pub(crate) secret_input: bool,
+    /// The snapshot the text shows, by tab and number: taken back when the
+    /// session gives another result in this one's place.
+    pub(crate) snapshot: Option<(u32, u64)>,
 }
 
 /// What a call left held: the hold numbers (navigations and requests of
@@ -25,6 +28,13 @@ pub struct ToolOutput {
 pub(crate) struct Held {
     pub ids: Vec<u64>,
     pub what: String,
+    /// What else the call led to, for a result given in place of the
+    /// call's own: the consequence lines that stay true (`! dialog …`),
+    /// where the call's requests begin in the page's log (their line is
+    /// made again, with how they went), and a script's value.
+    pub lines: Vec<String>,
+    pub requests: usize,
+    pub value: Option<String>,
 }
 
 impl ToolOutput {

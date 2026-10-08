@@ -11,7 +11,7 @@ text: Powered by
 e7 link "Elemental Selenium"
 
 > act {"files":["hello.txt"],"kind":"upload","target":"css:#file-upload"}
-needs_confirmation c1: upload hello.txt (19 B) into e4 button
+needs_confirmation c1: upload hello.txt (19 B) into e4 button (the page can read it right away, before any form is sent)
   ask the user to approve at http://127.0.0.1:PORT/confirm/c1 (expires in 10m); then repeat (it waits up to 45s for them): act {"confirmation":"c1","files":["hello.txt"],"kind":"upload","target":"css:#file-upload"}
 
 > (user) approve c1
@@ -30,7 +30,7 @@ approved
 
 > click {"confirmation":"c2","target":"button \"Upload\""}
 ok click e5 button "Upload" (confirmed c2) → https://the-internet.herokuapp.com/upload (POST, 200)
-# s4 title="The Internet" full=navigated
+# s3 title="The Internet" full=navigated
 e8 link "Fork me on GitHub"
 e9 heading "File Uploaded!" [level=3]
 text: hello.txt

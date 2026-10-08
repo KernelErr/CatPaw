@@ -75,6 +75,21 @@ fn about_ignored_host(text: &str, policy: &SettlePolicy) -> bool {
         .any(|url| policy.ignores_host(&url))
 }
 
+/// Puts consequence lines in a fixed order, each kind in the order it
+/// happened.
+pub(super) fn in_order(lines: &mut [String]) {
+    lines.sort_by_key(|line| {
+        let word = line
+            .strip_prefix("! ")
+            .and_then(|rest| rest.split_whitespace().next())
+            .unwrap_or("");
+        consequence::ORDER
+            .iter()
+            .position(|w| *w == word)
+            .unwrap_or(consequence::ORDER.len())
+    });
+}
+
 /// A failure with the consequences of the action that failed; one that
 /// only repeats a navigation failure is left out.
 pub(super) fn with_consequences(mut failure: Failure, lines: Vec<String>) -> Failure {
@@ -428,23 +443,22 @@ impl GroupState {
             held_ids.extend(requests.iter().map(|r| r.id));
             held_what.push(format!("send → {}", sent.join(", ")));
         }
+        in_order(&mut report.lines);
         if !held_ids.is_empty() {
+            let network = format!("! {} ", consequence::NETWORK);
             report.held = Some(Held {
                 ids: held_ids,
                 what: held_what.join(", and "),
+                lines: report
+                    .lines
+                    .iter()
+                    .filter(|line| !line.starts_with(&network))
+                    .cloned()
+                    .collect(),
+                requests: base.requests,
+                value: None,
             });
         }
-        // In a fixed order, each kind in the order it happened.
-        report.lines.sort_by_key(|line| {
-            let word = line
-                .strip_prefix("! ")
-                .and_then(|rest| rest.split_whitespace().next())
-                .unwrap_or("");
-            consequence::ORDER
-                .iter()
-                .position(|w| *w == word)
-                .unwrap_or(consequence::ORDER.len())
-        });
         if let Some(root) = root {
             report.lines.extend(self.not_settled(root));
         }
@@ -487,16 +501,21 @@ impl GroupState {
         let page = self.page_view(tab, mode, view, url_shown, report.acted)?;
         // A lone change to the element acted on, with nothing else to say,
         // goes on the status line (`ok type e2 textbox "Name" [value=- →
-        // Ada]`).
-        if suffix.is_empty()
+        // Ada]`), and the snapshot's number goes to the next one. Not when
+        // something is held: the session may give another result in this
+        // one's place.
+        if held.is_none()
+            && suffix.is_empty()
             && report.lines.is_empty()
             && let Some(rest) = page
                 .quiet
                 .as_deref()
                 .and_then(|lines| lone_change(&status, lines))
         {
+            if let Some(id) = page.id {
+                self.unnumber(tab, id);
+            }
             return Ok(ToolOutput {
-                held,
                 dropped_holds: dropped,
                 ..ToolOutput::ok(format!("{status}{rest}"))
             });
@@ -514,6 +533,7 @@ impl GroupState {
         Ok(ToolOutput {
             held,
             dropped_holds: dropped,
+            snapshot: page.id.map(|id| (tab, id)),
             ..ToolOutput::ok(text)
         })
     }

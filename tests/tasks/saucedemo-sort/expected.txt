@@ -17,7 +17,7 @@ ok type e3 textbox "Username" [value=- → standard_user]
 
 > type {"submit":true,"target":"textbox \"Password\"","text":"secret_sauce"}
 ok type e4 textbox "Password" + Enter → https://www.saucedemo.com/inventory.html (same document)
-# s3 title="Swag Labs" full=large
+# s2 title="Swag Labs" full=large
 e8 banner
   e9 button "Open Menu"
   text: Swag Labs
@@ -65,7 +65,7 @@ e31 contentinfo
 
 > select {"option":"Price (low to high)","target":"combobox \"Sort products\""}
 ok select e11 combobox "Sort products" ← "Price (low to high)"
-# s4 url=https://www.saucedemo.com/inventory.html title="Swag Labs" full=large
+# s3 url=https://www.saucedemo.com/inventory.html title="Swag Labs" full=large
 e8 banner
   e9 button "Open Menu"
   text: Swag Labs

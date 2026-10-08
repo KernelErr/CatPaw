@@ -53,6 +53,30 @@ function send(name) {
 <button onclick="send('one')">One</button>
 <button onclick="send('two')">Two</button>"#;
 
+/// A form whose submission changes the page and alerts before it goes.
+const PAY: &str = r#"<!doctype html><title>Pay</title>
+<p id=state>Ready</p>
+<form method=post action=/paid onsubmit="document.getElementById('state').textContent = 'Paying'; alert('Paying now')">
+  <input name=amount value=5><button>Pay</button>
+</form>"#;
+
+/// A button that changes the page, sends a POST to another site
+/// (localhost, from a page on 127.0.0.1), and changes the page again once
+/// it went.
+const NOTE: &str = r#"<!doctype html><title>Note</title>
+<h1>Notes</h1>
+<ul><li><a href=/one>First note</a><li><a href=/two>Second note</a><li><a href=/three>Third note</a></ul>
+<p id=state>Idle</p>
+<script>
+function send() {
+  const state = document.getElementById('state');
+  state.textContent = 'Sending';
+  fetch('http://localhost:' + location.port + '/sent', {method: 'POST', body: 'hi', mode: 'no-cors'})
+    .then(() => { state.textContent = 'Sent'; }, () => { state.textContent = 'Failed'; });
+}
+</script>
+<button onclick="send()">Send</button>"#;
+
 type Log = Arc<Mutex<Vec<String>>>;
 
 /// Serves `/order`, answers anything else with a page naming the request,
@@ -107,6 +131,10 @@ fn serve() -> (u16, Log) {
                     LOGIN.to_string()
                 } else if path == "/two-posts" {
                     TWO_POSTS.to_string()
+                } else if path == "/pay" {
+                    PAY.to_string()
+                } else if path == "/note" {
+                    NOTE.to_string()
                 } else if path == "/framed" {
                     format!(
                         "<!doctype html><title>Framed</title><iframe src=\"http://localhost:{port}/order\"></iframe>"
@@ -212,6 +240,16 @@ impl Client {
             .handle_line_with(&line.to_string(), host)
             .expect("a reply");
         serde_json::from_str(&reply).unwrap()
+    }
+
+    /// Says the host can ask its user within a call (MCP elicitation).
+    fn can_ask(&mut self) {
+        let init = self.line(
+            "initialize",
+            json!({"protocolVersion": "2025-06-18", "capabilities": {"elicitation": {}}, "clientInfo": {"name": "t", "version": "0"}}),
+            &mut Never,
+        );
+        assert!(init["result"]["protocolVersion"].is_string());
     }
 
     fn call_asking(&mut self, name: &str, args: Value, host: &mut dyn Host) -> String {
@@ -422,6 +460,78 @@ fn the_host_can_ask_within_the_call() {
 }
 
 #[test]
+fn an_answer_within_the_call_keeps_what_the_action_did() {
+    let mut client = Client::new("answered", |_| {});
+    client.can_ask();
+    let url = format!("{}/pay", client.base);
+    let page = client.call("navigate", json!({ "url": url }));
+    assert!(page.contains("\n# s1 "), "{page}");
+
+    // Approved: what the approval led to, with the dialog the action
+    // raised before it was held, and the snapshot numbered on from the
+    // last one shown.
+    let mut yes = Answer(true, Vec::new());
+    let paid = client.call_asking("click", json!({"target": "button \"Pay\""}), &mut yes);
+    assert!(paid.contains("(confirmed c1) → "), "{paid}");
+    assert!(paid.contains("\n! dialog alert \"Paying now\""), "{paid}");
+    assert!(paid.contains("\n# s2 "), "{paid}");
+    assert_eq!(posts(&client.log).len(), 1);
+
+    // Declined: what the action did, as the question would have shown it.
+    let page = client.call("navigate", json!({ "url": url }));
+    assert!(page.contains("\n# s3 "), "{page}");
+    let mut no = Answer(false, Vec::new());
+    let blocked = client.call_asking("click", json!({"target": "button \"Pay\""}), &mut no);
+    assert!(
+        blocked.starts_with("blocked user: declined c2\n"),
+        "{blocked}"
+    );
+    assert!(
+        blocked.contains("\n! dialog alert \"Paying now\""),
+        "{blocked}"
+    );
+    assert!(blocked.contains("\n# s4 "), "{blocked}");
+    assert!(blocked.contains("Ready → Paying"), "{blocked}");
+    let after = client.call("snapshot", json!({"diff": true}));
+    assert_eq!(after, "ok snapshot\n# s5 no changes");
+    assert_eq!(posts(&client.log).len(), 1);
+
+    // A script that submits keeps its value.
+    let mut yes = Answer(true, Vec::new());
+    let ran = client.call_asking(
+        "evaluate",
+        json!({"script": "document.forms[0].requestSubmit(); return 'submitted';"}),
+        &mut yes,
+    );
+    assert!(ran.starts_with("ok evaluate (confirmed c3) → "), "{ran}");
+    assert!(ran.contains("\nsubmitted\n# s6 "), "{ran}");
+    assert_eq!(posts(&client.log).len(), 2);
+}
+
+#[test]
+fn the_diff_after_an_approval_within_the_call_starts_from_the_page_shown() {
+    let mut client = Client::new("answered-diff", strict);
+    client.can_ask();
+    let url = format!("{}/note", client.base);
+    let page = client.call("navigate", json!({ "url": url }));
+    assert!(page.contains("\n# s1 "), "{page}");
+    let mut yes = Answer(true, Vec::new());
+    let sent = client.call_asking("click", json!({"target": "button \"Send\""}), &mut yes);
+    assert!(sent.starts_with("ok click e"), "{sent}");
+    assert!(sent.contains("(confirmed c1)"), "{sent}");
+    // The agent saw Idle last; Sending, shown to no one, is not where the
+    // diff starts.
+    assert!(sent.contains("\n# s2 "), "{sent}");
+    assert!(sent.contains("Idle → Sent"), "{sent}");
+    // The request the action made is told as it went, not as it waited.
+    assert!(
+        sent.contains("\n! network POST localhost/sent 200\n"),
+        "{sent}"
+    );
+    assert_eq!(posts(&client.log), vec!["POST /sent hi".to_string()]);
+}
+
+#[test]
 fn uploads_ask_first_and_reach_the_server() {
     let dir = temp_dir("upload-files");
     std::fs::write(dir.join("hello.txt"), "hello upload").unwrap();
@@ -439,6 +549,10 @@ fn uploads_ask_first_and_reach_the_server() {
     let asked = client.call("act", args.clone());
     assert!(
         asked.starts_with("needs_confirmation c1: upload hello.txt (12 B) into e4 button"),
+        "{asked}"
+    );
+    assert!(
+        asked.contains("(the page can read it right away, before any form is sent)"),
         "{asked}"
     );
     client.decide(&asked, "approve");

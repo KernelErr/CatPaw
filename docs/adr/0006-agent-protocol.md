@@ -124,7 +124,9 @@ of the model on every turn.
    WebSocket connections, are refused rather than held: they cannot wait)
    are held where they would leave for the network, after the action ran,
    so an approved action is let go and never carried out again; uploads
-   and `evaluate` are stopped before they run. Holds are numbered per
+   and `evaluate` are stopped before they run (an upload's question says
+   the page can read the files as soon as they are in: a form that sends
+   them asks again, as any submission does). Holds are numbered per
    page, and a confirmation is tied to the holds its action made:
    approving lets exactly those go (with their preflights and redirect
    hops), declining or running out drops them, and one whose holds the
@@ -134,7 +136,11 @@ of the model on every turn.
    `needs_confirmation c1: click e8 button "Login" would submit → POST
    https://…/authenticate (fields: username=tomsmith, password=***)`. A
    host that offers MCP elicitation asks its user within the same call
-   (a boolean `approve`; declining gives `blocked user: declined c1`).
+   (a boolean `approve`). Declining gives `blocked user: declined c1`
+   and what the action did before it was held, as the question would
+   have; approving gives what the approval led to, with what the action
+   led to before it was held (its requests as they went, a script's
+   value), and a diff from the snapshot the agent last saw.
    Otherwise the result gives the address of a page on 127.0.0.1 where
    the user approves with a key kept in a file (made on first use in the
    user's data directory, or `--approval-key-file`; readable by its owner
@@ -157,13 +163,18 @@ of the model on every turn.
    host's own permission prompts.
 
 9. **Diffs after actions.** An action answers with what changed since
-   the tab's last snapshot (ADR 0005, amended): `~` changed, `+` added
-   with its subtree, `-` removed, `>` moved, `(replaces eN)` for a node
-   the page rendered again. A new document, a page that changed more than
-   it stayed (the diff over 60% of the whole), or no snapshot to compare
-   with gives the whole snapshot, its header saying why (`full=navigated`,
-   `full=large`, `full=no-baseline`). `snapshot: "full" | "none"` on any
-   action says otherwise. A tab keeps its latest snapshot of each filter.
+   the last snapshot of the tab a result showed (ADR 0005, amended): `~`
+   changed, `+` added with its subtree, `-` removed, `>` moved,
+   `(replaces eN)` for a node the page rendered again. A new document, a
+   page that changed more than it stayed (the diff over 60% of the
+   whole), or no snapshot to compare with gives the whole snapshot, its
+   header saying why (`full=navigated`, `full=large`, `full=no-baseline`).
+   `snapshot: "full" | "none"` on any action says otherwise. A tab keeps
+   its latest snapshot of each filter. Numbers go to the snapshots results
+   show, one after another: a lone change put on the status line gives
+   its snapshot's number back, and a result the session gives in place of
+   another (an action answered within the call) takes back the replaced
+   one's snapshot.
 10. **Settling.** An action is done when the page has settled under a
     policy, not when its event loop is empty (real pages never empty
     it). The policy waits for requests the page waits on, timers due

@@ -366,8 +366,11 @@ fn a_form_is_filled_and_submitted_by_ref() {
         "ok type e3 textbox \"Search\" [value=- → \"wool socks\"]"
     );
 
-    // Control+A selects what is there: typing replaces it.
-    client.ok("press", json!({"key": "ctrl+a", "target": search}));
+    // Control+A selects what is there: typing replaces it. Numbers go to
+    // the snapshots shown: the typing above showed its change on the ok
+    // line.
+    let pressed = client.ok("press", json!({"key": "ctrl+a", "target": search}));
+    assert!(pressed.ends_with("\n# s2 no changes"), "{pressed}");
     let replaced = client.ok(
         "type",
         json!({"target": search, "text": "hats", "append": true}),
@@ -416,7 +419,7 @@ fn a_form_is_filled_and_submitted_by_ref() {
 
     let back = client.ok("navigate", json!({"go": "back"}));
     assert!(back.starts_with("ok back → "), "{back}");
-    assert!(back.contains("\n# s9 title=\"Shop\"\n"), "{back}");
+    assert!(back.contains("\n# s4 title=\"Shop\"\n"), "{back}");
 }
 
 #[test]

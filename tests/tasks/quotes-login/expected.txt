@@ -31,7 +31,7 @@ approved
 
 > click {"confirmation":"c1","target":"button \"Login\""}
 ok click e5 button "Login" (confirmed c1) → https://quotes.toscrape.com/ (POST, 200)
-# s5 title="Quotes to Scrape" full=navigated
+# s2 title="Quotes to Scrape" full=navigated
 e11 link "Quotes to Scrape" [heading=1]
 e12 link "Logout"
 text: “The world as we have created it is a process of our thinking. It cannot be changed without changing our thinking.”

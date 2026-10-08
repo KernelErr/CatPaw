@@ -77,11 +77,25 @@ pub(super) struct PageView {
     /// For a diff whose header says nothing but its counts: its lines (a
     /// lone change can then go on the status line).
     pub quiet: Option<Vec<String>>,
+    /// The number of the snapshot shown.
+    pub id: Option<u64>,
 }
 
 impl PageView {
-    fn whole(text: String) -> Self {
-        Self { text, quiet: None }
+    fn whole((text, id): (String, u64)) -> Self {
+        Self {
+            text,
+            quiet: None,
+            id: Some(id),
+        }
+    }
+
+    fn nothing() -> Self {
+        Self {
+            text: String::new(),
+            quiet: None,
+            id: None,
+        }
     }
 }
 
@@ -295,10 +309,16 @@ impl GroupState {
             return;
         };
         // The latest of each filter is all a diff compares with, and those
-        // of a document the tab left are of no use.
-        entry
-            .history
-            .retain(|stored| stored.filter != filter && stored.epoch == model.epoch);
+        // of a document the tab left are of no use. The ones replaced are
+        // kept until the next snapshot, should this one be taken back.
+        let mut replaced = Vec::new();
+        for (at, stored) in std::mem::take(&mut entry.history).into_iter().enumerate() {
+            if stored.filter != filter && stored.epoch == model.epoch {
+                entry.history.push_back(stored);
+            } else {
+                replaced.push((at, stored));
+            }
+        }
         entry.history.push_back(Stored {
             filter,
             epoch: model.epoch,
@@ -309,6 +329,46 @@ impl GroupState {
             lines: model.lines,
             version,
         });
+        if let Some(taken) = &mut entry.taken {
+            taken.replaced = Some(replaced);
+        }
+    }
+
+    /// Takes back snapshot `id` of `tab`, which no result showed: the next
+    /// snapshot gets its number, and diffs start again from the one shown
+    /// before it. Only the latest snapshot can be taken back.
+    pub(crate) fn take_back(&mut self, tab: u32, id: u64) {
+        let Some(entry) = self.tabs.get_mut(&tab) else {
+            return;
+        };
+        if entry.next_snapshot != id + 1 {
+            return;
+        }
+        let Some(taken) = entry.taken.take_if(|t| t.id == id) else {
+            return;
+        };
+        entry.next_snapshot = id;
+        entry.marks.retain(|m| m.id != id);
+        if let Some(replaced) = taken.replaced {
+            entry.history.pop_back();
+            // In the order they stood, each goes back to its place.
+            for (at, stored) in replaced {
+                entry.history.insert(at, stored);
+            }
+        }
+    }
+
+    /// Gives back the number of snapshot `id` of `tab`, whose one change a
+    /// status line showed: the page it saw stays the one to diff against.
+    pub(super) fn unnumber(&mut self, tab: u32, id: u64) {
+        let Some(entry) = self.tabs.get_mut(&tab) else {
+            return;
+        };
+        if entry.next_snapshot == id + 1 {
+            entry.next_snapshot = id;
+            entry.marks.retain(|m| m.id != id);
+            entry.taken = None;
+        }
     }
 
     /// The `settled=` and `pending=` of a header.
@@ -350,12 +410,13 @@ impl GroupState {
         request: &SnapRequest,
         view: View,
         full: Option<&str>,
-    ) -> Result<String, Failure> {
+    ) -> Result<(String, u64), Failure> {
         let model = self.model(tab, request.filter, request.extra, request.root.as_deref())?;
         self.full_text_of(tab, request, view, full, model)
     }
 
-    /// [`GroupState::full_text`] of a model built already (for the request).
+    /// [`GroupState::full_text`] of a model built already (for the request),
+    /// with the snapshot's number.
     fn full_text_of(
         &mut self,
         tab: u32,
@@ -363,7 +424,7 @@ impl GroupState {
         view: View,
         full: Option<&str>,
         model: Model,
-    ) -> Result<String, Failure> {
+    ) -> Result<(String, u64), Failure> {
         let (settled, pending) = self.settledness(tab);
         let challenge = self.challenge(tab);
         let entry = self.tabs.get_mut(&tab).expect("model found the tab");
@@ -405,7 +466,7 @@ impl GroupState {
         if request.root.is_none() && request.extra == ExtraAttrs::default() {
             self.remember(tab, request.filter, model);
         }
-        Ok(text.trim_end().to_string())
+        Ok((text.trim_end().to_string(), id))
     }
 
     /// The tab's snapshot as text: header line, then the lines.
@@ -416,6 +477,7 @@ impl GroupState {
         view: View,
     ) -> Result<String, Failure> {
         self.full_text(tab, request, view, None)
+            .map(|(text, _)| text)
     }
 
     pub(crate) fn snapshot(&mut self, tab: u32, p: params::Snapshot, view: View) -> CallResult {
@@ -460,7 +522,7 @@ impl GroupState {
         acted: Option<u32>,
     ) -> Result<PageView, Failure> {
         if !self.tabs.contains_key(&tab) {
-            return Ok(PageView::whole(String::new()));
+            return Ok(PageView::nothing());
         }
         let request = SnapRequest {
             url_shown,
@@ -468,8 +530,10 @@ impl GroupState {
             ..SnapRequest::default()
         };
         match mode.unwrap_or(SnapshotMode::Diff) {
-            SnapshotMode::None => Ok(PageView::whole(String::new())),
-            SnapshotMode::Full => self.snapshot_text(tab, &request, view).map(PageView::whole),
+            SnapshotMode::None => Ok(PageView::nothing()),
+            SnapshotMode::Full => self
+                .full_text(tab, &request, view, None)
+                .map(PageView::whole),
             SnapshotMode::Diff => self.diff_view(tab, &request, view),
         }
     }
@@ -516,6 +580,7 @@ impl GroupState {
         Ok(Some(PageView {
             text: text.trim_end().to_string(),
             quiet: quiet.then(Vec::new),
+            id: Some(id),
         }))
     }
 
@@ -619,6 +684,7 @@ impl GroupState {
         Ok(PageView {
             text: text.trim_end().to_string(),
             quiet: quiet.then(|| diff.lines.clone()),
+            id: Some(id),
         })
     }
 }

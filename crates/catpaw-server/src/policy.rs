@@ -120,7 +120,8 @@ impl Policy {
         }
     }
 
-    /// Choosing local files in a file input (they go to the site later).
+    /// Choosing local files in a file input: the page can read them from
+    /// then on, and a form that sends them is asked about as any other.
     pub fn upload(&self) -> Verdict {
         match self.preset {
             Preset::Open => Verdict::Allow,

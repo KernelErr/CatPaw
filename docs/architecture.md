@@ -233,9 +233,6 @@ README lists as missing:
   controls' state themselves.
 - **Form controls sit on the line by their bottom edge**, where browsers
   align the text inside them with the text around them.
-- **An action approved through the host's own prompt skips a snapshot
-  number**, and the diff that follows the approval starts from the
-  snapshot taken while the action waited, which the agent did not see.
 - **A host whose HTTP/2 connections leave streams unanswered** costs the
   requests it leaves about two seconds before they go again over
   HTTP/1.1 (see `HTTP2_STALL` in `catpaw-net`).

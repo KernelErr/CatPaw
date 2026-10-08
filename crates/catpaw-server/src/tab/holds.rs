@@ -5,9 +5,9 @@ use catpaw_agent::snapshot::truncate;
 use catpaw_engine::HeldNavigation;
 use catpaw_protocol::wording::ErrorCode;
 
-use super::report::with_consequences;
+use super::report::{in_order, with_consequences};
 use super::{GroupState, View};
-use crate::output::{Failure, ToolOutput};
+use crate::output::{Failure, Held, ToolOutput};
 
 /// The fields of a submission's body, `name=value` (secrets and what the
 /// user typed in a hand-off masked, values cut short), as many as fit.
@@ -85,17 +85,23 @@ pub(super) fn describe_held(held: &HeldNavigation, typed: &[String]) -> String {
 
 impl GroupState {
     /// Lets the holds `ids` go (navigations, requests), as though the
-    /// action had not been stopped, and reports like that action. `None`
-    /// when none of them is held any more (the page replaced or dropped
-    /// them).
+    /// action had not been stopped, and reports like that action; with
+    /// `before` (what the action left held, when its own result was not
+    /// shown), what it led to before it was held as well. `None` when none
+    /// of them is held any more (the page replaced or dropped them).
     pub(crate) fn release_holds(
         &mut self,
         tab: u32,
         ids: &[u64],
         status: String,
         view: View,
+        before: Option<Held>,
     ) -> Result<Option<ToolOutput>, Failure> {
-        let base = self.baseline(tab);
+        let mut base = self.baseline(tab);
+        // The action's requests are told again, with how they went.
+        if let Some(held) = &before {
+            base.requests = held.requests;
+        }
         let navigations: Vec<u64> = self
             .page
             .held_navigations()
@@ -121,7 +127,15 @@ impl GroupState {
         }
         // Let the page take in what came back.
         self.page.settle(&super::action_limits());
-        let report = self.finish(tab, &base);
+        let mut report = self.finish(tab, &base);
+        if let Some(held) = before {
+            let after = std::mem::replace(&mut report.lines, held.lines);
+            report.lines.extend(after);
+            in_order(&mut report.lines);
+            // A script's value comes after what happened, as it does in
+            // its own result.
+            report.lines.extend(held.value);
+        }
         if let Err(e) = result {
             let failure = Failure::new(ErrorCode::NavigationFailed, e.to_string());
             return Err(with_consequences(failure, report.lines));

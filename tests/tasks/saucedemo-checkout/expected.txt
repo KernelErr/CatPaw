@@ -17,7 +17,7 @@ ok type e3 textbox "Username" [value=- → standard_user]
 
 > type {"submit":true,"target":"textbox \"Password\"","text":"secret_sauce"}
 ok type e4 textbox "Password" + Enter → https://www.saucedemo.com/inventory.html (same document)
-# s3 title="Swag Labs" full=large
+# s2 title="Swag Labs" full=large
 e8 banner
   e9 button "Open Menu"
   text: Swag Labs
@@ -65,14 +65,14 @@ e31 contentinfo
 
 > click {"target":"css:#add-to-cart-sauce-labs-backpack"}
 ok click e15 button "Add to cart" (after e14 button "View details for Sauce Labs Backpack")
-# s4 changed=1 added=1 removed=1
+# s3 changed=1 added=1 removed=1
 ~ e10 button "Cart, empty" → "Cart, 1 items"
 + e36 button "Remove" (in e12, after e14)
 - e15 button "Add to cart"
 
 > click {"target":"css:.shopping_cart_link"}
 ok click e10 button "Cart, 1 items" → https://www.saucedemo.com/cart.html (same document)
-# s5 title="Swag Labs" full=large
+# s4 title="Swag Labs" full=large
 e37 banner
   e38 button "Open Menu"
   text: Swag Labs
@@ -96,7 +96,7 @@ e45 contentinfo
 
 > click {"target":"button \"Checkout\""}
 ok click e44 button "Checkout" → https://www.saucedemo.com/checkout-step-one.html (same document)
-# s6 title="Swag Labs" full=large
+# s5 title="Swag Labs" full=large
 e50 banner
   e51 button "Open Menu"
   text: Swag Labs
@@ -127,7 +127,7 @@ ok type e57 textbox "Zip/Postal Code" [value=- → 10115]
 
 > click {"target":"button \"Continue\""}
 ok click e59 button "Continue" → https://www.saucedemo.com/checkout-step-two.html (same document)
-# s10 title="Swag Labs" full=large
+# s6 title="Swag Labs" full=large
 e65 banner
   e66 button "Open Menu"
   text: Swag Labs
@@ -158,7 +158,7 @@ e72 contentinfo
 
 > click {"target":"button \"Finish\""}
 ok click e71 button "Finish" → https://www.saucedemo.com/checkout-complete.html (same document)
-# s11 title="Swag Labs" full=large
+# s7 title="Swag Labs" full=large
 e77 banner
   e78 button "Open Menu"
   text: Swag Labs

@@ -104,16 +104,16 @@ ok click e16 button "Add to cart"
 | internet-login | 5 | 1309 (~374) | 6 | 2940 (~840) |
 | internet-login-declined | 5 | 1136 (~325) | - | - |
 | internet-prompt | 2 | 622 (~178) | 5 | 1968 (~562) |
-| internet-upload | 5 | 1318 (~377) | 8 | 3239 (~925) |
+| internet-upload | 5 | 1377 (~393) | 8 | 3239 (~925) |
 | internet-windows | 3 | 479 (~137) | 5 | 2217 (~633) |
 | quotes-js-pagination | 2 | 5768 (~1648) | 4 | 9394 (~2684) |
 | quotes-login | 5 | 3849 (~1100) | 6 | 12497 (~3571) |
 | quotes-scroll | 3 | 4354 (~1244) | 5 | 11922 (~3406) |
 | quotes-table | 2 | 5116 (~1462) | 2 | 8658 (~2474) |
-| saucedemo-checkout | 11 | 6253 (~1787) | 18 | 20992 (~5998) |
+| saucedemo-checkout | 11 | 6251 (~1786) | 18 | 20992 (~5998) |
 | saucedemo-sort | 4 | 5418 (~1548) | 7 | 12814 (~3661) |
 | todomvc | 5 | 1306 (~373) | 10 | 9128 (~2608) |
-| 合计 | 71 | 68042 (~19441) | 118 | 243282 (~69509) |
+| 合计 | 71 | 68099 (~19457) | 118 | 243282 (~69509) |
 
 字节数是 agent 在一个任务中收到的全部工具结果（token 按每 3.5 字节一个估算）。CatPaw 的数字来自录制的回放；`@playwright/mcp` 0.0.83 搭配 headless Chrome 于 2026-10-08 实网走了同样的步骤（取三次运行的中位数）。Playwright MCP 把页面快照存进文件，页面变化时在结果里给出链接；agent 要看页面、找下一个目标就得读它，所以这个文件也计入，并算作一次调用。CatPaw 对动作只返回变化的部分，整份快照默认上限 4000 token，其余折叠起来由 agent 按需展开；CatPaw 的数字里还包含了等待用户批准的调用（登录、表单提交、上传），Playwright MCP 没有这一步。用户拒绝确认的任务在 Playwright MCP 一侧没有对应的步骤，合计不计入。每轮对话都要付出的工具列表，CatPaw 为 12.1 KB，Playwright MCP 为 20.3 KB。
 

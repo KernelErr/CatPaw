@@ -857,20 +857,26 @@ impl GroupState {
                     text.push('\n');
                     text.push_str(line);
                 }
-                text.push('\n');
-                if value.len() > EVAL_BYTES {
+                let shown = if value.len() > EVAL_BYTES {
                     let cut = floor_char_boundary(&value, EVAL_BYTES);
-                    let _ = write!(
-                        text,
+                    format!(
                         "{}\n[truncated at {cut} of {} bytes]",
                         &value[..cut],
                         value.len()
-                    );
+                    )
                 } else {
-                    text.push_str(&value);
+                    value
+                };
+                text.push('\n');
+                text.push_str(&shown);
+                let mut held = report.held;
+                if let Some(held) = &mut held
+                    && !shown.is_empty()
+                {
+                    held.value = Some(shown);
                 }
                 Ok(ToolOutput {
-                    held: report.held,
+                    held,
                     dropped_holds: report.dropped,
                     ..ToolOutput::ok(text)
                 })

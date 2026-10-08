@@ -25,7 +25,7 @@ approved
 
 > click {"confirmation":"c1","target":"button \"Login\""}
 ok click e6 button "Login" (confirmed c1) → https://the-internet.herokuapp.com/secure (POST, 200)
-# s5 title="The Internet" full=navigated
+# s2 title="The Internet" full=navigated
 text: You logged into a secure area!
 e8 link "×"
 e9 link "Fork me on GitHub"

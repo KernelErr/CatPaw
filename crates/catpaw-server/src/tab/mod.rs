@@ -118,6 +118,15 @@ struct Stored {
     version: Vec<u64>,
 }
 
+/// The latest snapshot a tab took, until it takes another: what taking it
+/// changed, so that one no result shows can be taken back.
+struct Taken {
+    id: u64,
+    /// The snapshots it replaced as the ones to diff against, at their
+    /// places in the history (`None`: it was not kept to diff against).
+    replaced: Option<Vec<(usize, Stored)>>,
+}
+
 /// Where the logs stood when a snapshot was taken.
 #[derive(Clone, Copy)]
 struct Mark {
@@ -135,6 +144,7 @@ struct Tab {
     opener: Option<u32>,
     refs: RefTable,
     next_snapshot: u64,
+    taken: Option<Taken>,
     /// The epoch of the document shown.
     doc_epoch: u64,
     history: VecDeque<Stored>,
@@ -151,6 +161,7 @@ impl Tab {
             opener,
             refs: RefTable::new(),
             next_snapshot: 1,
+            taken: None,
             doc_epoch: epoch,
             history: VecDeque::new(),
             marks: VecDeque::new(),
@@ -211,6 +222,7 @@ impl Tab {
     fn take_id(&mut self) -> u64 {
         let id = self.next_snapshot;
         self.next_snapshot += 1;
+        self.taken = Some(Taken { id, replaced: None });
         id
     }
 }
