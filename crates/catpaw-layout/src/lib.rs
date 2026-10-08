@@ -32,6 +32,7 @@ use style::properties::ComputedValues;
 use style::servo_arc::Arc;
 
 pub use construct::is_replaced;
+pub use inline::shape_control_text;
 pub use query::{HitTarget, ScrollMetrics};
 
 new_key_type! {

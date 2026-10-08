@@ -18,3 +18,4 @@ url.workspace = true
 
 [dev-dependencies]
 catpaw-dom = { path = "../catpaw-dom", version = "0.0.1" }
+png.workspace = true

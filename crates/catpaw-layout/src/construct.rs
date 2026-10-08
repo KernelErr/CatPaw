@@ -660,7 +660,8 @@ fn intrinsic_size(dom: &Dom, el: NodeId, style: &ComputedValues) -> Intrinsic {
                             "reset" => "Reset".to_string(),
                             _ => String::new(),
                         });
-                    fixed(label.chars().count() as f32 * char_width + 12.0, line)
+                    // The UA style sheet gives the button its padding.
+                    fixed(label.chars().count() as f32 * char_width, line)
                 }
                 _ => fixed(attr_count(dom, el, "size", 20.0) * char_width, line),
             }

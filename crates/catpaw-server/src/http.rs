@@ -187,6 +187,6 @@ pub(crate) fn respond_bytes(
 
 pub(crate) fn page(title: &str, body: &str) -> String {
     format!(
-        "<!doctype html><html lang=en><meta charset=utf-8><meta name=viewport content=\"width=device-width,initial-scale=1\"><title>{title}</title><style>:root{{color-scheme:light dark}}body{{font:16px/1.5 system-ui,sans-serif;max-width:40rem;margin:3rem auto;padding:0 1rem}}pre{{white-space:pre-wrap;padding:1rem;border:1px solid #8884;border-radius:.5rem}}button{{font:inherit;padding:.5rem 1.2rem;margin:.25rem .5rem 0 0}}input{{font:inherit;width:100%;padding:.4rem}}small{{opacity:.75}}</style>{body}</html>"
+        "<!doctype html><html lang=en><meta charset=utf-8><meta name=viewport content=\"width=device-width,initial-scale=1\"><title>{title}</title><style>:root{{color-scheme:light dark}}body{{font:16px/1.5 system-ui,sans-serif;max-width:40rem;margin:3rem auto;padding:0 1rem}}pre{{white-space:pre-wrap;padding:1rem;border:1px solid #8884;border-radius:.5rem}}button{{font:inherit;padding:.5rem 1.2rem;margin:.25rem .5rem 0 0}}input:not([type=checkbox]):not([type=radio]){{font:inherit;width:100%;padding:.4rem}}small{{opacity:.75}}</style>{body}</html>"
     )
 }

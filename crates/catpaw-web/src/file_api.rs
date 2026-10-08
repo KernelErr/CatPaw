@@ -152,6 +152,25 @@ pub(crate) fn chosen_files(cx: &Cx<'_>, input: NodeId) -> Vec<ObjectId> {
     .unwrap_or_default()
 }
 
+/// The names of the files a file input chose, in order.
+pub(crate) fn chosen_file_names(page: &PageState, input: NodeId) -> Vec<String> {
+    let list = page.file_lists.borrow().get(&input).copied();
+    let files = list
+        .and_then(|list| {
+            page.with::<FileListObject, _>(list, |l| l.files.clone())
+                .ok()
+        })
+        .unwrap_or_default();
+    files
+        .into_iter()
+        .filter_map(|file| {
+            page.with::<BlobObject, _>(file, |b| b.file.as_ref().map(|f| f.name.clone()))
+                .ok()
+                .flatten()
+        })
+        .collect()
+}
+
 /// The name of a file.
 pub(crate) fn file_name(cx: &Cx<'_>, file: ObjectId) -> Option<String> {
     blob(cx, file, |b| b.file.as_ref().map(|f| f.name.clone()))

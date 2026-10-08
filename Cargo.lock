@@ -538,6 +538,7 @@ dependencies = [
  "catpaw-js",
  "catpaw-js-boa",
  "catpaw-web",
+ "png",
  "url",
 ]
 

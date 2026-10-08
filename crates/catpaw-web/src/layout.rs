@@ -611,7 +611,8 @@ pub fn screenshot(page: &PageState, full_page: bool) -> Vec<u8> {
                 window_scroll(page),
             )
         };
-        catpaw_paint::render_png_with(
+        let focused = page.document_state.borrow().focused;
+        catpaw_paint::render_png_content(
             tree,
             dom,
             &catpaw_paint::Options {
@@ -620,7 +621,11 @@ pub fn screenshot(page: &PageState, full_page: bool) -> Vec<u8> {
                 scroll,
                 scale: page.config.device_pixel_ratio as f32,
             },
-            &|node| page.canvases.pixmap(node),
+            &catpaw_paint::Content {
+                replaced: &|node| page.canvases.pixmap(node),
+                controls: &|node| crate::faces::control_face(page, dom, node),
+                focused,
+            },
         )
     })
 }

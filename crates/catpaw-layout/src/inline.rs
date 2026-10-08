@@ -647,6 +647,33 @@ fn generic_family(generic: GenericFontFamily) -> GenericFamily {
     }
 }
 
+/// Text in the font of `style` as a form control shows it (a field's
+/// value, a button's label): shaped on one line, or broken into lines
+/// `wrap` CSS pixels wide.
+pub fn shape_control_text(
+    style: &ComputedValues,
+    text: &str,
+    wrap: Option<f32>,
+) -> parley::Layout<Brush> {
+    let fonts = catpaw_text::shared_fonts();
+    let mut fonts = fonts.lock().unwrap_or_else(|e| e.into_inner());
+    let Fonts { font_cx, layout_cx } = &mut *fonts;
+    let mut root = text_style(style, Brush::default());
+    if wrap.is_none() {
+        root.text_wrap_mode = TextWrapMode::NoWrap;
+    }
+    let mut builder = layout_cx.tree_builder(font_cx, 1.0, true, &root);
+    builder.set_white_space_mode(WhiteSpaceCollapse::Preserve);
+    builder.push_text(text);
+    let (mut layout, _) = builder.build();
+    layout.break_all_lines(wrap);
+    layout.align(
+        parley::Alignment::Start,
+        parley::AlignmentOptions::default(),
+    );
+    layout
+}
+
 /// The Parley style of text with these computed values.
 pub(crate) fn text_style(
     style: &ComputedValues,

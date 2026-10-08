@@ -379,7 +379,7 @@ body{{font:15px/1.5 system-ui,sans-serif;margin:0;padding:1rem;max-width:1320px;
 header{{display:flex;flex-wrap:wrap;gap:.5rem 1rem;align-items:center;justify-content:space-between;margin-bottom:.75rem}}
 h1{{font-size:1.05rem;margin:0}} .why{{opacity:.8}}
 button{{font:inherit;padding:.45rem 1.1rem;border-radius:.4rem;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer}}
-input{{font:inherit;padding:.35rem;width:min(28rem,100%)}}
+input{{font:inherit}} #key{{padding:.35rem;width:min(28rem,100%)}}
 #where{{font-size:.85rem;opacity:.75;overflow-wrap:anywhere;margin:.25rem 0 .5rem}}
 #screen{{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:.4rem;cursor:pointer;outline-offset:2px}}
 #screen:focus{{outline:2px solid var(--accent)}}
@@ -391,7 +391,8 @@ input{{font:inherit;padding:.35rem;width:min(28rem,100%)}}
 <div id=keyrow hidden><p><label>Approval key <input id=key type=password autocomplete=off></label> <button id=use>Use</button><br><small>From <code>{key_file}</code>. This browser keeps a pass for this session only. <label><input id=remember type=checkbox> Remember the key itself here</label></small></p></div>
 <div id=where></div>
 <div id=held hidden><p>The page would:</p><ul id=heldlist></ul><button id=allow>Allow</button> <button id=block class=block>Block</button></div>
-<img id=screen tabindex=0 alt="The tab the agent handed over">
+<p id=waiting class=note>The tab shows here once the approval key is in.</p>
+<img id=screen hidden tabindex=0 alt="The tab the agent handed over">
 {status}
 <script>
 const base = location.pathname, q = location.search;
@@ -450,7 +451,7 @@ async function refresh() {{
     if (r.status === 403) {{ forget(); askKey(); return; }}
     if (r.ok) {{
       const next = URL.createObjectURL(await r.blob());
-      img.onload = () => {{ if (shown) URL.revokeObjectURL(shown); shown = next; }};
+      img.onload = () => {{ if (shown) URL.revokeObjectURL(shown); shown = next; img.hidden = false; document.getElementById('waiting').hidden = true; }};
       img.src = next;
     }}
   }} catch (e) {{}} finally {{ loading = false; }}

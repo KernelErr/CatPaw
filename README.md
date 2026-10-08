@@ -24,7 +24,9 @@ isolated contexts.
 > `scrollTo`, `scrollIntoView`, `elementFromPoint`), as do
 > `IntersectionObserver` and `ResizeObserver`. Screenshots
 > (`catpaw fetch --js --screenshot out.png [--full-page]`) paint backgrounds,
-> borders and text with tiny-skia. Input: trusted pointer and keyboard
+> borders and text with tiny-skia, and what form controls hold (values,
+> checked boxes, the chosen option, a ring around the focused field).
+> Input: trusted pointer and keyboard
 > sequences with focus, typing, activation (links, buttons, labels,
 > `details`), form submission in every encoding and the navigations that
 > follow, driven by `--action "click <selector>"`, `fill`, `type`, `press`,

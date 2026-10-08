@@ -44,6 +44,40 @@ rt { display: ruby-text; }
 
 input, select, button, textarea, meter, progress, img, video, audio, iframe,
 embed, object, canvas, svg, math { display: inline-block; }
+
+/* Form controls as browsers show them when the page leaves them alone: a
+   field with a sunken edge, a raised grey button, the controls' own small
+   font. */
+input, textarea, select, button {
+  margin: 0;
+  font: 13.333px sans-serif;
+  color: black;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-transform: none;
+  text-indent: 0;
+  text-align: start;
+}
+input { padding: 1px 2px; border: 2px inset #767676; background-color: white; }
+textarea { padding: 2px; border: 1px solid #767676; background-color: white; }
+select { border: 1px solid #767676; background-color: white; box-sizing: border-box; }
+button, input[type=submit i], input[type=reset i], input[type=button i] {
+  padding: 1px 6px;
+  border: 2px outset #767676;
+  background-color: #efefef;
+  text-align: center;
+  box-sizing: border-box;
+}
+input[type=checkbox i], input[type=radio i], input[type=range i],
+input[type=file i], input[type=image i] {
+  padding: 0;
+  border: none;
+  background-color: transparent;
+}
+input[type=checkbox i] { margin: 3px 3px 3px 4px; box-sizing: border-box; }
+input[type=radio i] { margin: 3px 3px 0 5px; box-sizing: border-box; }
+input[type=range i] { margin: 2px; }
+input[type=color i] { padding: 1px 2px; border: 1px solid #767676; background-color: #efefef; }
 img { overflow: clip; }
 iframe { border: 2px inset; }
 br::before { content: "\A"; white-space: pre; }

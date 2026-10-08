@@ -32,6 +32,7 @@ pub mod element;
 mod encoding;
 pub mod event_loop;
 pub mod events;
+mod faces;
 mod fetch;
 mod file_api;
 mod fonts;

@@ -6,7 +6,8 @@
 //! content, in tree order with positioned boxes after their static
 //! siblings; text comes from Parley's glyph runs through skrifa outlines.
 //! Overflow that is hidden, clipped or scrolled clips its descendants to
-//! the padding box. Not drawn yet: images, gradients, shadows, rounded
+//! the padding box. Form controls show what the page says they hold (see
+//! [`controls`]). Not drawn yet: images, gradients, shadows, rounded
 //! corners, transforms, opacity.
 //!
 //! Only what can show is drawn: backgrounds, borders, glyphs and bitmaps
@@ -31,6 +32,9 @@ use tiny_skia::{FillRule, Mask, Paint, Path, PathBuilder, Pixmap, Transform};
 pub use tiny_skia;
 
 pub mod canvas;
+pub mod controls;
+
+pub use controls::{ControlFace, ControlFaces, Gauge};
 
 /// What to paint.
 #[derive(Clone, Debug)]
@@ -48,6 +52,26 @@ pub struct Options {
 /// for only when the element can show.
 pub type ReplacedContent<'a> = &'a dyn Fn(NodeId) -> Option<Pixmap>;
 
+/// What the page knows that the tree does not: the bitmaps of replaced
+/// elements, what form controls hold, and which element has focus.
+#[derive(Clone, Copy)]
+pub struct Content<'a> {
+    pub replaced: ReplacedContent<'a>,
+    pub controls: ControlFaces<'a>,
+    pub focused: Option<NodeId>,
+}
+
+impl<'a> Content<'a> {
+    /// Bitmaps only: controls show nothing, nothing has focus.
+    pub fn bitmaps(replaced: ReplacedContent<'a>) -> Self {
+        Self {
+            replaced,
+            controls: &|_| None,
+            focused: None,
+        }
+    }
+}
+
 /// Paints the tree into a pixmap of `options.width × options.height` CSS
 /// pixels (times the scale), white where nothing is drawn.
 pub fn render(tree: &LayoutTree, dom: &Dom, options: &Options) -> Pixmap {
@@ -62,7 +86,28 @@ pub fn render_with(
     options: &Options,
     replaced: ReplacedContent<'_>,
 ) -> Pixmap {
-    render_counting(tree, dom, options, replaced).0
+    render_content(tree, dom, options, &Content::bitmaps(replaced))
+}
+
+/// `render`, with what the page knows of replaced elements, controls and
+/// focus.
+pub fn render_content(
+    tree: &LayoutTree,
+    dom: &Dom,
+    options: &Options,
+    content: &Content<'_>,
+) -> Pixmap {
+    render_counting(tree, dom, options, content).0
+}
+
+/// `render_content`, encoded as PNG.
+pub fn render_png_content(
+    tree: &LayoutTree,
+    dom: &Dom,
+    options: &Options,
+    content: &Content<'_>,
+) -> Vec<u8> {
+    encode_png(render_content(tree, dom, options, content))
 }
 
 /// `render`, encoded as PNG.
@@ -106,7 +151,7 @@ fn render_counting(
     tree: &LayoutTree,
     dom: &Dom,
     options: &Options,
-    replaced: ReplacedContent<'_>,
+    content: &Content<'_>,
 ) -> (Pixmap, Stats) {
     let width = ((options.width as f32) * options.scale).round().max(1.0) as u32;
     let height = ((options.height as f32) * options.scale).round().max(1.0) as u32;
@@ -122,7 +167,9 @@ fn render_counting(
         clip_mask: ClipMask::default(),
         glyphs: HashMap::new(),
         font_boxes: HashMap::new(),
-        replaced,
+        replaced: content.replaced,
+        controls: content.controls,
+        focused: content.focused,
         stats: Stats::default(),
     };
     painter.paint_canvas();
@@ -168,6 +215,8 @@ struct Painter<'a> {
     /// The box around every glyph of a font, by font.
     font_boxes: HashMap<(u64, u32), Option<[f32; 4]>>,
     replaced: ReplacedContent<'a>,
+    controls: ControlFaces<'a>,
+    focused: Option<NodeId>,
     stats: Stats,
 }
 
@@ -526,11 +575,19 @@ impl Painter<'_> {
                 let content = self.to_output(tree.content_box(id), fixed);
                 // The bitmap comes as a copy: only asked for when it can
                 // show.
-                let bounds = [content.x, content.y, content.right(), content.bottom()];
+                let bounds = [
+                    padding_box.x,
+                    padding_box.y,
+                    padding_box.right(),
+                    padding_box.bottom(),
+                ];
                 if matches!(self.reach(bounds), Reach::Nowhere) {
                     self.stats.culled += 1;
                 } else if let Some(bitmap) = (self.replaced)(node) {
                     self.paint_bitmap(&bitmap, content);
+                } else if let Some(face) = (self.controls)(node) {
+                    let focused = self.focused == Some(node);
+                    self.paint_control(id, &face, content, padding_box, focused);
                 }
             }
             // Static children first, then positioned ones, each in tree
@@ -545,6 +602,34 @@ impl Painter<'_> {
             }
         }
         self.clip = outer_clip;
+        // A focused field, list or chooser shows a ring around it.
+        if visible
+            && let Some(node) = b.node
+            && self.focused == Some(node)
+            && self.shows_focus_ring(node)
+        {
+            self.paint_focus_ring(border_box);
+        }
+    }
+
+    /// Whether focus on `node` shows a ring: text fields, lists and other
+    /// controls that take typing, as browsers ring them even after a click.
+    fn shows_focus_ring(&self, node: NodeId) -> bool {
+        let dom = self.dom;
+        if dom.is_html_element(node, "textarea") || dom.is_html_element(node, "select") {
+            return true;
+        }
+        if !dom.is_html_element(node, "input") {
+            return false;
+        }
+        let kind = dom
+            .attr(node, "type")
+            .map(|t| t.trim().to_ascii_lowercase())
+            .unwrap_or_default();
+        !matches!(
+            kind.as_str(),
+            "submit" | "reset" | "button" | "image" | "checkbox" | "radio" | "hidden"
+        )
     }
 
     /// Draws a bitmap scaled into `rect`, clipped like everything else.
@@ -942,7 +1027,12 @@ mod tests {
             scroll: (0.0, scroll_y),
             scale: 1.0,
         };
-        render_counting(&page.tree, &page.dom, &options, &|_| None)
+        render_counting(
+            &page.tree,
+            &page.dom,
+            &options,
+            &Content::bitmaps(&|_| None),
+        )
     }
 
     fn words(n: usize) -> String {
@@ -1103,5 +1193,102 @@ mod tests {
         assert!(stats.mask_cuts > 0, "{stats:?}");
         assert!(ink(&without, 0..300, 0..100) > 500);
         assert!(with_cut.data() == without.data());
+    }
+    /// Pixels inside the rectangle that are clearly blue.
+    fn blue(pixmap: &Pixmap, x: std::ops::Range<u32>, y: std::ops::Range<u32>) -> usize {
+        y.flat_map(|y| x.clone().map(move |x| (x, y)))
+            .filter(|&(x, y)| {
+                let p = pixmap.pixel(x, y).expect("inside the pixmap");
+                p.blue() > 150 && p.red() < 100
+            })
+            .count()
+    }
+
+    /// The content box of the element with `id`, in whole pixels.
+    fn content_of(page: &Page, id: &str) -> (std::ops::Range<u32>, std::ops::Range<u32>) {
+        let node = page
+            .dom
+            .descendants(page.dom.document())
+            .find(|&n| page.dom.attr(n, "id") == Some(id))
+            .expect("the element");
+        let b = page.tree.box_of(node).expect("a box");
+        let r = page.tree.content_box(b);
+        (
+            r.x.ceil() as u32..r.right().floor() as u32,
+            r.y.ceil() as u32..r.bottom().floor() as u32,
+        )
+    }
+
+    #[test]
+    fn controls_show_what_they_hold() {
+        let page = lay_out(
+            r#"<!doctype html><body style="margin:10px"><input id="name" value="Ada Lovelace"><input id="empty"><input type="checkbox" id="on" checked><input type="checkbox" id="off"><input type="submit" id="go" value="Log in"><select id="pick"><option>First choice</option></select>"#,
+            600,
+            200,
+        );
+        let dom = &page.dom;
+        let controls = |node: NodeId| -> Option<ControlFace> {
+            let kind = dom.attr(node, "type").unwrap_or("");
+            if dom.is_html_element(node, "select") {
+                return Some(ControlFace::DropDown {
+                    label: "First choice".to_string(),
+                });
+            }
+            if !dom.is_html_element(node, "input") {
+                return None;
+            }
+            Some(match kind {
+                "checkbox" => ControlFace::Check {
+                    radio: false,
+                    checked: dom.attr(node, "checked").is_some(),
+                },
+                "submit" => ControlFace::Button {
+                    label: dom.attr(node, "value").unwrap_or("").to_string(),
+                },
+                _ => ControlFace::Field {
+                    text: dom.attr(node, "value").unwrap_or("").to_string(),
+                    placeholder: false,
+                },
+            })
+        };
+        let focused = dom
+            .descendants(dom.document())
+            .find(|&n| dom.attr(n, "id") == Some("empty"));
+        let options = Options {
+            width: 600,
+            height: 200,
+            scroll: (0.0, 0.0),
+            scale: 1.0,
+        };
+        let content = Content {
+            replaced: &|_| None,
+            controls: &controls,
+            focused,
+        };
+        let (pixmap, _) = render_counting(&page.tree, &page.dom, &options, &content);
+        let (x, y) = content_of(&page, "name");
+        assert!(ink(&pixmap, x, y) > 60, "a field shows its value");
+        let (x, y) = content_of(&page, "go");
+        assert!(ink(&pixmap, x, y) > 40, "a button shows its label");
+        let (x, y) = content_of(&page, "pick");
+        assert!(ink(&pixmap, x, y) > 60, "a drop-down shows its option");
+        let (x, y) = content_of(&page, "on");
+        assert!(blue(&pixmap, x, y) > 40, "a checked box is filled");
+        let (x, y) = content_of(&page, "off");
+        assert_eq!(blue(&pixmap, x, y), 0, "an unchecked box is not");
+        // The empty field is focused: a caret inside, a ring around.
+        let (x, y) = content_of(&page, "empty");
+        assert!(ink(&pixmap, x.clone(), y.clone()) > 4, "a caret");
+        let above = y.start.saturating_sub(6)..y.start.saturating_sub(2);
+        assert!(blue(&pixmap, x, above) > 20, "a focus ring");
+        // Without what the page knows, controls are empty boxes.
+        let (bare, _) = render_counting(
+            &page.tree,
+            &page.dom,
+            &options,
+            &Content::bitmaps(&|_| None),
+        );
+        let (x, y) = content_of(&page, "name");
+        assert_eq!(ink(&bare, x, y), 0);
     }
 }
