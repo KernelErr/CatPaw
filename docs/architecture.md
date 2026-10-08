@@ -230,8 +230,9 @@ challenges → M5 scale & compat. Exit criteria live in the README.
   offline through the MCP server, twice, with a fixed random seed and
   clock origin, and both transcripts must equal `expected.txt` byte for
   byte (ADR 0006). `tasks record` takes new recordings from the live
-  sites, `tasks lint` checks sizes and that no local path or secret header
-  is kept, and `tasks report --baseline tools/baseline/playwright-mcp.json`
+  sites, `tasks lint` checks sizes and that no local path or secret is
+  kept (`tasks rekey` computes the request keys of an older recording
+  again), and `tasks report --baseline tools/baseline/playwright-mcp.json`
   sets what the agent reads beside what Playwright MCP sends for the same
   steps.
 - Leak census after integration tests: force a GC, then assert the arena is

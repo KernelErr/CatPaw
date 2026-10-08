@@ -53,6 +53,10 @@ enum Cmd {
         #[arg(long)]
         forbid: Vec<String>,
     },
+    /// Compute the keys of recorded requests again, from the requests as
+    /// recorded: recordings made before keys were computed so hold keys
+    /// computed from the request bodies as sent.
+    Rekey(Select),
     /// Steps, sizes and outcome per task, as a Markdown table (replayed).
     Report {
         #[command(flatten)]
@@ -398,8 +402,30 @@ pub fn run_cmd(args: Args) -> Result<()> {
             update_expectations,
         } => replay_all(&select, twice, update_expectations),
         Cmd::Lint { select, forbid } => lint(&select, &forbid),
+        Cmd::Rekey(select) => rekey(&select),
         Cmd::Report { select, baseline } => report(&select, baseline.as_deref()),
     }
+}
+
+/// The compression level recordings are written with.
+const ZSTD_LEVEL: i32 = 19;
+
+fn rekey(select: &Select) -> Result<()> {
+    for task in load(select)? {
+        let har = task.har();
+        if !har.exists() {
+            continue;
+        }
+        let bytes = zstd::decode_all(&std::fs::read(&har)?[..])?;
+        match catpaw_net::har::rekey(&bytes).map_err(|e| anyhow::anyhow!("{}: {e}", task.id))? {
+            Some((text, changed)) => {
+                std::fs::write(&har, zstd::encode_all(&text[..], ZSTD_LEVEL)?)?;
+                println!("{}: {changed} key(s) rewritten", task.id);
+            }
+            None => println!("{}: keys unchanged", task.id),
+        }
+    }
+    Ok(())
 }
 
 fn record(select: &Select) -> Result<()> {
@@ -550,8 +576,10 @@ fn lint(select: &Select, forbid: &[String]) -> Result<()> {
             }
         }
         // Credentials stay out of recordings: no request credential
-        // headers, secret-looking form fields redacted, response cookies
-        // and credential headers as placeholders.
+        // headers, secret-looking form fields and URL parameters redacted,
+        // response cookies, credential headers and secret-looking fields
+        // of JSON responses as placeholders, keys computed from the
+        // requests as recorded (`tasks rekey`).
         match catpaw_net::har::unredacted_secrets(&bytes) {
             Ok(found) => problems.extend(
                 found

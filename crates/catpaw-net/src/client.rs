@@ -714,7 +714,11 @@ impl NetClient {
 
         if let Some(replayer) = &self.replayer {
             let request_body = body.clone().unwrap_or_default();
-            match replayer.answer(method, url, &request_body) {
+            let mime = headers
+                .get(CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("");
+            match replayer.answer(method, url, mime, &request_body) {
                 Some(Ok(answer)) => {
                     if credentials {
                         self.cookies.store_response(url, &answer.headers);

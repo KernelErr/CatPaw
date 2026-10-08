@@ -8,21 +8,24 @@
 //! request bodies too).
 //!
 //! A request is matched by the key recorded with each entry
-//! (`_catpaw.key`: method, URL without the fragment, and a hash of the body
-//! as it was sent), failing that by method, scheme, host, port and path
-//! (cache-busting and analytics parameters). Every recorded answer is given
-//! once, in recorded order, whichever way it was matched; once all the
-//! answers a request matches have been given, the last of them repeats.
+//! (`_catpaw.key`: method, URL without the fragment, and a hash of the
+//! body, URL and body as the recording holds them), failing that by
+//! method, scheme, host, port and path (cache-busting and analytics
+//! parameters). A replayed request's key is computed the same way, its
+//! secrets redacted first. Every recorded answer is given once, in
+//! recorded order, whichever way it was matched; once all the answers a
+//! request matches have been given, the last of them repeats.
 //!
 //! Secrets stay out. Request `Cookie`, `Authorization`, signature and other
-//! credential headers are never written. Form fields whose names look
-//! secret ([`is_secret_field`]) are written as `redacted` in URL-encoded,
-//! plain-text, multipart and JSON bodies, while the key is still computed
-//! from the body as sent. The values of response cookies and credential
-//! headers become placeholders, `redacted-<hash>`: within one recording
-//! equal values get equal placeholders, and a replayed session keeps and
-//! sends them back as it would the real ones. Files are readable by their
-//! owner only.
+//! credential headers are never written. Fields whose names look secret
+//! ([`is_secret_field`]) are written as `redacted`: in URL-encoded,
+//! plain-text, multipart and JSON request bodies, and as parameters in the
+//! query or fragment of request URLs, `Referer` and `Location`. The values
+//! of response cookies, credential headers and secret-looking fields of
+//! JSON responses become placeholders, `redacted-<hash>`: within one
+//! recording equal values get equal placeholders, and a replayed session
+//! keeps and sends them back as it would the real ones. Files are readable
+//! by their owner only.
 //!
 //! A path ending in `.zst` is written and read zstd-compressed.
 
@@ -81,9 +84,118 @@ const CREDENTIAL_HEADER_PARTS: &[&str] = &[
     "token", "secret", "csrf", "xsrf", "api-key", "apikey", "password", "session",
 ];
 
-/// Parts of form field names that mark a secret.
-const SECRET_FIELD_PARTS: &[&str] = &[
-    "pass", "pwd", "secret", "token", "card", "cvv", "cvc", "ssn", "otp",
+/// Parts that make a word of a name hold a secret wherever they stand in
+/// it (`newpassword`, `passwd`, `pwd2`, `clientsecret`).
+const SECRET_PARTS: &[&str] = &["passw", "pwd", "passphrase", "passcode", "secret"];
+
+/// Endings that make a word hold a secret (`pass`, `userpass`, `pw`,
+/// `csrftoken`, `totp`, `mpin`).
+const SECRET_ENDINGS: &[&str] = &["pass", "pw", "token", "otp", "pin"];
+
+/// Words that hold a secret by themselves.
+const SECRET_WORDS: &[&str] = &[
+    "card",
+    "creditcard",
+    "debitcard",
+    "giftcard",
+    "cvv",
+    "cvc",
+    "csc",
+    "ssn",
+    "pincode",
+    "authorization",
+    "authorisation",
+    "verifier",
+];
+
+/// Nouns that hold a secret after one of their words (`api_key`,
+/// `verification_code`, `cc_number`, `session_id`), written apart or as
+/// one word (`apikey`, `authcode`).
+const QUALIFIED_SECRETS: &[(&str, &[&str])] = &[
+    (
+        "key",
+        &[
+            "api",
+            "access",
+            "private",
+            "client",
+            "session",
+            "auth",
+            "signing",
+            "encryption",
+            "license",
+            "licence",
+            "activation",
+            "recovery",
+            "master",
+            "subscription",
+        ],
+    ),
+    (
+        "code",
+        &[
+            "onetime",
+            "mfa",
+            "2fa",
+            "tfa",
+            "twofactor",
+            "multifactor",
+            "verification",
+            "verify",
+            "auth",
+            "authentication",
+            "security",
+            "sms",
+            "recovery",
+            "backup",
+            "reset",
+            "login",
+            "signin",
+            "access",
+            "activation",
+            "confirmation",
+            "confirm",
+            "unlock",
+        ],
+    ),
+    ("number", &["card", "cc", "pin", "socialsecurity"]),
+    ("num", &["card", "cc", "pin"]),
+    ("id", &["session", "sess", "phpsess", "jsession"]),
+];
+
+/// Names that are a one-time code when they are the whole name (`mfa`,
+/// `2fa`), though not as a word of a longer one (`mfa_enabled`).
+const SECRET_NAMES: &[&str] = &["mfa", "2fa", "tfa"];
+
+/// Words that, after the one that names a secret, make the name describe
+/// the secret rather than hold it (`token_type`, `pin_length`,
+/// `api_key_id`).
+const DESCRIPTIONS: &[&str] = &[
+    "type",
+    "endpoint",
+    "url",
+    "uri",
+    "expires",
+    "expiry",
+    "ttl",
+    "lifetime",
+    "length",
+    "len",
+    "min",
+    "max",
+    "policy",
+    "strength",
+    "hint",
+    "format",
+    "required",
+    "supported",
+    "method",
+    "methods",
+    "count",
+    "id",
+    "label",
+    "brand",
+    "last",
 ];
 
 /// Whether a header (by its lowercase name) carries credentials. Requests
@@ -93,16 +205,64 @@ fn is_credential_header(name: &str) -> bool {
     CREDENTIAL_HEADERS.contains(&name) || CREDENTIAL_HEADER_PARTS.iter().any(|p| name.contains(p))
 }
 
-/// Whether a form field's name says it holds a secret: it contains `pass`,
-/// `pwd`, `secret`, `token`, `card`, `cvv`, `cvc`, `ssn` or `otp` (in any
-/// case), or has `pin` as a word of its own (`pin`, `card_pin`, `pinCode`;
-/// not `shipping`).
+/// Whether a header (by its lowercase name) holds a URL whose parameters
+/// a recording redacts.
+fn is_url_header(name: &str) -> bool {
+    matches!(name, "referer" | "location" | "content-location")
+}
+
+/// Whether the name of a form field, a URL parameter or a JSON member
+/// says it holds a secret, by its words in any case (`cardPIN2` is `card`,
+/// `pin`, `2`): passwords (`password`, `passwd`, `passphrase`, `passcode`,
+/// `pwd`, `pw`, `pass` and words ending so), secrets and tokens
+/// (`client_secret`, `access_token`, `csrfmiddlewaretoken`), keys
+/// (`api_key`, `x-api-key`, `apiKey`, `access_key`, `private_key`),
+/// one-time codes (`otp`, `totp`, `mfa`, `2fa_code`, `one_time_code`,
+/// `verification_code`, `auth_code`, `security_code`), PINs (`pin`,
+/// `pinCode`, `pincode`, `mpin`), card numbers and their codes (`card`,
+/// `cardNumber`, `cc_number`, `cvv`, `cvc`), social security numbers and
+/// session ids. A word naming a secret that is followed by one describing
+/// it does not count (`token_type`, `pin_length`, `access_key_id`). Other
+/// codes are not secrets (`country_code`, `zip_code`, `postcode`,
+/// `promo_code`), nor are words that only contain a secret's name
+/// (`shipping`, `spinner`, `passenger`, `className`, `rootPath`).
 pub fn is_secret_field(name: &str) -> bool {
-    let lower = name.to_ascii_lowercase();
-    SECRET_FIELD_PARTS.iter().any(|part| lower.contains(part))
-        || words(name)
-            .iter()
-            .any(|word| word.eq_ignore_ascii_case("pin"))
+    let words: Vec<String> = words(name)
+        .iter()
+        .map(|word| word.to_ascii_lowercase())
+        .collect();
+    SECRET_NAMES.contains(&words.concat().as_str())
+        || (0..words.len()).any(|i| {
+            names_secret(&words, i)
+                && !words
+                    .get(i + 1)
+                    .is_some_and(|next| DESCRIPTIONS.contains(&next.as_str()))
+        })
+}
+
+/// Whether word `i` of a name (its words in lowercase), with the words
+/// before it, names a secret.
+fn names_secret(words: &[String], i: usize) -> bool {
+    let word = words[i].as_str();
+    let named = (SECRET_PARTS.iter().any(|part| word.contains(part))
+        && !word.starts_with("secretar"))
+        || (SECRET_ENDINGS.iter().any(|end| word.ends_with(end)) && !word.ends_with("spin"))
+        || word.starts_with("otp")
+        || SECRET_WORDS.contains(&word);
+    named
+        || QUALIFIED_SECRETS.iter().any(|(noun, qualifiers)| {
+            let Some(start) = word.strip_suffix(noun) else {
+                return false;
+            };
+            // The qualifier is the start of the word, the words before
+            // it, or both (`authcode`, `api_key`, `one_time_code`).
+            let mut qualifier = start.to_string();
+            (!start.is_empty() && qualifiers.contains(&start))
+                || words[..i].iter().rev().take(2).any(|before| {
+                    qualifier.insert_str(0, before);
+                    qualifiers.contains(&qualifier.as_str())
+                })
+        })
 }
 
 /// The words of an identifier: runs of letters and digits, split where
@@ -385,6 +545,8 @@ fn cookie_pair(set_cookie: &str) -> (&str, &str) {
     }
 }
 
+/// FNV-1a (64 bits). It has no key, so it only ever hashes what a
+/// recording holds anyway (see [`request_key`]).
 fn fnv(bytes: &[u8]) -> u64 {
     let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
     for b in bytes {
@@ -394,10 +556,73 @@ fn fnv(bytes: &[u8]) -> u64 {
     hash
 }
 
-fn exact_key(method: &str, url: &Url, body: &[u8]) -> String {
+/// A URL (as text, absolute or relative) with the values of its
+/// secret-looking parameters redacted, in the query and in a fragment of
+/// `name=value` pairs, the rest byte for byte; `None` when it has none to
+/// redact. The names of the parameters redacted come with it.
+fn redact_url(url: &str) -> Option<(String, Vec<String>)> {
+    let (rest, fragment) = match url.split_once('#') {
+        Some((rest, fragment)) => (rest, Some(fragment)),
+        None => (url, None),
+    };
+    let (base, query) = match rest.split_once('?') {
+        Some((base, query)) => (base, Some(query)),
+        None => (rest, None),
+    };
+    let redacted = [
+        query.and_then(|query| redact_urlencoded(query.as_bytes())),
+        fragment
+            .filter(|fragment| fragment.contains('='))
+            .and_then(|fragment| redact_urlencoded(fragment.as_bytes())),
+    ];
+    if redacted.iter().all(Option::is_none) {
+        return None;
+    }
+    let mut out = base.to_string();
+    let mut fields = Vec::new();
+    for ((separator, part), redaction) in [('?', query), ('#', fragment)].into_iter().zip(redacted)
+    {
+        let Some(part) = part else { continue };
+        out.push(separator);
+        match redaction {
+            Some(redaction) => {
+                out.push_str(&String::from_utf8_lossy(&redaction.body));
+                fields.extend(redaction.fields);
+            }
+            None => out.push_str(part),
+        }
+    }
+    Some((out, fields))
+}
+
+/// The key a request is matched by: its method, its URL without the
+/// fragment and a hash of its body, URL and body as a recording holds
+/// them (secrets redacted), so that a key tells nothing the recording
+/// does not.
+fn request_key(method: &str, url: &Url, mime: &str, body: &[u8]) -> String {
     let mut url = url.clone();
     url.set_fragment(None);
+    let url = match redact_url(url.as_str()) {
+        Some((redacted, _)) => redacted,
+        None => url.into(),
+    };
+    let redaction = redact_body(mime, body);
+    let body = redaction.as_ref().map_or(body, |r| &r.body[..]);
     format!("{method} {url} {:016x}", fnv(body))
+}
+
+/// The key of a recorded request, from the request as the recording holds
+/// it; `None` when its URL does not parse.
+fn recorded_key(request: &Value) -> Result<Option<String>, String> {
+    let method = request["method"].as_str().unwrap_or("GET");
+    let Some(url) = request["url"].as_str().and_then(|u| Url::parse(u).ok()) else {
+        return Ok(None);
+    };
+    let (mime, body) = match request.get("postData") {
+        Some(post) => (post["mimeType"].as_str().unwrap_or(""), decode_text(post)?),
+        None => ("", Vec::new()),
+    };
+    Ok(Some(request_key(method, &url, mime, &body)))
 }
 
 fn loose_key(method: &str, url: &Url) -> String {
@@ -530,10 +755,14 @@ fn echoed_addresses(value: &Value, out: &mut Vec<String>) {
     }
 }
 
+fn is_json(mime: &str) -> bool {
+    mime.to_ascii_lowercase().contains("json")
+}
+
 /// A JSON response body with the addresses it echoes replaced by the
 /// stand-in, everywhere in the body; `None` when it echoes none.
 fn scrub_addresses(body: &[u8], mime: &str) -> Option<Vec<u8>> {
-    if !mime.to_ascii_lowercase().contains("json") {
+    if !is_json(mime) {
         return None;
     }
     let value: Value = serde_json::from_slice(body).ok()?;
@@ -547,6 +776,111 @@ fn scrub_addresses(body: &[u8], mime: &str) -> Option<Vec<u8>> {
         text = text.replace(&address, STAND_IN_ADDRESS);
     }
     Some(text.into_bytes())
+}
+
+/// Whether a secret's value is hidden already, or there is nothing to
+/// hide: empty, `redacted`, or a placeholder.
+fn is_hidden(value: &str) -> bool {
+    value.is_empty() || value == REDACTED || is_placeholder(value)
+}
+
+/// A value a JSON text holds under a secret-looking name.
+struct JsonSecret {
+    /// Where it is in the text: a string with its quotes, or a number.
+    at: std::ops::Range<usize>,
+    /// The string, or the number as written.
+    value: String,
+    /// The name it is under.
+    name: String,
+}
+
+/// The values a JSON text holds under secret-looking names: strings and
+/// numbers, at any depth below such a name. Empty when the text is not
+/// JSON.
+fn json_secrets(text: &[u8]) -> Vec<JsonSecret> {
+    /// An object or an array the scan is in.
+    struct Container {
+        object: bool,
+        /// Whether a member's name comes next.
+        expects_name: bool,
+        /// The name of the member being read.
+        name: Option<String>,
+        /// The secret-looking name the container is under.
+        under: Option<String>,
+    }
+    /// The secret-looking name a value read now is under.
+    fn under(stack: &[Container]) -> Option<String> {
+        let top = stack.last()?;
+        top.under.clone().or_else(|| {
+            top.name
+                .clone()
+                .filter(|name| top.object && is_secret_field(name))
+        })
+    }
+    if serde_json::from_slice::<serde::de::IgnoredAny>(text).is_err() {
+        return Vec::new();
+    }
+    let mut stack: Vec<Container> = Vec::new();
+    let mut found = Vec::new();
+    let mut i = 0;
+    while i < text.len() {
+        match text[i] {
+            open @ (b'{' | b'[') => {
+                let under = under(&stack);
+                stack.push(Container {
+                    object: open == b'{',
+                    expects_name: open == b'{',
+                    name: None,
+                    under,
+                });
+                i += 1;
+            }
+            b'}' | b']' => {
+                stack.pop();
+                i += 1;
+            }
+            b',' => {
+                if let Some(top) = stack.last_mut() {
+                    top.expects_name = top.object;
+                }
+                i += 1;
+            }
+            b'"' => {
+                // The string ends at the first quote that is not escaped.
+                let mut end = i + 1;
+                while end < text.len() && text[end] != b'"' {
+                    end += if text[end] == b'\\' { 2 } else { 1 };
+                }
+                let at = i..(end + 1).min(text.len());
+                i = at.end;
+                let string =
+                    || serde_json::from_slice::<String>(&text[at.clone()]).unwrap_or_default();
+                if let Some(top) = stack.last_mut().filter(|top| top.expects_name) {
+                    top.name = Some(string());
+                    top.expects_name = false;
+                } else if let Some(name) = under(&stack) {
+                    let value = string();
+                    found.push(JsonSecret { at, value, name });
+                }
+            }
+            b'-' | b'0'..=b'9' => {
+                let end = text[i..]
+                    .iter()
+                    .position(|b| !matches!(b, b'0'..=b'9' | b'-' | b'+' | b'.' | b'e' | b'E'))
+                    .map_or(text.len(), |n| i + n);
+                if let Some(name) = under(&stack) {
+                    found.push(JsonSecret {
+                        at: i..end,
+                        value: String::from_utf8_lossy(&text[i..end]).into_owned(),
+                        name,
+                    });
+                }
+                i = end;
+            }
+            _ => i += 1,
+        }
+    }
+    found
 }
 
 /// A request body as HAR `postData`: text, or base64 when not UTF-8.
@@ -632,6 +966,28 @@ impl Recorder {
         format!("redacted-{:08x}", self.keys.hash_one(value) as u32)
     }
 
+    /// A JSON response body with the values under its secret-looking names
+    /// replaced by placeholders, the rest byte for byte; `None` when it
+    /// holds none to hide.
+    fn redact_json_response(&self, body: &[u8]) -> Option<Vec<u8>> {
+        let secrets: Vec<JsonSecret> = json_secrets(body)
+            .into_iter()
+            .filter(|secret| !is_hidden(&secret.value))
+            .collect();
+        if secrets.is_empty() {
+            return None;
+        }
+        let mut out = Vec::with_capacity(body.len());
+        let mut copied = 0;
+        for secret in secrets {
+            out.extend_from_slice(&body[copied..secret.at.start]);
+            out.extend_from_slice(format!("\"{}\"", self.placeholder(&secret.value)).as_bytes());
+            copied = secret.at.end;
+        }
+        out.extend_from_slice(&body[copied..]);
+        Some(out)
+    }
+
     /// A `Set-Cookie` value with the cookie's value replaced by a
     /// placeholder (an empty one, which deletes, is kept), its name and
     /// attributes as they were.
@@ -664,16 +1020,23 @@ impl Recorder {
             started_ms,
             took_ms,
         } = exchange;
-        let text = |value: &HeaderValue| String::from_utf8_lossy(value.as_bytes()).into_owned();
+        // URLs keep their parameters, but for the values of secret ones.
+        let text = |name: &HeaderName, value: &HeaderValue| {
+            let value = String::from_utf8_lossy(value.as_bytes()).into_owned();
+            if !is_url_header(name.as_str()) {
+                return value;
+            }
+            redact_url(&value).map_or(value, |(redacted, _)| redacted)
+        };
         let request_header_list: Vec<Value> = request_headers
             .iter()
             .filter(|(name, _)| !is_credential_header(name.as_str()))
-            .map(|(name, value)| json!({"name": name.as_str(), "value": text(value)}))
+            .map(|(name, value)| json!({"name": name.as_str(), "value": text(name, value)}))
             .collect();
         let response_header_list: Vec<Value> = response_headers
             .iter()
             .map(|(name, value)| {
-                let value = text(value);
+                let value = text(name, value);
                 let value = match name.as_str() {
                     "set-cookie" | "set-cookie2" => self.redact_set_cookie(&value),
                     other if is_credential_header(other) && !value.is_empty() => {
@@ -684,9 +1047,14 @@ impl Recorder {
                 json!({"name": name.as_str(), "value": value})
             })
             .collect();
+        let redirect_url = response_headers
+            .get(http::header::LOCATION)
+            .map(|value| text(&http::header::LOCATION, value))
+            .unwrap_or_default();
+        let request_mime = content_type(request_headers);
         let mut request = json!({
             "method": method.as_str(),
-            "url": url.as_str(),
+            "url": redact_url(url.as_str()).map_or_else(|| url.to_string(), |(redacted, _)| redacted),
             "httpVersion": "HTTP/1.1",
             "headers": request_header_list,
             "queryString": [],
@@ -695,18 +1063,24 @@ impl Recorder {
             "bodySize": request_body.len(),
         });
         if !request_body.is_empty() {
-            let mime = content_type(request_headers);
-            let stored = match redact_body(mime, request_body) {
+            let stored = match redact_body(request_mime, request_body) {
                 Some(redaction) => Cow::Owned(redaction.body),
                 None => Cow::Borrowed(request_body),
             };
-            request["postData"] = post_data_json(&stored, mime);
+            request["postData"] = post_data_json(&stored, request_mime);
         }
-        // An address the service echoes is the recording machine's.
+        // Secrets the service hands out are kept as placeholders; an
+        // address it echoes is the recording machine's.
         let mime = content_type(response_headers);
-        let content = match scrub_addresses(response_body, mime) {
+        let redacted = if is_json(mime) {
+            self.redact_json_response(response_body)
+        } else {
+            None
+        };
+        let body = redacted.as_deref().unwrap_or(response_body);
+        let content = match scrub_addresses(body, mime) {
             Some(scrubbed) => content_json(&scrubbed, mime),
-            None => content_json(response_body, mime),
+            None => content_json(body, mime),
         };
         let entry = json!({
             "startedDateTime": iso8601(started_ms),
@@ -719,17 +1093,17 @@ impl Recorder {
                 "headers": response_header_list,
                 "cookies": [],
                 "content": content,
-                "redirectURL": response_headers
-                    .get(http::header::LOCATION)
-                    .and_then(|v| v.to_str().ok())
-                    .unwrap_or(""),
+                "redirectURL": redirect_url,
                 "headersSize": -1,
                 "bodySize": -1,
             },
             "cache": {},
             "timings": {"send": 0, "wait": took_ms, "receive": 0},
-            // The key comes from the body as sent, not as written above.
-            "_catpaw": {"key": exact_key(method.as_str(), url, request_body), "startedMs": started_ms},
+            // From the URL and body as written above, secrets redacted.
+            "_catpaw": {
+                "key": request_key(method.as_str(), url, request_mime, request_body),
+                "startedMs": started_ms,
+            },
         });
         self.state
             .lock()
@@ -845,16 +1219,19 @@ impl Replayer {
                 continue;
             };
             let what = format!("{method} {url}");
-            // The key the recording computed from the body as sent; a HAR
-            // file from elsewhere has the body itself.
+            // The key the recording computed; a HAR file from elsewhere
+            // has the request itself.
             let key = match entry["_catpaw"]["key"].as_str() {
                 Some(key) => key.to_string(),
                 None => {
-                    let body = match request.get("postData") {
-                        Some(post) => decode_text(post).unwrap_or_default(),
-                        None => Vec::new(),
+                    let (mime, body) = match request.get("postData") {
+                        Some(post) => (
+                            post["mimeType"].as_str().unwrap_or(""),
+                            decode_text(post).unwrap_or_default(),
+                        ),
+                        None => ("", Vec::new()),
                     };
-                    exact_key(method, &url, &body)
+                    request_key(method, &url, mime, &body)
                 }
             };
             let index = replayer.answers.len();
@@ -870,19 +1247,21 @@ impl Replayer {
         Ok(replayer)
     }
 
-    /// The recorded answer to a request: the first not yet given of those
-    /// recorded for the same key, else for the same path; once all have
-    /// been given, the last of them again. `None` when nothing matches;
-    /// an error when the recording cannot give the answer it holds.
+    /// The recorded answer to a request (its body of type `mime`): the
+    /// first not yet given of those recorded for the same key, else for
+    /// the same path; once all have been given, the last of them again.
+    /// `None` when nothing matches; an error when the recording cannot
+    /// give the answer it holds.
     pub(crate) fn answer(
         &self,
         method: &Method,
         url: &Url,
+        mime: &str,
         body: &[u8],
     ) -> Option<Result<Answer, String>> {
         let list = self
             .exact
-            .get(&exact_key(method.as_str(), url, body))
+            .get(&request_key(method.as_str(), url, mime, body))
             .or_else(|| self.loose.get(&loose_key(method.as_str(), url)))?;
         let mut used = self.used.lock().expect("not poisoned");
         let index = list
@@ -932,12 +1311,23 @@ fn relative_cookies(headers: &mut HeaderMap, recorded_ms: u64) {
     }
 }
 
+/// A recorded request as reports name it: its method and its URL, secrets
+/// redacted.
+fn describe(request: &Value) -> String {
+    let url = request["url"].as_str().unwrap_or("?");
+    let url = redact_url(url).map_or_else(|| url.to_string(), |(redacted, _)| redacted);
+    format!("{} {url}", request["method"].as_str().unwrap_or("?"))
+}
+
 /// What in a HAR document (JSON, as a recording writes it) holds a secret
 /// that should have been left out or redacted: credential headers in
 /// requests, secret-looking form fields with real values in request
-/// bodies, and response cookies and credential headers whose values are
-/// not placeholders. Each item names the request and the field, never the
-/// value.
+/// bodies, secret-looking parameters with real values in request URLs,
+/// `Referer` and `Location`, response cookies, credential headers and
+/// secret-looking fields of JSON responses whose values are not
+/// placeholders, and keys not computed from the request as recorded
+/// (which may come from a secret it held). Each item names the request
+/// and the field, never the value.
 pub fn unredacted_secrets(har: &[u8]) -> Result<Vec<String>, String> {
     let har: Value = serde_json::from_slice(har).map_err(|e| format!("parsing: {e}"))?;
     let entries = har["log"]["entries"]
@@ -946,11 +1336,20 @@ pub fn unredacted_secrets(har: &[u8]) -> Result<Vec<String>, String> {
     let mut found = Vec::new();
     for entry in entries {
         let request = &entry["request"];
-        let what = format!(
-            "{} {}",
-            request["method"].as_str().unwrap_or("?"),
-            request["url"].as_str().unwrap_or("?")
-        );
+        let what = describe(request);
+        let url = request["url"].as_str().unwrap_or("");
+        for field in redact_url(url).into_iter().flat_map(|(_, fields)| fields) {
+            found.push(format!("{what}: URL parameter {field}"));
+        }
+        if let Some(key) = entry["_catpaw"]["key"].as_str()
+            && recorded_key(request)
+                .map_err(|e| format!("{what}: {e}"))?
+                .is_some_and(|recorded| recorded != key)
+        {
+            found.push(format!(
+                "{what}: a key not computed from the request as recorded"
+            ));
+        }
         let headers = |holder: &Value| -> Vec<(String, String)> {
             holder["headers"]
                 .as_array()
@@ -964,6 +1363,19 @@ pub fn unredacted_secrets(har: &[u8]) -> Result<Vec<String>, String> {
                 })
                 .collect()
         };
+        for (side, holder) in [("request", request), ("response", &entry["response"])] {
+            for (name, value) in headers(holder) {
+                if !is_url_header(&name) {
+                    continue;
+                }
+                for field in redact_url(&value)
+                    .into_iter()
+                    .flat_map(|(_, fields)| fields)
+                {
+                    found.push(format!("{what}: {side} header {name}, parameter {field}"));
+                }
+            }
+        }
         for (name, _) in headers(request) {
             if is_credential_header(&name) {
                 found.push(format!("{what}: request header {name}"));
@@ -979,10 +1391,23 @@ pub fn unredacted_secrets(har: &[u8]) -> Result<Vec<String>, String> {
             }
         }
         let content = &entry["response"]["content"];
-        if let Ok(body) = decode_text(content)
-            && scrub_addresses(&body, content["mimeType"].as_str().unwrap_or("")).is_some()
-        {
-            found.push(format!("{what}: an address the response echoes"));
+        let mime = content["mimeType"].as_str().unwrap_or("");
+        if let Ok(body) = decode_text(content) {
+            if scrub_addresses(&body, mime).is_some() {
+                found.push(format!("{what}: an address the response echoes"));
+            }
+            if is_json(mime) {
+                let mut fields: Vec<String> = json_secrets(&body)
+                    .into_iter()
+                    .filter(|secret| !is_hidden(&secret.value))
+                    .map(|secret| secret.name)
+                    .collect();
+                fields.sort();
+                fields.dedup();
+                for field in fields {
+                    found.push(format!("{what}: response field {field}"));
+                }
+            }
         }
         for (name, value) in headers(&entry["response"]) {
             match name.as_str() {
@@ -1004,6 +1429,40 @@ pub fn unredacted_secrets(har: &[u8]) -> Result<Vec<String>, String> {
         }
     }
     Ok(found)
+}
+
+/// A recording with each entry's key computed again from its request as
+/// recorded, and how many keys that changed; `None` when none did.
+/// Recordings made before keys were computed so hold keys computed from
+/// the body as it was sent, secrets included. Nothing else changes, so a
+/// recording not laid out as the recorder writes one is refused.
+pub fn rekey(bytes: &[u8]) -> Result<Option<(Vec<u8>, usize)>, String> {
+    let mut har: Value = serde_json::from_slice(bytes).map_err(|e| format!("parsing: {e}"))?;
+    if serde_json::to_vec(&har).map_err(|e| format!("writing: {e}"))? != bytes {
+        return Err("not laid out as a recording is written".to_string());
+    }
+    let entries = har["log"]["entries"]
+        .as_array_mut()
+        .ok_or_else(|| "no entries".to_string())?;
+    let mut changed = 0;
+    for entry in entries {
+        let Some(key) = entry["_catpaw"]["key"].as_str() else {
+            continue;
+        };
+        let request = &entry["request"];
+        if let Some(recorded) =
+            recorded_key(request).map_err(|e| format!("{}: {e}", describe(request)))?
+            && recorded != key
+        {
+            entry["_catpaw"]["key"] = Value::String(recorded);
+            changed += 1;
+        }
+    }
+    if changed == 0 {
+        return Ok(None);
+    }
+    let text = serde_json::to_vec(&har).map_err(|e| format!("writing: {e}"))?;
+    Ok(Some((text, changed)))
 }
 
 /// Unix milliseconds now.
@@ -1062,7 +1521,7 @@ mod tests {
 
     fn get(replayer: &Replayer, url: &str) -> Option<Bytes> {
         replayer
-            .answer(&Method::GET, &Url::parse(url).unwrap(), b"")
+            .answer(&Method::GET, &Url::parse(url).unwrap(), "", b"")
             .map(|a| a.unwrap().body)
     }
 
@@ -1203,7 +1662,12 @@ mod tests {
         let replayer = Replayer::open(&path, Misses::Fail).unwrap();
         let post = |body: &[u8]| {
             replayer
-                .answer(&Method::POST, &Url::parse(url).unwrap(), body)
+                .answer(
+                    &Method::POST,
+                    &Url::parse(url).unwrap(),
+                    "application/octet-stream",
+                    body,
+                )
                 .map(|a| a.unwrap().body)
         };
         // Asked the other way round: each body gets its own answer.
@@ -1274,6 +1738,7 @@ mod tests {
             .answer(
                 &Method::GET,
                 &Url::parse("https://shop.example/big").unwrap(),
+                "",
                 b"",
             )
             .unwrap();
@@ -1311,7 +1776,7 @@ mod tests {
                 "response": {"status": 201, "headers": [
                     {"name": "set-cookie", "value": "s=1; Expires=Thu, 01 Jan 1970 00:10:00 GMT"}],
                     "content": {"text": "posted"}},
-                "_catpaw": {"key": exact_key("POST", &url, &binary), "startedMs": 0},
+                "_catpaw": {"key": request_key("POST", &url, "", &binary), "startedMs": 0},
             },
             {
                 "request": {"method": "GET", "url": "https://shop.example/img", "headers": []},
@@ -1321,7 +1786,7 @@ mod tests {
         ]}});
         let replayer = Replayer::from_bytes(har.to_string().as_bytes(), Misses::Fail).unwrap();
         let posted = replayer
-            .answer(&Method::POST, &url, &binary)
+            .answer(&Method::POST, &url, "", &binary)
             .unwrap()
             .unwrap();
         assert_eq!(posted.status, StatusCode::CREATED);
@@ -1337,27 +1802,159 @@ mod tests {
     #[test]
     fn secret_fields_are_named_so() {
         for secret in [
+            // Passwords.
             "password",
             "Passwd",
             "user[password]",
+            "newPassword",
+            "password_confirmation",
+            "passphrase",
+            "passcode",
+            "pass",
+            "user_pass",
             "pwd",
+            "pw",
+            "new_pw",
+            "PW2",
+            // Secrets, tokens and keys.
             "client_secret",
+            "clientSecret",
             "csrf_token",
-            "cardNumber",
-            "cvv",
-            "cvc2",
-            "ssn",
+            "csrfmiddlewaretoken",
+            "authenticity_token",
+            "__RequestVerificationToken",
+            "access_token",
+            "refresh_token",
+            "id_token",
+            "apiKey",
+            "api_key",
+            "x-api-key",
+            "apikey",
+            "access_key",
+            "secret_key",
+            "private_key",
+            "Ocp-Apim-Subscription-Key",
+            "code_verifier",
+            "Authorization",
+            // One-time codes.
+            "otp",
             "otp_code",
+            "totp",
+            "app_otp",
+            "mfa",
+            "mfa_code",
+            "2fa",
+            "2fa_code",
+            "twoFactorCode",
+            "one_time_code",
+            "oneTimeCode",
+            "one-time-code",
+            "verification_code",
+            "verificationCode",
+            "verify_code",
+            "auth_code",
+            "authCode",
+            "authorization_code",
+            "sms_code",
+            "security_code",
+            "recovery_code",
+            "backup_code",
+            "login_code",
+            "access_code",
+            // PINs.
             "pin",
             "PIN",
             "card_pin",
             "pinCode",
+            // A postcode in India too: taken for a PIN.
+            "pincode",
             "userPIN",
+            "pin1",
+            "mpin",
+            "pin_number",
+            // Cards, social security numbers, sessions.
+            "card",
+            "cardNumber",
+            "card[number]",
+            "cardnumber",
+            "creditcard",
+            "cc_number",
+            "ccnum",
+            "cvv",
+            "cvc2",
+            "card_cvc",
+            "ssn",
+            "social_security_number",
+            "session_id",
+            "sessionId",
+            "PHPSESSID",
+            "JSESSIONID",
         ] {
             assert!(is_secret_field(secret), "{secret}");
         }
         for plain in [
-            "username", "email", "shipping", "spinner", "opinion", "q", "size",
+            "username",
+            "email",
+            "q",
+            "size",
+            // Codes that are not secrets.
+            "country_code",
+            "countryCode",
+            "zip_code",
+            "zipCode",
+            "zipcode",
+            "postcode",
+            "postal_code",
+            "promo_code",
+            "promoCode",
+            "coupon_code",
+            "couponCode",
+            "discount_code",
+            "voucher_code",
+            "referral_code",
+            "preset_code",
+            "presetcode",
+            "barcode",
+            "status_code",
+            "language_code",
+            "currency_code",
+            "area_code",
+            "code",
+            // A secret's name inside another word.
+            "shipping",
+            "spinner",
+            "spin",
+            "opinion",
+            "passenger",
+            "passport",
+            "className",
+            "classname",
+            "rootPath",
+            "footprint",
+            "discard",
+            "scorecard",
+            "cards",
+            "tokens",
+            "prompt_tokens",
+            "secretary",
+            "monkey",
+            // Names that describe a secret, or say something of it.
+            "token_type",
+            "token_endpoint",
+            "expires_in",
+            "pin_length",
+            "password_hint",
+            "password_policy",
+            "authorization_endpoint",
+            "access_key_id",
+            "api_key_id",
+            "card_brand",
+            "card_last4",
+            "card_id",
+            "mfa_enabled",
+            "session",
+            "public_key",
+            "primary_key",
         ] {
             assert!(!is_secret_field(plain), "{plain}");
         }
@@ -1411,6 +2008,7 @@ mod tests {
         let path = dir.join("t.har");
         let recorder = Recorder::new(path.clone());
         let url = "https://shop.example/login";
+        let form = "application/x-www-form-urlencoded";
         let body = b"username=tomsmith&password=SuperSecretPassword%21";
         let place = recorder.start();
         hop(
@@ -1436,11 +2034,24 @@ mod tests {
             ]),
             b"<p>welcome</p>",
         );
+        // Another user's login to the same address, recorded after.
+        let place = recorder.start();
+        hop(
+            &recorder,
+            place,
+            &Method::POST,
+            url,
+            &headers(&[("content-type", "application/x-www-form-urlencoded")]),
+            b"username=ada&password=Engine1843",
+            &HeaderMap::new(),
+            b"<p>hello Ada</p>",
+        );
         recorder.save("test").unwrap();
         let bytes = read_file(&path).unwrap();
         let text = String::from_utf8(bytes.clone()).unwrap();
         for secret in [
             "SuperSecret",
+            "Engine1843",
             "tok123",
             "tok456",
             "BAh7CUkiD3Nlc3Npb25faWQ",
@@ -1456,10 +2067,42 @@ mod tests {
         );
         assert_eq!(unredacted_secrets(&bytes).unwrap(), Vec::<String>::new());
 
-        // The answer still matches the body as sent.
+        // The key comes from the body as recorded: it is the same whatever
+        // the password was, and tells nothing of it.
+        let har: Value = serde_json::from_slice(&bytes).unwrap();
+        let key = har["log"]["entries"][0]["_catpaw"]["key"].as_str().unwrap();
+        let login = Url::parse(url).unwrap();
+        for password in ["SuperSecretPassword%21", "guess", "redacted"] {
+            let body = format!("username=tomsmith&password={password}");
+            assert_eq!(
+                request_key("POST", &login, form, body.as_bytes()),
+                key,
+                "{password}"
+            );
+        }
+        assert_eq!(
+            key,
+            format!(
+                "POST {url} {:016x}",
+                fnv(b"username=tomsmith&password=redacted")
+            )
+        );
+
+        // A replayed login, redacted the same way, matches its own entry:
+        // asked first, the later login gets its answer.
         let replayer = Replayer::open(&path, Misses::Fail).unwrap();
+        let ada = replayer
+            .answer(
+                &Method::POST,
+                &login,
+                form,
+                b"username=ada&password=Engine1843",
+            )
+            .unwrap()
+            .unwrap();
+        assert_eq!(ada.body, "<p>hello Ada</p>");
         let answer = replayer
-            .answer(&Method::POST, &Url::parse(url).unwrap(), body)
+            .answer(&Method::POST, &login, form, body)
             .unwrap()
             .unwrap();
         assert_eq!(answer.body, "<p>welcome</p>");
@@ -1521,25 +2164,267 @@ mod tests {
     #[test]
     fn unredacted_secrets_are_found() {
         let har = json!({"log": {"entries": [{
-            "request": {"method": "POST", "url": "https://shop.example/login",
-                "headers": [{"name": "Authorization", "value": "Bearer x"}],
+            "request": {"method": "POST",
+                "url": "https://shop.example/login?next=%2F&api_key=k1#access_token=t1",
+                "headers": [
+                    {"name": "Authorization", "value": "Bearer x"},
+                    {"name": "Referer", "value": "https://shop.example/start?session_id=s1"}],
                 "postData": {"mimeType": "application/x-www-form-urlencoded",
                     "text": "user=a&password=hunter2"}},
-            "response": {"status": 200, "headers": [
+            "response": {"status": 302, "headers": [
                 {"name": "Set-Cookie", "value": "sid=abc123; HttpOnly"},
                 {"name": "Set-Cookie", "value": "ok=redacted-0a1b2c3d"},
-                {"name": "X-CSRF-Token", "value": "t0k3n"}],
-                "content": {"text": ""}},
+                {"name": "X-CSRF-Token", "value": "t0k3n"},
+                {"name": "Location", "value": "/home?verification_code=123456"}],
+                "content": {"mimeType": "application/json", "text":
+                    r#"{"refresh_token": "r1", "token_type": "Bearer", "client_secret": "redacted-0a1b2c3d"}"#}},
+            "_catpaw": {"key": "POST https://shop.example/login?next=%2F&api_key=k1 0123456789abcdef"},
         }]}});
         let found = unredacted_secrets(har.to_string().as_bytes()).unwrap();
+        let what =
+            "POST https://shop.example/login?next=%2F&api_key=redacted#access_token=redacted";
+        let expected: Vec<String> = [
+            "URL parameter api_key",
+            "URL parameter access_token",
+            "a key not computed from the request as recorded",
+            "request header referer, parameter session_id",
+            "response header location, parameter verification_code",
+            "request header authorization",
+            "form field password",
+            "response field refresh_token",
+            "response cookie sid",
+            "response header x-csrf-token",
+        ]
+        .iter()
+        .map(|item| format!("{what}: {item}"))
+        .collect();
+        assert_eq!(found, expected);
+        for value in [
+            "k1", "t1", "s1", "123456", "hunter2", "r1", "abc123", "t0k3n",
+        ] {
+            assert!(
+                found.iter().all(|item| !item.contains(value)),
+                "{value}: {found:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn secret_url_parameters_are_redacted_and_requests_still_match() {
+        assert_eq!(redact_url("/a?b=1&code=US"), None);
+        assert_eq!(redact_url("/a#section"), None);
+        assert_eq!(redact_url("/a?token=redacted&pin="), None);
         assert_eq!(
-            found,
+            redact_url("/a?api%5Fkey=k&x=%20#/route?token=t"),
+            Some((
+                "/a?api%5Fkey=redacted&x=%20#/route?token=redacted".to_string(),
+                vec!["api_key".to_string(), "/route?token".to_string()]
+            ))
+        );
+
+        let dir = temp_dir("url-secrets");
+        let path = dir.join("t.har");
+        let recorder = Recorder::new(path.clone());
+        for (page, token, answer) in [("1", "tokA", "first"), ("2", "tokB", "second")] {
+            let place = recorder.start();
+            hop(
+                &recorder,
+                place,
+                &Method::GET,
+                &format!(
+                    "https://shop.example/api?page={page}&access_token={token}#id_token=idt{page}&state=s"
+                ),
+                &headers(&[(
+                    "referer",
+                    "https://shop.example/callback?code=1&auth_code=AC1",
+                )]),
+                b"",
+                &headers(&[("location", "/next?x=1&session_id=SID1")]),
+                answer.as_bytes(),
+            );
+        }
+        recorder.save("test").unwrap();
+        let bytes = read_file(&path).unwrap();
+        let text = String::from_utf8(bytes.clone()).unwrap();
+        for secret in ["tokA", "tokB", "idt1", "idt2", "AC1", "SID1"] {
+            assert!(!text.contains(secret), "{secret} is in {text}");
+        }
+        let har: Value = serde_json::from_slice(&bytes).unwrap();
+        let entry = &har["log"]["entries"][0];
+        assert_eq!(
+            entry["request"]["url"],
+            "https://shop.example/api?page=1&access_token=redacted#id_token=redacted&state=s"
+        );
+        assert_eq!(
+            entry["request"]["headers"][0]["value"],
+            "https://shop.example/callback?code=1&auth_code=redacted"
+        );
+        assert_eq!(
+            entry["response"]["headers"][0]["value"],
+            "/next?x=1&session_id=redacted"
+        );
+        assert_eq!(
+            entry["response"]["redirectURL"],
+            "/next?x=1&session_id=redacted"
+        );
+        assert_eq!(unredacted_secrets(&bytes).unwrap(), Vec::<String>::new());
+
+        // A key holds the URL as recorded, whatever the token was.
+        let url = |query: &str| Url::parse(&format!("https://shop.example/api?{query}")).unwrap();
+        assert_eq!(
+            request_key("GET", &url("page=1&access_token=tokA"), "", b""),
+            request_key("GET", &url("page=1&access_token=other"), "", b"")
+        );
+        assert_eq!(
+            entry["_catpaw"]["key"],
+            format!(
+                "GET {} {:016x}",
+                url("page=1&access_token=redacted"),
+                fnv(b"")
+            )
+        );
+        // Asked first, the second page gets its own answer.
+        let replayer = Replayer::open(&path, Misses::Fail).unwrap();
+        assert_eq!(
+            get(
+                &replayer,
+                "https://shop.example/api?page=2&access_token=tokB"
+            )
+            .unwrap(),
+            "second"
+        );
+        assert_eq!(
+            get(
+                &replayer,
+                "https://shop.example/api?page=1&access_token=tokA"
+            )
+            .unwrap(),
+            "first"
+        );
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn secret_fields_of_json_responses_become_placeholders() {
+        let dir = temp_dir("json-secrets");
+        let path = dir.join("t.har");
+        let recorder = Recorder::new(path.clone());
+        let body = br#"{ "token_type": "Bearer", "access_token": "tok\"A", "expires_in": 3600,
+  "user": {"name": "Ada", "pin": 1234, "sessions": [{"refresh_token": "tokB"}]},
+  "copy": {"id_token": "tok\"A"}, "client_secret": "", "secrets": ["s1", {"k": "s2"}] }"#;
+        let redacted = recorder.redact_json_response(body).unwrap();
+        let p = |value: &str| recorder.placeholder(value);
+        // Each value under a secret name, at any depth, and nothing else.
+        let expected = format!(
+            r#"{{ "token_type": "Bearer", "access_token": "{a}", "expires_in": 3600,
+  "user": {{"name": "Ada", "pin": "{pin}", "sessions": [{{"refresh_token": "{b}"}}]}},
+  "copy": {{"id_token": "{a}"}}, "client_secret": "", "secrets": ["{s1}", {{"k": "{s2}"}}] }}"#,
+            a = p("tok\"A"),
+            pin = p("1234"),
+            b = p("tokB"),
+            s1 = p("s1"),
+            s2 = p("s2"),
+        );
+        assert_eq!(String::from_utf8(redacted.clone()).unwrap(), expected);
+        assert_ne!(p("tokB"), p("s1"));
+        assert!(recorder.redact_json_response(&redacted).is_none());
+        assert!(
+            recorder
+                .redact_json_response(b"<p>access_token</p>")
+                .is_none()
+        );
+
+        let json = headers(&[("content-type", "application/json")]);
+        for (place, mime) in [
+            (recorder.start(), &json),
+            (recorder.start(), &HeaderMap::new()),
+        ] {
+            hop(
+                &recorder,
+                place,
+                &Method::POST,
+                "https://shop.example/oauth/token",
+                &HeaderMap::new(),
+                b"",
+                mime,
+                br#"{"access_token": "tokC"}"#,
+            );
+        }
+        recorder.save("test").unwrap();
+        let bytes = read_file(&path).unwrap();
+        let har: Value = serde_json::from_slice(&bytes).unwrap();
+        let content = |i: usize| har["log"]["entries"][i]["response"]["content"]["text"].clone();
+        assert_eq!(
+            content(0),
+            format!(r#"{{"access_token": "{}"}}"#, p("tokC"))
+        );
+        // Not said to be JSON: kept as it is.
+        assert_eq!(content(1), r#"{"access_token": "tokC"}"#);
+        assert_eq!(unredacted_secrets(&bytes).unwrap(), Vec::<String>::new());
+
+        let leftover = json!({"log": {"entries": [{
+            "request": {"method": "GET", "url": "https://shop.example/me", "headers": []},
+            "response": {"status": 200, "headers": [], "content": {
+                "mimeType": "application/json; charset=utf-8",
+                "text": String::from_utf8_lossy(body)}},
+        }]}});
+        assert_eq!(
+            unredacted_secrets(leftover.to_string().as_bytes()).unwrap(),
             [
-                "POST https://shop.example/login: request header authorization",
-                "POST https://shop.example/login: form field password",
-                "POST https://shop.example/login: response cookie sid",
-                "POST https://shop.example/login: response header x-csrf-token",
+                "GET https://shop.example/me: response field access_token",
+                "GET https://shop.example/me: response field id_token",
+                "GET https://shop.example/me: response field pin",
+                "GET https://shop.example/me: response field refresh_token",
+                "GET https://shop.example/me: response field secrets",
             ]
         );
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn keys_are_computed_again_from_the_requests_as_recorded() {
+        // A recording made when keys came from the body as sent.
+        let url = Url::parse("https://shop.example/login").unwrap();
+        let form = "application/x-www-form-urlencoded";
+        let sent = b"username=tomsmith&password=SuperSecretPassword%21";
+        let old_key = format!("POST {url} {:016x}", fnv(sent));
+        let har = json!({"log": {"entries": [
+            {
+                "request": {"method": "POST", "url": url.as_str(), "headers": [],
+                    "postData": {"mimeType": form, "text": "username=tomsmith&password=redacted"}},
+                "response": {"status": 302, "headers": [], "content": {"text": ""}},
+                "_catpaw": {"key": old_key, "startedMs": 0},
+            },
+            {
+                "request": {"method": "GET", "url": "https://shop.example/secure", "headers": []},
+                "response": {"status": 200, "headers": [], "content": {"text": "in"}},
+                "_catpaw": {"key": "GET https://shop.example/secure cbf29ce484222325", "startedMs": 0},
+            },
+        ]}});
+        let bytes = serde_json::to_vec(&har).unwrap();
+        assert_eq!(
+            unredacted_secrets(&bytes).unwrap(),
+            ["POST https://shop.example/login: a key not computed from the request as recorded"]
+        );
+        let (rekeyed, changed) = rekey(&bytes).unwrap().unwrap();
+        assert_eq!(changed, 1);
+        // Only the key changes.
+        let new_key = request_key("POST", &url, form, sent);
+        assert_eq!(
+            String::from_utf8(rekeyed.clone()).unwrap(),
+            String::from_utf8(bytes)
+                .unwrap()
+                .replace(&old_key, &new_key)
+        );
+        assert_eq!(unredacted_secrets(&rekeyed).unwrap(), Vec::<String>::new());
+        assert!(rekey(&rekeyed).unwrap().is_none());
+        let replayer = Replayer::from_bytes(&rekeyed, Misses::Fail).unwrap();
+        let answer = replayer
+            .answer(&Method::POST, &url, form, sent)
+            .unwrap()
+            .unwrap();
+        assert_eq!(answer.status, StatusCode::FOUND);
+        // Laid out otherwise, a recording is left alone.
+        assert!(rekey(serde_json::to_string_pretty(&har).unwrap().as_bytes()).is_err());
     }
 }

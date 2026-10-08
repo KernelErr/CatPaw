@@ -188,19 +188,24 @@ of the model on every turn.
     `.zst`) in a file only its owner can read: entries in the order their
     requests started, bodies whole (base64 when not UTF-8). Credentials
     stay out: request cookies, credentials and signatures are not
-    written, form fields that look secret (passwords, tokens, card
-    numbers, one-time codes, PINs) are written as `redacted`, and the
-    values of response cookies and credential headers become
-    `redacted-<hash>` placeholders (equal values, equal placeholders) that
-    a replayed session keeps and sends back; `cargo xtask tasks lint`
-    fails on a recording that holds any of them. `--replay-har <file>`
-    answers from it with no network. A request matches on method, URL and
-    body (as sent, not as written), or failing that on method, host, port
-    and path; each recorded answer is given once, in order, however it
-    was matched, the last one repeating when they run out; a request the
-    recording lacks fails (`--replay-misses-live` sends it instead), and
-    so does one whose body an older recording left out. Answers arrive at
-    once, in the order the page asked for them. `--random-seed` gives
+    written; form fields and URL parameters that look secret (passwords,
+    secrets, tokens, API and private keys, card numbers, one-time codes,
+    PINs, session ids, but not other codes such as country, postal or
+    promotion codes) are written as `redacted`, in request bodies and in
+    the query and fragment of request URLs, `Referer` and `Location`; and
+    the values of response cookies, credential headers and secret-looking
+    fields of JSON responses become `redacted-<hash>` placeholders (equal
+    values, equal placeholders) that a replayed session keeps and sends
+    back. `cargo xtask tasks lint` fails on a recording that holds any of
+    them. `--replay-har <file>` answers from it with no network. A request
+    matches on method, URL and body, secrets redacted as in the recording
+    (the key a recording keeps for it holds nothing the recording does
+    not), or failing that on method, host, port and path; each recorded
+    answer is given once, in order, however it was matched, the last one
+    repeating when they run out; a request the recording lacks fails
+    (`--replay-misses-live` sends it instead), and so does one whose body
+    an older recording left out. Answers arrive at once, in the order the
+    page asked for them. `--random-seed` gives
     each document, frame and worker sequences of its own for
     `Math.random`, `crypto` and Web Crypto keys; `--time-origin` fixes
     where the page clock starts; dates show UTC (or `--timezone`) and
