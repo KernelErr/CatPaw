@@ -152,16 +152,24 @@ impl Session {
         }
     }
 
-    /// `error Busy` when `tab` is with the user.
+    /// `error Busy` when `tab` is with the user, with the page they have it
+    /// on: an agent that lost track of the hand-off (its conversation
+    /// started over) can give the user the link again.
     pub(super) fn refuse_with_user(&self, tab: u32) -> Result<(), Failure> {
-        match self.handoffs.with_user(tab) {
-            Some(h) => Err(Failure::new(
-                ErrorCode::Busy,
-                format!("t{tab} is with the user (hand-off h{h})"),
-            )
-            .with(advice::HANDED_OVER)),
-            None => Ok(()),
-        }
+        let Some(h) = self.handoffs.with_user(tab) else {
+            return Ok(());
+        };
+        let page = self
+            .handoffs
+            .link(h)
+            .zip(self.local.as_ref())
+            .map(|(path, local)| format!(" at {}", local.url(&path)))
+            .unwrap_or_default();
+        Err(Failure::new(
+            ErrorCode::Busy,
+            format!("t{tab} is with the user (hand-off h{h}{page})"),
+        )
+        .with(advice::HANDED_OVER))
     }
 
     /// Whether a tab is still open in its group.

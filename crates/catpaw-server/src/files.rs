@@ -137,6 +137,19 @@ pub(crate) fn describe(root: Option<&Path>, paths: &[String]) -> Result<String, 
         .join(", "))
 }
 
+/// A path as people write it: without the `\\?\` prefix Windows gives
+/// canonical paths (`\\?\UNC\server\share` reads `\\server\share`).
+fn plain(path: &Path) -> String {
+    let text = path.display().to_string();
+    if let Some(rest) = text.strip_prefix(r"\\?\UNC\") {
+        format!(r"\\{rest}")
+    } else if let Some(rest) = text.strip_prefix(r"\\?\") {
+        rest.to_string()
+    } else {
+        text
+    }
+}
+
 /// The files at `paths` as the user approves them: where each really is
 /// (links followed; relative to the files root when under it, else with
 /// the home directory as `~`) and its size.
@@ -156,9 +169,9 @@ pub(crate) fn describe_paths(root: Option<&Path>, paths: &[String]) -> Result<St
                     .unwrap_or_default(),
                 (_, Some(home)) if real.starts_with(home) => match real.strip_prefix(home) {
                     Ok(rest) => format!("~/{}", rest.display()),
-                    Err(_) => real.display().to_string(),
+                    Err(_) => plain(real),
                 },
-                _ => real.display().to_string(),
+                _ => plain(real),
             };
             format!("{shown} ({})", size(*bytes))
         })
@@ -185,6 +198,19 @@ pub(crate) fn read(root: Option<&Path>, paths: &[String]) -> Result<Vec<Chosen>,
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn paths_show_without_the_verbatim_prefix() {
+        assert_eq!(
+            plain(Path::new(r"\\?\D:\trial\hello.txt")),
+            r"D:\trial\hello.txt"
+        );
+        assert_eq!(
+            plain(Path::new(r"\\?\UNC\server\share\a.txt")),
+            r"\\server\share\a.txt"
+        );
+        assert_eq!(plain(Path::new("/srv/a.txt")), "/srv/a.txt");
+    }
 
     #[test]
     fn an_upload_shows_where_each_file_really_is() {

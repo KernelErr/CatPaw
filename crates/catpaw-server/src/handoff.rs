@@ -208,6 +208,15 @@ impl Handoffs {
         .or_else(|| store.items.keys().next_back().copied())
     }
 
+    /// The path of hand-off `id`'s page (with its token), while it is open.
+    pub(crate) fn link(&self, id: u32) -> Option<String> {
+        lock(&self.store)
+            .items
+            .get(&id)
+            .filter(|h| !h.lapsed())
+            .map(|h| format!("/handoff/h{id}?t={}", h.token))
+    }
+
     /// The hand-off `tab` is with (not given back yet), if any.
     pub fn with_user(&self, tab: u32) -> Option<u32> {
         lock(&self.store)

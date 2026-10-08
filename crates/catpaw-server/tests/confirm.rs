@@ -768,6 +768,10 @@ fn a_handed_over_tab_is_the_users_until_given_back() {
         switch.starts_with("error Busy t1 is with the user"),
         "{switch}"
     );
+    // It names the page the user has the tab on, for an agent that lost
+    // track of the hand-off to give the user again.
+    assert!(switch.contains(&link), "{switch}");
+    assert!(switch.contains("gives the tab back there"), "{switch}");
 
     // The planted submission waits for the user, who blocks it.
     let (_, clicked) = user_side(
