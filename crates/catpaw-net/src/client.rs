@@ -257,6 +257,8 @@ struct Traffic {
     sent: u64,
     /// The highest number of a request answered over HTTP/2.
     answered: u64,
+    /// When a request was last answered over HTTP/2.
+    answered_at: Option<tokio::time::Instant>,
     /// How many have waited for their response headers longer than
     /// [`HTTP2_STALL`], and wait still.
     waiting: usize,
@@ -270,9 +272,9 @@ struct Protocols {
     news: tokio::sync::Notify,
 }
 
-/// How long a request to a host known to speak HTTP/2 waits for its
-/// response headers before the client looks for evidence that the host's
-/// HTTP/2 stalls. Some servers (Heroku's router among them) at times leave
+/// How long a request that may go over HTTP/2 waits for its response
+/// headers before the client looks for evidence that the host's HTTP/2
+/// stalls. Some servers (Heroku's router among them) at times leave
 /// streams multiplexed on one connection unanswered while other streams,
 /// and separate connections, are served in a second; but a request that
 /// takes long is often meant to (a long poll), and sending it again would
@@ -280,15 +282,18 @@ struct Protocols {
 ///
 /// The rule: a GET, HEAD or OPTIONS that has waited this long is sent
 /// again, over an HTTP/1.1 connection of its own, only on evidence that
-/// the host's HTTP/2 stalls: a request to the host sent after it has been
-/// answered over HTTP/2 meanwhile (the connection serves new streams, not
-/// this one), or another request to the host has waited this long at the
-/// same time. The host then gets HTTP/1.1 for the client's life, so the
-/// requests waiting when the evidence comes are the only ones ever sent
-/// twice. A request waiting without such evidence is left to be answered
-/// or to time out: a long poll is not repeated while it is its host's
-/// only traffic, and at most once in a client's life when it is not.
-const HTTP2_STALL: Duration = Duration::from_secs(5);
+/// the host's HTTP/2 stalls: the host answered another request over
+/// HTTP/2 since this one was sent (the connection serves other streams,
+/// not this one; two requests sent at once to a host not met before are
+/// multiplexed on the first connection, and the second may be the one
+/// left), or, on a host known to speak HTTP/2, another request has waited
+/// this long at the same time. The host then gets HTTP/1.1 for the
+/// client's life, so the requests waiting when the evidence comes are the
+/// only ones ever sent twice. A request waiting without such evidence is
+/// left to be answered or to time out: a long poll is not repeated while
+/// it is its host's only traffic, and at most once in a client's life
+/// when it is not. A host that answers over HTTP/1.1 gives no evidence.
+const HTTP2_STALL: Duration = Duration::from_secs(2);
 
 /// How a request sent over HTTP/2 ended.
 #[derive(Debug, PartialEq, Eq)]
@@ -341,6 +346,7 @@ impl Protocols {
             known.h2.insert(host.to_string());
             let traffic = known.traffic.entry(host.to_string()).or_default();
             traffic.answered = traffic.answered.max(number);
+            traffic.answered_at = Some(tokio::time::Instant::now());
         }
         self.news.notify_waiters();
     }
@@ -362,16 +368,18 @@ impl Protocols {
     /// Whether there is evidence that `host`'s HTTP/2 stalls for request
     /// `number`, which waits long (see [`HTTP2_STALL`]). Evidence found
     /// marks the host, and the other requests waiting on it are told.
-    fn stalls(&self, host: &str, number: u64) -> bool {
+    fn stalls(&self, host: &str, number: u64, sent_at: tokio::time::Instant) -> bool {
         let found = {
             let mut known = self.lock();
             if known.stalled.contains(host) {
                 return true;
             }
-            let found = known
-                .traffic
-                .get(host)
-                .is_some_and(|traffic| traffic.answered > number || traffic.waiting >= 2);
+            let speaks_h2 = known.h2.contains(host);
+            let found = known.traffic.get(host).is_some_and(|traffic| {
+                traffic.answered > number
+                    || traffic.answered_at.is_some_and(|at| at > sent_at)
+                    || (speaks_h2 && traffic.waiting >= 2)
+            });
             if found {
                 known.stalled.insert(host.to_string());
             }
@@ -394,6 +402,7 @@ impl Protocols {
         stall: Duration,
         budget: Duration,
     ) -> H2Wait<F::Output> {
+        let sent_at = tokio::time::Instant::now();
         tokio::pin!(response);
         let deadline = tokio::time::sleep(budget);
         tokio::pin!(deadline);
@@ -407,7 +416,7 @@ impl Protocols {
             let news = self.news.notified();
             tokio::pin!(news);
             news.as_mut().enable();
-            if self.stalls(host, number) {
+            if self.stalls(host, number, sent_at) {
                 return H2Wait::Resend;
             }
             tokio::select! {
@@ -809,13 +818,7 @@ impl NetClient {
         };
         let timeout = self.config.timeout;
         let started = Instant::now();
-        let (stalled, speaks_h2) = {
-            let known = self.protocols.lock();
-            (
-                known.stalled.contains(&authority),
-                known.h2.contains(&authority),
-            )
-        };
+        let stalled = self.protocols.lock().stalled.contains(&authority);
         let idempotent = matches!(*method, Method::GET | Method::HEAD | Method::OPTIONS);
         let response = if stalled {
             tokio::time::timeout(timeout, self.h1.request(build(uri, headers, body)?))
@@ -823,7 +826,10 @@ impl NetClient {
                 .map_err(|_| NetError::Timeout(timeout))??
         } else {
             let number = self.protocols.sent(&authority);
-            let response = if idempotent && speaks_h2 && timeout > HTTP2_STALL {
+            // Whether the host speaks HTTP/2 is known only once a
+            // connection is up, so a request to a host not met before is
+            // watched too.
+            let response = if idempotent && timeout > HTTP2_STALL {
                 let first = self
                     .inner
                     .request(build(uri.clone(), headers.clone(), body.clone())?);
@@ -994,9 +1000,11 @@ mod tests {
         assert!(!protocols.is_stalled("host"));
         assert_eq!(waiting(&protocols, "host"), 0);
         // Nor are two slow requests to different hosts, nor one whose host
-        // answered only requests sent before it.
+        // answered an earlier request before this one was sent.
         let earlier = protocols.sent("b");
-        let (a, b, ()) = tokio::join!(
+        protocols.answered_h2("b", earlier);
+        tokio::time::sleep(Duration::from_millis(5)).await;
+        let (a, b) = tokio::join!(
             protocols.wait_h2(
                 "a",
                 protocols.sent("a"),
@@ -1011,18 +1019,61 @@ mod tests {
                 STALL,
                 BUDGET
             ),
-            async {
-                tokio::time::sleep(STALL * 2).await;
-                protocols.answered_h2("b", earlier);
-            },
         );
         assert_eq!((a, b), (H2Wait::Done("answer"), H2Wait::Done("answer")));
         assert!(!protocols.is_stalled("a") && !protocols.is_stalled("b"));
     }
 
     #[tokio::test]
+    async fn the_one_left_of_two_sent_at_once_is_sent_again() {
+        // Two requests sent at once to a host not met before go out as two
+        // streams of one connection; the host answers one and leaves the
+        // other.
+        let protocols = Protocols::default();
+        let first = protocols.sent("host");
+        let second = protocols.sent("host");
+        let (answered, left) = tokio::join!(
+            async {
+                let out = protocols
+                    .wait_h2("host", first, answered_after(STALL / 2), STALL, BUDGET)
+                    .await;
+                protocols.answered_h2("host", first);
+                out
+            },
+            protocols.wait_h2(
+                "host",
+                second,
+                std::future::pending::<&str>(),
+                STALL,
+                BUDGET
+            ),
+        );
+        assert_eq!(answered, H2Wait::Done("answer"));
+        assert_eq!(left, H2Wait::Resend);
+        assert!(protocols.is_stalled("host"));
+    }
+
+    #[tokio::test]
+    async fn slow_requests_to_a_host_not_known_to_speak_http2_are_left_alone() {
+        // Two long waits at once are evidence only on a host known to
+        // speak HTTP/2: on others they are slow requests, not a stall.
+        let protocols = Protocols::default();
+        let a = protocols.sent("host");
+        let b = protocols.sent("host");
+        let (a, b) = tokio::join!(
+            protocols.wait_h2("host", a, answered_after(STALL * 3), STALL, BUDGET),
+            protocols.wait_h2("host", b, answered_after(STALL * 3), STALL, BUDGET),
+        );
+        assert_eq!((a, b), (H2Wait::Done("answer"), H2Wait::Done("answer")));
+        assert!(!protocols.is_stalled("host"));
+    }
+
+    #[tokio::test]
     async fn requests_stuck_at_once_on_a_host_are_sent_again() {
         let protocols = Protocols::default();
+        // The host has answered over HTTP/2 before.
+        let earlier = protocols.sent("host");
+        protocols.answered_h2("host", earlier);
         let stuck = || std::future::pending::<&str>();
         let later = async {
             tokio::time::sleep(STALL * 2).await;

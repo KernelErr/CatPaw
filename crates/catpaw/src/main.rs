@@ -17,7 +17,7 @@ use catpaw_agent::{
     Snapshotter, StyleOracle,
 };
 use catpaw_dom::{Dom, HtmlParseOptions, NodeId, parse_html, to_html};
-use catpaw_engine::{LoopLimits, PageConfig, PageOptions, StopReason};
+use catpaw_engine::{LoopLimits, PageConfig, PageOptions, SettlePolicy, StopReason};
 use catpaw_fetch::fetch_document;
 use catpaw_net::{BotAuthConfig, KeyPair, NetClient, NetConfig, Url};
 use catpaw_style::{StyleEngine, StyleOptions};
@@ -869,6 +869,9 @@ fn fetch_with_scripts(args: FetchArgs) -> Result<()> {
         },
         limits: LoopLimits {
             virtual_ms: args.time_budget as f64,
+            // Analytics, polling and far timers are not waited for, as an
+            // agent session does not wait for them.
+            settle: Some(SettlePolicy::default()),
             ..LoopLimits::default()
         },
         storage: read_storage_file(args.storage.as_deref())?,
