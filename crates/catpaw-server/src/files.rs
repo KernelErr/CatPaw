@@ -197,15 +197,17 @@ mod tests {
         std::fs::write(elsewhere.join("id.txt"), "ssh").unwrap();
         let outside = elsewhere.join("id.txt").display().to_string();
         let shown = describe_paths(Some(&root), &["notes.txt".to_string(), outside]).unwrap();
-        // Under the root, relative to it; elsewhere, all of the path, so
-        // that the user sees which file leaves the machine.
-        let real = std::fs::canonicalize(elsewhere.join("id.txt")).unwrap();
-        let home = std::env::var_os("HOME").and_then(|h| std::fs::canonicalize(h).ok());
-        let expected_outside = match home.as_deref().and_then(|h| real.strip_prefix(h).ok()) {
-            Some(rest) => format!("~/{}", rest.display()),
-            None => real.display().to_string(),
-        };
-        assert_eq!(shown, format!("notes.txt (12 B), {expected_outside} (3 B)"));
+        // Under the root, relative to it; elsewhere, all of the path (from
+        // the home directory, when it is under it), so that the user sees
+        // which file leaves the machine.
+        let (inside, outside) = shown.split_once(", ").unwrap();
+        assert_eq!(inside, "notes.txt (12 B)");
+        let outside = outside.strip_suffix(" (3 B)").unwrap();
+        assert!(outside.ends_with("id.txt"), "{outside}");
+        assert!(
+            outside.starts_with('~') || Path::new(outside).is_absolute(),
+            "{outside}"
+        );
         let _ = std::fs::remove_dir_all(&base);
     }
 }

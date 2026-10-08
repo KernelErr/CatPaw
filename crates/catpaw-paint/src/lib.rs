@@ -1071,15 +1071,13 @@ mod tests {
             scroll: (0.0, 0.0),
             scale: 1.0,
         };
-        let (png, large) = allocations_of(1280 * 2048 * 4, || {
-            render_png_with(&page.tree, &page.dom, &options, &|_| None)
-        });
-        // The pixmap, and no copy of it.
-        assert_eq!(large, 1, "{large} allocations as big as the pixmap");
-        // What tiny-skia's encoder writes, byte for byte.
-        let copied = render_with(&page.tree, &page.dom, &options, &|_| None)
-            .encode_png()
-            .expect("a PNG");
+        let pixmap = render_with(&page.tree, &page.dom, &options, &|_| None);
+        // What tiny-skia's encoder writes, from a copy, byte for byte.
+        let copied = pixmap.clone().encode_png().expect("a PNG");
+        // Encoding makes no copy of the pixmap (what rendering allocates,
+        // fonts included, differs by platform and is not counted).
+        let (png, large) = allocations_of(1280 * 2048 * 4, || encode_png(pixmap));
+        assert_eq!(large, 0, "{large} allocations as big as the pixmap");
         assert!(png == copied, "the encodings differ");
     }
 
