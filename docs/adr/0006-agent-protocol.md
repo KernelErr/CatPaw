@@ -80,7 +80,7 @@ of the model on every turn.
    MCP's `isError`. An `ok` line echoes the element acted on as
    `eN role "name"` (the cheapest guard against acting on the wrong one),
    with where it is when other shown elements have its role and name
-   (`(in e12 listitem "Hats")`, or `(after e14 button "View details for
+   (`(in listitem "Hats")`, a nameless one by its ref, or `(after e14 button "View details for
    …")`), and how the page moved: `→ <url> (200)`, `(POST, 302)`, or
    `(same document)` for `pushState`. A lone change to that element ends
    the line (`ok type e2 textbox "Name" [value=- → Ada]`). Lines starting

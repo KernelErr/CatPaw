@@ -69,7 +69,7 @@ pub(crate) struct View {
 pub(crate) struct SnapRequest {
     pub filter: Filter,
     pub root: Option<String>,
-    /// With `root`: show the items after this one.
+    /// Show the items after this list item: the rest of its list.
     pub after: Option<String>,
     pub max_tokens: u32,
     pub extra: ExtraAttrs,
@@ -926,7 +926,15 @@ impl GroupState {
                 .iter()
                 .all(|&other| refs.context_of(other) != Some(around))
         {
-            text.push_str(&format!(" (in {})", describe(refs, around)));
+            // A named container is known by its name, a nameless one by
+            // its ref.
+            let place = match refs.entry(around) {
+                Some(entry) if !entry.name.is_empty() => {
+                    format!("{} {}", entry.role, quote(&entry.name))
+                }
+                _ => describe(refs, around),
+            };
+            text.push_str(&format!(" (in {place})"));
         } else if let Some(before) = entry.line_before(r) {
             text.push_str(&format!(" (after {before})"));
         }
@@ -1074,11 +1082,14 @@ fn resolve_ref(
             format!("e{r} was never shown in this tab"),
         )
         .with(advice::UNKNOWN_REF)),
-        Err(RefError::Forgotten(r)) => Err(Failure::new(
-            ErrorCode::StaleRef,
-            format!("e{r} (from a page this tab left long ago)"),
-        )
-        .with(advice::STALE_GONE)),
+        Err(RefError::Forgotten(r)) => {
+            let when = match refs.forgotten(r) {
+                Some(catpaw_agent::StaleReason::Removed) => "removed from the page a while ago",
+                _ => "from a page this tab left long ago",
+            };
+            Err(Failure::new(ErrorCode::StaleRef, format!("e{r} ({when})"))
+                .with(advice::STALE_GONE))
+        }
         Err(RefError::Stale {
             r,
             reason,
@@ -1094,7 +1105,17 @@ fn resolve_ref(
                 Some(s) => failure
                     .with(format!("maybe {}", describe(refs, s)))
                     .with(advice::STALE),
-                None => failure.with(advice::STALE_GONE),
+                // What only took its place (the next row of a list) is
+                // named as such, not taken for it.
+                None => match refs.occupant(r, |key| is_live(page, key)) {
+                    Some(o) => failure
+                        .with(format!(
+                            "in its place now: {}, another element",
+                            describe(refs, o)
+                        ))
+                        .with(advice::STALE_GONE),
+                    None => failure.with(advice::STALE_GONE),
+                },
             })
         }
     }

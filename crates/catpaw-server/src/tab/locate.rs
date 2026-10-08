@@ -28,6 +28,20 @@ fn normalize(text: &str) -> String {
         .to_lowercase()
 }
 
+/// A cut name without the ` [+N chars]` the budget adds after its `…`.
+fn without_cut_count(name: &str) -> &str {
+    let Some(at) = name.rfind("… [+") else {
+        return name;
+    };
+    let tail = &name[at + "… [+".len()..];
+    match tail.strip_suffix(" chars]") {
+        Some(digits) if !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit()) => {
+            &name[..at + '…'.len_utf8()]
+        }
+        _ => name,
+    }
+}
+
 /// A candidate: its ref, whether it matched exactly, whether it is
 /// something to act on, and whether the action can use it.
 struct Candidate {
@@ -46,7 +60,9 @@ impl GroupState {
         wants: Use,
     ) -> Result<Aim, Failure> {
         let needle = normalize(text);
-        let cut = role.and(needle.strip_suffix('…'));
+        // A name the snapshot cut short (`…`, or `… [+N chars]` when the
+        // budget cut it) names what it begins.
+        let cut = role.and_then(|_| without_cut_count(&needle).strip_suffix('…'));
         let what = match role {
             Some(role) => format!("{role} {}", quote(text)),
             None => format!("text:{text}"),

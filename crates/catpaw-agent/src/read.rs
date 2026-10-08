@@ -187,6 +187,10 @@ impl MdWriter<'_> {
                 if is_hidden(self.dom, id, self.oracle) {
                     return;
                 }
+                if crate::visibility::masked_text(self.dom, id, self.oracle) {
+                    self.inline.push_str(" *** ");
+                    return;
+                }
                 let el = el.clone();
                 self.element(id, &el);
             }

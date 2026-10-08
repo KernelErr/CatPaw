@@ -73,6 +73,24 @@ const ALIKE: &str = r#"<!doctype html><title>Alike</title>
 <button class=buy onclick="document.title='bought'">Buy</button>
 <button class=two>Two</button><button class=two>Two</button>"#;
 
+/// A list drawn again whole on every change, as front-end frameworks do.
+const ROWS: &str = r#"<!doctype html><title>Rows</title><ul id=rows></ul>
+<script>
+let items = ['Item 1', 'Item 2', 'Item 3'];
+function render() {
+  document.getElementById('rows').replaceChildren(...items.map((name, i) => {
+    const li = document.createElement('li');
+    li.textContent = name + ' ';
+    const b = document.createElement('button');
+    b.textContent = 'Delete';
+    b.onclick = () => { items.splice(i, 1); render(); };
+    li.append(b);
+    return li;
+  }));
+}
+render();
+</script>"#;
+
 /// A long page.
 const LONG: &str = r##"<!doctype html><title>Long</title><main>
 <section><h2>Prose</h2>
@@ -208,6 +226,7 @@ impl Client {
             ("/inner", INNER),
             ("/p2", P2),
             ("/alike", ALIKE),
+            ("/rows", ROWS),
             ("/long", LONG),
             ("/drag", DRAG),
             ("/p5", P5),
@@ -727,6 +746,45 @@ fn targets_by_text_and_role_never_guess() {
 }
 
 #[test]
+fn a_row_that_took_a_deleted_ones_place_is_named_not_taken() {
+    let mut client = Client::new();
+    let url = format!("{}/rows", client.base);
+    let page = client.ok("navigate", json!({ "url": url }));
+    let first = page
+        .lines()
+        .find(|l| l.contains("button \"Delete\""))
+        .and_then(|l| l.split_whitespace().next())
+        .unwrap()
+        .to_string();
+    client.ok("click", json!({ "target": first }));
+    // Again: the row is gone, and the one in its place is another row.
+    let again = client.error("click", json!({ "target": first }));
+    assert!(
+        again.starts_with(&format!("error StaleRef {first} button \"Delete\"")),
+        "{again}"
+    );
+    assert!(
+        again.contains("in its place now: e")
+            && again.contains("button \"Delete\", another element"),
+        "{again}"
+    );
+    let title = client.ok(
+        "evaluate",
+        json!({"script": "document.querySelectorAll('li').length"}),
+    );
+    assert_eq!(title, "ok evaluate\n2", "nothing else was deleted");
+    // Long after, the table has let it go, and says so.
+    for _ in 0..10 {
+        client.ok("snapshot", json!({}));
+    }
+    let late = client.error("click", json!({ "target": first }));
+    assert_eq!(
+        late.lines().next().unwrap(),
+        format!("error StaleRef {first} (removed from the page a while ago)")
+    );
+}
+
+#[test]
 fn elements_alike_are_told_apart() {
     let mut client = Client::new();
     let url = format!("{}/alike", client.base);
@@ -744,7 +802,7 @@ fn elements_alike_are_told_apart() {
     // Buttons of one name say where they are.
     let add = client.error("click", json!({"target": "text:Add to cart"}));
     assert!(
-        add.contains("button \"Add to cart\" (in e") && add.contains("listitem \"Hats\")"),
+        add.contains("button \"Add to cart\" (in listitem \"Hats\")"),
         "{add}"
     );
     let page = client.ok("snapshot", json!({}));
@@ -757,7 +815,7 @@ fn elements_alike_are_told_apart() {
         .to_string();
     let clicked = client.ok("click", json!({ "target": hats }));
     assert!(
-        clicked.contains("button \"Add to cart\" (in e") && clicked.contains("listitem \"Hats\")"),
+        clicked.contains("button \"Add to cart\" (in listitem \"Hats\")"),
         "{clicked}"
     );
     // A link to a new window opens a tab.

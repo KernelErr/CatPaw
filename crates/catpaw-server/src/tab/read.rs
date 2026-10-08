@@ -315,7 +315,7 @@ impl GroupState {
                 }
                 ReadView::Forms => render_forms(&catpaw_agent::forms(dom, &oracle, Some(scope))),
                 ReadView::Tables => catpaw_agent::tables(dom, &oracle, Some(scope), root),
-                ReadView::Html => catpaw_agent::html(dom, root),
+                ReadView::Html => catpaw_agent::html(dom, &oracle, root),
                 ReadView::Find => {
                     let Some(matches) = find else {
                         return String::new();

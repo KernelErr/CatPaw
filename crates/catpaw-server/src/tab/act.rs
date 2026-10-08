@@ -72,20 +72,6 @@ impl Report {
     }
 }
 
-/// Whether a form field's name says it holds a secret.
-fn secret_field(name: &str) -> bool {
-    name.to_ascii_lowercase()
-        .split(|c: char| !c.is_ascii_alphanumeric())
-        .any(|word| {
-            [
-                "pass", "pwd", "secret", "token", "card", "cvv", "cvc", "ssn", "otp",
-            ]
-            .iter()
-            .any(|s| word.starts_with(s))
-                || word == "pin"
-        })
-}
-
 /// The fields of a submission's body, `name=value` (secrets and what the
 /// user typed in a hand-off masked, values cut short), as many as fit.
 fn describe_fields(kind: &str, body: &[u8], typed: &[String]) -> String {
@@ -124,7 +110,8 @@ fn describe_fields(kind: &str, body: &[u8], typed: &[String]) -> String {
         .iter()
         .take(8)
         .map(|(name, value)| {
-            let value = if secret_field(name) || typed.contains(value) {
+            // The same names a recording keeps out are masked here.
+            let value = if catpaw_net::har::is_secret_field(name) || typed.contains(value) {
                 "***".to_string()
             } else {
                 truncate(value, 40)

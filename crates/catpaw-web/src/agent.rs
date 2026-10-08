@@ -27,13 +27,26 @@ pub fn mask_value(page: &PageState, el: NodeId) {
     page.masked_values.borrow_mut().insert(el);
 }
 
-/// The values of the controls [`mask_value`] masks (those not empty):
-/// what the user typed, which nothing the agent reads should show.
+/// Whether [`mask_value`] masks `el`: a field, or an editable element,
+/// the user typed into during a hand-off.
+pub fn is_masked(page: &PageState, el: NodeId) -> bool {
+    page.masked_values.borrow().contains(&el)
+}
+
+/// What the user typed into the elements [`mask_value`] masks (those not
+/// empty): the values of fields, the text of editable elements. Nothing
+/// the agent reads should show it.
 pub fn user_values(page: &PageState) -> Vec<String> {
     let masked: Vec<NodeId> = page.masked_values.borrow().iter().copied().collect();
     masked
         .into_iter()
-        .filter_map(|el| raw_control_value(page, el))
+        .filter_map(|el| {
+            raw_control_value(page, el).or_else(|| {
+                let dom = page.dom.borrow();
+                dom.contains(el).then(|| dom.text_content(el))
+            })
+        })
+        .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
         .collect()
 }

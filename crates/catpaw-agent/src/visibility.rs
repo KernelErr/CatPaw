@@ -43,6 +43,21 @@ pub trait StyleOracle {
     fn has_activation_listener(&self, _dom: &Dom, _id: NodeId) -> bool {
         false
     }
+    /// Whether the user typed into the element during a hand-off: what it
+    /// holds shows as `***`.
+    fn is_masked(&self, _dom: &Dom, _id: NodeId) -> bool {
+        false
+    }
+}
+
+/// Whether an element is an editing host the user typed into during a
+/// hand-off: its text is theirs, and shows as `***`. (A field's value is
+/// masked where values are read.)
+pub fn masked_text(dom: &Dom, id: NodeId, oracle: &dyn StyleOracle) -> bool {
+    dom.element(id).is_some_and(|el| {
+        el.attr("contenteditable")
+            .is_some_and(|v| !v.trim().eq_ignore_ascii_case("false"))
+    }) && oracle.is_masked(dom, id)
 }
 
 /// Elements the HTML rendering section never displays, regardless of CSS.

@@ -671,9 +671,20 @@ impl<'a> Snapshotter<'a> {
                 .attr("tabindex")
                 .is_some_and(|t| t.trim().parse::<i32>().is_ok_and(|v| v >= 0));
 
+        // What the user typed into an editor during a hand-off is theirs:
+        // the editor shows a masked value, as a field does, and no text.
+        let masked = crate::visibility::masked_text(self.dom, id, self.oracle);
+        if masked {
+            attrs.retain(|(k, _)| *k != "value");
+            attrs.push(("value", "***".to_string()));
+        }
         // Name-from-content roles whose subtree is plain text have no children
         // to show: the name carries it.
-        let mut children = self.build_children(id, options);
+        let mut children = if masked {
+            Vec::new()
+        } else {
+            self.build_children(id, options)
+        };
         if role.is_some_and(names_from_content)
             && children.iter().all(|c| c.text.is_some())
             && !name.is_empty()

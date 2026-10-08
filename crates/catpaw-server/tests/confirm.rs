@@ -25,6 +25,9 @@ const ORDER: &str = r#"<!doctype html><title>Order</title>
 </form>
 <label>Password <input type=password id=pw></label>"#;
 
+const EDITOR: &str = r#"<!doctype html><title>Note</title>
+<p>Note:</p><div id=note contenteditable style="min-height:40px;border:1px solid">Draft</div>"#;
+
 const OPENER: &str = r#"<!doctype html><title>Opener</title>
 <button id=open onclick="window.open('/closer')">Open</button>"#;
 
@@ -103,6 +106,8 @@ fn serve() -> (u16, Log) {
                     LOGIN.to_string()
                 } else if path == "/two-posts" {
                     TWO_POSTS.to_string()
+                } else if path == "/editor" {
+                    EDITOR.to_string()
                 } else if path == "/opener" {
                     OPENER.to_string()
                 } else if path == "/closer" {
@@ -827,6 +832,51 @@ fn tabs_the_page_opens_or_closes_in_a_hand_off_are_followed() {
         gone.starts_with("error NoTab t2 closed during hand-off h2"),
         "{gone}"
     );
+}
+
+#[test]
+fn text_typed_into_an_editor_in_a_hand_off_stays_masked() {
+    let mut client = Client::new("handoff-editor", |_| {});
+    let url = format!("{}/editor", client.base);
+    client.call("navigate", json!({ "url": url }));
+    let at = client.call(
+        "evaluate",
+        json!({"script": "(() => { const r = document.getElementById('note').getBoundingClientRect(); return (r.x + r.width / 2) + ',' + (r.y + r.height / 2); })()"}),
+    );
+    let (x, y) = at.lines().last().unwrap().split_once(',').unwrap();
+    let (x, y): (f64, f64) = (x.parse().unwrap(), y.parse().unwrap());
+    let started = client.call("handoff", json!({}));
+    let link = started
+        .split_whitespace()
+        .find(|w| w.contains("/handoff/h1?t="))
+        .unwrap()
+        .to_string();
+    let key = client.key();
+    let user =
+        |suffix: &str, body: String| handoff_request(&link, Some(&key), "POST", suffix, &body);
+    user(
+        "/input",
+        json!({"kind": "click", "x": x, "y": y}).to_string(),
+    );
+    user(
+        "/input",
+        json!({"kind": "text", "text": " my secret plan"}).to_string(),
+    );
+    user("/done", String::new());
+    let back = client.call("wait", json!({"for": "handoff"}));
+    assert!(!back.contains("secret"), "{back}");
+    assert!(back.contains("***"), "{back}");
+    for view in ["text", "markdown", "html"] {
+        let read = client.call("read", json!({"view": view}));
+        assert!(!read.contains("secret"), "{view}: {read}");
+    }
+    let found = client.call("read", json!({"view": "find", "query": "secret"}));
+    assert!(found.contains("(0 matches)"), "{found}");
+    let script = client.call(
+        "evaluate",
+        json!({"script": "document.getElementById('note').textContent"}),
+    );
+    assert!(script.starts_with("needs_confirmation c"), "{script}");
 }
 
 fn strict(config: &mut SessionConfig) {

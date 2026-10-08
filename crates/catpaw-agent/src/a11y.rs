@@ -553,6 +553,9 @@ impl LabelIndex {
 /// The rendered text of a subtree: text nodes plus image alt text, with
 /// whitespace collapsed; hidden subtrees are skipped.
 pub fn subtree_text(dom: &Dom, id: NodeId, oracle: &dyn StyleOracle) -> String {
+    if crate::visibility::masked_text(dom, id, oracle) {
+        return "***".to_string();
+    }
     let mut out = String::new();
     collect_text(dom, id, oracle, &mut out);
     collapse_whitespace(&out)
@@ -564,6 +567,10 @@ fn collect_text(dom: &Dom, id: NodeId, oracle: &dyn StyleOracle, out: &mut Strin
             NodeKind::Text(t) => out.push_str(t),
             NodeKind::Element(el) => {
                 if is_hidden(dom, child, oracle) {
+                    continue;
+                }
+                if crate::visibility::masked_text(dom, child, oracle) {
+                    out.push_str(" *** ");
                     continue;
                 }
                 match &*el.name.local {

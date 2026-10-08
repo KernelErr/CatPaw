@@ -37,7 +37,7 @@ ok type e3 textbox "What needs to be done?" + Enter
 ~ text[1] "1 item left" → "2 items left"
 
 > act {"kind":"check","target":"css:.todo-list li:first-child .toggle"}
-ok check e13 checkbox "Toggle Todo" (in e12 listitem "Buy milk")
+ok check e13 checkbox "Toggle Todo" (in listitem "Buy milk")
 # s4 changed=2 added=1
 ~ e13 checkbox "Toggle Todo" [- → checked]
 ~ text[1] "2 items left" → "1 item left"

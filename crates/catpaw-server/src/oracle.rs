@@ -27,6 +27,10 @@ impl StyleOracle for EngineOracle<'_> {
         agent::control_value(self.page, id)
     }
 
+    fn is_masked(&self, _dom: &Dom, id: NodeId) -> bool {
+        agent::is_masked(self.page, id)
+    }
+
     fn is_checked(&self, _dom: &Dom, id: NodeId) -> Option<bool> {
         Some(agent::is_checked(self.page, id))
     }

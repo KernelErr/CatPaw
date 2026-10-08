@@ -344,7 +344,7 @@ const VOID: &[&str] = &[
 /// The HTML of `root` (the body when `None`), without scripts, styles and
 /// comments: markup as a page author wrote it, for what the other views
 /// leave out (classes, data attributes).
-pub fn html(dom: &Dom, root: Option<NodeId>) -> String {
+pub fn html(dom: &Dom, oracle: &dyn StyleOracle, root: Option<NodeId>) -> String {
     let root = root
         .or_else(|| {
             dom.descendants(dom.document())
@@ -352,7 +352,7 @@ pub fn html(dom: &Dom, root: Option<NodeId>) -> String {
         })
         .unwrap_or_else(|| dom.document());
     let mut out = String::new();
-    write_html(dom, root, &mut out);
+    write_html(dom, oracle, root, &mut out);
     out
 }
 
@@ -371,7 +371,7 @@ fn escape(text: &str, attribute: bool) -> String {
     out
 }
 
-fn write_html(dom: &Dom, id: NodeId, out: &mut String) {
+fn write_html(dom: &Dom, oracle: &dyn StyleOracle, id: NodeId, out: &mut String) {
     match dom.kind(id) {
         NodeKind::Text(t) => out.push_str(&escape(t, false)),
         NodeKind::Element(el) => {
@@ -379,27 +379,35 @@ fn write_html(dom: &Dom, id: NodeId, out: &mut String) {
             if el.is_html() && matches!(local, "script" | "style" | "noscript" | "template") {
                 return;
             }
+            // What the user typed in a hand-off (a value a page copied to
+            // the attribute, an editor's text) shows masked.
+            let masked = oracle.is_masked(dom, id);
             let _ = write!(out, "<{local}");
             for attr in el.attrs.iter() {
-                let _ = write!(
-                    out,
-                    " {}=\"{}\"",
-                    &*attr.name.local,
+                let name = &*attr.name.local;
+                let value = if masked && name == "value" {
+                    "***".to_string()
+                } else {
                     escape(&attr.value, true)
-                );
+                };
+                let _ = write!(out, " {name}=\"{value}\"");
             }
             out.push('>');
             if el.is_html() && VOID.contains(&local) {
                 return;
             }
-            for child in dom.children(id) {
-                write_html(dom, child, out);
+            if masked {
+                out.push_str("***");
+            } else {
+                for child in dom.children(id) {
+                    write_html(dom, oracle, child, out);
+                }
             }
             let _ = write!(out, "</{local}>");
         }
         NodeKind::Document(_) | NodeKind::DocumentFragment(_) => {
             for child in dom.children(id) {
-                write_html(dom, child, out);
+                write_html(dom, oracle, child, out);
             }
         }
         _ => {}
@@ -490,8 +498,58 @@ mod tests {
             "<body><div class=a>x &amp; y<script>s()</script><style>p{}</style><br></div></body>",
         );
         assert_eq!(
-            html(&d, None),
+            html(&d, &AttributeOracle, None),
             "<body><div class=\"a\">x &amp; y<br></div></body>"
         );
+    }
+
+    /// Reports what the user typed into, during a hand-off.
+    struct Masking(Vec<NodeId>);
+
+    impl StyleOracle for Masking {
+        fn is_display_none(&self, _dom: &Dom, _id: NodeId) -> bool {
+            false
+        }
+        fn is_visibility_hidden(&self, _dom: &Dom, _id: NodeId) -> bool {
+            false
+        }
+        fn is_masked(&self, _dom: &Dom, id: NodeId) -> bool {
+            self.0.contains(&id)
+        }
+    }
+
+    #[test]
+    fn what_the_user_typed_stays_masked_in_every_view() {
+        let d = dom(
+            "<body><p>Note: <span contenteditable id=ed>my secret plan</span></p><input id=f value=\"copied secret\"></body>",
+        );
+        let by_id = |id: &str| {
+            d.descendants(d.document())
+                .find(|&n| d.attr(n, "id") == Some(id))
+                .unwrap()
+        };
+        let oracle = Masking(vec![by_id("ed"), by_id("f")]);
+        let markup = html(&d, &oracle, None);
+        assert!(!markup.contains("secret"), "{markup}");
+        assert!(
+            markup.contains("<span contenteditable=\"\" id=\"ed\">***</span>"),
+            "{markup}"
+        );
+        assert!(markup.contains("value=\"***\""), "{markup}");
+        let text = crate::read::text_with(&d, &oracle, &Default::default());
+        assert!(!text.contains("secret") && text.contains("***"), "{text}");
+        let (hits, total) = find(
+            &d,
+            &oracle,
+            None,
+            None,
+            &|t: &str| {
+                t.match_indices("secret")
+                    .map(|(i, m)| (i, i + m.len()))
+                    .collect()
+            },
+            10,
+        );
+        assert_eq!((hits.len(), total), (0, 0));
     }
 }

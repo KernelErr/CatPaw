@@ -562,10 +562,14 @@ impl GroupState {
                 .full_text_of(tab, request, view, Some("navigated"), model)
                 .map(PageView::whole);
         }
-        let diff = catpaw_agent::diff(&baseline.lines, &model.lines);
+        // Long names and texts are cut before a diff is given up for the
+        // whole page.
         let budget = token_bytes(request.max_tokens);
+        let whole = rendered_len(&model.lines, view.format);
+        let diff =
+            catpaw_agent::diff_within(&baseline.lines, &model.lines, budget.min(whole * 6 / 10));
         let diff_len: usize = diff.lines.iter().map(|l| l.len() + 1).sum();
-        if diff_len * 10 > rendered_len(&model.lines, view.format) * 6 || diff_len > budget {
+        if diff_len * 10 > whole * 6 || diff_len > budget {
             return self
                 .full_text_of(tab, request, view, Some("large"), model)
                 .map(PageView::whole);
