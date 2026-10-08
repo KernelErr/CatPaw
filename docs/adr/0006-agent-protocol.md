@@ -185,31 +185,32 @@ of the model on every turn.
     consequence line with its answer.
 12. **Recording and replay.** `--record-har <file>` keeps a session's
     traffic as HAR 1.2 (compressed with zstd when the name ends in
-    `.zst`) in a file only its owner can read: entries in the order their
-    requests started, bodies whole (base64 when not UTF-8). Credentials
-    stay out: request cookies, credentials and signatures are not
-    written; form fields and URL parameters that look secret (passwords,
-    secrets, tokens, API and private keys, card numbers, one-time codes,
-    PINs, session ids, but not other codes such as country, postal or
-    promotion codes) are written as `redacted`, in request bodies and in
-    the query and fragment of request URLs, `Referer` and `Location`; and
-    the values of response cookies, credential headers and secret-looking
-    fields of JSON responses become `redacted-<hash>` placeholders (equal
-    values, equal placeholders) that a replayed session keeps and sends
-    back. `cargo xtask tasks lint` fails on a recording that holds any of
-    them. `--replay-har <file>` answers from it with no network. A request
-    matches on method, URL and body, secrets redacted as in the recording
-    (the key a recording keeps for it holds nothing the recording does
-    not), or failing that on method, host, port and path; each recorded
-    answer is given once, in order, however it was matched, the last one
-    repeating when they run out; a request the recording lacks fails
-    (`--replay-misses-live` sends it instead), and so does one whose body
-    an older recording left out. Answers arrive at once, in the order the
-    page asked for them. `--random-seed` gives
-    each document, frame and worker sequences of its own for
-    `Math.random`, `crypto` and Web Crypto keys; `--time-origin` fixes
-    where the page clock starts; dates show UTC (or `--timezone`) and
-    `Intl` the page's language, never the host's; cookies go out in
+    `.zst`) in a file only its owner can read: entries in the order the
+    page made its requests, whichever was answered first, each request's
+    redirect hops together; bodies whole (base64 when not UTF-8).
+    Credentials stay out: request cookies, credentials and signatures are
+    not written; form fields and URL parameters that look secret
+    (passwords, secrets, tokens, API and private keys, card numbers,
+    one-time codes, PINs, session ids, but not other codes such as
+    country, postal or promotion codes) are written as `redacted`, in
+    request bodies and in the query and fragment of request URLs,
+    `Referer` and `Location`; and the values of response cookies,
+    credential headers and secret-looking fields of JSON responses become
+    `redacted-<hash>` placeholders (equal values, equal placeholders) that
+    a replayed session keeps and sends back. `cargo xtask tasks lint`
+    fails on a recording that holds any of them. `--replay-har <file>`
+    answers from it with no network. A request matches on method, URL and
+    body, secrets redacted as in the recording (the key a recording keeps
+    for it holds nothing the recording does not), or failing that on
+    method, host, port and path; each recorded answer is given once, in
+    order, however it was matched, the last one repeating when they run
+    out; a request the recording lacks fails (`--replay-misses-live` sends
+    it instead), and so does one whose body an older recording left out.
+    Answers arrive at once, in the order the page asked for them.
+    `--random-seed` gives each document, frame and worker sequences of its
+    own for `Math.random`, `crypto` and Web Crypto keys; `--time-origin`
+    fixes where the page clock starts; dates show UTC (or `--timezone`)
+    and `Intl` the page's language, never the host's; cookies go out in
     RFC 6265 order; cookie lifetimes count from the recorded time. A
     replay therefore gives the same results byte for byte, on any
     platform. WebSockets are refused at once during replay; they are not

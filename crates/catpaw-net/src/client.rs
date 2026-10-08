@@ -114,6 +114,10 @@ pub struct RequestOptions {
     /// Whether to send cookies with the request and store the ones the
     /// response sets.
     pub credentials: bool,
+    /// Where the request's entries go in a recording (see
+    /// [`NetClient::reserve_place`]); without one it takes the next place
+    /// when it is sent.
+    pub place: Option<crate::har::Place>,
 }
 
 impl Default for RequestOptions {
@@ -123,6 +127,7 @@ impl Default for RequestOptions {
             body: None,
             follow_redirects: true,
             credentials: true,
+            place: None,
         }
     }
 }
@@ -578,6 +583,14 @@ impl NetClient {
         self.replayer.is_some()
     }
 
+    /// The next place in the recording, for a request about to be made:
+    /// its entries go there ([`RequestOptions::place`]) whenever it is
+    /// sent and answered, so that the recording keeps the order requests
+    /// were made in. `None` when not recording.
+    pub fn reserve_place(&self) -> Option<crate::har::Place> {
+        self.recorder.as_ref().map(crate::har::Recorder::reserve)
+    }
+
     /// Writes the traffic recorded so far; `None` when not recording.
     pub fn save_recording(&self) -> std::io::Result<Option<usize>> {
         match &self.recorder {
@@ -603,19 +616,17 @@ impl NetClient {
         let mut url = url.clone();
         let mut body = options.body.clone();
         let mut chain = Vec::new();
+        // Taken here, before the first await, when the caller did not take
+        // it: on the caller's thread when it blocks on the request.
+        let place = options.place.or_else(|| self.reserve_place());
 
-        for _ in 0..=self.config.max_redirects {
+        for number in 0..=self.config.max_redirects {
             if !matches!(url.scheme(), "http" | "https") {
                 return Err(NetError::UnsupportedScheme(url.scheme().to_string()));
             }
+            let entry = place.map(|place| (place, number));
             let hop = self
-                .send_once(
-                    &method,
-                    &url,
-                    &options.headers,
-                    body.clone(),
-                    options.credentials,
-                )
+                .send_once(&method, &url, &options, body.clone(), entry)
                 .await?;
 
             if options.follow_redirects
@@ -652,14 +663,17 @@ impl NetClient {
         Err(NetError::TooManyRedirects(self.config.max_redirects))
     }
 
+    /// Sends one hop: `body` for `options.body` once a redirect changed it,
+    /// recorded as hop `entry.1` of the request at place `entry.0`.
     async fn send_once(
         &self,
         method: &Method,
         url: &Url,
-        extra_headers: &HeaderMap,
+        options: &RequestOptions,
         body: Option<Bytes>,
-        credentials: bool,
+        entry: Option<(crate::har::Place, usize)>,
     ) -> Result<Hop, NetError> {
+        let credentials = options.credentials;
         if self.config.proxy.is_none() {
             policy::check_host(url, self.config.allow_private_network)
                 .map_err(NetError::PrivateAddress)?;
@@ -680,7 +694,7 @@ impl NetClient {
             ACCEPT_ENCODING,
             HeaderValue::from_static(DEFAULT_ACCEPT_ENCODING),
         );
-        for (name, value) in extra_headers {
+        for (name, value) in &options.headers {
             headers.insert(name.clone(), value.clone());
         }
         if credentials && let Some(cookie) = self.cookies.request_header(url) {
@@ -738,11 +752,11 @@ impl NetClient {
                 None => {}
             }
         }
-        // The entry takes its place in the recording now, as the request
-        // starts: a replay asks in this order.
-        let recording = self.recorder.as_ref().map(|recorder| {
+        // The entry goes to its request's place in the recording, however
+        // late it comes: a replay asks in that order.
+        let recording = self.recorder.as_ref().and(entry).map(|entry| {
             (
-                recorder.start(),
+                entry,
                 headers.clone(),
                 body.clone().unwrap_or_default(),
                 crate::har::now_ms(),
@@ -835,11 +849,14 @@ impl NetClient {
         // The body is now decoded; these headers would describe the wire form.
         headers.remove(CONTENT_ENCODING);
         headers.remove(CONTENT_LENGTH);
-        if let (Some(recorder), Some((place, request_headers, request_body, started_ms))) =
-            (&self.recorder, recording)
+        if let (
+            Some(recorder),
+            Some(((place, number), request_headers, request_body, started_ms)),
+        ) = (&self.recorder, recording)
         {
             recorder.record(
                 place,
+                number,
                 crate::har::Exchange {
                     method,
                     url,

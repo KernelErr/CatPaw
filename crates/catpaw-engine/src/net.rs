@@ -14,8 +14,8 @@ use std::time::Duration;
 
 use bytes::Bytes;
 use catpaw_fetch::{FetchedDocument, fetch_document_hop};
-use catpaw_net::WsMessage;
-use catpaw_net::{NetClient, NetConfig, NetError, RequestOptions};
+use catpaw_net::har::Place;
+use catpaw_net::{NetClient, NetConfig, NetError, RequestOptions, WsMessage};
 use catpaw_web::net::{
     NetHost, NetRequest, NetResponse, NetResult, RequestKind, WsEvent, WsOutbound,
 };
@@ -249,7 +249,9 @@ fn header<'a>(request: &'a NetRequest, name: &str) -> Option<&'a str> {
         .map(|(_, v)| v.as_str())
 }
 
-async fn perform(client: &NetClient, request: NetRequest) -> NetResult {
+/// Sends a request the page made, its entries going to `place` in a
+/// recording.
+async fn perform(client: &NetClient, request: NetRequest, place: Option<Place>) -> NetResult {
     let method = Method::from_bytes(request.method.as_bytes())
         .map_err(|_| format!("invalid method `{}`", request.method))?;
     let mut options = RequestOptions::default();
@@ -274,6 +276,7 @@ async fn perform(client: &NetClient, request: NetRequest) -> NetResult {
     options.body = request.body.map(Bytes::from);
     options.credentials = request.credentials;
     options.follow_redirects = request.follow_redirects;
+    options.place = place;
 
     let response = client
         .request(method, &request.url, options)
@@ -372,6 +375,8 @@ impl EngineNet {
         let mut chain = Vec::new();
         for _ in 0..=MAX_REDIRECTS {
             let hop_referrer = referrer.and_then(|from| navigation_referrer(from, &url));
+            // Blocked on here, the hop takes its place in a recording on
+            // the page's thread, in the order of the page's requests.
             let result = self.block_on(fetch_document_hop(
                 &self.client,
                 &method,
@@ -599,16 +604,20 @@ impl EngineNet {
     /// Sends a request started for the page.
     fn dispatch(&self, token: u64, request: NetRequest, index: usize) {
         if self.client.is_replaying() {
-            let result = self.runtime.block_on(perform(&self.client, request));
+            let result = self.runtime.block_on(perform(&self.client, request, None));
             self.finish(index, &result);
             self.ready.borrow_mut().push_back((token, result));
             return;
         }
+        // The request's place in a recording is taken here, on the page's
+        // thread: the recording keeps the order the page made its
+        // requests in, whichever is answered first.
+        let place = self.client.reserve_place();
         let client = self.client.clone();
         let tx = self.tx.clone();
         let kind = request.kind;
         let task = self.runtime.spawn(async move {
-            let result = perform(&client, request).await;
+            let result = perform(&client, request, place).await;
             let _ = tx.send(HostEvent::Response(token, result));
         });
         self.inflight
@@ -745,7 +754,8 @@ impl NetHost for EngineNet {
             return result;
         }
         let index = self.record(&request);
-        let result = self.runtime.block_on(perform(&self.client, request));
+        let place = self.client.reserve_place();
+        let result = self.runtime.block_on(perform(&self.client, request, place));
         self.finish(index, &result);
         result
     }
@@ -975,5 +985,129 @@ mod tests {
         assert_eq!(log.dropped, LOG_DROP);
         assert!(log.get_mut(5).is_none(), "dropped");
         assert_eq!(log.get_mut(last).unwrap().url.path(), format!("/{last}"));
+    }
+
+    /// A server on 127.0.0.1 that answers each GET on a thread of its own:
+    /// `answer` gives the status and body for a request's path and headers
+    /// (names in lowercase).
+    fn serve<F>(answer: F) -> u16
+    where
+        F: Fn(&str, &[(String, String)]) -> (u16, String) + Send + Sync + 'static,
+    {
+        use std::io::{Read as _, Write as _};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let answer = Arc::new(answer);
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let Ok(mut stream) = stream else { return };
+                let answer = answer.clone();
+                std::thread::spawn(move || {
+                    let mut head = Vec::new();
+                    let mut byte = [0u8; 1];
+                    while !head.ends_with(b"\r\n\r\n") {
+                        match stream.read(&mut byte) {
+                            Ok(1) => head.push(byte[0]),
+                            _ => return,
+                        }
+                    }
+                    let head = String::from_utf8_lossy(&head).into_owned();
+                    let mut lines = head.split("\r\n");
+                    let path = lines
+                        .next()
+                        .and_then(|line| line.split_whitespace().nth(1))
+                        .unwrap_or("/")
+                        .to_string();
+                    let headers: Vec<(String, String)> = lines
+                        .filter_map(|line| line.split_once(':'))
+                        .map(|(name, value)| {
+                            (name.trim().to_ascii_lowercase(), value.trim().to_string())
+                        })
+                        .collect();
+                    let (status, body) = answer(&path, &headers);
+                    let response = format!(
+                        "HTTP/1.1 {status} Answer\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                        body.len()
+                    );
+                    let _ = stream.write_all(response.as_bytes());
+                });
+            }
+        });
+        port
+    }
+
+    fn config(recording: catpaw_net::Recording) -> NetConfig {
+        NetConfig {
+            allow_private_network: true,
+            recording: Some(recording),
+            ..NetConfig::default()
+        }
+    }
+
+    /// Polls until each request in `tokens` is answered.
+    fn answers(host: &EngineNet, tokens: &[u64]) -> HashMap<u64, NetResponse> {
+        let deadline = std::time::Instant::now() + Duration::from_secs(60);
+        let mut answers = HashMap::new();
+        while answers.len() < tokens.len() {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "unanswered: {tokens:?}"
+            );
+            for (token, result) in host.poll(Some(Duration::from_millis(100))) {
+                answers.insert(token, result.unwrap());
+            }
+        }
+        answers
+    }
+
+    #[test]
+    fn a_recording_keeps_the_order_the_page_made_its_requests_in() {
+        // Each request is answered with its `x-n`, the first one slowly.
+        let port = serve(|_, headers| {
+            let n = headers
+                .iter()
+                .find(|(name, _)| name == "x-n")
+                .map(|(_, value)| value.clone())
+                .unwrap_or_default();
+            if n == "1" {
+                std::thread::sleep(Duration::from_millis(300));
+            }
+            (200, n)
+        });
+        let url = Url::parse(&format!("http://127.0.0.1:{port}/same")).unwrap();
+        let request = |n: &str| {
+            let mut request = NetRequest::get(url.clone(), RequestKind::Fetch);
+            request.headers.push(("x-n".to_string(), n.to_string()));
+            request
+        };
+        let dir = std::env::temp_dir().join(format!("catpaw-net-order-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let har = dir.join("run.har");
+
+        let host = EngineNet::new(config(catpaw_net::Recording::Record(har.clone()))).unwrap();
+        // Both network threads are busy when the page fetches, so the
+        // synchronous request it makes next goes out first, and is
+        // answered first.
+        for _ in 0..2 {
+            host.runtime
+                .spawn(async { std::thread::sleep(Duration::from_millis(500)) });
+        }
+        let fetch = host.start(request("1"));
+        assert_eq!(host.fetch_blocking(request("2")).unwrap().body, b"2");
+        assert_eq!(answers(&host, &[fetch])[&fetch].body, b"1");
+        host.client().save_recording().unwrap();
+        drop(host);
+
+        // The two have the same key: a replay gives them their answers in
+        // the order the page made them.
+        let replay = catpaw_net::Recording::Replay {
+            path: har.clone(),
+            misses: catpaw_net::Misses::Fail,
+        };
+        let host = EngineNet::new(config(replay)).unwrap();
+        let fetch = host.start(request("1"));
+        assert_eq!(host.fetch_blocking(request("2")).unwrap().body, b"2");
+        assert_eq!(answers(&host, &[fetch])[&fetch].body, b"1");
+        let _ = std::fs::remove_dir_all(dir);
     }
 }

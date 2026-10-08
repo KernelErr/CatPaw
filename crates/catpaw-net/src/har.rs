@@ -2,10 +2,11 @@
 //!
 //! A recording holds every hop (redirects are hops of their own) with its
 //! decoded body, whatever its size, so that a replay needs no network at
-//! all. Entries are written in the order their requests started, which is
-//! the order a replay asks for them in, whichever response came first.
-//! Bodies that are not UTF-8 are kept in base64 (`"encoding": "base64"`,
-//! request bodies too).
+//! all. Entries are written in the order the requests were made, each
+//! request's hops together: a request takes its place when it is made
+//! ([`crate::NetClient::reserve_place`]), whichever response comes first,
+//! and that is the order a replay asks for them in. Bodies that are not
+//! UTF-8 are kept in base64 (`"encoding": "base64"`, request bodies too).
 //!
 //! A request is matched by the key recorded with each entry
 //! (`_catpaw.key`: method, URL without the fragment, and a hash of the
@@ -924,6 +925,12 @@ pub(crate) struct Exchange<'a> {
     pub took_ms: u64,
 }
 
+/// A request's place in a recording: its entries, one per hop, go there
+/// whenever it is sent and answered (see
+/// [`crate::NetClient::reserve_place`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Place(u64);
+
 /// Writes down every hop.
 #[derive(Debug)]
 pub(crate) struct Recorder {
@@ -937,10 +944,11 @@ pub(crate) struct Recorder {
 
 #[derive(Debug, Default)]
 struct RecorderState {
-    /// The place of the next request to start.
+    /// The place the next request takes.
     next: u64,
-    /// The finished exchanges, by the place their requests started in.
-    entries: BTreeMap<u64, Value>,
+    /// The finished exchanges, by the place of their request and their
+    /// hop.
+    entries: BTreeMap<(Place, usize), Value>,
 }
 
 impl Recorder {
@@ -952,11 +960,10 @@ impl Recorder {
         }
     }
 
-    /// Notes that a request starts. Its entry takes this place in the
-    /// recording, whenever its response completes.
-    pub(crate) fn start(&self) -> u64 {
+    /// The next place, for a request about to be made.
+    pub(crate) fn reserve(&self) -> Place {
         let mut state = self.state.lock().expect("not poisoned");
-        let place = state.next;
+        let place = Place(state.next);
         state.next += 1;
         place
     }
@@ -1008,7 +1015,8 @@ impl Recorder {
         }
     }
 
-    pub(crate) fn record(&self, place: u64, exchange: Exchange<'_>) {
+    /// Writes down hop `hop` (counting from 0) of the request at `place`.
+    pub(crate) fn record(&self, place: Place, hop: usize, exchange: Exchange<'_>) {
         let Exchange {
             method,
             url,
@@ -1109,7 +1117,7 @@ impl Recorder {
             .lock()
             .expect("not poisoned")
             .entries
-            .insert(place, entry);
+            .insert((place, hop), entry);
     }
 
     /// Writes the recording so far.
@@ -1491,11 +1499,11 @@ mod tests {
         map
     }
 
-    /// Records one hop.
+    /// Records the first hop of the request at `place`.
     #[allow(clippy::too_many_arguments)]
     fn hop(
         recorder: &Recorder,
-        place: u64,
+        place: Place,
         method: &Method,
         url: &str,
         request_headers: &HeaderMap,
@@ -1505,6 +1513,7 @@ mod tests {
     ) {
         recorder.record(
             place,
+            0,
             Exchange {
                 method,
                 url: &Url::parse(url).unwrap(),
@@ -1540,7 +1549,7 @@ mod tests {
         let request_headers = headers(&[("cookie", "secret=1"), ("accept", "*/*")]);
         let response_headers = headers(&[("content-type", "text/plain")]);
         for body in ["first", "second"] {
-            let place = recorder.start();
+            let place = recorder.reserve();
             hop(
                 &recorder,
                 place,
@@ -1552,7 +1561,7 @@ mod tests {
                 body.as_bytes(),
             );
         }
-        let place = recorder.start();
+        let place = recorder.reserve();
         hop(
             &recorder,
             place,
@@ -1608,29 +1617,35 @@ mod tests {
     }
 
     #[test]
-    fn entries_keep_the_order_requests_started_in() {
+    fn entries_keep_the_order_requests_were_made_in_hops_together() {
         let dir = temp_dir("order");
         let path = dir.join("t.har");
         let recorder = Recorder::new(path.clone());
         let url = "https://shop.example/same";
-        let (a, b) = (recorder.start(), recorder.start());
-        // The second request's response completes first.
-        for (place, body) in [(b, "B"), (a, "A")] {
-            hop(
-                &recorder,
+        let (a, b) = (recorder.reserve(), recorder.reserve());
+        // The second request is answered first, and the first one's
+        // redirect comes after that.
+        for (place, number, body) in [(b, 0, "B"), (a, 1, "A after the redirect"), (a, 0, "A")] {
+            recorder.record(
                 place,
-                &Method::GET,
-                url,
-                &HeaderMap::new(),
-                b"",
-                &HeaderMap::new(),
-                body.as_bytes(),
+                number,
+                Exchange {
+                    method: &Method::GET,
+                    url: &Url::parse(url).unwrap(),
+                    request_headers: &HeaderMap::new(),
+                    request_body: b"",
+                    status: StatusCode::OK,
+                    response_headers: &HeaderMap::new(),
+                    response_body: body.as_bytes(),
+                    started_ms: 1_000,
+                    took_ms: 5,
+                },
             );
         }
         recorder.save("test").unwrap();
         let replayer = Replayer::open(&path, Misses::Fail).unwrap();
-        assert_eq!(get(&replayer, url).unwrap(), "A");
-        assert_eq!(get(&replayer, url).unwrap(), "B");
+        let answers: Vec<Bytes> = (0..3).map(|_| get(&replayer, url).unwrap()).collect();
+        assert_eq!(answers, ["A", "A after the redirect", "B"]);
         let _ = std::fs::remove_dir_all(dir);
     }
 
@@ -1642,7 +1657,7 @@ mod tests {
         let url = "https://shop.example/upload";
         let bodies: [&[u8]; 2] = [&[0xff, 0xfe, 0x00, 0x01], &[0xff, 0xfe, 0x00, 0x02]];
         for (body, answer) in bodies.iter().zip(["one", "two"]) {
-            let place = recorder.start();
+            let place = recorder.reserve();
             hop(
                 &recorder,
                 place,
@@ -1682,7 +1697,7 @@ mod tests {
         let path = dir.join("t.har");
         let recorder = Recorder::new(path.clone());
         for (t, body) in [("1", "A"), ("2", "B")] {
-            let place = recorder.start();
+            let place = recorder.reserve();
             hop(
                 &recorder,
                 place,
@@ -1710,7 +1725,7 @@ mod tests {
         let path = dir.join("t.har");
         let recorder = Recorder::new(path.clone());
         let big = vec![b'x'; 5 * 1024 * 1024];
-        let place = recorder.start();
+        let place = recorder.reserve();
         hop(
             &recorder,
             place,
@@ -2010,7 +2025,7 @@ mod tests {
         let url = "https://shop.example/login";
         let form = "application/x-www-form-urlencoded";
         let body = b"username=tomsmith&password=SuperSecretPassword%21";
-        let place = recorder.start();
+        let place = recorder.reserve();
         hop(
             &recorder,
             place,
@@ -2035,7 +2050,7 @@ mod tests {
             b"<p>welcome</p>",
         );
         // Another user's login to the same address, recorded after.
-        let place = recorder.start();
+        let place = recorder.reserve();
         hop(
             &recorder,
             place,
@@ -2226,7 +2241,7 @@ mod tests {
         let path = dir.join("t.har");
         let recorder = Recorder::new(path.clone());
         for (page, token, answer) in [("1", "tokA", "first"), ("2", "tokB", "second")] {
-            let place = recorder.start();
+            let place = recorder.reserve();
             hop(
                 &recorder,
                 place,
@@ -2336,8 +2351,8 @@ mod tests {
 
         let json = headers(&[("content-type", "application/json")]);
         for (place, mime) in [
-            (recorder.start(), &json),
-            (recorder.start(), &HeaderMap::new()),
+            (recorder.reserve(), &json),
+            (recorder.reserve(), &HeaderMap::new()),
         ] {
             hop(
                 &recorder,
