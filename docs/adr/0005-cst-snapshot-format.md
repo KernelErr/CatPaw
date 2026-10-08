@@ -190,3 +190,11 @@ they name.
    nodes it holds, and a nameless one says what they are about, by
    their first heading or text: `e80 article [collapsed=3]: Book 7`.
    (Amends point 7 of the first amendment.)
+5. **What a tab keeps of its refs.** The ref of a node gone from the
+   page (removed, not just hidden) is kept for eight passes over the
+   page after the last one that showed it, so that its error can say
+   what it was and what is in its place; then it is forgotten, as the
+   refs of documents left long ago are. A forgotten ref still says
+   whether it was removed from the page or went with its document. A
+   single-page app's table is the size of what it shows, not of all it
+   ever showed. (Amends point 7 above.)

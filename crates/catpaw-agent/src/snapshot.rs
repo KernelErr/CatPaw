@@ -555,13 +555,19 @@ impl<'a> Snapshotter<'a> {
             emitter.text.push('\n');
             emitter.lines.push(line);
         }
-        SnapBody {
+        let body = SnapBody {
             lines: emitter.lines,
             text: emitter.text,
             emitted: emitter.emitted,
             total_elements,
             truncated_nodes: emitter.truncated_nodes,
-        }
+        };
+        // Refs of nodes long gone from the document go too.
+        let dom = self.dom;
+        self.refs.forget_removed(self.frame, self.epoch, |node| {
+            dom.contains(node) && dom.is_connected(node)
+        });
+        body
     }
 
     /// A whole snapshot with a short header (url, title, filter, counts):

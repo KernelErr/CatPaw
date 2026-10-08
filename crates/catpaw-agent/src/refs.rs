@@ -90,7 +90,9 @@ pub enum RefError {
     BadSyntax(String),
     /// Never handed out.
     Unknown(u32),
-    /// Handed out for a document the tab left long ago, and forgotten.
+    /// Handed out for a node gone long ago, and forgotten:
+    /// [`RefTable::forgotten`] says whether it was removed from the page
+    /// or went with its document.
     Forgotten(u32),
     Stale {
         r: u32,
@@ -111,11 +113,18 @@ pub struct RefTable {
     pass: u64,
     /// Documents and frames left so far.
     left: u64,
+    /// Why each forgotten ref went, two bits a ref (see
+    /// [`RefTable::forgotten`]).
+    forgotten_why: Vec<u64>,
 }
 
 /// Refs of the documents a tab left are kept for this many more, so that
 /// an error can still say what one was; then they are forgotten.
 const KEEP_LEFT: u64 = 2;
+/// The ref of a node gone from the page is kept for this many passes
+/// after the last one that showed it, so that an error can still say what
+/// it was and what took its place; then it is forgotten.
+const KEEP_PASSES: u64 = 8;
 
 impl RefTable {
     pub fn new() -> Self {
@@ -406,21 +415,73 @@ impl RefTable {
     /// Forgets the refs of documents left more than [`KEEP_LEFT`] ago.
     fn forget_long_gone(&mut self) {
         let left = self.left;
+        let gone: Vec<(u32, StaleReason)> = self
+            .entries
+            .iter()
+            .filter_map(|(&r, e)| match e.stale {
+                Some(reason @ (StaleReason::Navigated | StaleReason::FrameClosed))
+                    if e.gone_at + KEEP_LEFT < left =>
+                {
+                    Some((r, reason))
+                }
+                _ => None,
+            })
+            .collect();
+        for (r, reason) in gone {
+            self.forget(r, reason);
+        }
+    }
+
+    /// Forgets the refs into `frame`'s document of `epoch` whose nodes
+    /// have left it (`is_live` says whether a node is still in it) and
+    /// were last shown more than [`KEEP_PASSES`] passes ago: a page that
+    /// keeps rendering new nodes leaves a table the size of what it shows,
+    /// not of all it ever showed. A node only hidden keeps its ref.
+    pub fn forget_removed(&mut self, frame: u32, epoch: u64, is_live: impl Fn(NodeId) -> bool) {
+        let pass = self.pass;
         let gone: Vec<u32> = self
             .entries
             .iter()
             .filter(|(_, e)| {
-                matches!(
-                    e.stale,
-                    Some(StaleReason::Navigated | StaleReason::FrameClosed)
-                ) && e.gone_at + KEEP_LEFT < left
+                e.key.frame == frame
+                    && e.key.epoch == epoch
+                    && e.seen + KEEP_PASSES < pass
+                    && !is_live(e.key.node)
             })
             .map(|(&r, _)| r)
             .collect();
         for r in gone {
-            if let Some(entry) = self.entries.remove(&r) {
-                self.by_key.remove(&entry.key);
-            }
+            self.forget(r, StaleReason::Removed);
+        }
+    }
+
+    /// Drops a ref's entry, keeping why it went.
+    fn forget(&mut self, r: u32, reason: StaleReason) {
+        if let Some(entry) = self.entries.remove(&r) {
+            self.by_key.remove(&entry.key);
+        }
+        let (word, shift) = (r as usize / 32, (r % 32) * 2);
+        if self.forgotten_why.len() <= word {
+            self.forgotten_why.resize(word + 1, 0);
+        }
+        let why: u64 = match reason {
+            StaleReason::Removed => 1,
+            StaleReason::Navigated => 2,
+            StaleReason::FrameClosed => 3,
+        };
+        self.forgotten_why[word] |= why << shift;
+    }
+
+    /// Why a forgotten ref went: `Removed` when its node left a page the
+    /// tab still shows, `Navigated` or `FrameClosed` when it went with its
+    /// document. `None` for a ref the table has not forgotten.
+    pub fn forgotten(&self, r: u32) -> Option<StaleReason> {
+        let word = self.forgotten_why.get(r as usize / 32)?;
+        match (word >> ((r % 32) * 2)) & 3 {
+            1 => Some(StaleReason::Removed),
+            2 => Some(StaleReason::Navigated),
+            3 => Some(StaleReason::FrameClosed),
+            _ => None,
         }
     }
 
@@ -436,7 +497,7 @@ impl RefTable {
         self.forget_long_gone();
     }
 
-    /// Number of refs ever handed out.
+    /// Number of refs the table remembers (not those it forgot).
     pub fn len(&self) -> usize {
         self.entries.len()
     }
@@ -559,6 +620,7 @@ mod tests {
             refs.lookup(&format!("e{first}"), |_| true),
             Err(RefError::Forgotten(r)) if r == first
         ));
+        assert_eq!(refs.forgotten(first), Some(StaleReason::Navigated));
         assert!(refs.len() < 5, "the oldest went");
         assert!(matches!(
             refs.lookup("e999", |_| true),
@@ -638,6 +700,54 @@ mod tests {
 
     fn live(dom: &Dom) -> impl Fn(&RefKey) -> bool + '_ {
         |key| dom.contains(key.node) && dom.is_connected(key.node)
+    }
+
+    #[test]
+    fn refs_of_nodes_long_gone_from_the_page_are_forgotten() {
+        let mut page = parse_html(
+            "<ul><li>Socks <button>Remove</button></li><li>Hats <button>Remove</button></li></ul>\
+             <p hidden>Shipped in a week</p>",
+            &Default::default(),
+        );
+        let dom = &page.dom;
+        let first = |local: &str| {
+            dom.descendants(dom.document())
+                .find(|&n| dom.is_html_element(n, local))
+                .unwrap()
+        };
+        let (row, button, note) = (first("li"), first("button"), first("p"));
+        let mut refs = RefTable::new();
+        look(&page.dom, &mut refs);
+        let remove = refs.get(RefKey::plain(button)).unwrap();
+        // A read view gave the hidden note a ref; it is still in the page.
+        let hidden = RefScope::plain(&mut refs).assign(&page.dom, note, &AttributeOracle);
+        let known = refs.len();
+
+        page.dom.detach(row);
+        look(&page.dom, &mut refs);
+        // Just removed, the ref still says what it was.
+        match refs.lookup(&format!("e{remove}"), live(&page.dom)) {
+            Err(RefError::Stale {
+                reason, role, name, ..
+            }) => assert_eq!(
+                (reason, role, name.as_str()),
+                (StaleReason::Removed, "button", "Remove")
+            ),
+            other => panic!("{other:?}"),
+        }
+        assert_eq!(refs.forgotten(remove), None);
+        // Long gone, it is forgotten, and why is kept.
+        for _ in 0..KEEP_PASSES {
+            look(&page.dom, &mut refs);
+        }
+        assert_eq!(
+            refs.lookup(&format!("e{remove}"), live(&page.dom)),
+            Err(RefError::Forgotten(remove))
+        );
+        assert_eq!(refs.forgotten(remove), Some(StaleReason::Removed));
+        assert_eq!(refs.len(), known - 2, "the row and its button went");
+        assert!(refs.entry(hidden).is_some());
+        assert_eq!(refs.forgotten(hidden), None);
     }
 
     #[test]
