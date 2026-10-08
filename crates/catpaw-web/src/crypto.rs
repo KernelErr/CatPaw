@@ -43,10 +43,16 @@ pub(crate) fn uuid_v4() -> Fallible<String> {
 /// The most `getRandomValues()` hands out in one call.
 pub const RANDOM_VALUES_LIMIT: usize = 65536;
 
+/// A realm's seeded sequence: the seed it started from, and its state.
+struct Sequence {
+    seed: u64,
+    state: u64,
+}
+
 thread_local! {
     /// The seeded sequences of the realms on this thread, by the epoch of
     /// their page.
-    static SEQUENCES: RefCell<HashMap<u64, u64>> = RefCell::new(HashMap::new());
+    static SEQUENCES: RefCell<HashMap<u64, Sequence>> = RefCell::new(HashMap::new());
     /// The epoch of the page whose realm script runs in (0: none).
     static CURRENT: Cell<u64> = const { Cell::new(0) };
 }
@@ -57,10 +63,16 @@ pub fn seed_realm(page: &PageState, seed: Option<u64>) {
     SEQUENCES.with(|sequences| {
         let mut sequences = sequences.borrow_mut();
         match seed {
-            Some(seed) => sequences.insert(page.epoch, seed),
+            Some(seed) => sequences.insert(page.epoch, Sequence { seed, state: seed }),
             None => sequences.remove(&page.epoch),
         };
     });
+}
+
+/// The seed the realm of `page` draws its numbers from, in a seeded run:
+/// what the sequences of the workers it starts are derived from.
+pub fn realm_seed(page: &PageState) -> Option<u64> {
+    SEQUENCES.with(|sequences| sequences.borrow().get(&page.epoch).map(|s| s.seed))
 }
 
 /// Forgets the sequence of a realm that is gone.
@@ -104,9 +116,9 @@ pub fn fill_random(bytes: &mut [u8]) -> Fallible<()> {
     let current = CURRENT.with(Cell::get);
     let seeded = SEQUENCES.with(|sequences| {
         let mut sequences = sequences.borrow_mut();
-        let state = sequences.get_mut(&current)?;
+        let sequence = sequences.get_mut(&current)?;
         for chunk in bytes.chunks_mut(8) {
-            let word = next_seeded(state).to_le_bytes();
+            let word = next_seeded(&mut sequence.state).to_le_bytes();
             chunk.copy_from_slice(&word[..chunk.len()]);
         }
         Some(())

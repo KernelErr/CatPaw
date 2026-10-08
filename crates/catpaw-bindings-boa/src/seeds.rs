@@ -2,11 +2,13 @@
 //!
 //! Every realm (a document, a frame's document, a worker) gets sequences
 //! of its own, derived from the session's seed, the document's URL and
-//! what tells the realm from others with the same URL: its frame and how
-//! many documents of that URL the frame loaded before, or the worker it
-//! is. A run asks for the same realms in the same order, so it gets the
-//! same numbers wherever it runs; two frames showing one page, or a page
-//! loaded again, do not repeat each other's.
+//! what tells the realm from others with the same URL: its tab, its frame
+//! and how many documents of that URL the frame loaded before. A worker's
+//! derive from the seed of the realm that started it (which the embedder
+//! makes the worker's run seed), its script's URL, and the worker it is
+//! there. A run asks for the same realms in the same order, so it gets the
+//! same numbers wherever it runs; two tabs or frames showing one page, a
+//! page loaded again, and their workers, do not repeat each other's.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -28,6 +30,9 @@ thread_local! {
 /// What workers' seeds are mixed with first, so that they never meet a
 /// frame's.
 const WORKER: u64 = 0x776f_726b_6572;
+
+/// What the documents of a tab other than the first are mixed with first.
+const TAB: u64 = 0x0074_6162;
 
 fn splitmix(mut z: u64) -> u64 {
     z = z.wrapping_add(0x9E37_79B9_7F4A_7C15);
@@ -71,8 +76,8 @@ fn previous_loads(tree: &Rc<RefCell<FrameTree>>, frame: u32, url: &str) -> u64 {
 }
 
 /// The seed of the realm being made for `page`, when the run is seeded.
-/// The first document of a page's top frame gets the seed it always had:
-/// the session's mixed with the URL.
+/// The first document of the first tab's top frame gets the seed it always
+/// had: the session's mixed with the URL.
 pub(crate) fn realm_seed(page: &PageState, realm: Realm) -> Option<u64> {
     let session = page.config.random_seed?;
     let url = page.url.borrow().to_string();
@@ -82,12 +87,18 @@ pub(crate) fn realm_seed(page: &PageState, realm: Realm) -> Option<u64> {
     }
     match realm {
         Realm::Window => {
+            let tab = page.config.tab;
+            if tab != 0 {
+                seed = mix(mix(seed, TAB), u64::from(tab));
+            }
             let frame = page.frames.id().map_or(0, |frame| frame.0);
             let before = previous_loads(&page.frames.tree(), frame, &url);
             if frame != 0 || before != 0 {
                 seed = mix(mix(seed, u64::from(frame)), before);
             }
         }
+        // The run seed here is the seed of the realm that started the
+        // worker, which tells its tab, frame and load apart.
         Realm::Worker => {
             let (id, name) = page
                 .workers

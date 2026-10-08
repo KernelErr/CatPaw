@@ -9,6 +9,7 @@ use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
 use std::time::Duration;
 
@@ -93,6 +94,8 @@ enum HostEvent {
 pub struct SharedNet {
     runtime: Arc<Runtime>,
     client: Arc<NetClient>,
+    /// How many pages were opened over it (see [`SharedNet::next_page`]).
+    pages: Arc<AtomicU32>,
 }
 
 impl SharedNet {
@@ -111,6 +114,7 @@ impl SharedNet {
         Ok(Self {
             runtime: Arc::new(runtime),
             client: Arc::new(client),
+            pages: Arc::default(),
         })
     }
 
@@ -122,6 +126,12 @@ impl SharedNet {
     /// called from inside an async context.
     pub fn block_on<F: Future>(&self, future: F) -> F::Output {
         self.runtime.block_on(future)
+    }
+
+    /// The number of a page about to open over this network: the context's
+    /// pages (its tabs) count from 0 in the order they open.
+    pub(crate) fn next_page(&self) -> u32 {
+        self.pages.fetch_add(1, Ordering::Relaxed)
     }
 }
 
@@ -151,6 +161,8 @@ pub fn navigation_referrer(from: &Url, to: &Url) -> Option<Url> {
 pub struct EngineNet {
     runtime: Arc<Runtime>,
     client: Arc<NetClient>,
+    /// The shared network's count of pages.
+    pages: Arc<AtomicU32>,
     tx: Sender<HostEvent>,
     rx: Receiver<HostEvent>,
     next_token: Cell<u64>,
@@ -353,6 +365,7 @@ impl EngineNet {
         Self {
             runtime: net.runtime.clone(),
             client: net.client.clone(),
+            pages: net.pages.clone(),
             tx,
             rx,
             next_token: Cell::new(1),
@@ -374,6 +387,7 @@ impl EngineNet {
         SharedNet {
             runtime: self.runtime.clone(),
             client: self.client.clone(),
+            pages: self.pages.clone(),
         }
     }
 
@@ -474,6 +488,7 @@ impl EngineNet {
         Self {
             runtime: self.runtime.clone(),
             client: self.client.clone(),
+            pages: self.pages.clone(),
             tx,
             rx,
             next_token: Cell::new(1),

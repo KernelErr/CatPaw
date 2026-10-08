@@ -111,6 +111,10 @@ pub struct PageConfig {
     /// Seeds `Math.random` and `crypto.getRandomValues` for repeatable runs
     /// (each document, frame and worker gets a sequence of its own).
     pub random_seed: Option<u64>,
+    /// Which tab of the run the page is in, counting from 0 in the order
+    /// they opened: with a `random_seed`, tabs showing one URL draw
+    /// different numbers.
+    pub tab: u32,
     /// The page's time zone, as minutes east of UTC: `Date` shows local
     /// time in it (`getTimezoneOffset()` is its negation). UTC unless set,
     /// whatever the host's zone, so that runs agree from host to host.
@@ -145,6 +149,7 @@ impl Default for PageConfig {
             virtual_time: true,
             time_origin_unix_ms: None,
             random_seed: None,
+            tab: 0,
             timezone_offset_minutes: 0,
             script_budget: Some(std::time::Duration::from_secs(10)),
             history_before: 0,

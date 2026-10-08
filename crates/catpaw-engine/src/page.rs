@@ -608,8 +608,11 @@ impl Page {
     }
 
     /// An empty page (`about:blank`) on a context's shared network, to be
-    /// sent somewhere with [`Page::goto`].
+    /// sent somewhere with [`Page::goto`]. The context's pages are its
+    /// tabs, numbered as they open ([`PageConfig::tab`]).
     pub fn blank(options: &PageOptions, net: &SharedNet) -> Result<Self, EngineError> {
+        let mut options = options.clone();
+        options.page.tab = net.next_page();
         let net = Rc::new(EngineNet::from_shared(net));
         let url = Url::parse("about:blank").expect("about:blank parses");
         let info = DocumentInfo::local(&url, "");
@@ -619,11 +622,11 @@ impl Page {
             &info,
             "",
             None,
-            options,
+            &options,
             &options.storage,
             top_placement(&tree, (0, 0)),
         )?;
-        Ok(Self::with_top(boa, tree, net, info, options))
+        Ok(Self::with_top(boa, tree, net, info, &options))
     }
 
     /// Navigates the top frame to `url` as typed into an address bar (no
@@ -1587,6 +1590,12 @@ impl Page {
         };
         let mut config = self.options.page.clone();
         config.user_agent = self.options.net.user_agent.clone();
+        // In a seeded run, a worker's random numbers derive from those of
+        // the realm that started it: the same script started by another
+        // tab, frame or load of the page draws others.
+        config.random_seed = config
+            .random_seed
+            .map(|run| catpaw_web::crypto::realm_seed(&owner_page).unwrap_or(run));
         let mut state = PageState::new(script_url.clone(), config);
         // One object-URL store per origin: the worker resolves the blob
         // URLs its owner makes.
