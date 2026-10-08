@@ -183,6 +183,16 @@ impl RefTable {
         }
     }
 
+    /// Names a ref in errors and results by `name`: a nameless container
+    /// by what it holds.
+    pub fn set_name(&mut self, r: u32, name: &str) {
+        if let Some(entry) = self.entries.get_mut(&r)
+            && entry.name != name
+        {
+            entry.name = name.to_string();
+        }
+    }
+
     pub fn get(&self, key: RefKey) -> Option<u32> {
         self.by_key.get(&key).copied()
     }

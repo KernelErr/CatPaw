@@ -1565,6 +1565,7 @@ impl Emitter<'_> {
             text: inline,
         };
         let mut shown = Fingerprint::of(&kind);
+        let at = self.lines.len();
         self.push(SnapLine {
             depth: depth16,
             kind,
@@ -1576,8 +1577,61 @@ impl Emitter<'_> {
         }
         let shown = shown.finish();
         self.refs.placed(r, index, shown);
+        // A nameless container is known by what it holds
+        // (`listitem "Buy milk"`).
+        if known_as.is_empty()
+            && let Some(gist) = gist(&self.lines[at + 1..])
+        {
+            self.refs.set_name(r, &gist);
+        }
         shown
     }
+}
+
+/// Longest [`gist`].
+const GIST_LEN: usize = 40;
+
+/// What a run of lines (an element's content) is about, in a few words:
+/// its first heading, else its first text (a text, or the name of a part
+/// not to act on, such as a cell), else its first name. How a nameless
+/// container is known (`listitem "Buy milk"`), and what a folded one
+/// holds.
+pub(crate) fn gist(lines: &[SnapLine]) -> Option<String> {
+    fn heading(line: &SnapLine) -> Option<&str> {
+        match &line.kind {
+            LineKind::Element {
+                role, name, attrs, ..
+            } if !name.is_empty()
+                && (*role == "heading" || attrs.iter().any(|(k, _)| *k == "heading")) =>
+            {
+                Some(name)
+            }
+            _ => None,
+        }
+    }
+    fn text(line: &SnapLine) -> Option<&str> {
+        match &line.kind {
+            LineKind::Text(t) | LineKind::Element { text: Some(t), .. } => Some(t),
+            LineKind::Element { role, name, .. }
+                if !name.is_empty() && !is_interactive(role) && *role != "img" =>
+            {
+                Some(name)
+            }
+            _ => None,
+        }
+    }
+    fn name(line: &SnapLine) -> Option<&str> {
+        match &line.kind {
+            LineKind::Element { name, .. } if !name.is_empty() => Some(name),
+            _ => None,
+        }
+    }
+    let found = lines
+        .iter()
+        .find_map(heading)
+        .or_else(|| lines.iter().find_map(text))
+        .or_else(|| lines.iter().find_map(name))?;
+    Some(truncate(found, GIST_LEN))
 }
 
 /// What a line shows and what the lines under it show, as a number to
@@ -1953,6 +2007,44 @@ e5 main
         assert_eq!(known.chars().count(), 99 + "… [+23 chars]".chars().count());
         assert!(known.ends_with("SuperSecretPass… [+23 chars]"), "{known}");
         assert_eq!(cap_name("Login"), None);
+    }
+
+    #[test]
+    fn a_nameless_container_is_known_by_what_it_holds() {
+        let r = parse_html(
+            "<ul><li><input type=checkbox aria-label='Toggle Todo'> Hat <button>Delete</button></li>\
+             <li><input type=checkbox aria-label='Toggle Todo'> A very long todo about all the \
+             things to buy at the market <button>Delete</button></li></ul>\
+             <table><tr><th>Item<th>Action<tr><td>Wool socks<td><button>Remove</button></table>\
+             <article><h3><a href=/b>A Light in the Attic</a></h3><p>£51.77</p></article>",
+            &Default::default(),
+        );
+        let oracle = AttributeOracle;
+        let mut refs = RefTable::new();
+        let lines = Snapshotter::new(&r.dom, &oracle, &mut refs)
+            .snapshot(&SnapshotOptions::default())
+            .lines;
+        let known: Vec<String> = lines
+            .iter()
+            .filter_map(|line| match line.kind {
+                LineKind::Element {
+                    r,
+                    role: role @ ("listitem" | "row" | "article"),
+                    ..
+                } => Some(format!("{role} {}", quote(&refs.entry(r).unwrap().name))),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            known,
+            [
+                "listitem \"Hat\"",
+                "listitem \"A very long todo about all the things t…\"",
+                "row \"Item\"",
+                "row \"Wool socks\"",
+                "article \"A Light in the Attic\"",
+            ]
+        );
     }
 
     #[test]

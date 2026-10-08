@@ -180,3 +180,7 @@ they name.
    row that slid into a deleted row's place, or the next page's row in
    the same place, is never the replacement: the stale ref's error can
    name it as what is in that place now. (Replaces point 4 above.)
+3. **A nameless element is known by what it shows**, in errors and
+   results: by its lone text, else, as a container, by what it holds,
+   kept short: its first heading, else its first text
+   (`listitem "Buy milk"`, `row "Wool socks"`). Its line is unchanged.
