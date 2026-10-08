@@ -23,7 +23,8 @@ use std::fmt::Write as _;
 
 use crate::budget::capped;
 use crate::snapshot::{
-    Format, LineKind, SnapLine, attr_value, cap_name, cap_text, quote, render_line, truncate,
+    Fingerprint, Format, LineKind, SnapLine, attr_value, cap_name, cap_text, quote, render_line,
+    truncate,
 };
 
 /// A snapshot's lines as a tree.
@@ -81,6 +82,24 @@ impl<'a> Tree<'a> {
         self.children.get(&i).map(Vec::as_slice).unwrap_or(&[])
     }
 
+    /// The place of `i` among the elements its parent shows.
+    fn element_index(&self, i: usize) -> usize {
+        self.kids(self.parent[i])
+            .iter()
+            .take_while(|&&s| s != i)
+            .filter(|&&s| self.r(s).is_some())
+            .count()
+    }
+
+    /// What `i` and the lines under it show (see [`Fingerprint`]).
+    fn content(&self, i: usize) -> u64 {
+        let mut shown = Fingerprint::of(&self.lines[i].kind);
+        for &k in self.kids(Some(i)) {
+            shown.child(self.content(k));
+        }
+        shown.finish()
+    }
+
     /// The element just before `i` among its parent's children.
     fn previous_element(&self, i: usize) -> Option<u32> {
         let siblings = self.kids(self.parent[i]);
@@ -108,9 +127,6 @@ impl<'a> Tree<'a> {
             .collect()
     }
 }
-
-/// Where a node sits and what it is: parent ref, role and name.
-type Signature = (Option<u32>, &'static str, String);
 
 /// What changed between two snapshots.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -351,32 +367,21 @@ fn compare(old: &[SnapLine], new: &[SnapLine], cap: bool) -> Diff {
         })
         .collect();
 
-    // A removed node and an added one in the same place, with the same
-    // role and name, are one node the page rendered again.
-    let signature = |t: &Tree, i: usize| -> Option<Signature> {
-        match &t.lines[i].kind {
-            LineKind::Element { role, name, .. } => Some((t.parent_ref(i), *role, name.clone())),
-            _ => None,
-        }
-    };
-    let mut by_sig: HashMap<Signature, (Vec<usize>, Vec<usize>)> = HashMap::new();
-    for &i in &removed {
-        if let Some(sig) = signature(&a, i) {
-            by_sig.entry(sig).or_default().0.push(i);
-        }
-    }
-    for &j in &added {
-        if let Some(sig) = signature(&b, j) {
-            by_sig.entry(sig).or_default().1.push(j);
-        }
-    }
+    // A removed node and an added one are one node the page rendered
+    // again when they sit in the same place (the same parent, the same
+    // place among its elements) and show the same (role, name and texts,
+    // their descendants' too). A row that slid into a deleted row's place
+    // shows other texts or sits elsewhere among its siblings; the next
+    // page's row in the same place shows other texts.
+    let place = |t: &Tree, i: usize| (t.parent_ref(i), t.element_index(i), t.content(i));
+    let olds: HashMap<_, usize> = removed.iter().map(|&i| (place(&a, i), i)).collect();
     let mut replaces: HashMap<usize, usize> = HashMap::new();
     let mut replaced_old: HashSet<usize> = HashSet::new();
-    for (olds, news) in by_sig.values() {
-        if let ([i], [j]) = (olds.as_slice(), news.as_slice()) {
-            replaces.insert(*j, *i);
-            replaced_old.insert(*i);
-            pair_subtrees(&a, *i, &b, *j, &mut out.replaced);
+    for &j in &added {
+        if let Some(&i) = olds.get(&place(&b, j)) {
+            replaces.insert(j, i);
+            replaced_old.insert(i);
+            pair_subtrees(&a, i, &b, j, &mut out.replaced);
         }
     }
 
@@ -615,41 +620,16 @@ fn excerpts(old: &str, new: &str, max: usize) -> (String, String) {
     (cut(old), cut(new))
 }
 
-/// Pairs the nodes of a re-rendered subtree with the old one's, where the
-/// two have the same shape: same roles and names, in order.
+/// Pairs the refs of a re-rendered subtree with the old one's, line by
+/// line: the two show the same, so they have the same shape.
 fn pair_subtrees(a: &Tree, i: usize, b: &Tree, j: usize, out: &mut Vec<(u32, u32)>) {
-    if let (Some(ra), Some(rb)) = (a.r(i), b.r(j)) {
-        out.push((ra, rb));
-    }
-    let ka: Vec<usize> = a
-        .kids(Some(i))
-        .iter()
-        .copied()
-        .filter(|&k| a.r(k).is_some())
-        .collect();
-    let kb: Vec<usize> = b
-        .kids(Some(j))
-        .iter()
-        .copied()
-        .filter(|&k| b.r(k).is_some())
-        .collect();
-    if ka.len() != kb.len() {
+    let below = a.descendants(i);
+    if below != b.descendants(j) {
         return;
     }
-    for (&x, &y) in ka.iter().zip(&kb) {
-        let same = match (&a.lines[x].kind, &b.lines[y].kind) {
-            (
-                LineKind::Element {
-                    role: r1, name: n1, ..
-                },
-                LineKind::Element {
-                    role: r2, name: n2, ..
-                },
-            ) => r1 == r2 && n1 == n2,
-            _ => false,
-        };
-        if same {
-            pair_subtrees(a, x, b, y, out);
+    for k in 0..=below {
+        if let (Some(old), Some(new)) = (a.r(i + k), b.r(j + k)) {
+            out.push((old, new));
         }
     }
 }
@@ -812,6 +792,45 @@ mod tests {
             ["+ e8 listitem \"Beanie\" (replaces e2)\n    e9 button \"Remove\""]
         );
         assert_eq!(d.replaced, [(2, 8), (3, 9)]);
+    }
+
+    #[test]
+    fn a_row_that_took_a_deleted_rows_place_does_not_replace_it() {
+        let list = || vec![el(0, 1, "list", "")];
+        let row = |r: u32, item: &str| {
+            vec![
+                el(1, r, "listitem", ""),
+                text(2, item),
+                el(2, r + 1, "button", "Delete"),
+            ]
+        };
+        // A list that shows three: "B" is deleted and "D" slides in.
+        let old = [list(), row(10, "A"), row(20, "B"), row(30, "C")].concat();
+        let new = [list(), row(10, "A"), row(30, "C"), row(40, "D")].concat();
+        let d = diff(&old, &new);
+        assert!(d.replaced.is_empty(), "{d:?}");
+        assert_eq!(
+            d.lines,
+            [
+                "- e20 listitem (+2 descendants)",
+                "+ e40 listitem (in e1, after e30)\n    text: D\n    e41 button \"Delete\"",
+            ]
+        );
+        // Rows alike: the one at the end is not the one taken from the
+        // middle.
+        let old = [list(), row(10, "Socks"), row(20, "Socks"), row(30, "Socks")].concat();
+        let new = [list(), row(10, "Socks"), row(30, "Socks"), row(40, "Socks")].concat();
+        assert!(diff(&old, &new).replaced.is_empty());
+        // The next page's row in the same place shows other texts.
+        let old = [list(), row(10, "A")].concat();
+        let new = [list(), row(40, "K")].concat();
+        assert!(diff(&old, &new).replaced.is_empty());
+        // The same row rendered again in its place is that row, whatever
+        // its state.
+        let mut again = row(40, "A");
+        again[2] = with_attrs(el(2, 41, "button", "Delete"), &[("disabled", "")]);
+        let d = diff(&[list(), row(10, "A")].concat(), &[list(), again].concat());
+        assert_eq!(d.replaced, [(10, 40), (11, 41)]);
     }
 
     #[test]

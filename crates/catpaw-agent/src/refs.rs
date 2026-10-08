@@ -5,7 +5,8 @@
 //! apart by an epoch the embedder supplies, because a new document's arena
 //! can hand out the very keys the old one used. A ref whose node left the
 //! document, or whose document was replaced, is stale; looking it up says
-//! why and suggests the live ref that most likely took its place.
+//! why and suggests the node rendered again in its place, when there is
+//! evidence that it is the same item.
 
 use std::collections::HashMap;
 
@@ -64,6 +65,12 @@ pub struct RefEntry {
     pub name: String,
     /// The ref of the nearest shown ancestor, when there was one.
     pub parent: Option<u32>,
+    /// Its place among the elements that ancestor showed (the first is
+    /// 0); unknown until a snapshot shows it.
+    index: Option<u32>,
+    /// What it showed, with what was under it (see
+    /// [`crate::snapshot::Fingerprint`]).
+    content: u64,
     pub stale: Option<StaleReason>,
     /// The ref that took this one's place when the page re-rendered it.
     pub replaced_by: Option<u32>,
@@ -153,6 +160,8 @@ impl RefTable {
                 role,
                 name: name.to_string(),
                 parent,
+                index: None,
+                content: 0,
                 stale: None,
                 replaced_by: None,
                 born: self.pass,
@@ -161,6 +170,17 @@ impl RefTable {
             },
         );
         r
+    }
+
+    /// Records where a snapshot showed a node, the `index`-th element
+    /// under its parent, and what it showed (`content`, its
+    /// [`crate::snapshot::Fingerprint`]): the evidence that a node shown
+    /// later in its place is the same item rendered again.
+    pub fn placed(&mut self, r: u32, index: u32, content: u64) {
+        if let Some(entry) = self.entries.get_mut(&r) {
+            entry.index = Some(index);
+            entry.content = content;
+        }
     }
 
     pub fn get(&self, key: RefKey) -> Option<u32> {
@@ -224,13 +244,20 @@ impl RefTable {
         self.replacement(r, is_live)
     }
 
-    /// The live ref that took a removed one's place, when there is no
-    /// doubt about it: the one a diff saw the page render in its place, or
-    /// else the only node first shown after the removed one was last seen
-    /// with the same frame, role and name, under a parent of the same role
-    /// and name. A node the page showed alongside it (a row alike) is
-    /// never one. Refs gone with their document have no replacement.
+    /// The live ref that took a removed one's place, when there is
+    /// evidence that it is the same item rendered again: the one a diff
+    /// saw the page render in its place, or else the only node first shown
+    /// after the removed one was last seen that sits where it sat (in its
+    /// frame, under its parent or the parent's replacement, at its place
+    /// among the elements there) and shows what it showed (its role, name
+    /// and texts, its descendants' too). A row alike that slid into its
+    /// place, or the next page's row there, is never one. Refs gone with
+    /// their document have no replacement.
     pub fn replacement(&self, r: u32, is_live: impl Fn(&RefKey) -> bool) -> Option<u32> {
+        self.replacement_with(r, &is_live)
+    }
+
+    fn replacement_with(&self, r: u32, is_live: &dyn Fn(&RefKey) -> bool) -> Option<u32> {
         let entry = self.entries.get(&r)?;
         if entry
             .stale
@@ -239,25 +266,72 @@ impl RefTable {
             return None;
         }
         if let Some(next) = entry.replaced_by
-            && let Some(e) = self.entries.get(&next)
-            && e.stale.is_none()
-            && is_live(&e.key)
+            && self.is_shown(next, is_live)
         {
             return Some(next);
         }
-        let parent_sig = self.parent_signature(entry.parent);
+        let index = entry.index?;
+        let parent = match entry.parent {
+            Some(p) if !self.is_shown(p, is_live) => Some(self.replacement_with(p, is_live)?),
+            parent => parent,
+        };
         let mut found = self.entries.iter().filter(|&(&other, e)| {
             other != r
                 && e.born > entry.seen
-                && e.stale.is_none()
                 && e.key.frame == entry.key.frame
+                && e.parent == parent
+                && e.index == Some(index)
                 && e.role == entry.role
-                && e.name == entry.name
-                && self.parent_signature(e.parent) == parent_sig
+                && e.content == entry.content
+                && e.stale.is_none()
                 && is_live(&e.key)
         });
         let first = found.next().map(|(&other, _)| other);
         if found.next().is_some() { None } else { first }
+    }
+
+    /// The live ref shown since where a removed one was (under its parent,
+    /// or what is in the parent's place, at its place among the elements
+    /// there), with its role: what an error can name when there is no
+    /// replacement, as another element that only took its place.
+    pub fn occupant(&self, r: u32, is_live: impl Fn(&RefKey) -> bool) -> Option<u32> {
+        self.occupant_with(r, &is_live)
+    }
+
+    fn occupant_with(&self, r: u32, is_live: &dyn Fn(&RefKey) -> bool) -> Option<u32> {
+        let entry = self.entries.get(&r)?;
+        if entry
+            .stale
+            .is_some_and(|reason| reason != StaleReason::Removed)
+        {
+            return None;
+        }
+        let index = entry.index?;
+        let parent = match entry.parent {
+            Some(p) if !self.is_shown(p, is_live) => Some(self.occupant_with(p, is_live)?),
+            parent => parent,
+        };
+        self.entries
+            .iter()
+            .filter(|&(&other, e)| {
+                other != r
+                    && e.seen > entry.seen
+                    && e.key.frame == entry.key.frame
+                    && e.parent == parent
+                    && e.index == Some(index)
+                    && e.role == entry.role
+                    && e.stale.is_none()
+                    && is_live(&e.key)
+            })
+            .max_by_key(|(_, e)| e.seen)
+            .map(|(&other, _)| other)
+    }
+
+    /// Whether a ref's node is still in the page.
+    fn is_shown(&self, r: u32, is_live: &dyn Fn(&RefKey) -> bool) -> bool {
+        self.entries
+            .get(&r)
+            .is_some_and(|e| e.stale.is_none() && is_live(&e.key))
     }
 
     /// The other live-looking refs with the same frame, role and name.
@@ -289,13 +363,6 @@ impl RefTable {
             at = entry.parent;
         }
         Some(first)
-    }
-
-    /// The role and name of a parent ref, for matching replacements.
-    fn parent_signature(&self, parent: Option<u32>) -> Option<(&'static str, &str)> {
-        parent
-            .and_then(|p| self.entries.get(&p))
-            .map(|e| (e.role, e.name.as_str()))
     }
 
     /// Records that the page re-rendered `old` as `new`.
@@ -420,6 +487,8 @@ impl<'a> RefScope<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::snapshot::{SnapshotOptions, Snapshotter};
+    use crate::visibility::AttributeOracle;
     use catpaw_dom::parse_html;
 
     #[test]
@@ -509,6 +578,9 @@ mod tests {
         let old = refs.get_or_assign(k(nodes[1]), "button", "Remove", Some(row1));
         let row2 = refs.get_or_assign(k(nodes[2]), "listitem", "Socks", None);
         let other = refs.get_or_assign(k(nodes[3]), "button", "Remove", Some(row2));
+        for (r, index, content) in [(row1, 0, 1), (old, 0, 2), (row2, 1, 1), (other, 0, 2)] {
+            refs.placed(r, index, content);
+        }
         match refs.lookup(&format!("e{old}"), live) {
             Err(RefError::Stale {
                 reason, suggestion, ..
@@ -524,18 +596,87 @@ mod tests {
         assert_eq!(refs.suggest(old, live), Some(other));
         assert_eq!(refs.replacement(old, live), Some(other));
 
-        // A node first shown after the removed one was last seen, alike
-        // and alone, is its re-rendering.
+        // A node first shown after the removed one was last seen, in its
+        // place and showing what it showed, is its re-rendering.
         let mut rerender = RefTable::new();
         rerender.begin_pass();
         let row = rerender.get_or_assign(k(nodes[0]), "listitem", "Socks", None);
         let old = rerender.get_or_assign(k(nodes[1]), "button", "Remove", Some(row));
+        rerender.placed(old, 0, 7);
         rerender.begin_pass();
         let row = rerender.get_or_assign(k(nodes[0]), "listitem", "Socks", None);
         let new = rerender.get_or_assign(k(nodes[3]), "button", "Remove", Some(row));
+        rerender.placed(new, 0, 7);
         let _ = rerender.lookup(&format!("e{old}"), live);
         assert_eq!(rerender.replacement(old, live), Some(new));
+        // Elsewhere among the row's elements, or showing something else,
+        // it is another node.
+        rerender.placed(new, 1, 7);
+        assert_eq!(rerender.replacement(old, live), None);
+        rerender.placed(new, 0, 8);
+        assert_eq!(rerender.replacement(old, live), None);
+        rerender.placed(new, 0, 7);
         rerender.document_replaced(0, 9);
         assert_eq!(rerender.replacement(old, live), None);
+    }
+
+    /// A pass over the page, as a snapshot makes one.
+    fn look(dom: &Dom, refs: &mut RefTable) {
+        refs.begin_pass();
+        Snapshotter::new(dom, &AttributeOracle, refs).body(&SnapshotOptions::default());
+    }
+
+    fn live(dom: &Dom) -> impl Fn(&RefKey) -> bool + '_ {
+        |key| dom.contains(key.node) && dom.is_connected(key.node)
+    }
+
+    #[test]
+    fn a_row_that_took_a_deleted_rows_place_is_not_its_replacement() {
+        let mut page = parse_html(
+            "<ul><li>Item 1 <button>Delete</button></li><li>Item 2 <button>Delete</button></li>\
+             <li>Item 3 <button>Delete</button></li></ul>\
+             <div hidden><li>Item 4 <button>Delete</button></li><li>Item 1 <button>Delete</button></li></div>",
+            &Default::default(),
+        );
+        let dom = &page.dom;
+        let rows: Vec<NodeId> = dom
+            .descendants(dom.document())
+            .filter(|&n| dom.is_html_element(n, "li"))
+            .collect();
+        let buttons: Vec<NodeId> = rows
+            .iter()
+            .map(|&row| {
+                dom.descendants(row)
+                    .find(|&n| dom.is_html_element(n, "button"))
+                    .unwrap()
+            })
+            .collect();
+        let list = dom.parent_element(rows[0]).unwrap();
+        let delete = |refs: &RefTable, row: usize| refs.get(RefKey::plain(buttons[row])).unwrap();
+        let mut refs = RefTable::new();
+        look(&page.dom, &mut refs);
+        let (second, third) = (delete(&refs, 1), delete(&refs, 2));
+
+        // Item 2 is deleted, and item 4 slides in at the end of the list.
+        page.dom.detach(rows[1]);
+        page.dom.append_child(list, rows[3]);
+        look(&page.dom, &mut refs);
+        match refs.lookup(&format!("e{second}"), live(&page.dom)) {
+            Err(RefError::Stale { suggestion, .. }) => assert_eq!(suggestion, None),
+            other => panic!("{other:?}"),
+        }
+        assert_eq!(refs.replacement(second, live(&page.dom)), None);
+        // In its place now: item 3's button, slid up.
+        assert_eq!(refs.occupant(second, live(&page.dom)), Some(third));
+
+        // Item 1 rendered again, the same in the same place, is item 1.
+        let first = delete(&refs, 0);
+        page.dom.insert_before(list, rows[4], Some(rows[0]));
+        page.dom.detach(rows[0]);
+        look(&page.dom, &mut refs);
+        assert_eq!(
+            refs.replacement(first, live(&page.dom)),
+            Some(delete(&refs, 4))
+        );
     }
 }

@@ -17,6 +17,7 @@
 //! `- searchbox "Search products" [ref=e2] [value=""]`.
 
 use std::fmt::Write as _;
+use std::hash::{DefaultHasher, Hash, Hasher};
 
 use catpaw_dom::{Dom, ElementData, NodeId, NodeKind};
 use url::Url;
@@ -540,8 +541,10 @@ impl<'a> Snapshotter<'a> {
             emitted: 0,
             truncated_nodes: 0,
         };
+        let mut elements = 0;
         for node in &forest {
-            emitter.emit(node, 0, parent);
+            emitter.emit(node, 0, parent, elements);
+            elements += u32::from(node.text.is_none());
         }
         if emitter.truncated_nodes > 0 {
             let line = SnapLine {
@@ -1513,18 +1516,22 @@ impl Emitter<'_> {
         self.emitted += 1;
     }
 
-    fn emit(&mut self, node: &AxNode, depth: usize, parent: Option<u32>) {
+    /// Emits `node`, the `index`-th element under `parent`, and what is
+    /// under it; returns its [`Fingerprint`].
+    fn emit(&mut self, node: &AxNode, depth: usize, parent: Option<u32>, index: u32) -> u64 {
         if self.over_budget() || self.options.max_depth.is_some_and(|d| depth > d) {
             self.truncated_nodes += node.count();
-            return;
+            return 0;
         }
         let depth16 = depth.min(u16::MAX as usize) as u16;
         if let Some(text) = &node.text {
+            let kind = LineKind::Text(text.clone());
+            let shown = Fingerprint::of(&kind).finish();
             self.push(SnapLine {
                 depth: depth16,
-                kind: LineKind::Text(text.clone()),
+                kind,
             });
-            return;
+            return shown;
         }
         let role = node.role.unwrap_or("generic");
         let role = if role == "none" { "generic" } else { role };
@@ -1549,20 +1556,57 @@ impl Emitter<'_> {
         } else {
             &node.children
         };
+        let kind = LineKind::Element {
+            r,
+            role,
+            name,
+            attrs: node.attrs.clone(),
+            has_children: !children.is_empty(),
+            text: inline,
+        };
+        let mut shown = Fingerprint::of(&kind);
         self.push(SnapLine {
             depth: depth16,
-            kind: LineKind::Element {
-                r,
-                role,
-                name,
-                attrs: node.attrs.clone(),
-                has_children: !children.is_empty(),
-                text: inline,
-            },
+            kind,
         });
+        let mut elements = 0;
         for child in children {
-            self.emit(child, depth + 1, Some(r));
+            shown.child(self.emit(child, depth + 1, Some(r), elements));
+            elements += u32::from(child.text.is_none());
         }
+        let shown = shown.finish();
+        self.refs.placed(r, index, shown);
+        shown
+    }
+}
+
+/// What a line shows and what the lines under it show, as a number to
+/// compare: roles, names and texts in order, not refs or states. A node
+/// the page rendered again shows the same; a row that slid into a
+/// deleted one's place does not.
+pub(crate) struct Fingerprint(DefaultHasher);
+
+impl Fingerprint {
+    /// Begins with what `kind` shows itself.
+    pub(crate) fn of(kind: &LineKind) -> Self {
+        let mut hasher = DefaultHasher::new();
+        match kind {
+            LineKind::Element {
+                role, name, text, ..
+            } => (0u8, role, name, text).hash(&mut hasher),
+            LineKind::Text(text) => (1u8, text).hash(&mut hasher),
+            LineKind::Truncated(_) | LineKind::More { .. } => 2u8.hash(&mut hasher),
+        }
+        Self(hasher)
+    }
+
+    /// Adds a line right under it, by its fingerprint.
+    pub(crate) fn child(&mut self, child: u64) {
+        child.hash(&mut self.0);
+    }
+
+    pub(crate) fn finish(&self) -> u64 {
+        self.0.finish()
     }
 }
 

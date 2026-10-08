@@ -170,3 +170,13 @@ they name.
    diff that has to fit a budget cuts long names and texts as a
    snapshot does. (Names were cut at 100 characters, and diff texts at
    120 with a bare `…`.)
+2. **Replacements need evidence.** A node is taken for a removed one
+   rendered again only when it sits where that one sat (under the same
+   parent, or under the parent's own replacement, at the same place
+   among the elements there) and shows what it showed (role, name and
+   texts, its descendants' too; a state such as `[checked]` may
+   differ). Diffs pair a removed and an added node by this rule
+   (`(replaces eN)`), and a stale ref no diff paired goes by it too. A
+   row that slid into a deleted row's place, or the next page's row in
+   the same place, is never the replacement: the stale ref's error can
+   name it as what is in that place now. (Replaces point 4 above.)
