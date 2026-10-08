@@ -1,0 +1,24 @@
+> navigate {"url":"https://the-internet.herokuapp.com/key_presses"}
+ok navigate → https://the-internet.herokuapp.com/key_presses (200)
+# s1 title="The Internet"
+e1 link "Fork me on GitHub"
+e2 heading "Key Presses" [level=3]
+e3 paragraph: Key presses are often used to interact with a website (e.g., tab order, enter, escape, etc.). Press a key and see what you inputted.
+e4 textbox
+text: Powered by
+e5 link "Elemental Selenium"
+
+> press {"key":"Tab","target":"css:#target"}
+ok press Tab on e4 textbox
+# s2 focus=e5 added=1
++ e6 paragraph (after e4): You entered: TAB
+
+> press {"key":"Shift+Tab"}
+ok press Shift+Tab
+# s3 focus=e4 no changes
+
+> logs {"kind":"events"}
+ok logs events
+navigated GET https://the-internet.herokuapp.com/key_presses 200
+
+? text_contains "You entered: TAB" → yes

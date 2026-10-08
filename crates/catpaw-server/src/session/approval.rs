@@ -417,8 +417,13 @@ impl Session {
             }
             State::Superseded => {
                 self.confirmations.remove(id);
+                let why = if self.routes.contains_key(&confirmation.tab) {
+                    "the page replaced or dropped what it held"
+                } else {
+                    "its tab closed"
+                };
                 Ok(ToolOutput::ok(format!(
-                    "{} {}: c{id} no longer applies (the page replaced or dropped what it held)",
+                    "{} {}: c{id} no longer applies ({why})",
                     outcome::BLOCKED,
                     outcome::SUPERSEDED
                 )))

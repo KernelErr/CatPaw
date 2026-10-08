@@ -10,7 +10,8 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use catpaw_server::{
-    Approval, ApprovalConfig, Host, McpServer, Policy, Preset, Session, SessionConfig,
+    Approval, ApprovalConfig, Host, JournalConfig, McpServer, Policy, Preset, Session,
+    SessionConfig,
 };
 use serde_json::{Value, json};
 
@@ -106,6 +107,10 @@ fn serve() -> (u16, Log) {
                     LOGIN.to_string()
                 } else if path == "/two-posts" {
                     TWO_POSTS.to_string()
+                } else if path == "/framed" {
+                    format!(
+                        "<!doctype html><title>Framed</title><iframe src=\"http://localhost:{port}/order\"></iframe>"
+                    )
                 } else if path == "/editor" {
                     EDITOR.to_string()
                 } else if path == "/opener" {
@@ -141,11 +146,28 @@ fn posts(log: &Log) -> Vec<String> {
         .collect()
 }
 
-fn temp_dir(name: &str) -> PathBuf {
+/// A directory of a test's own, removed once the test is done with it.
+struct TempDir(PathBuf);
+
+impl std::ops::Deref for TempDir {
+    type Target = PathBuf;
+
+    fn deref(&self) -> &PathBuf {
+        &self.0
+    }
+}
+
+impl Drop for TempDir {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+
+fn temp_dir(name: &str) -> TempDir {
     let dir = std::env::temp_dir().join(format!("catpaw-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
-    dir
+    TempDir(dir)
 }
 
 struct Client {
@@ -154,12 +176,14 @@ struct Client {
     base: String,
     log: Log,
     key_file: PathBuf,
+    _keys: TempDir,
 }
 
 impl Client {
     fn new(name: &str, adjust: impl FnOnce(&mut SessionConfig)) -> Self {
         let (port, log) = serve();
-        let key_file = temp_dir(name).join("approval-key");
+        let keys = temp_dir(name);
+        let key_file = keys.join("approval-key");
         let mut config = SessionConfig::default();
         config.options.net.allow_private_network = true;
         config.approval = ApprovalConfig {
@@ -175,6 +199,7 @@ impl Client {
             base: format!("http://127.0.0.1:{port}"),
             log,
             key_file,
+            _keys: keys,
         }
     }
 
@@ -877,6 +902,215 @@ fn text_typed_into_an_editor_in_a_hand_off_stays_masked() {
         json!({"script": "document.getElementById('note').textContent"}),
     );
     assert!(script.starts_with("needs_confirmation c"), "{script}");
+}
+
+#[test]
+fn strict_asks_before_a_script_runs() {
+    let mut client = Client::new("strict-eval", strict);
+    client.call("navigate", json!({"url": format!("{}/order", client.base)}));
+    let asked = client.call("evaluate", json!({"script": "document.title"}));
+    assert!(
+        asked.starts_with("needs_confirmation c1: run a script in the page: \"document.title\""),
+        "{asked}"
+    );
+    client.decide(&asked, "approve");
+    let ran = client.call(
+        "evaluate",
+        json!({"script": "document.title", "confirmation": "c1"}),
+    );
+    assert_eq!(ran, "ok evaluate\nOrder");
+}
+
+#[test]
+fn a_confirmed_call_runs_where_it_was_asked() {
+    let mut client = Client::new("asked-where", strict);
+    client.call("navigate", json!({"url": format!("{}/order", client.base)}));
+    let asked = client.call("evaluate", json!({"script": "document.title"}));
+    assert!(asked.starts_with("needs_confirmation c1"), "{asked}");
+    let opened = client.call(
+        "tabs",
+        json!({"op": "open", "url": format!("{}/login", client.base)}),
+    );
+    assert!(opened.contains("t2"), "{opened}");
+    client.decide(&asked, "approve");
+    // On t1, where it was asked, though t2 is current.
+    let ran = client.call(
+        "evaluate",
+        json!({"script": "document.title", "confirmation": "c1"}),
+    );
+    assert_eq!(ran, "ok evaluate\nOrder");
+    // One asked on a tab that closed since does not run elsewhere.
+    let asked = client.call("evaluate", json!({"script": "document.title"}));
+    assert!(asked.starts_with("needs_confirmation c2"), "{asked}");
+    client.call("tabs", json!({"op": "close", "tab": "t2"}));
+    client.decide(&asked, "approve");
+    let refused = client.call(
+        "evaluate",
+        json!({"script": "document.title", "confirmation": "c2"}),
+    );
+    assert!(
+        refused.starts_with("blocked superseded: c2 no longer applies (its tab closed"),
+        "{refused}"
+    );
+}
+
+#[test]
+fn allowed_domains_hold_for_tabs_and_frames() {
+    let mut client = Client::new("allowed-frames", |config| {
+        config.policy.allowed_domains = vec!["127.0.0.1".into()];
+    });
+    let framed = client.call(
+        "navigate",
+        json!({"url": format!("{}/framed", client.base)}),
+    );
+    assert!(framed.starts_with("ok navigate"), "{framed}");
+    assert!(
+        framed.contains("! blocked frame http://localhost:")
+            && framed.contains("(localhost is not an allowed domain)"),
+        "{framed}"
+    );
+    let other = client.base.replace("127.0.0.1", "localhost");
+    let opened = client.call(
+        "tabs",
+        json!({"op": "open", "url": format!("{other}/order")}),
+    );
+    assert!(
+        opened.contains("localhost is not an allowed domain"),
+        "{opened}"
+    );
+    assert!(posts(&client.log).is_empty());
+}
+
+#[test]
+fn a_hand_off_page_answers_its_own_host_and_hand_off_only() {
+    let mut client = Client::new("handoff-edges", |_| {});
+    client.call("navigate", json!({"url": format!("{}/login", client.base)}));
+    let first = client.call("handoff", json!({}));
+    let link = |text: &str, id: &str| {
+        text.split_whitespace()
+            .find(|w| w.contains(&format!("/handoff/{id}?t=")))
+            .unwrap()
+            .to_string()
+    };
+    let h1 = link(&first, "h1");
+    let key = client.key();
+    // Another host name for the address (DNS rebinding) is refused.
+    let rest = h1.strip_prefix("http://127.0.0.1:").unwrap();
+    let (port, path) = rest.split_once('/').unwrap();
+    let mut stream = TcpStream::connect(("127.0.0.1", port.parse::<u16>().unwrap())).unwrap();
+    let request = format!("GET /{path} HTTP/1.1\r\nHost: evil.example:{port}\r\n\r\n");
+    stream.write_all(request.as_bytes()).unwrap();
+    let mut answer = String::new();
+    stream.read_to_string(&mut answer).unwrap();
+    assert!(answer.starts_with("HTTP/1.1 421"), "{answer}");
+    // A new hand-off of the tab ends the old one.
+    let second = client.call("handoff", json!({}));
+    let h2 = link(&second, "h2");
+    assert!(handoff_request(&h1, None, "GET", "", "").0.contains("404"));
+    // Given back, it takes no more input.
+    assert_eq!(
+        handoff_request(&h2, Some(&key), "POST", "/done", "").0,
+        "HTTP/1.1 200 OK"
+    );
+    let late = handoff_request(
+        &h2,
+        Some(&key),
+        "POST",
+        "/input",
+        &json!({"kind": "key", "key": "Tab"}).to_string(),
+    );
+    assert!(late.0.contains("404"), "{late:?}");
+    let back = client.call("wait", json!({"for": "handoff"}));
+    assert!(back.starts_with("ok wait handoff h2: given back"), "{back}");
+}
+
+#[test]
+fn the_journal_keeps_confirmations_decisions_and_screens() {
+    let dir = temp_dir("journal-records-dir");
+    let journal = dir.join("journal");
+    let mut client = Client::new("journal-records", |config| {
+        config.journal = Some(JournalConfig {
+            dir: journal.clone(),
+            screens: true,
+        });
+    });
+    client.call("navigate", json!({"url": format!("{}/order", client.base)}));
+    let asked = client.call("click", json!({"target": "button \"Place order\""}));
+    assert!(asked.starts_with("needs_confirmation c1"), "{asked}");
+    client.decide(&asked, "approve");
+    let done = client.call(
+        "click",
+        json!({"target": "button \"Place order\"", "confirmation": "c1"}),
+    );
+    assert!(done.starts_with("ok click"), "{done}");
+    drop(client);
+    let session = std::fs::read_dir(&journal)
+        .unwrap()
+        .flatten()
+        .next()
+        .unwrap()
+        .path();
+    let text = std::fs::read_to_string(session.join("journal.jsonl")).unwrap();
+    let kinds: Vec<String> = text
+        .lines()
+        .map(|l| {
+            serde_json::from_str::<Value>(l).unwrap()["type"]
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
+        .collect();
+    for kind in ["start", "call", "confirmation", "decision"] {
+        assert!(kinds.iter().any(|k| k == kind), "{kind}: {kinds:?}");
+    }
+    assert!(text.contains("\"via\":\"page\""), "{text}");
+    let screens = std::fs::read_dir(session.join("screens")).unwrap().count();
+    assert!(screens >= 2, "a screen per page action: {screens}");
+}
+
+#[test]
+fn a_checkpoint_comes_back_in_a_new_session() {
+    let profile = temp_dir("checkpoint-tabs");
+    let with_profile = |dir: PathBuf| {
+        move |config: &mut SessionConfig| {
+            config.profile = Some(dir);
+            config.tools = vec!["session".into()];
+        }
+    };
+    let mut client = Client::new("checkpoint-1", with_profile(profile.to_path_buf()));
+    client.call("navigate", json!({"url": format!("{}/order", client.base)}));
+    client.call(
+        "tabs",
+        json!({"op": "open", "url": format!("{}/login", client.base)}),
+    );
+    let saved = client.call("session", json!({"op": "save", "name": "two"}));
+    assert!(saved.starts_with("ok session save"), "{saved}");
+    drop(client);
+    let mut client = Client::new("checkpoint-2", with_profile(profile.to_path_buf()));
+    let restored = client.call("session", json!({"op": "restore", "name": "two"}));
+    assert!(restored.starts_with("ok session restore"), "{restored}");
+    let tabs = client.call("tabs", json!({"op": "list"}));
+    assert!(tabs.contains("/order") && tabs.contains("/login"), "{tabs}");
+}
+
+#[cfg(unix)]
+#[test]
+fn a_profile_that_cannot_be_saved_is_said() {
+    use std::os::unix::fs::PermissionsExt;
+    let profile = temp_dir("unsaved-profile-dir");
+    let dir = profile.to_path_buf();
+    let mut client = Client::new("unsaved-profile", move |config| config.profile = Some(dir));
+    client.call("navigate", json!({"url": format!("{}/order", client.base)}));
+    let mode = |m| std::fs::set_permissions(&*profile, std::fs::Permissions::from_mode(m));
+    mode(0o500).unwrap();
+    // Some users can write anywhere: then there is nothing to see.
+    let writable = std::fs::write(profile.join("probe"), "x").is_ok();
+    std::thread::sleep(Duration::from_millis(2100));
+    let next = client.call("evaluate", json!({"script": "document.cookie = 'a=1'"}));
+    mode(0o700).unwrap();
+    if !writable {
+        assert!(next.contains("\n! profile: not saved ("), "{next}");
+    }
 }
 
 fn strict(config: &mut SessionConfig) {

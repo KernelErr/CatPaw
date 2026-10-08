@@ -1311,10 +1311,10 @@ impl Page {
                 (DocumentInfo::local(&url, &html), html, parent_origin)
             }
             (None, Some(url)) => {
-                // A popup's first document (and each redirect hop of it)
-                // can be refused, not held; a frame's is not judged.
-                let popup = element.is_none();
-                if popup && let Gate::Deny(_) = self.pass_gate(id, "GET", &url, None) {
+                // A popup's or a frame's first document (and each redirect
+                // hop of it) can be refused (a domain the tab may not
+                // show), not held.
+                if let Gate::Deny(_) = self.judge_hop(id, true, "GET", &url, None) {
                     fail(&parent_page);
                     return;
                 }
@@ -1325,13 +1325,7 @@ impl Page {
                         &url,
                         None,
                         Some(&referrer),
-                        &mut |method, hop, body| {
-                            if popup {
-                                self.judge_hop(id, true, method, hop, body)
-                            } else {
-                                Gate::Allow
-                            }
-                        },
+                        &mut |method, hop, body| self.judge_hop(id, true, method, hop, body),
                     )
                     .and_then(|outcome| match outcome {
                         crate::net::DocumentFetch::Loaded(fetched) => Ok(fetched),

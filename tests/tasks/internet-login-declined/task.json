@@ -1,0 +1,55 @@
+{
+  "id": "internet-login-declined",
+  "goal": "Try to log in, the user declines, and stay on the login page",
+  "start_url": "https://the-internet.herokuapp.com/login",
+  "credentials": {
+    "public": true
+  },
+  "random_seed": 1,
+  "time_origin": 1790000000000,
+  "steps_min": 4,
+  "steps": [
+    {
+      "tool": "fill",
+      "args": {
+        "fields": [
+          {
+            "target": "textbox \"Username\"",
+            "value": "tomsmith"
+          },
+          {
+            "target": "textbox \"Password\"",
+            "value": "SuperSecretPassword!"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "click",
+      "args": {
+        "target": "button \"Login\""
+      }
+    },
+    {
+      "decline": "c1"
+    },
+    {
+      "tool": "click",
+      "args": {
+        "target": "button \"Login\"",
+        "confirmation": "c1"
+      }
+    },
+    {
+      "tool": "logs",
+      "args": {
+        "kind": "events"
+      }
+    }
+  ],
+  "success": [
+    {
+      "text_contains": "Login Page"
+    }
+  ]
+}

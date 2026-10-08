@@ -239,6 +239,13 @@ fn parse_key(spec: &str) -> Key {
 fn key_state(key: &Key, char_code: u32) -> UiEvent {
     UiEvent {
         has_view: true,
+        // The legacy `which` many pages still read: the character of a
+        // keypress, the key code of the others.
+        which: if char_code != 0 {
+            char_code
+        } else {
+            key.key_code
+        },
         modifiers: key.modifiers.clone(),
         key: Keyboard {
             key: key.key.clone(),
@@ -247,7 +254,13 @@ fn key_state(key: &Key, char_code: u32) -> UiEvent {
             repeat: false,
             is_composing: false,
             char_code,
-            key_code: key.key_code,
+            // A keypress gives its character as its key code too, as
+            // Chrome does.
+            key_code: if char_code != 0 {
+                char_code
+            } else {
+                key.key_code
+            },
         },
         ..UiEvent::default()
     }

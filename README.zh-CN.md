@@ -89,31 +89,33 @@ ok click e16 button "Add to cart"
 
 有副作用的操作要等用户批准。默认策略下，会发送数据的导航（表单提交）和上传会停下来，返回 `needs_confirmation c1: click e8 button "Login" would submit → POST https://…/authenticate (fields: username=tomsmith, password=***)`。宿主支持 MCP elicitation 时当场询问用户；否则用户在结果给出的本地页面上用 agent 看不到的密钥批准，agent 再带上 `confirmation: "c1"` 重发同一调用：被挂起的提交只发送一次，不会重新点击。`--policy strict` 还会在脚本向其他站点发送数据和 `evaluate` 之前询问，`--policy open` 什么都不问。`--trust <host>` 让发往该主机的内容不必询问；`--allowed-domain <domain>` 把 tab 能显示的文档（页面、弹窗和 frame）限制在该域名内，但不限制页面为加载资源和数据发出的请求。网站需要真人操作时（登录、面向人类的验证），`handoff` 把这个 tab 交给用户，在用户自己的浏览器里的本地页面上操作，页面要发出的任何内容都先在那里等用户允许；`wait({"for":"handoff"})` 在用户完成后返回，带回此时的页面，用户输入的内容一律遮蔽。`--flight-log <dir>` 记录每次调用（`--flight-screens` 为每个动作加一张截图；输入的密码只记录长度），`--profile <dir>` 在会话之间保留 cookie、localStorage、checkpoint 和记录，`--tools session` 增加保存与恢复 checkpoint 的工具。`act` 的 `kind: "upload"` 在文件输入框中选择本地文件。
 
-`--record-har run.har.zst` 记录会话的全部流量，`--replay-har run.har.zst` 不联网地按记录作答；再加上 `--random-seed` 和 `--time-origin`，回放结果逐字节一致。[`tests/tasks/`](tests/tasks/) 里有 18 个练习站点上的任务（Sauce Demo、Books 与 Quotes to Scrape、the-internet、TodoMVC、httpbin），每个都带录制的流量和 agent 看到的完整记录；CI 不联网地把每个任务回放两次，两次都必须与记录逐字节相同。下表是 agent 完成每个任务读到的内容，与 Playwright MCP 走同样步骤的对比：
+`--record-har run.har.zst` 记录会话的全部流量，`--replay-har run.har.zst` 不联网地按记录作答；再加上 `--random-seed` 和 `--time-origin`，回放结果逐字节一致。[`tests/tasks/`](tests/tasks/) 里有 20 个练习站点上的任务（Sauce Demo、Books 与 Quotes to Scrape、the-internet、TodoMVC、httpbin），每个都带录制的流量和 agent 看到的完整记录；CI 不联网地把每个任务回放两次，两次都必须与记录逐字节相同。下表是 agent 完成每个任务读到的内容，与 Playwright MCP 走同样步骤的对比：
 
 | 任务 | CatPaw 调用数 | CatPaw 字节（≈token） | Playwright MCP 调用数 | Playwright MCP 字节（≈token） |
 |---|---|---|---|---|
-| books-category | 3 | 14814 (~4233) | 6 | 64648 (~18471) |
-| books-pagination | 2 | 13445 (~3841) | 4 | 64942 (~18555) |
-| httpbin-form | 6 | 2248 (~642) | 9 | 7477 (~2136) |
-| internet-dropdown | 2 | 601 (~172) | 4 | 1937 (~553) |
-| internet-dynamic | 3 | 911 (~260) | 6 | 2922 (~835) |
-| internet-entry-ad | 2 | 1055 (~301) | 4 | 2305 (~659) |
-| internet-frames | 2 | 859 (~245) | 3 | 980 (~280) |
-| internet-login | 5 | 1880 (~537) | 6 | 2940 (~840) |
-| internet-prompt | 2 | 861 (~246) | 5 | 1968 (~562) |
-| internet-upload | 5 | 1591 (~455) | 8 | 3239 (~925) |
-| internet-windows | 3 | 701 (~200) | 5 | 2217 (~633) |
-| quotes-js-pagination | 2 | 1452 (~415) | 4 | 9394 (~2684) |
-| quotes-login | 5 | 4409 (~1260) | 6 | 12497 (~3571) |
-| quotes-scroll | 3 | 906 (~259) | 5 | 11922 (~3406) |
-| quotes-table | 2 | 5179 (~1480) | 2 | 8658 (~2474) |
-| saucedemo-checkout | 11 | 7397 (~2113) | 18 | 20992 (~5998) |
-| saucedemo-sort | 4 | 5651 (~1615) | 7 | 12814 (~3661) |
-| todomvc | 5 | 1833 (~524) | 10 | 9128 (~2608) |
-| 合计 | 67 | 65793 (~18798) | 112 | 240980 (~68851) |
+| books-category | 3 | 14960 (~4274) | 6 | 64648 (~18471) |
+| books-pagination | 2 | 12576 (~3593) | 4 | 64942 (~18555) |
+| httpbin-form | 6 | 1736 (~496) | 9 | 7477 (~2136) |
+| internet-dropdown | 2 | 394 (~113) | 4 | 1937 (~553) |
+| internet-dynamic | 3 | 535 (~153) | 6 | 2922 (~835) |
+| internet-entry-ad | 2 | 844 (~241) | 4 | 2305 (~659) |
+| internet-frames | 2 | 630 (~180) | 3 | 980 (~280) |
+| internet-keys | 4 | 575 (~164) | 6 | 2302 (~658) |
+| internet-login | 5 | 1309 (~374) | 6 | 2940 (~840) |
+| internet-login-declined | 5 | 1136 (~325) | - | - |
+| internet-prompt | 2 | 622 (~178) | 5 | 1968 (~562) |
+| internet-upload | 5 | 1303 (~372) | 8 | 3239 (~925) |
+| internet-windows | 3 | 479 (~137) | 5 | 2217 (~633) |
+| quotes-js-pagination | 2 | 5768 (~1648) | 4 | 9394 (~2684) |
+| quotes-login | 5 | 3849 (~1100) | 6 | 12497 (~3571) |
+| quotes-scroll | 3 | 4354 (~1244) | 5 | 11922 (~3406) |
+| quotes-table | 2 | 5116 (~1462) | 2 | 8658 (~2474) |
+| saucedemo-checkout | 11 | 6253 (~1787) | 18 | 20992 (~5998) |
+| saucedemo-sort | 4 | 5418 (~1548) | 7 | 12814 (~3661) |
+| todomvc | 5 | 1306 (~373) | 10 | 9128 (~2608) |
+| 合计 | 71 | 68027 (~19436) | 118 | 243282 (~69509) |
 
-字节数是 agent 在一个任务中收到的全部工具结果（token 按每 3.5 字节一个估算）。CatPaw 的数字来自录制的回放；`@playwright/mcp` 0.0.83 搭配 headless Chrome 于 2026-10-08 实网走了同样的步骤（取三次运行的中位数）。Playwright MCP 把页面快照存进文件，页面变化时在结果里给出链接；agent 要看页面、找下一个目标就得读它，所以这个文件也计入，并算作一次调用。CatPaw 对动作只返回变化的部分，整份快照默认上限 4000 token，其余折叠起来由 agent 按需展开；CatPaw 的数字里还包含了等待用户批准的调用（登录、表单提交、上传），Playwright MCP 没有这一步。每轮对话都要付出的工具列表，CatPaw 为 10.7 KB，Playwright MCP 为 20.3 KB。
+字节数是 agent 在一个任务中收到的全部工具结果（token 按每 3.5 字节一个估算）。CatPaw 的数字来自录制的回放；`@playwright/mcp` 0.0.83 搭配 headless Chrome 于 2026-10-08 实网走了同样的步骤（取三次运行的中位数）。Playwright MCP 把页面快照存进文件，页面变化时在结果里给出链接；agent 要看页面、找下一个目标就得读它，所以这个文件也计入，并算作一次调用。CatPaw 对动作只返回变化的部分，整份快照默认上限 4000 token，其余折叠起来由 agent 按需展开；CatPaw 的数字里还包含了等待用户批准的调用（登录、表单提交、上传），Playwright MCP 没有这一步。用户拒绝确认的任务在 Playwright MCP 一侧没有对应的步骤，合计不计入。每轮对话都要付出的工具列表，CatPaw 为 12.1 KB，Playwright MCP 为 20.3 KB。
 
 在内容站点上（同一天用同样方法测量，这些录制不进仓库），预算起了主要作用：CatPaw 把一篇长文章折叠到 4000 token，由 agent 分段展开；Playwright MCP 对同一篇文章的快照约 16 万 token。
 

@@ -73,6 +73,21 @@ const ALIKE: &str = r#"<!doctype html><title>Alike</title>
 <button class=buy onclick="document.title='bought'">Buy</button>
 <button class=two>Two</button><button class=two>Two</button>"#;
 
+/// The rarer actions, and a page long enough to read in parts.
+const ACTS: &str = r#"<!doctype html><title>Acts</title>
+<p id=out>none</p>
+<button onmouseover="out.textContent='hovered'">Hover me</button>
+<label>Name <input id=name value=Ada></label>
+<label><input type=checkbox id=agree checked> Agree</label>
+<ol id=lines></ol>
+<script>
+for (let i = 1; i <= 80; i++) {
+  const li = document.createElement('li');
+  li.textContent = 'Line number ' + i + ' of the long list, read a part at a time';
+  document.getElementById('lines').append(li);
+}
+</script>"#;
+
 /// A list drawn again whole on every change, as front-end frameworks do.
 const ROWS: &str = r#"<!doctype html><title>Rows</title><ul id=rows></ul>
 <script>
@@ -227,6 +242,7 @@ impl Client {
             ("/p2", P2),
             ("/alike", ALIKE),
             ("/rows", ROWS),
+            ("/acts", ACTS),
             ("/long", LONG),
             ("/drag", DRAG),
             ("/p5", P5),
@@ -438,6 +454,17 @@ fn popups_become_tabs() {
     assert!(closed.contains("! current tab is now t1"), "{closed}");
     let title = client.ok("evaluate", json!({"script": "document.title"}));
     assert_eq!(title, "ok evaluate\nShop");
+
+    // Closing a page closes the popups it opened with it.
+    let opened = client.ok("click", json!({"target": help}));
+    assert!(opened.contains("! popup t3 "), "{opened}");
+    let closed = client.ok("tabs", json!({"op": "close", "tab": "t1"}));
+    assert!(
+        closed.starts_with("ok close t1\n! tab-closed t3"),
+        "{closed}"
+    );
+    let list = client.ok("tabs", json!({"op": "list"}));
+    assert!(!list.contains("t1") && !list.contains("t3"), "{list}");
 }
 
 #[test]
@@ -742,6 +769,65 @@ fn targets_by_text_and_role_never_guess() {
     assert!(
         missing.contains("NotFound text:Checkout matches nothing"),
         "{missing}"
+    );
+}
+
+#[test]
+fn the_rarer_actions_and_reading_in_parts() {
+    let mut client = Client::new();
+    let url = format!("{}/acts", client.base);
+    client.ok("navigate", json!({ "url": url }));
+    let eval = |client: &mut Client, script: &str| {
+        let out = client.ok("evaluate", json!({ "script": script }));
+        out.strip_prefix("ok evaluate\n").unwrap().to_string()
+    };
+    client.ok(
+        "act",
+        json!({"kind": "hover", "target": "button \"Hover me\""}),
+    );
+    assert_eq!(eval(&mut client, "out.textContent"), "hovered");
+    client.ok(
+        "act",
+        json!({"kind": "focus", "target": "textbox \"Name\""}),
+    );
+    assert_eq!(eval(&mut client, "document.activeElement.id"), "name");
+    let cleared = client.ok(
+        "act",
+        json!({"kind": "clear", "target": "textbox \"Name\""}),
+    );
+    assert!(cleared.contains("[value=Ada → -]"), "{cleared}");
+    let unchecked = client.ok(
+        "act",
+        json!({"kind": "uncheck", "target": "checkbox \"Agree\""}),
+    );
+    assert!(unchecked.starts_with("ok uncheck e"), "{unchecked}");
+    assert_eq!(eval(&mut client, "String(agree.checked)"), "false");
+
+    // A long read stops at its budget and says how to go on; going on
+    // gives the rest.
+    let first = client.ok("read", json!({"view": "text", "maxTokens": 200}));
+    let offset: usize = first
+        .split("\"offset\":")
+        .nth(1)
+        .and_then(|rest| rest.split('}').next())
+        .and_then(|n| n.parse().ok())
+        .unwrap_or_else(|| panic!("{first}"));
+    let rest = client.ok(
+        "read",
+        json!({"view": "text", "maxTokens": 200, "offset": offset}),
+    );
+    assert!(
+        rest.starts_with(&format!("ok read text (bytes {offset}-")),
+        "{rest}"
+    );
+    assert!(!first.contains("Line number 80 ") || !rest.contains("Line number 80 "));
+
+    // A reload brings the page back as its markup has it.
+    let reloaded = client.ok("navigate", json!({"go": "reload"}));
+    assert!(reloaded.starts_with("ok reload → "), "{reloaded}");
+    assert_eq!(
+        eval(&mut client, "document.getElementById('name').value"),
+        "Ada"
     );
 }
 

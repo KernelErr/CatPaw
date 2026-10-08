@@ -1,0 +1,34 @@
+> navigate {"url":"https://the-internet.herokuapp.com/login"}
+ok navigate → https://the-internet.herokuapp.com/login (200)
+# s1 title="The Internet"
+e1 link "Fork me on GitHub"
+e2 heading "Login Page" [level=2]
+e3 heading "This is where you can log into the secure area. Enter tomsmith for the username and SuperSecretPassword! for the password. If the information is wrong you should see error messages." [level=4]
+e4 textbox "Username"
+e5 textbox "Password"
+e6 button "Login"
+text: Powered by
+e7 link "Elemental Selenium"
+
+> fill {"fields":[{"target":"textbox \"Username\"","value":"tomsmith"},{"target":"textbox \"Password\"","value":"SuperSecretPassword!"}]}
+ok fill e4 textbox "Username" ← "tomsmith", e5 textbox "Password" ← ***
+# s2 changed=2
+~ e4 textbox "Username" [value=- → tomsmith]
+~ e5 textbox "Password" [value=- → ***]
+
+> click {"target":"button \"Login\""}
+needs_confirmation c1: click e6 button "Login" would submit → POST https://the-internet.herokuapp.com/authenticate (fields: username=tomsmith, password=***)
+  ask the user to approve at http://127.0.0.1:PORT/confirm/c1 (expires in 10m); then repeat (it waits up to 45s for them): click {"confirmation":"c1","target":"button \"Login\""}
+
+> (user) decline c1
+declined
+
+> click {"confirmation":"c1","target":"button \"Login\""}
+blocked user: declined c1
+
+> logs {"kind":"events"}
+ok logs events
+navigated GET https://the-internet.herokuapp.com/login 200
+held POST https://the-internet.herokuapp.com/authenticate
+
+? text_contains "Login Page" → yes

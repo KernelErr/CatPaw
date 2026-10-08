@@ -632,7 +632,7 @@ fn report(select: &Select, baseline: Option<&Path>) -> Result<()> {
             println!("|---|---|---|---|");
         }
     }
-    let (mut ours, mut theirs) = ((0, 0), (0, 0));
+    let (mut ours, mut theirs, mut compared) = ((0, 0), (0, 0), (0, 0));
     for task in load(select)? {
         if !task.har().exists() {
             println!("| {} | not recorded |", task.id);
@@ -653,6 +653,7 @@ fn report(select: &Select, baseline: Option<&Path>) -> Result<()> {
                 let (calls, theirs_cell) = match (calls, bytes, other["passed"] == true) {
                     (Some(calls), Some(bytes), true) => {
                         theirs = (theirs.0 + calls, theirs.1 + bytes);
+                        compared = (compared.0 + run.calls, compared.1 + run.result_bytes as u64);
                         (calls.to_string(), sized(bytes))
                     }
                     (Some(calls), _, false) => (calls.to_string(), "failed".into()),
@@ -672,13 +673,22 @@ fn report(select: &Select, baseline: Option<&Path>) -> Result<()> {
         }
     }
     if let Some(b) = &baseline {
+        // Totals over the tasks both sides took: a task the baseline has
+        // no run of is left out of both.
         println!(
             "| all | {} | {} | {} | {} |",
-            ours.0,
-            sized(ours.1),
+            compared.0,
+            sized(compared.1),
             theirs.0,
             sized(theirs.1)
         );
+        if compared.0 != ours.0 {
+            println!(
+                "(all: the tasks measured on both sides; every task: {} calls, {})",
+                ours.0,
+                sized(ours.1)
+            );
+        }
         let mut server = McpServer::new(Session::new(SessionConfig::default())?);
         let line = json!({"jsonrpc": "2.0", "id": 1, "method": "tools/list"});
         let reply: Value = serde_json::from_str(

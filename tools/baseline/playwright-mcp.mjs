@@ -182,7 +182,24 @@ async function run(task) {
           await call('browser_select_option', { ...element(args), values: [].concat(args.option) });
           break;
         case 'press':
+          // A key pressed on an element goes to it once it has focus.
+          if (args.target !== undefined) await call('browser_click', element(args));
           await call('browser_press_key', { key: args.key });
+          break;
+        case 'fill':
+          await call('browser_fill_form', {
+            fields: args.fields.map((f) => ({
+              name: f.target,
+              type: typeof f.value === 'boolean' ? 'checkbox' : 'textbox',
+              target: target(f.target),
+              value: String(f.value),
+            })),
+          });
+          break;
+        case 'logs':
+          // Events (navigations, tabs, dialogs) have no counterpart.
+          if (args.kind === 'console') await call('browser_console_messages', { level: 'debug' });
+          if (args.kind === 'network') await call('browser_network_requests', { static: true });
           break;
         case 'act':
           if (args.kind === 'scroll') {

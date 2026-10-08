@@ -49,9 +49,10 @@ of the model on every turn.
    `cargo xtask protocol --check` keeps it current. Deriving them
    (schemars, as first planned) would put words in front of the model that
    nobody chose. A test parses every example with the tool's parameter type
-   and keeps the whole list under 11 000 bytes (10.9 KB for the fifteen
-   standard tools today; `fill` earns its kilobyte by saving a turn per
-   form). Unknown fields are refused with the names of the right ones.
+   and keeps their names, descriptions and schemas under 11 000 bytes
+   (10 984 for the fifteen standard tools today; `fill` earns its
+   kilobyte by saving a turn per form); `tools/list` as sent, with titles
+   and annotations, is 12.1 KB. Unknown fields are refused with the names of the right ones.
 4. **Targets** are one string: a ref `e12` (a whole snapshot line or
    `[ref=e12]` is accepted, since models copy those), `text:<visible
    text>`, `role "name"` (`button "Sign in"`: a snapshot line without its
