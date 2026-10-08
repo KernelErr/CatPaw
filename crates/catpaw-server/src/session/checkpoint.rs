@@ -95,10 +95,10 @@ impl Session {
             SessionOp::Save => {
                 let name = checked_name(p.name.as_deref())?;
                 let mut tabs = Vec::new();
-                let mut order: Vec<u32> = self.routes.keys().copied().collect();
-                order.sort_by_key(|t| (Some(*t) != self.current, *t));
+                let mut order: Vec<u32> = self.router.routes.keys().copied().collect();
+                order.sort_by_key(|t| (Some(*t) != self.router.current, *t));
                 for tab in order {
-                    if let Some((url, scroll)) = self.place_of(tab) {
+                    if let Some((url, scroll)) = self.router.place_of(tab) {
                         tabs.push(SavedTab { url, scroll });
                     }
                 }
@@ -166,20 +166,20 @@ impl Session {
                         format!("{} cannot be restored: {e}", quote(&name)),
                     )
                 })?;
-                let groups: Vec<u32> = self.groups.keys().copied().collect();
+                let groups: Vec<u32> = self.router.groups.keys().copied().collect();
                 for group in groups {
                     self.drop_group(group);
                 }
-                self.openers.clear();
-                self.current = None;
-                let jar = self.net.client().cookies();
+                self.router.openers.clear();
+                self.router.current = None;
+                let jar = self.router.net.client().cookies();
                 jar.clear();
                 jar.load_json(&checkpoint.cookies)
                     .map_err(|e| Failure::new(ErrorCode::Unsupported, e))?;
-                self.options.storage = checkpoint.storage.clone().into_iter().collect();
+                self.router.options.storage = checkpoint.storage.clone().into_iter().collect();
                 let mut opened = Vec::new();
                 for saved in &checkpoint.tabs {
-                    let tab = self.open_group()?;
+                    let tab = self.router.open_group()?;
                     let p = params::Navigate {
                         url: Some(saved.url.clone()),
                         go: None,
@@ -198,8 +198,8 @@ impl Session {
                     }
                     opened.push(line);
                 }
-                let first = self.routes.keys().next().copied();
-                self.current = first;
+                let first = self.router.routes.keys().next().copied();
+                self.router.current = first;
                 let mut text =
                     format!("ok session restore {}: {}", quote(&name), opened.join(", "));
                 if let Some(tab) = first {

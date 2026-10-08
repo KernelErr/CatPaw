@@ -2,19 +2,7 @@
 //! track of what a call opened or closed, and the `tabs` tool.
 
 use super::*;
-
-pub(super) type Group = GroupHandle<GroupState>;
-
-/// What a group says about its tabs after a call: ids and openers.
-pub(super) type TabList = Vec<(u32, Option<u32>)>;
-
-pub(super) fn tab_list(state: &GroupState) -> TabList {
-    state
-        .tab_ids()
-        .into_iter()
-        .map(|id| (id, state.opener_of(id)))
-        .collect()
-}
+use router::{TabList, tab_list};
 
 /// `t2` (or `2`) as a number.
 pub(super) fn parse_tab(text: &str) -> Result<u32, Failure> {
@@ -36,55 +24,21 @@ pub(super) fn names(tabs: &[u32]) -> String {
 }
 
 impl Session {
-    pub(super) fn place_of(&self, tab: u32) -> Option<(String, (f32, f32))> {
-        let group = self.groups.get(self.routes.get(&tab)?)?;
-        group
-            .call(move |g| g.place(tab))
-            .ok()
-            .flatten()
-            .map(|(url, scroll)| (url.to_string(), scroll))
-    }
-    pub(super) fn screen_of(&self, tab: u32) -> Option<Vec<u8>> {
-        let group = self.groups.get(self.routes.get(&tab)?)?;
-        group.call(move |g| g.screen(tab)).ok().flatten()
-    }
     /// Whether a tab's fields hold what the user typed in a hand-off.
     pub(super) fn holds_user_input(&self, tab: u32) -> bool {
-        self.routes
+        self.router
+            .routes
             .get(&tab)
-            .and_then(|g| self.groups.get(g))
+            .and_then(|g| self.router.groups.get(g))
             .and_then(|g| g.call(move |g| g.holds_user_input(tab)).ok())
             .unwrap_or(false)
-    }
-    pub(super) fn current_tab(&self) -> Result<u32, Failure> {
-        self.current
-            .ok_or_else(|| Failure::new(ErrorCode::NoTab, "no tab is open").with(advice::NO_TAB))
-    }
-    /// Opens a group with one blank tab, which becomes the current tab.
-    pub(super) fn open_group(&mut self) -> Result<u32, Failure> {
-        let tab = self.next_tab.fetch_add(1, Ordering::SeqCst);
-        let id = self.next_group;
-        self.next_group += 1;
-        let options = self.options.clone();
-        let net = self.net.clone();
-        let next_tab = self.next_tab.clone();
-        let setup = self.setup.clone();
-        let group = GroupHandle::spawn(&format!("catpaw-group-{id}"), move || {
-            GroupState::new(&options, &net, tab, next_tab, setup)
-        })
-        .map_err(|e| Failure::new(ErrorCode::Crashed, format!("could not open a tab: {e}")))?;
-        self.groups.insert(id, group);
-        self.routes.insert(tab, id);
-        self.openers.insert(tab, None);
-        self.current = Some(tab);
-        Ok(tab)
     }
     /// Runs `f` on the current tab's group (see [`Session::on_tab`]).
     pub(super) fn on_current(
         &mut self,
         f: impl FnOnce(&mut GroupState, u32, View) -> CallResult + Send + 'static,
     ) -> CallResult {
-        let tab = self.current_tab()?;
+        let tab = self.router.current_tab()?;
         self.on_tab(tab, f)
     }
     /// Runs `f` on the group of `tab`, then catches up with the tabs the
@@ -95,15 +49,17 @@ impl Session {
         f: impl FnOnce(&mut GroupState, u32, View) -> CallResult + Send + 'static,
     ) -> CallResult {
         let group_id = *self
+            .router
             .routes
             .get(&tab)
             .ok_or_else(|| Failure::new(ErrorCode::NoTab, format!("t{tab} is closed")))?;
         let group = self
+            .router
             .groups
             .get(&group_id)
             .ok_or_else(|| Failure::new(ErrorCode::NoTab, format!("t{tab} is closed")))?;
         let view = View {
-            tabs: self.routes.len(),
+            tabs: self.router.routes.len(),
             ..self.view
         };
         let reply = group.call(move |state| {
@@ -113,7 +69,7 @@ impl Session {
         match reply {
             Ok((result, tabs)) => {
                 self.reconcile(group_id, tabs);
-                let note = self.repair_current();
+                let note = self.router.repair_current();
                 result.map(|mut output| {
                     if let Some(note) = note {
                         output.text.push('\n');
@@ -124,7 +80,7 @@ impl Session {
             }
             Err(error) => {
                 let lost = self.drop_group(group_id);
-                let note = self.repair_current();
+                let note = self.router.repair_current();
                 // A group that is simply gone closed its tabs; one a call
                 // took down crashed.
                 let mut failure = match error {
@@ -144,59 +100,26 @@ impl Session {
             }
         }
     }
-    /// Brings the routes of a group up to date with its tabs.
+    /// Brings the routes of a group up to date with its tabs, and lets go
+    /// of what the tabs that closed had.
     pub(super) fn reconcile(&mut self, group: u32, tabs: TabList) {
-        let alive: Vec<u32> = tabs.iter().map(|(id, _)| *id).collect();
-        let gone: Vec<u32> = self
-            .routes
-            .iter()
-            .filter(|&(tab, g)| *g == group && !alive.contains(tab))
-            .map(|(&tab, _)| tab)
-            .collect();
-        for tab in gone {
+        for tab in self.router.reconcile(group, tabs) {
             self.forget_tab(tab);
-        }
-        for (id, opener) in tabs {
-            self.routes.insert(id, group);
-            self.openers.insert(id, opener);
         }
     }
     /// Closes a group; returns the tabs that went with it.
     pub(super) fn drop_group(&mut self, group: u32) -> Vec<u32> {
-        self.groups.remove(&group);
-        let lost: Vec<u32> = self
-            .routes
-            .iter()
-            .filter(|&(_, g)| *g == group)
-            .map(|(&tab, _)| tab)
-            .collect();
+        let lost = self.router.drop_group(group);
         for &tab in &lost {
             self.forget_tab(tab);
         }
         lost
     }
-    /// A tab closed: its route goes, and with it its hand-off and what
-    /// it waited to have approved.
+    /// A tab closed: its hand-off goes, and what it waited to have
+    /// approved.
     fn forget_tab(&mut self, tab: u32) {
-        self.routes.remove(&tab);
         self.handoffs.close_for_tab(tab);
         self.confirmations.close_for_tab(tab);
-    }
-    /// When the current tab closed, moves to its opener (or the first
-    /// tab), and says so.
-    pub(super) fn repair_current(&mut self) -> Option<String> {
-        let current = self.current?;
-        if self.routes.contains_key(&current) {
-            return None;
-        }
-        let opener = self.openers.get(&current).copied().flatten();
-        self.current = opener
-            .filter(|t| self.routes.contains_key(t))
-            .or_else(|| self.routes.keys().next().copied());
-        Some(match self.current {
-            Some(tab) => format!("! current tab is now t{tab}"),
-            None => "! no tab is open".to_string(),
-        })
     }
     pub(super) fn tabs(&mut self, p: params::Tabs) -> CallResult {
         match p.op {
@@ -207,13 +130,13 @@ impl Session {
                         .as_deref()
                         .ok_or_else(|| Failure::bad_argument("switch needs tab"))?,
                 )?;
-                if !self.routes.contains_key(&tab) {
+                if !self.router.routes.contains_key(&tab) {
                     return Err(
                         Failure::new(ErrorCode::NoTab, format!("t{tab} is not open"))
                             .with(self.list_line()),
                     );
                 }
-                self.current = Some(tab);
+                self.router.current = Some(tab);
                 let snapshot = self.on_tab(tab, move |g, tab, view| {
                     g.snapshot_text(tab, &SnapRequest::default(), view)
                         .map(ToolOutput::ok)
@@ -224,7 +147,7 @@ impl Session {
                 )))
             }
             TabsOp::Open => {
-                let tab = self.open_group()?;
+                let tab = self.router.open_group()?;
                 match p.url {
                     Some(url) => {
                         let p = params::Navigate {
@@ -246,13 +169,13 @@ impl Session {
             TabsOp::Close => {
                 let tab = match &p.tab {
                     Some(text) => parse_tab(text)?,
-                    None => self.current_tab()?,
+                    None => self.router.current_tab()?,
                 };
-                let group_id = *self
-                    .routes
-                    .get(&tab)
-                    .ok_or_else(|| Failure::new(ErrorCode::NoTab, format!("t{tab} is not open")))?;
-                let Some(group) = self.groups.get(&group_id) else {
+                let group_id =
+                    *self.router.routes.get(&tab).ok_or_else(|| {
+                        Failure::new(ErrorCode::NoTab, format!("t{tab} is not open"))
+                    })?;
+                let Some(group) = self.router.groups.get(&group_id) else {
                     self.drop_group(group_id);
                     return Err(Failure::new(ErrorCode::NoTab, format!("t{tab} is closed")));
                 };
@@ -275,7 +198,7 @@ impl Session {
                         }
                     }
                 }
-                if let Some(note) = self.repair_current() {
+                if let Some(note) = self.router.repair_current() {
                     text.push('\n');
                     text.push_str(&note);
                 }
@@ -285,7 +208,7 @@ impl Session {
     }
     pub(super) fn summaries(&self) -> Vec<TabSummary> {
         let mut all = Vec::new();
-        for group in self.groups.values() {
+        for group in self.router.groups.values() {
             if let Ok(list) = group.call(|g| g.summaries()) {
                 all.extend(list);
             }
@@ -300,7 +223,7 @@ impl Session {
             text.push_str("\n(no tab is open)");
         }
         for tab in summaries {
-            let mark = if Some(tab.id) == self.current {
+            let mark = if Some(tab.id) == self.router.current {
                 "*"
             } else {
                 ""
@@ -319,7 +242,7 @@ impl Session {
     }
     /// The open tabs on one line, for errors.
     pub(super) fn list_line(&self) -> String {
-        let open: Vec<String> = self.routes.keys().map(|t| format!("t{t}")).collect();
+        let open: Vec<String> = self.router.routes.keys().map(|t| format!("t{t}")).collect();
         if open.is_empty() {
             "open tabs: none".to_string()
         } else {

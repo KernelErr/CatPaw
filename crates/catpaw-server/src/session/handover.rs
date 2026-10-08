@@ -30,11 +30,12 @@ impl Session {
     /// `handoff`: the user takes over the current tab on a page of their
     /// own (in place of a hand-off the tab had).
     pub(super) fn handoff(&mut self, p: params::Handoff) -> CallResult {
-        let tab = self.current_tab()?;
+        let tab = self.router.current_tab()?;
         let group = self
+            .router
             .routes
             .get(&tab)
-            .and_then(|g| self.groups.get(g))
+            .and_then(|g| self.router.groups.get(g))
             .and_then(|g| g.caller())
             .ok_or_else(|| Failure::new(ErrorCode::NoTab, format!("t{tab} is closed")))?;
         let reason = p
@@ -73,7 +74,7 @@ impl Session {
     pub(super) fn wait_handoff(&mut self, p: params::Wait, host: &mut dyn Host) -> CallResult {
         let id = self
             .handoffs
-            .open(self.current)
+            .open(self.router.current)
             .ok_or_else(|| Failure::bad_argument("no hand-off is open: call handoff first"))?;
         let timeout = p
             .timeout_ms
@@ -126,8 +127,8 @@ impl Session {
         };
         self.handoffs.close(id);
         self.journal("handoff-done", json!({"id": format!("h{id}")}));
-        if self.routes.contains_key(&tab) {
-            self.current = Some(tab);
+        if self.router.routes.contains_key(&tab) {
+            self.router.current = Some(tab);
         }
         let status = format!("ok wait handoff h{id}: given back");
         self.on_tab(tab, move |g, tab, view| g.after_handoff(tab, status, view))
@@ -141,8 +142,8 @@ impl Session {
                 .tab
                 .as_deref()
                 .and_then(|t| parse_tab(t).ok())
-                .or(self.current),
-            call if call.uses_page() => self.current,
+                .or(self.router.current),
+            call if call.uses_page() => self.router.current,
             _ => None,
         };
         match tab {
@@ -165,9 +166,10 @@ impl Session {
 
     /// Whether a tab is still open in its group.
     fn tab_alive(&self, tab: u32) -> bool {
-        self.routes
+        self.router
+            .routes
             .get(&tab)
-            .and_then(|g| self.groups.get(g))
+            .and_then(|g| self.router.groups.get(g))
             .and_then(|g| g.call(move |g| g.tab_ids().contains(&tab)).ok())
             .unwrap_or(false)
     }

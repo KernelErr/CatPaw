@@ -82,7 +82,7 @@ impl Session {
         self.refuse_handed_over(&call)?;
         self.refuse_key_upload(&call)?;
         if let Some(what) = self.ask_first(&call)? {
-            let tab = self.current_tab()?;
+            let tab = self.router.current_tab()?;
             let (id, repeat) = self.open_confirmation(
                 NewConfirmation {
                     tab,
@@ -165,7 +165,8 @@ impl Session {
                         "upload needs files: paths of local files",
                     ));
                 }
-                let files = crate::files::describe_paths(self.setup.files_root.as_deref(), &paths)?;
+                let files =
+                    crate::files::describe_paths(self.router.setup.files_root.as_deref(), &paths)?;
                 let target = p.target.clone().unwrap_or_default();
                 let into = self.describe_target(&target).unwrap_or(target);
                 Some(format!("upload {files} into {into}"))
@@ -174,7 +175,11 @@ impl Session {
                 let script = quote(&truncate(p.script.trim(), 200));
                 if self.policy.evaluate() == Verdict::Confirm {
                     Some(format!("run a script in the page: {script}"))
-                } else if self.current.is_some_and(|tab| self.holds_user_input(tab)) {
+                } else if self
+                    .router
+                    .current
+                    .is_some_and(|tab| self.holds_user_input(tab))
+                {
                     // A script could read what the user typed in a hand-off.
                     Some(format!(
                         "run a script in a page that holds what you typed in the hand-off: {script}"
@@ -199,7 +204,7 @@ impl Session {
         let Ok(key_file) = crate::confirm::key_file(self.confirmations.config()) else {
             return Ok(());
         };
-        if crate::files::names_file(self.setup.files_root.as_deref(), paths, &key_file) {
+        if crate::files::names_file(self.router.setup.files_root.as_deref(), paths, &key_file) {
             return Err(Failure::bad_argument(
                 "that file is CatPaw's approval key, which never goes to a page",
             ));
@@ -210,7 +215,7 @@ impl Session {
     /// The element a target names in the current tab (`e5 button
     /// "Choose file"`), when it resolves.
     fn describe_target(&mut self, target: &str) -> Option<String> {
-        let tab = self.current?;
+        let tab = self.router.current?;
         let target = target.to_string();
         self.on_tab(tab, move |g, tab, _| {
             g.describe_target(tab, &target).map(ToolOutput::ok)
@@ -230,7 +235,7 @@ impl Session {
         fingerprint: &str,
         host: &mut dyn Host,
     ) -> CallResult {
-        let Some(tab) = self.current else {
+        let Some(tab) = self.router.current else {
             return Ok(output);
         };
         let voided = if output.dropped_holds.is_empty() {
@@ -417,7 +422,7 @@ impl Session {
             }
             State::Superseded => {
                 self.confirmations.remove(id);
-                let why = if self.routes.contains_key(&confirmation.tab) {
+                let why = if self.router.routes.contains_key(&confirmation.tab) {
                     "the page replaced or dropped what it held"
                 } else {
                     "its tab closed"
@@ -448,21 +453,21 @@ impl Session {
                     }
                     Stage::BeforeRunning => {
                         // On the tab where it was asked, whichever is current.
-                        if !self.routes.contains_key(&confirmation.tab) {
+                        if !self.router.routes.contains_key(&confirmation.tab) {
                             return Err(Failure::new(
                                 ErrorCode::NoTab,
                                 format!("t{}, where c{id} was asked, is closed", confirmation.tab),
                             ));
                         }
-                        let previous = self.current.replace(confirmation.tab);
+                        let previous = self.router.current.replace(confirmation.tab);
                         let result = self.dispatch(call, host).and_then(|output| {
                             self.after_action(name, arguments, output, fingerprint, host)
                         });
                         if let Some(previous) = previous
                             && previous != confirmation.tab
-                            && self.routes.contains_key(&previous)
+                            && self.router.routes.contains_key(&previous)
                         {
-                            self.current = Some(previous);
+                            self.router.current = Some(previous);
                         }
                         result
                     }

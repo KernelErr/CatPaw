@@ -28,11 +28,13 @@ use crate::tab::{GroupSetup, GroupState, SnapRequest, TabSummary, View, action_l
 mod approval;
 mod checkpoint;
 mod handover;
+mod router;
 mod tabs;
 
 use approval::fingerprint;
 use checkpoint::Checkpoint;
-use tabs::{Group, parse_tab};
+use router::Router;
+use tabs::parse_tab;
 
 /// The shortest time between two saves of the profile after calls.
 const PROFILE_EVERY: std::time::Duration = std::time::Duration::from_secs(2);
@@ -116,19 +118,10 @@ impl Host for NoHost {
 }
 
 pub struct Session {
-    net: SharedNet,
-    options: PageOptions,
+    /// The groups and tabs open, and which tab calls go to.
+    router: Router,
     view: View,
-    groups: BTreeMap<u32, Group>,
-    next_group: u32,
-    /// Tab → group.
-    routes: BTreeMap<u32, u32>,
-    /// Tab → the tab that opened it.
-    openers: BTreeMap<u32, Option<u32>>,
-    current: Option<u32>,
-    next_tab: Arc<AtomicU32>,
     policy: Policy,
-    setup: GroupSetup,
     confirmations: Confirmations,
     handoffs: Handoffs,
     /// The approval page and the hand-off viewer, once one was needed.
@@ -197,22 +190,15 @@ impl Session {
                 })
             })
             .transpose()?;
+        let setup = GroupSetup {
+            policy: config.policy.clone(),
+            files_root: config.files_root,
+        };
         Ok(Self {
-            net,
-            options,
+            router: Router::new(net, options, setup),
             view: View {
                 format: config.format,
                 tabs: 0,
-            },
-            groups: BTreeMap::new(),
-            next_group: 1,
-            routes: BTreeMap::new(),
-            openers: BTreeMap::new(),
-            current: None,
-            next_tab: Arc::new(AtomicU32::new(1)),
-            setup: GroupSetup {
-                policy: config.policy.clone(),
-                files_root: config.files_root,
             },
             policy: config.policy,
             confirmations: Confirmations::new(config.approval),
@@ -268,19 +254,19 @@ impl Session {
 
     /// Writes the HAR recording, when the session records.
     pub fn save_recording(&self) -> std::io::Result<Option<usize>> {
-        self.net.client().save_recording()
+        self.router.net.client().save_recording()
     }
 
     /// The context's cookies.
     pub fn cookies(&self) -> &catpaw_net::CookieJar {
-        self.net.client().cookies()
+        self.router.net.client().cookies()
     }
 
     /// `localStorage` by origin, across the open tabs (what was loaded at
     /// start included).
     pub fn storage(&self) -> std::collections::HashMap<String, Vec<(String, String)>> {
-        let mut all = self.options.storage.clone();
-        for group in self.groups.values() {
+        let mut all = self.router.options.storage.clone();
+        for group in self.router.groups.values() {
             if let Ok(storage) = group.call(|g| g.storage_snapshot()) {
                 all.extend(storage);
             }
@@ -334,11 +320,12 @@ impl Session {
         if let Some(journal) = self.journal.clone() {
             let screens = journal.lock().keeps_screens();
             let url = self
+                .router
                 .current
-                .and_then(|tab| self.place_of(tab))
+                .and_then(|tab| self.router.place_of(tab))
                 .map(|(url, _)| url);
-            let screen = match (screens && acted && !output.is_error, self.current) {
-                (true, Some(tab)) => self.screen_of(tab),
+            let screen = match (screens && acted && !output.is_error, self.router.current) {
+                (true, Some(tab)) => self.router.screen_of(tab),
                 _ => None,
             };
             let mut journal = journal.lock();
@@ -346,7 +333,7 @@ impl Session {
                 tool: name,
                 args: arguments,
                 secret_input: output.secret_input,
-                tab: self.current,
+                tab: self.router.current,
                 url,
                 text: &output.text,
                 took: started.elapsed(),
@@ -395,9 +382,9 @@ impl Session {
     fn dispatch(&mut self, call: Call, host: &mut dyn Host) -> CallResult {
         match call {
             Call::Navigate(p) => {
-                let tab = match self.current {
+                let tab = match self.router.current {
                     Some(tab) => tab,
-                    None => self.open_group()?,
+                    None => self.router.open_group()?,
                 };
                 self.on_tab(tab, move |g, tab, view| g.navigate(tab, p, view))
             }

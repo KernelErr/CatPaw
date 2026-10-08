@@ -3,9 +3,12 @@
 //! the tools that act on them. Everything here runs on the group's thread.
 
 mod act;
+mod checks;
+mod holds;
 mod locate;
 mod pending;
 mod read;
+mod report;
 mod view;
 mod wait;
 
@@ -482,7 +485,7 @@ impl GroupState {
             .held_navigations()
             .iter()
             .filter(|h| h.id >= mark && frames.contains(&h.frame))
-            .map(|h| (h.id, act::describe_held(h, &typed)))
+            .map(|h| (h.id, holds::describe_held(h, &typed)))
             .collect();
         held.extend(
             self.page
