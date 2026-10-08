@@ -395,13 +395,13 @@ where
             // It is a Syntax Error if StatementList Contains super unless the source text containing super is eval
             // code that is being processed by a direct eval.
             // Additional early error rules for super within direct eval are defined in 19.2.1.1.
-            if contains(&body, ContainsSymbol::Super) {
+            if cursor.super_seen() && contains(&body, ContainsSymbol::Super) {
                 return Err(Error::general("invalid super usage", Position::new(1, 1)));
             }
             // It is a Syntax Error if StatementList Contains NewTarget unless the source text containing NewTarget
             // is eval code that is being processed by a direct eval.
             // Additional early error rules for NewTarget in direct eval are defined in 19.2.1.1.
-            if contains(&body, ContainsSymbol::NewTarget) {
+            if cursor.new_target_seen() && contains(&body, ContainsSymbol::NewTarget) {
                 return Err(Error::general(
                     "invalid new.target usage",
                     Position::new(1, 1),
@@ -411,7 +411,8 @@ where
             // It is a Syntax Error if AllPrivateIdentifiersValid of StatementList with
             // argument « » is false unless the source text containing ScriptBody is
             // eval code that is being processed by a direct eval.
-            if !all_private_identifiers_valid(&body, Vec::new()) {
+            if cursor.private_identifier_seen() && !all_private_identifiers_valid(&body, Vec::new())
+            {
                 return Err(Error::general(
                     "invalid private identifier usage",
                     Position::new(1, 1),
@@ -426,7 +427,7 @@ where
             )));
         }
 
-        if contains_invalid_object_literal(&body) {
+        if cursor.cover_initialized_name_seen() && contains_invalid_object_literal(&body) {
             return Err(Error::lex(LexError::Syntax(
                 "invalid object literal in script statement list".into(),
                 Position::new(1, 1),
@@ -516,7 +517,7 @@ where
         }
 
         // It is a Syntax Error if ModuleItemList Contains super.
-        if contains(&module, ContainsSymbol::Super) {
+        if cursor.super_seen() && contains(&module, ContainsSymbol::Super) {
             return Err(Error::general(
                 "module cannot contain `super` on the top-level",
                 Position::new(1, 1),
@@ -524,7 +525,7 @@ where
         }
 
         // It is a Syntax Error if ModuleItemList Contains NewTarget.
-        if contains(&module, ContainsSymbol::NewTarget) {
+        if cursor.new_target_seen() && contains(&module, ContainsSymbol::NewTarget) {
             return Err(Error::general(
                 "module cannot contain `new.target` on the top-level",
                 Position::new(1, 1),
@@ -542,7 +543,7 @@ where
         })?;
 
         // It is a Syntax Error if AllPrivateIdentifiersValid of ModuleItemList with argument « » is false.
-        if !all_private_identifiers_valid(&module, Vec::new()) {
+        if cursor.private_identifier_seen() && !all_private_identifiers_valid(&module, Vec::new()) {
             return Err(Error::general(
                 "invalid private identifier usage",
                 Position::new(1, 1),
@@ -582,7 +583,12 @@ trait OrAbrupt<T> {
 }
 
 impl<T> OrAbrupt<T> for ParseResult<Option<T>> {
+    #[inline]
     fn or_abrupt(self) -> ParseResult<T> {
-        self?.ok_or(Error::AbruptEnd)
+        // Not `ok_or`: that builds (and drops) the error even when there is a value.
+        match self? {
+            Some(value) => Ok(value),
+            None => Err(Error::AbruptEnd),
+        }
     }
 }

@@ -88,7 +88,7 @@ where
             }
             TokenKind::Keyword((Keyword::Function, false)) => {
                 let next_token = cursor.peek(1, interner).or_abrupt()?;
-                if next_token.kind() == &TokenKind::Punctuator(Punctuator::Mul) {
+                if matches!(next_token.kind(), TokenKind::Punctuator(Punctuator::Mul)) {
                     GeneratorDeclaration::new(self.allow_yield, self.allow_await, self.is_default)
                         .parse(cursor, interner)
                         .map(Declaration::from)
@@ -100,7 +100,7 @@ where
             }
             TokenKind::Keyword((Keyword::Async, false)) => {
                 let next_token = cursor.peek(2, interner).or_abrupt()?;
-                if next_token.kind() == &TokenKind::Punctuator(Punctuator::Mul) {
+                if matches!(next_token.kind(), TokenKind::Punctuator(Punctuator::Mul)) {
                     AsyncGeneratorDeclaration::new(
                         self.allow_yield,
                         self.allow_await,
@@ -239,7 +239,9 @@ fn parse_callable_declaration<R: ReadChar, C: CallableDeclaration>(
     // It is a Syntax Error if FunctionBody Contains SuperProperty is true.
     // It is a Syntax Error if FormalParameters Contains SuperCall is true.
     // It is a Syntax Error if FunctionBody Contains SuperCall is true.
-    if contains(&body, ContainsSymbol::Super) || contains(&params, ContainsSymbol::Super) {
+    if cursor.super_seen()
+        && (contains(&body, ContainsSymbol::Super) || contains(&params, ContainsSymbol::Super))
+    {
         return Err(Error::lex(LexError::Syntax(
             "invalid super usage".into(),
             params_start_position,

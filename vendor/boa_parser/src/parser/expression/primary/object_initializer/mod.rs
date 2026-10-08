@@ -125,9 +125,9 @@ where
 
         if let Some(position) = duplicate_proto_position
             && !cursor.json_parse()
-            && cursor
-                .peek(0, interner)?
-                .is_none_or(|token| token.kind() != &TokenKind::Punctuator(Punctuator::Assign))
+            && cursor.peek(0, interner)?.is_none_or(|token| {
+                !matches!(token.kind(), TokenKind::Punctuator(Punctuator::Assign))
+            })
         {
             return Err(Error::general(
                 "Duplicate __proto__ fields are not allowed in object literals.",
@@ -216,7 +216,7 @@ where
                 let token = cursor.peek(0, interner).or_abrupt()?;
                 let position = token.span().start();
 
-                if token.kind() == &TokenKind::Punctuator(Punctuator::Mul) {
+                if matches!(token.kind(), TokenKind::Punctuator(Punctuator::Mul)) {
                     let (class_element_name, params, body) =
                         AsyncGeneratorMethod::new(self.allow_yield, self.allow_await)
                             .parse(cursor, interner)?;
@@ -281,7 +281,7 @@ where
         let token = cursor.peek(0, interner).or_abrupt()?;
         let start_linear_pos = token.linear_span().start();
 
-        if token.kind() == &TokenKind::Punctuator(Punctuator::Mul) {
+        if matches!(token.kind(), TokenKind::Punctuator(Punctuator::Mul)) {
             let position = cursor.peek(0, interner).or_abrupt()?.span().start();
             let (class_element_name, params, body) =
                 GeneratorMethod::new(self.allow_yield, self.allow_await).parse(cursor, interner)?;
@@ -1006,6 +1006,7 @@ where
         let expr = AssignmentExpression::new(true, self.allow_yield, self.allow_await)
             .parse(cursor, interner)?;
 
+        cursor.set_cover_initialized_name_seen();
         Ok(PropertyDefinitionNode::CoverInitializedName(ident, expr))
     }
 }

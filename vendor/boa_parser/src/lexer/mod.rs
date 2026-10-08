@@ -376,7 +376,7 @@ impl<R> Lexer<R> {
                 return Ok(None);
             };
 
-            if next.kind() != &TokenKind::Comment {
+            if !matches!(next.kind(), TokenKind::Comment) {
                 return Ok(Some(next));
             }
         }

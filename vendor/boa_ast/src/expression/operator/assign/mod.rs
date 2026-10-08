@@ -168,6 +168,42 @@ impl AssignTarget {
             _ => None,
         }
     }
+
+    /// Like [`AssignTarget::from_expression`], but takes the expression by value so
+    /// that identifiers and property accesses are moved rather than cloned.
+    #[must_use]
+    pub fn from_expression_owned(expression: Expression, strict: bool) -> Option<Self> {
+        match expression {
+            Expression::ObjectLiteral(object) => {
+                let pattern = object.to_pattern(strict)?;
+                Some(Self::Pattern(pattern.into()))
+            }
+            Expression::ArrayLiteral(array) => {
+                let pattern = array.to_pattern(strict)?;
+                Some(Self::Pattern(pattern.into()))
+            }
+            e => Self::from_expression_simple_owned(e, strict),
+        }
+    }
+
+    /// Like [`AssignTarget::from_expression_simple`], but takes the expression by value
+    /// so that identifiers and property accesses are moved rather than cloned.
+    #[must_use]
+    pub fn from_expression_simple_owned(expression: Expression, strict: bool) -> Option<Self> {
+        match expression {
+            Expression::Identifier(id)
+                if strict && (id.sym() == Sym::EVAL || id.sym() == Sym::ARGUMENTS) =>
+            {
+                None
+            }
+            Expression::Identifier(id) => Some(Self::Identifier(id)),
+            Expression::PropertyAccess(access) => Some(Self::Access(access)),
+            Expression::Parenthesized(p) => {
+                Self::from_expression_simple_owned(p.into_expression(), strict)
+            }
+            _ => None,
+        }
+    }
 }
 
 impl Spanned for AssignTarget {

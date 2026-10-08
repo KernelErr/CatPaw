@@ -432,7 +432,9 @@ where
             // CatPaw: `using` starts a declaration only when a binding
             // follows on the same line; otherwise it is an identifier, as
             // in jQuery UI's `using = function (props) { ... }`.
-            TokenKind::Keyword((Keyword::Using, _)) if using_declaration_follows(cursor, interner)? => {
+            TokenKind::Keyword((Keyword::Using, _))
+                if using_declaration_follows(cursor, interner)? =>
+            {
                 Declaration::new(self.allow_yield, self.allow_await)
                     .parse(cursor, interner)
                     .map(ast::StatementListItem::from)
@@ -448,7 +450,7 @@ where
                 // Check if this is `await using`
                 // Per spec, there must be [no LineTerminator here] between `await` and `using`
                 if let Some(next_tok) = cursor.peek_no_skip_line_term(1, interner)?
-                    && next_tok.kind() != &TokenKind::LineTerminator
+                    && !matches!(next_tok.kind(), TokenKind::LineTerminator)
                     && matches!(next_tok.kind(), TokenKind::Keyword((Keyword::Using, false)))
                 {
                     return Declaration::new(self.allow_yield, self.allow_await)
@@ -742,7 +744,7 @@ where
             }
 
             if let Some(peek_token) = cursor.peek(0, interner)?
-                && peek_token.kind() == &TokenKind::Punctuator(Punctuator::Comma)
+                && matches!(peek_token.kind(), TokenKind::Punctuator(Punctuator::Comma))
             {
                 cursor.expect(
                     TokenKind::Punctuator(Punctuator::Comma),
@@ -950,7 +952,7 @@ where
             }
 
             if let Some(peek_token) = cursor.peek(0, interner)?
-                && peek_token.kind() == &TokenKind::Punctuator(Punctuator::Comma)
+                && matches!(peek_token.kind(), TokenKind::Punctuator(Punctuator::Comma))
             {
                 cursor.expect(
                     TokenKind::Punctuator(Punctuator::Comma),
@@ -994,7 +996,7 @@ where
                 )));
             }
 
-            if contains_invalid_object_literal(&item) {
+            if cursor.cover_initialized_name_seen() && contains_invalid_object_literal(&item) {
                 return Err(Error::lex(LexError::Syntax(
                     "invalid object literal in module item list".into(),
                     Position::new(1, 1),
@@ -1007,7 +1009,7 @@ where
         let list = list.into();
 
         // It is a Syntax Error if AllPrivateIdentifiersValid of ModuleItemList with argument « » is false.
-        if !all_private_identifiers_valid(&list, Vec::new()) {
+        if cursor.private_identifier_seen() && !all_private_identifiers_valid(&list, Vec::new()) {
             return Err(Error::general(
                 "invalid private identifier usage",
                 Position::new(1, 1),

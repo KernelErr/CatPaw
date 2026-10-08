@@ -68,7 +68,7 @@ where
     fn parse(self, cursor: &mut Cursor<R>, interner: &mut Interner) -> ParseResult<Self::Output> {
         let token = cursor.peek(0, interner).or_abrupt()?;
 
-        let lhs = if token.kind() == &TokenKind::Punctuator(Punctuator::OpenParen) {
+        let lhs = if matches!(token.kind(), TokenKind::Punctuator(Punctuator::OpenParen)) {
             let (args, args_span) =
                 Arguments::new(self.allow_yield, self.allow_await).parse(cursor, interner)?;
 

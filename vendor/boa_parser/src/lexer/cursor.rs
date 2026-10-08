@@ -2,7 +2,11 @@
 
 use crate::source::{ReadChar, UTF8Input};
 use boa_ast::{LinearPosition, Position, PositionGroup, SourceText};
+use boa_interner::{Interner, Sym};
 use std::io::{self, Error, ErrorKind};
+
+/// Number of entries in the identifier name cache, a power of two.
+const NAME_CACHE_SIZE: usize = 2048;
 
 /// Cursor over the source code.
 #[derive(Debug)]
@@ -13,6 +17,11 @@ pub(super) struct Cursor<R> {
     strict: bool,
     peeked: [Option<u32>; 4],
     source_collector: SourceText,
+    /// Buffer reused for the text of identifier names.
+    name_buffer: String,
+    /// Recently interned identifier names, direct mapped by hash: the hash and the
+    /// symbol of the name last stored in each entry. Allocated on first use.
+    name_cache: Vec<(u32, Option<Sym>)>,
 }
 
 impl<R> Cursor<R> {
@@ -72,6 +81,45 @@ impl<R> Cursor<R> {
         self.module = module;
         self.strict = module;
     }
+
+    /// Takes the reusable identifier name buffer, emptied.
+    pub(super) fn take_name_buffer(&mut self) -> String {
+        let mut buffer = std::mem::take(&mut self.name_buffer);
+        buffer.clear();
+        buffer
+    }
+
+    /// Returns the identifier name buffer for reuse.
+    pub(super) fn restore_name_buffer(&mut self, buffer: String) {
+        self.name_buffer = buffer;
+    }
+
+    /// Interns an identifier name.
+    ///
+    /// Scripts repeat the same few names over and over, so the symbol of each name is
+    /// remembered in a small table: a repeated name is found there by comparing it with
+    /// the interned text of the remembered symbol, which is cheaper than the interner's
+    /// lookup. Any other name goes to the interner, so the symbol is the one
+    /// `get_or_intern` returns either way.
+    pub(super) fn intern_name(&mut self, name: &str, interner: &mut Interner) -> Sym {
+        let mut hash = 0x811C_9DC5_u32;
+        for &byte in name.as_bytes() {
+            hash = (hash ^ u32::from(byte)).wrapping_mul(0x0100_0193);
+        }
+        if self.name_cache.is_empty() {
+            self.name_cache = vec![(0, None); NAME_CACHE_SIZE];
+        }
+        let slot = (hash ^ (hash >> 16)) as usize & (NAME_CACHE_SIZE - 1);
+        if let (cached_hash, Some(sym)) = self.name_cache[slot]
+            && cached_hash == hash
+            && interner.resolve(sym).and_then(|s| s.utf8()) == Some(name)
+        {
+            return sym;
+        }
+        let sym = interner.get_or_intern(name);
+        self.name_cache[slot] = (hash, Some(sym));
+        sym
+    }
 }
 
 impl<R: ReadChar> Cursor<R> {
@@ -84,6 +132,8 @@ impl<R: ReadChar> Cursor<R> {
             module: false,
             peeked: [None; 4],
             source_collector: SourceText::default(),
+            name_buffer: String::new(),
+            name_cache: Vec::new(),
         }
     }
 
@@ -101,6 +151,7 @@ impl<R: ReadChar> Cursor<R> {
     }
 
     /// Peeks the next UTF-8 character in u32 code point.
+    #[inline]
     pub(super) fn peek_char(&mut self) -> Result<Option<u32>, Error> {
         if let Some(c) = self.peeked[0] {
             return Ok(Some(c));
@@ -183,10 +234,10 @@ impl<R: ReadChar> Cursor<R> {
     }
 
     /// Retrieves the next UTF-8 character.
+    #[inline]
     pub(crate) fn next_char(&mut self) -> Result<Option<u32>, Error> {
         let ch = if let Some(c) = self.peeked[0] {
-            self.peeked[0] = None;
-            self.peeked.rotate_left(1);
+            self.peeked = [self.peeked[1], self.peeked[2], self.peeked[3], None];
             Some(c)
         } else {
             self.iter.next_char()?

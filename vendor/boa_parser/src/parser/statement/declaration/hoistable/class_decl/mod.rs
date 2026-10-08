@@ -177,7 +177,7 @@ where
         cursor.set_strict(false);
         let token = cursor.peek(0, interner).or_abrupt()?;
         let token_span_end = token.span().end();
-        let is_close_block = token.kind() == &TokenKind::Punctuator(Punctuator::CloseBlock);
+        let is_close_block = matches!(token.kind(), TokenKind::Punctuator(Punctuator::CloseBlock));
         cursor.set_strict(strict);
 
         if is_close_block {
@@ -678,7 +678,9 @@ where
                         return Err(Error::general("invalid await usage", position));
                     }
 
-                    if contains_invalid_object_literal(&statement_list) {
+                    if cursor.cover_initialized_name_seen()
+                        && contains_invalid_object_literal(&statement_list)
+                    {
                         return Err(Error::lex(LexError::Syntax(
                             "invalid object literal in class static block statement list".into(),
                             position,

@@ -66,7 +66,7 @@ where
             .parse(cursor, interner)?;
 
         if let Some(tok) = cursor.peek(0, interner)?
-            && tok.kind() == &TokenKind::Punctuator(Punctuator::Question)
+            && matches!(tok.kind(), TokenKind::Punctuator(Punctuator::Question))
         {
             let lhs = lhs.try_into_expression()?;
 

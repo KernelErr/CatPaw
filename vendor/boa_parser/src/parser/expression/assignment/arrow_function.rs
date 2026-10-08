@@ -70,31 +70,33 @@ where
         let next_token = cursor.peek(0, interner).or_abrupt()?;
         let start_linear_span = next_token.linear_span();
 
-        let (params, params_start_position) =
-            if next_token.kind() == &TokenKind::Punctuator(Punctuator::OpenParen) {
-                // CoverParenthesizedExpressionAndArrowParameterList
-                let params_start_position = cursor
-                    .expect(Punctuator::OpenParen, "arrow function", interner)?
-                    .span()
-                    .start();
+        let (params, params_start_position) = if matches!(
+            next_token.kind(),
+            TokenKind::Punctuator(Punctuator::OpenParen)
+        ) {
+            // CoverParenthesizedExpressionAndArrowParameterList
+            let params_start_position = cursor
+                .expect(Punctuator::OpenParen, "arrow function", interner)?
+                .span()
+                .start();
 
-                let params = FormalParameters::new(self.allow_yield, self.allow_await)
-                    .parse(cursor, interner)?;
-                cursor.expect(Punctuator::CloseParen, "arrow function", interner)?;
-                (params, params_start_position)
-            } else {
-                let params_start_position = next_token.span().start();
-                let param = BindingIdentifier::new(self.allow_yield, self.allow_await)
-                    .parse(cursor, interner)
-                    .set_context("arrow function")?;
-                (
-                    FormalParameterList::from(FormalParameter::new(
-                        Variable::from_identifier(param, None),
-                        false,
-                    )),
-                    params_start_position,
-                )
-            };
+            let params = FormalParameters::new(self.allow_yield, self.allow_await)
+                .parse(cursor, interner)?;
+            cursor.expect(Punctuator::CloseParen, "arrow function", interner)?;
+            (params, params_start_position)
+        } else {
+            let params_start_position = next_token.span().start();
+            let param = BindingIdentifier::new(self.allow_yield, self.allow_await)
+                .parse(cursor, interner)
+                .set_context("arrow function")?;
+            (
+                FormalParameterList::from(FormalParameter::new(
+                    Variable::from_identifier(param, None),
+                    false,
+                )),
+                params_start_position,
+            )
+        };
 
         // Early Error: ArrowFormalParameters are UniqueFormalParameters.
         if params.has_duplicates() {

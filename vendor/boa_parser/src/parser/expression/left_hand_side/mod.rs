@@ -103,7 +103,7 @@ where
                         ));
                     }
                     if let Some(next) = cursor.peek(1, interner)?
-                        && next.kind() == &TokenKind::Punctuator(Punctuator::OpenParen)
+                        && matches!(next.kind(), TokenKind::Punctuator(Punctuator::OpenParen))
                     {
                         return Ok(Some(keyword_token_start));
                     }
@@ -129,7 +129,7 @@ where
                     ));
                 }
                 if let Some(dot) = cursor.peek(1, interner)?
-                    && dot.kind() == &TokenKind::Punctuator(Punctuator::Dot)
+                    && matches!(dot.kind(), TokenKind::Punctuator(Punctuator::Dot))
                     && let Some(ident_tok) = cursor.peek(2, interner)?
                     && let TokenKind::IdentifierName((sym, _)) = ident_tok.kind()
                 {
@@ -140,7 +140,7 @@ where
                     };
                     if let Some(phase) = phase
                         && let Some(paren) = cursor.peek(3, interner)?
-                        && paren.kind() == &TokenKind::Punctuator(Punctuator::OpenParen)
+                        && matches!(paren.kind(), TokenKind::Punctuator(Punctuator::OpenParen))
                     {
                         return Ok(Some((keyword_token_start, phase)));
                     }
@@ -151,141 +151,138 @@ where
 
         cursor.set_goal(InputElement::TemplateTail);
 
-        let mut lhs: FormalParameterListOrExpression =
-            if let Some(start) = is_keyword_call(Keyword::Super, cursor, interner)? {
-                cursor.advance(interner);
-                let (args, args_span) =
-                    Arguments::new(self.allow_yield, self.allow_await).parse(cursor, interner)?;
-                SuperCall::new(args, Span::new(start, args_span.end())).into()
-            } else if let Some(start) = is_keyword_call(Keyword::Import, cursor, interner)? {
-                // Plain `import(...)` call
-                cursor.advance(interner);
-                // `(`
-                cursor.advance(interner);
+        let mut lhs: FormalParameterListOrExpression = if let Some(start) =
+            is_keyword_call(Keyword::Super, cursor, interner)?
+        {
+            cursor.advance(interner);
+            let (args, args_span) =
+                Arguments::new(self.allow_yield, self.allow_await).parse(cursor, interner)?;
+            SuperCall::new(args, Span::new(start, args_span.end())).into()
+        } else if let Some(start) = is_keyword_call(Keyword::Import, cursor, interner)? {
+            // Plain `import(...)` call
+            cursor.advance(interner);
+            // `(`
+            cursor.advance(interner);
 
-                let specifier = AssignmentExpression::new(true, self.allow_yield, self.allow_await)
-                    .parse(cursor, interner)?;
+            let specifier = AssignmentExpression::new(true, self.allow_yield, self.allow_await)
+                .parse(cursor, interner)?;
 
-                let options =
-                    if cursor
-                        .next_if(TokenKind::Punctuator(Punctuator::Comma), interner)?
-                        .is_some()
-                    {
-                        if cursor.peek(0, interner)?.is_some_and(|t| {
-                            t.kind() == &TokenKind::Punctuator(Punctuator::CloseParen)
-                        }) {
-                            None
-                        } else {
-                            let opts =
-                                AssignmentExpression::new(true, self.allow_yield, self.allow_await)
-                                    .parse(cursor, interner)?;
-                            if cursor.peek(0, interner)?.is_some_and(|t| {
-                                t.kind() == &TokenKind::Punctuator(Punctuator::Comma)
-                            }) {
-                                cursor.advance(interner);
-                            }
-                            Some(opts)
-                        }
-                    } else {
-                        None
-                    };
+            let options = if cursor
+                .next_if(TokenKind::Punctuator(Punctuator::Comma), interner)?
+                .is_some()
+            {
+                if cursor.peek(0, interner)?.is_some_and(|t| {
+                    matches!(t.kind(), TokenKind::Punctuator(Punctuator::CloseParen))
+                }) {
+                    None
+                } else {
+                    let opts = AssignmentExpression::new(true, self.allow_yield, self.allow_await)
+                        .parse(cursor, interner)?;
+                    if cursor.peek(0, interner)?.is_some_and(|t| {
+                        matches!(t.kind(), TokenKind::Punctuator(Punctuator::Comma))
+                    }) {
+                        cursor.advance(interner);
+                    }
+                    Some(opts)
+                }
+            } else {
+                None
+            };
 
-                let end = cursor
-                    .expect(
-                        TokenKind::Punctuator(Punctuator::CloseParen),
-                        "import call",
-                        interner,
-                    )?
-                    .span()
-                    .end();
+            let end = cursor
+                .expect(
+                    TokenKind::Punctuator(Punctuator::CloseParen),
+                    "import call",
+                    interner,
+                )?
+                .span()
+                .end();
 
-                CallExpressionTail::new(
-                    self.allow_yield,
-                    self.allow_await,
-                    ImportCall::new(
-                        specifier,
-                        options,
-                        ImportPhase::Evaluation,
-                        Span::new(start, end),
-                    )
-                    .into(),
+            CallExpressionTail::new(
+                self.allow_yield,
+                self.allow_await,
+                ImportCall::new(
+                    specifier,
+                    options,
+                    ImportPhase::Evaluation,
+                    Span::new(start, end),
                 )
-                .parse(cursor, interner)?
-                .into()
-            } else if let Some((start, phase)) = is_import_phase_call(cursor, interner)? {
-                // `import.defer(...)` or `import.source(...)` call
-                // Consume `import`
-                cursor.advance(interner);
-                // Consume `.`
-                cursor.advance(interner);
-                // Consume `defer` or `source`
-                cursor.advance(interner);
-                // Consume `(`
-                cursor.advance(interner);
+                .into(),
+            )
+            .parse(cursor, interner)?
+            .into()
+        } else if let Some((start, phase)) = is_import_phase_call(cursor, interner)? {
+            // `import.defer(...)` or `import.source(...)` call
+            // Consume `import`
+            cursor.advance(interner);
+            // Consume `.`
+            cursor.advance(interner);
+            // Consume `defer` or `source`
+            cursor.advance(interner);
+            // Consume `(`
+            cursor.advance(interner);
 
-                let specifier = AssignmentExpression::new(true, self.allow_yield, self.allow_await)
-                    .parse(cursor, interner)?;
+            let specifier = AssignmentExpression::new(true, self.allow_yield, self.allow_await)
+                .parse(cursor, interner)?;
 
-                let options =
-                    if cursor
-                        .next_if(TokenKind::Punctuator(Punctuator::Comma), interner)?
-                        .is_some()
-                    {
-                        if cursor.peek(0, interner)?.is_some_and(|t| {
-                            t.kind() == &TokenKind::Punctuator(Punctuator::CloseParen)
-                        }) {
-                            None
-                        } else {
-                            let opts =
-                                AssignmentExpression::new(true, self.allow_yield, self.allow_await)
-                                    .parse(cursor, interner)?;
-                            if cursor.peek(0, interner)?.is_some_and(|t| {
-                                t.kind() == &TokenKind::Punctuator(Punctuator::Comma)
-                            }) {
-                                cursor.advance(interner);
-                            }
-                            Some(opts)
-                        }
-                    } else {
-                        None
-                    };
+            let options = if cursor
+                .next_if(TokenKind::Punctuator(Punctuator::Comma), interner)?
+                .is_some()
+            {
+                if cursor.peek(0, interner)?.is_some_and(|t| {
+                    matches!(t.kind(), TokenKind::Punctuator(Punctuator::CloseParen))
+                }) {
+                    None
+                } else {
+                    let opts = AssignmentExpression::new(true, self.allow_yield, self.allow_await)
+                        .parse(cursor, interner)?;
+                    if cursor.peek(0, interner)?.is_some_and(|t| {
+                        matches!(t.kind(), TokenKind::Punctuator(Punctuator::Comma))
+                    }) {
+                        cursor.advance(interner);
+                    }
+                    Some(opts)
+                }
+            } else {
+                None
+            };
 
-                let end = cursor
-                    .expect(
-                        TokenKind::Punctuator(Punctuator::CloseParen),
-                        "import call",
-                        interner,
-                    )?
-                    .span()
-                    .end();
+            let end = cursor
+                .expect(
+                    TokenKind::Punctuator(Punctuator::CloseParen),
+                    "import call",
+                    interner,
+                )?
+                .span()
+                .end();
 
-                CallExpressionTail::new(
+            CallExpressionTail::new(
+                self.allow_yield,
+                self.allow_await,
+                ImportCall::new(specifier, options, phase, Span::new(start, end)).into(),
+            )
+            .parse(cursor, interner)?
+            .into()
+        } else {
+            let member = MemberExpression::new(self.allow_yield, self.allow_await)
+                .parse(cursor, interner)?;
+            if let Some(tok) = cursor.peek(0, interner)?
+                && matches!(tok.kind(), TokenKind::Punctuator(Punctuator::OpenParen))
+            {
+                CallExpression::new(
                     self.allow_yield,
                     self.allow_await,
-                    ImportCall::new(specifier, options, phase, Span::new(start, end)).into(),
+                    member.try_into_expression()?,
                 )
                 .parse(cursor, interner)?
                 .into()
             } else {
-                let member = MemberExpression::new(self.allow_yield, self.allow_await)
-                    .parse(cursor, interner)?;
-                if let Some(tok) = cursor.peek(0, interner)?
-                    && tok.kind() == &TokenKind::Punctuator(Punctuator::OpenParen)
-                {
-                    CallExpression::new(
-                        self.allow_yield,
-                        self.allow_await,
-                        member.try_into_expression()?,
-                    )
-                    .parse(cursor, interner)?
-                    .into()
-                } else {
-                    member
-                }
-            };
+                member
+            }
+        };
 
         if let Some(tok) = cursor.peek(0, interner)?
-            && tok.kind() == &TokenKind::Punctuator(Punctuator::Optional)
+            && matches!(tok.kind(), TokenKind::Punctuator(Punctuator::Optional))
         {
             lhs = OptionalExpression::new(
                 self.allow_yield,

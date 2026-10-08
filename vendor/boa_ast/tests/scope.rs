@@ -313,3 +313,40 @@ fn can_correlate_binding_to_scope() {
     // THEN
     assert_eq!(binding.locator().unique_scope_id(), child1.unique_id());
 }
+
+// CatPaw: scopes with many bindings look names up through a hash table; the
+// answers must be the same as a scan in declaration order, whichever string
+// representation a name has.
+#[test]
+fn many_bindings_are_found_by_name() {
+    let global = Scope::new_global();
+    let scope = Scope::new(global, true);
+    let names: Vec<String> = (0..1000).map(|i| format!("v{i}")).collect();
+    for (i, name) in (0..).zip(&names) {
+        let locator = scope.create_mutable_binding(JsString::from(name.as_str()), true);
+        assert_eq!(locator.binding_index(), i);
+        // Declaring a name again finds the first binding.
+        let again = scope.create_mutable_binding(JsString::from(name.as_str()), true);
+        assert_eq!(again.binding_index(), i);
+    }
+    assert_eq!(scope.num_bindings(), 1000);
+    for (i, name) in (0..).zip(&names) {
+        // The same name as Latin-1 and as UTF-16.
+        let latin1 = JsString::from(name.as_str());
+        let utf16 = JsString::from(name.encode_utf16().collect::<Vec<u16>>().as_slice());
+        for name in [&latin1, &utf16] {
+            assert!(scope.has_binding(name));
+            assert!(!scope.has_lex_binding(name));
+            assert_eq!(scope.is_binding_mutable(name), Some(true));
+            let reference = scope.get_binding_reference(name).unwrap();
+            assert_eq!(reference.locator().binding_index(), i);
+            scope.access_binding(name, false);
+        }
+    }
+    for missing in ["v1000", "v", "", "V1", "v01"] {
+        let missing = JsString::from(missing);
+        assert!(!scope.has_binding(&missing));
+        assert!(scope.get_binding(&missing).is_none());
+        assert_eq!(scope.is_binding_mutable(&missing), None);
+    }
+}

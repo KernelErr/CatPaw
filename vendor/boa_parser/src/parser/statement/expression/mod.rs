@@ -87,7 +87,10 @@ where
             }
             TokenKind::Keyword((Keyword::Let, false)) => {
                 let next_token = cursor.peek(1, interner).or_abrupt()?;
-                if next_token.kind() == &TokenKind::Punctuator(Punctuator::OpenBracket) {
+                if matches!(
+                    next_token.kind(),
+                    TokenKind::Punctuator(Punctuator::OpenBracket)
+                ) {
                     return Err(Error::general(
                         "expected statement",
                         next_token.span().start(),

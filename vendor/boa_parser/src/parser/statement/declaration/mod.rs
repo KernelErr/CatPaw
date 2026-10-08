@@ -84,7 +84,7 @@ where
                 // Check if this is `await using`
                 // Per spec, there must be [no LineTerminator here] between `await` and `using`
                 if let Some(next_tok) = cursor.peek_no_skip_line_term(1, interner)?
-                    && next_tok.kind() != &TokenKind::LineTerminator
+                    && !matches!(next_tok.kind(), TokenKind::LineTerminator)
                     && matches!(next_tok.kind(), TokenKind::Keyword((Keyword::Using, false)))
                 {
                     return LexicalDeclaration::new(
@@ -208,7 +208,10 @@ where
             return Ok(Box::default());
         };
 
-        if next_tok.kind() != &TokenKind::Punctuator(Punctuator::OpenBlock) {
+        if !matches!(
+            next_tok.kind(),
+            TokenKind::Punctuator(Punctuator::OpenBlock)
+        ) {
             return Ok(Box::default());
         }
 
@@ -221,7 +224,7 @@ where
         loop {
             let tok = cursor.peek(0, interner).or_abrupt()?;
 
-            if tok.kind() == &TokenKind::Punctuator(Punctuator::CloseBlock) {
+            if matches!(tok.kind(), TokenKind::Punctuator(Punctuator::CloseBlock)) {
                 break;
             }
 
@@ -264,9 +267,9 @@ where
             attributes.push(ImportAttribute::new(key, *value));
 
             let tok = cursor.peek(0, interner).or_abrupt()?;
-            if tok.kind() == &TokenKind::Punctuator(Punctuator::Comma) {
+            if matches!(tok.kind(), TokenKind::Punctuator(Punctuator::Comma)) {
                 cursor.advance(interner);
-            } else if tok.kind() != &TokenKind::Punctuator(Punctuator::CloseBlock) {
+            } else if !matches!(tok.kind(), TokenKind::Punctuator(Punctuator::CloseBlock)) {
                 return Err(Error::expected(
                     [",".to_owned(), "}".to_owned()],
                     tok.to_string(interner),

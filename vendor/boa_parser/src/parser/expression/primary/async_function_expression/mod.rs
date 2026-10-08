@@ -151,7 +151,7 @@ where
             Span::new(function_span_start, function_span_end),
         );
 
-        if contains(&function, ContainsSymbol::Super) {
+        if cursor.super_seen() && contains(&function, ContainsSymbol::Super) {
             return Err(Error::lex(LexError::Syntax(
                 "invalid super usage".into(),
                 params_start_position,

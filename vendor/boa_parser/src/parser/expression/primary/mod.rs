@@ -113,7 +113,7 @@ where
             }
             TokenKind::Keyword((Keyword::Function, _)) => {
                 let next_token = cursor.peek(1, interner).or_abrupt()?;
-                if next_token.kind() == &TokenKind::Punctuator(Punctuator::Mul) {
+                if matches!(next_token.kind(), TokenKind::Punctuator(Punctuator::Mul)) {
                     GeneratorExpression::new()
                         .parse(cursor, interner)
                         .map(Into::into)
@@ -482,9 +482,9 @@ where
                     "multiple expressions in parenthesized expression",
                 ));
             }
-            if let InnerExpression::Expression(expression) = &expressions[0] {
+            if let Some(InnerExpression::Expression(expression)) = expressions.pop() {
                 return Ok(ast::Expression::Parenthesized(Parenthesized::new(
-                    expression.clone(),
+                    expression,
                     Span::new(span_start.start(), span.end()),
                 ))
                 .into());

@@ -81,7 +81,10 @@ where
             }
         }
 
-        let catch = if next_token.kind() == &TokenKind::Keyword((Keyword::Catch, false)) {
+        let catch = if matches!(
+            next_token.kind(),
+            TokenKind::Keyword((Keyword::Catch, false))
+        ) {
             Some(
                 Catch::new(self.allow_yield, self.allow_await, self.allow_return)
                     .parse(cursor, interner)?,

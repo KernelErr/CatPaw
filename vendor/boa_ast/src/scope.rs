@@ -3,7 +3,7 @@
 //! Scopes are used to track the bindings of identifiers in the AST.
 
 use bitflags::bitflags;
-use boa_string::JsString;
+use boa_string::{JsStr, JsStrVariant, JsString};
 use std::{
     cell::{Cell, RefCell},
     fmt::Debug,
@@ -64,6 +64,148 @@ impl Binding {
     }
 }
 
+/// Hashes a binding name by its UTF-16 code units, so that the Latin-1 and the
+/// UTF-16 representation of the same name (which compare equal) hash alike.
+pub(crate) fn name_hash(name: JsStr<'_>) -> u32 {
+    #[inline]
+    fn step(hash: u32, unit: u16) -> u32 {
+        (hash.rotate_left(5) ^ u32::from(unit)).wrapping_mul(0x9E37_79B9)
+    }
+    let mut hash = 0x811C_9DC5_u32;
+    match name.variant() {
+        JsStrVariant::Latin1(units) => {
+            for &unit in units {
+                hash = step(hash, u16::from(unit));
+            }
+        }
+        JsStrVariant::Utf16(units) => {
+            for &unit in units {
+                hash = step(hash, unit);
+            }
+        }
+    }
+    hash
+}
+
+/// The bindings of a scope in declaration order.
+///
+/// Lookups by name compare stored name hashes before names, and once a scope
+/// holds more than [`Bindings::INDEX_THRESHOLD`] bindings (the top level of a
+/// bundled script can hold thousands), an open-addressing table from name hash to
+/// position makes them constant time. A scope never holds two bindings with the
+/// same name.
+#[derive(Clone, Default)]
+struct Bindings {
+    list: Vec<Binding>,
+    /// `name_hash` of each binding's name, parallel to `list`.
+    hashes: Vec<u32>,
+    /// Power-of-two sized table of `position + 1` (zero is an empty slot), filled
+    /// with linear probing; empty while the scope is small.
+    table: Vec<u32>,
+}
+
+impl Bindings {
+    /// Scopes with more bindings than this get a hash table.
+    const INDEX_THRESHOLD: usize = 8;
+
+    fn len(&self) -> usize {
+        self.list.len()
+    }
+
+    fn iter(&self) -> std::slice::Iter<'_, Binding> {
+        self.list.iter()
+    }
+
+    fn iter_mut(&mut self) -> std::slice::IterMut<'_, Binding> {
+        self.list.iter_mut()
+    }
+
+    fn first(&self) -> Option<&Binding> {
+        self.list.first()
+    }
+
+    /// Returns the position of the binding called `name`, whose `name_hash` is `hash`.
+    fn position(&self, name: JsStr<'_>, hash: u32) -> Option<usize> {
+        if self.table.is_empty() {
+            return self
+                .hashes
+                .iter()
+                .enumerate()
+                .find(|&(i, &h)| h == hash && self.list[i].name.as_str() == name)
+                .map(|(i, _)| i);
+        }
+        let mask = self.table.len() - 1;
+        let mut slot = hash as usize & mask;
+        loop {
+            let entry = self.table[slot];
+            if entry == 0 {
+                return None;
+            }
+            let i = entry as usize - 1;
+            if self.hashes[i] == hash && self.list[i].name.as_str() == name {
+                return Some(i);
+            }
+            slot = (slot + 1) & mask;
+        }
+    }
+
+    fn find(&self, name: &JsString) -> Option<&Binding> {
+        let name = name.as_str();
+        self.position(name, name_hash(name)).map(|i| &self.list[i])
+    }
+
+    fn find_mut(&mut self, name: JsStr<'_>, hash: u32) -> Option<&mut Binding> {
+        self.position(name, hash).map(|i| &mut self.list[i])
+    }
+
+    /// Appends a binding whose name is not bound in this scope yet.
+    fn push(&mut self, binding: Binding) {
+        let hash = name_hash(binding.name.as_str());
+        self.list.push(binding);
+        self.hashes.push(hash);
+        let len = self.list.len();
+        if self.table.is_empty() {
+            if len > Self::INDEX_THRESHOLD {
+                self.rebuild_table(len * 4);
+            }
+        } else if len * 2 > self.table.len() {
+            self.rebuild_table(self.table.len() * 2);
+        } else {
+            self.insert_into_table(len - 1);
+        }
+    }
+
+    fn rebuild_table(&mut self, capacity: usize) {
+        self.table.clear();
+        self.table.resize(capacity.next_power_of_two(), 0);
+        for i in 0..self.list.len() {
+            self.insert_into_table(i);
+        }
+    }
+
+    #[allow(clippy::cast_possible_truncation)]
+    fn insert_into_table(&mut self, position: usize) {
+        let mask = self.table.len() - 1;
+        let mut slot = self.hashes[position] as usize & mask;
+        while self.table[slot] != 0 {
+            slot = (slot + 1) & mask;
+        }
+        self.table[slot] = position as u32 + 1;
+    }
+}
+
+impl Debug for Bindings {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_list().entries(self.list.iter()).finish()
+    }
+}
+
+impl PartialEq for Bindings {
+    fn eq(&self, other: &Self) -> bool {
+        self.list == other.list
+    }
+}
+
 /// A scope maps bound identifiers to their binding positions.
 ///
 /// It can be either a global scope or a function scope or a declarative scope.
@@ -101,7 +243,7 @@ pub(crate) struct Inner {
     unique_id: u32,
     outer: Option<Scope>,
     index: Cell<u32>,
-    bindings: RefCell<Vec<Binding>>,
+    bindings: RefCell<Bindings>,
     function: bool,
     // The function is an arrow function: it has no `this` binding of its own.
     arrow: Cell<bool>,
@@ -176,22 +318,21 @@ impl Scope {
         self.inner
             .bindings
             .borrow()
-            .iter()
-            .find(|b| &b.name == name)
+            .find(name)
             .is_some_and(Binding::is_lex)
     }
 
     /// Check if the scope has a binding with the given name.
     #[must_use]
     pub fn has_binding(&self, name: &JsString) -> bool {
-        self.inner.bindings.borrow().iter().any(|b| &b.name == name)
+        self.inner.bindings.borrow().find(name).is_some()
     }
 
     /// Get the binding locator for a binding with the given name.
     /// Fall back to the global scope if the binding is not found.
     #[must_use]
     pub fn get_identifier_reference(&self, name: JsString) -> IdentifierReference {
-        if let Some(binding) = self.inner.bindings.borrow().iter().find(|b| b.name == name) {
+        if let Some(binding) = self.inner.bindings.borrow().find(&name) {
             IdentifierReference::new(
                 BindingLocator::declarative(
                     name,
@@ -278,13 +419,7 @@ impl Scope {
     /// or `None` if the binding is not found in this or any outer scope.
     #[must_use]
     pub fn is_binding_mutable(&self, name: &JsString) -> Option<bool> {
-        if let Some(binding) = self
-            .inner
-            .bindings
-            .borrow()
-            .iter()
-            .find(|b| &b.name == name)
-        {
+        if let Some(binding) = self.inner.bindings.borrow().find(name) {
             Some(binding.is_mutable())
         } else if let Some(outer) = &self.inner.outer {
             outer.is_binding_mutable(name)
@@ -296,41 +431,31 @@ impl Scope {
     /// Get the locator for a binding name.
     #[must_use]
     pub fn get_binding(&self, name: &JsString) -> Option<BindingLocator> {
-        self.inner
-            .bindings
-            .borrow()
-            .iter()
-            .find(|b| &b.name == name)
-            .map(|binding| {
-                BindingLocator::declarative(
-                    name.clone(),
-                    self.inner.index.get(),
-                    binding.index,
-                    self.inner.unique_id,
-                )
-            })
+        self.inner.bindings.borrow().find(name).map(|binding| {
+            BindingLocator::declarative(
+                name.clone(),
+                self.inner.index.get(),
+                binding.index,
+                self.inner.unique_id,
+            )
+        })
     }
 
     /// Get the locator for a binding name.
     #[must_use]
     pub fn get_binding_reference(&self, name: &JsString) -> Option<IdentifierReference> {
-        self.inner
-            .bindings
-            .borrow()
-            .iter()
-            .find(|b| &b.name == name)
-            .map(|binding| {
-                IdentifierReference::new(
-                    BindingLocator::declarative(
-                        name.clone(),
-                        self.inner.index.get(),
-                        binding.index,
-                        self.inner.unique_id,
-                    ),
-                    binding.is_lex(),
-                    binding.escapes(),
-                )
-            })
+        self.inner.bindings.borrow().find(name).map(|binding| {
+            IdentifierReference::new(
+                BindingLocator::declarative(
+                    name.clone(),
+                    self.inner.index.get(),
+                    binding.index,
+                    self.inner.unique_id,
+                ),
+                binding.is_lex(),
+                binding.escapes(),
+            )
+        })
     }
 
     /// Simulate a binding access.
@@ -338,16 +463,16 @@ impl Scope {
     /// - If the binding access crosses a function border, the binding is marked as escaping.
     /// - If the binding access is in an eval or with scope, the binding is marked as escaping.
     pub fn access_binding(&self, name: &JsString, eval_or_with: bool) {
+        self.access_binding_str(name.as_str(), eval_or_with);
+    }
+
+    /// Simulate a binding access, see [`Scope::access_binding`].
+    pub(crate) fn access_binding_str(&self, name: JsStr<'_>, eval_or_with: bool) {
+        let hash = name_hash(name);
         let mut crossed_function_border = false;
         let mut current = self;
         loop {
-            if let Some(binding) = current
-                .inner
-                .bindings
-                .borrow_mut()
-                .iter_mut()
-                .find(|b| &b.name == name)
-            {
+            if let Some(binding) = current.inner.bindings.borrow_mut().find_mut(name, hash) {
                 binding.flags.insert(BindingFlags::ACCESSED);
                 if crossed_function_border || eval_or_with {
                     binding.flags.insert(BindingFlags::ESCAPES);
@@ -396,7 +521,7 @@ impl Scope {
     pub fn create_mutable_binding(&self, name: JsString, function_scope: bool) -> BindingLocator {
         let mut bindings = self.inner.bindings.borrow_mut();
         let binding_index = bindings.len() as u32;
-        if let Some(binding) = bindings.iter().find(|b| b.name == name) {
+        if let Some(binding) = bindings.find(&name) {
             return BindingLocator::declarative(
                 name,
                 self.inner.index.get(),
@@ -424,7 +549,7 @@ impl Scope {
     #[allow(clippy::cast_possible_truncation)]
     pub(crate) fn create_immutable_binding(&self, name: JsString, strict: bool) {
         let mut bindings = self.inner.bindings.borrow_mut();
-        if bindings.iter().any(|b| b.name == name) {
+        if bindings.find(&name).is_some() {
             return;
         }
         let binding_index = bindings.len() as u32;
@@ -446,34 +571,32 @@ impl Scope {
         &self,
         name: JsString,
     ) -> Result<IdentifierReference, BindingLocatorError> {
-        Ok(
-            match self.inner.bindings.borrow().iter().find(|b| b.name == name) {
-                Some(binding) if binding.is_mutable() => IdentifierReference::new(
-                    BindingLocator::declarative(
-                        name,
-                        self.inner.index.get(),
-                        binding.index,
-                        self.inner.unique_id,
-                    ),
-                    binding.is_lex(),
-                    binding.escapes(),
+        Ok(match self.inner.bindings.borrow().find(&name) {
+            Some(binding) if binding.is_mutable() => IdentifierReference::new(
+                BindingLocator::declarative(
+                    name,
+                    self.inner.index.get(),
+                    binding.index,
+                    self.inner.unique_id,
                 ),
-                Some(binding) if binding.is_strict() => {
-                    return Err(BindingLocatorError::MutateImmutable);
-                }
-                Some(_) => return Err(BindingLocatorError::Silent),
-                None => self.inner.outer.as_ref().map_or_else(
-                    || {
-                        Ok(IdentifierReference::new(
-                            BindingLocator::global(name.clone()),
-                            false,
-                            true,
-                        ))
-                    },
-                    |outer| outer.set_mutable_binding(name.clone()),
-                )?,
-            },
-        )
+                binding.is_lex(),
+                binding.escapes(),
+            ),
+            Some(binding) if binding.is_strict() => {
+                return Err(BindingLocatorError::MutateImmutable);
+            }
+            Some(_) => return Err(BindingLocatorError::Silent),
+            None => self.inner.outer.as_ref().map_or_else(
+                || {
+                    Ok(IdentifierReference::new(
+                        BindingLocator::global(name.clone()),
+                        false,
+                        true,
+                    ))
+                },
+                |outer| outer.set_mutable_binding(name.clone()),
+            )?,
+        })
     }
 
     #[cfg(feature = "annex-b")]
@@ -498,34 +621,32 @@ impl Scope {
             );
         }
 
-        Ok(
-            match self.inner.bindings.borrow().iter().find(|b| b.name == name) {
-                Some(binding) if binding.is_mutable() => IdentifierReference::new(
-                    BindingLocator::declarative(
-                        name,
-                        self.inner.index.get(),
-                        binding.index,
-                        self.inner.unique_id,
-                    ),
-                    binding.is_lex(),
-                    binding.escapes(),
+        Ok(match self.inner.bindings.borrow().find(&name) {
+            Some(binding) if binding.is_mutable() => IdentifierReference::new(
+                BindingLocator::declarative(
+                    name,
+                    self.inner.index.get(),
+                    binding.index,
+                    self.inner.unique_id,
                 ),
-                Some(binding) if binding.is_strict() => {
-                    return Err(BindingLocatorError::MutateImmutable);
-                }
-                Some(_) => return Err(BindingLocatorError::Silent),
-                None => self.inner.outer.as_ref().map_or_else(
-                    || {
-                        Ok(IdentifierReference::new(
-                            BindingLocator::global(name.clone()),
-                            false,
-                            true,
-                        ))
-                    },
-                    |outer| outer.set_mutable_binding_var(name.clone()),
-                )?,
-            },
-        )
+                binding.is_lex(),
+                binding.escapes(),
+            ),
+            Some(binding) if binding.is_strict() => {
+                return Err(BindingLocatorError::MutateImmutable);
+            }
+            Some(_) => return Err(BindingLocatorError::Silent),
+            None => self.inner.outer.as_ref().map_or_else(
+                || {
+                    Ok(IdentifierReference::new(
+                        BindingLocator::global(name.clone()),
+                        false,
+                        true,
+                    ))
+                },
+                |outer| outer.set_mutable_binding_var(name.clone()),
+            )?,
+        })
     }
 
     /// Gets the outer scope of this scope.

@@ -81,7 +81,7 @@ where
         };
 
         if let Some(tok) = cursor.peek(0, interner)?
-            && tok.kind() == &TokenKind::Punctuator(Punctuator::Exp)
+            && matches!(tok.kind(), TokenKind::Punctuator(Punctuator::Exp))
         {
             cursor.advance(interner);
             return Ok(Binary::new(

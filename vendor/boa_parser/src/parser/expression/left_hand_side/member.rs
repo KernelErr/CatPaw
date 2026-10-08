@@ -126,8 +126,9 @@ where
                             ));
                         }
                         TokenKind::IdentifierName((Sym::TARGET, ContainsEscapeSequence(false))) => {
-                            NewTarget::new(Span::new(new_token_span.start(), token.span().end()))
-                                .into()
+                            let span = Span::new(new_token_span.start(), token.span().end());
+                            cursor.set_new_target_seen();
+                            NewTarget::new(span).into()
                         }
                         _ => {
                             return Err(Error::general(
@@ -140,7 +141,10 @@ where
                     let lhs_inner = self.parse(cursor, interner)?.try_into_expression()?;
                     let (args, args_span) = match cursor.peek(0, interner)? {
                         Some(next)
-                            if next.kind() == &TokenKind::Punctuator(Punctuator::OpenParen) =>
+                            if matches!(
+                                next.kind(),
+                                TokenKind::Punctuator(Punctuator::OpenParen)
+                            ) =>
                         {
                             Arguments::new(self.allow_yield, self.allow_await)
                                 .parse(cursor, interner)?

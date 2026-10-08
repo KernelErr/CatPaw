@@ -48,7 +48,10 @@ where
         cursor.expect((Keyword::Return, false), "return statement", interner)?;
 
         if let SemicolonResult::Found(tok) = cursor.peek_semicolon(interner)? {
-            if tok.map(Token::kind) == Some(&TokenKind::Punctuator(Punctuator::Semicolon)) {
+            if matches!(
+                tok.map(Token::kind),
+                Some(TokenKind::Punctuator(Punctuator::Semicolon))
+            ) {
                 cursor.advance(interner);
             }
 

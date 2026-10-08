@@ -123,7 +123,7 @@ where
                 let next_tok = cursor.peek_no_skip_line_term(0, interner).or_abrupt()?;
 
                 // Check if next token is a line terminator
-                if next_tok.kind() == &TokenKind::LineTerminator {
+                if matches!(next_tok.kind(), TokenKind::LineTerminator) {
                     return Err(Error::general(
                         "Unexpected token 'await'",
                         tok.span().start(),
@@ -283,8 +283,8 @@ where
             match cursor.peek_semicolon(interner)? {
                 SemicolonResult::Found(_) => break,
                 SemicolonResult::NotFound(tk)
-                    if tk.kind() == &TokenKind::Keyword((Keyword::Of, true))
-                        || tk.kind() == &TokenKind::Keyword((Keyword::In, true)) =>
+                    if matches!(tk.kind(), TokenKind::Keyword((Keyword::Of, true)))
+                        || matches!(tk.kind(), TokenKind::Keyword((Keyword::In, true))) =>
                 {
                     return Err(Error::general(
                         "Keyword must not contain escaped characters",
@@ -292,13 +292,13 @@ where
                     ));
                 }
                 SemicolonResult::NotFound(tk)
-                    if tk.kind() == &TokenKind::Keyword((Keyword::Of, false))
-                        || tk.kind() == &TokenKind::Keyword((Keyword::In, false)) =>
+                    if matches!(tk.kind(), TokenKind::Keyword((Keyword::Of, false)))
+                        || matches!(tk.kind(), TokenKind::Keyword((Keyword::In, false))) =>
                 {
                     break;
                 }
                 SemicolonResult::NotFound(tk)
-                    if tk.kind() == &TokenKind::Punctuator(Punctuator::Comma) =>
+                    if matches!(tk.kind(), TokenKind::Punctuator(Punctuator::Comma)) =>
                 {
                     // We discard the comma
                     cursor.advance(interner);

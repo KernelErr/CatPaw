@@ -59,21 +59,19 @@ impl UpdateExpression {
 ///
 /// [spec]: https://tc39.es/ecma262/#sec-static-semantics-assignmenttargettype
 fn as_simple(
-    expr: &Expression,
+    expr: Expression,
     position: Position,
     strict: bool,
 ) -> ParseResult<Option<UpdateTarget>> {
     match expr {
         Expression::Identifier(ident) => {
             if strict {
-                check_strict_arguments_or_eval(*ident, position)?;
+                check_strict_arguments_or_eval(ident, position)?;
             }
-            Ok(Some(UpdateTarget::Identifier(*ident)))
+            Ok(Some(UpdateTarget::Identifier(ident)))
         }
-        Expression::PropertyAccess(access) => {
-            Ok(Some(UpdateTarget::PropertyAccess(access.clone())))
-        }
-        Expression::Parenthesized(p) => as_simple(p.expression(), position, strict),
+        Expression::PropertyAccess(access) => Ok(Some(UpdateTarget::PropertyAccess(access))),
+        Expression::Parenthesized(p) => as_simple(p.into_expression(), position, strict),
         _ => Ok(None),
     }
 }
@@ -99,7 +97,7 @@ where
                 let target_span_end = target.span().end();
 
                 // https://tc39.es/ecma262/#sec-update-expressions-static-semantics-early-errors
-                return (as_simple(&target, position, cursor.strict())?).map_or_else(
+                return (as_simple(target, position, cursor.strict())?).map_or_else(
                     || {
                         Err(Error::lex(LexError::Syntax(
                             "Invalid left-hand side in assignment".into(),
@@ -127,7 +125,7 @@ where
                 let target_span_end = target.span().end();
 
                 // https://tc39.es/ecma262/#sec-update-expressions-static-semantics-early-errors
-                return (as_simple(&target, position, cursor.strict())?).map_or_else(
+                return (as_simple(target, position, cursor.strict())?).map_or_else(
                     || {
                         Err(Error::lex(LexError::Syntax(
                             "Invalid left-hand side in assignment".into(),
@@ -168,7 +166,7 @@ where
                         .expect("Punctuator::Inc token disappeared");
 
                     // https://tc39.es/ecma262/#sec-update-expressions-static-semantics-early-errors
-                    return (as_simple(&lhs, position, cursor.strict())?).map_or_else(
+                    return (as_simple(lhs, position, cursor.strict())?).map_or_else(
                         || {
                             Err(Error::lex(LexError::Syntax(
                                 "Invalid left-hand side in assignment".into(),
@@ -191,7 +189,7 @@ where
                         .expect("Punctuator::Dec token disappeared");
 
                     // https://tc39.es/ecma262/#sec-update-expressions-static-semantics-early-errors
-                    return (as_simple(&lhs, position, cursor.strict())?).map_or_else(
+                    return (as_simple(lhs, position, cursor.strict())?).map_or_else(
                         || {
                             Err(Error::lex(LexError::Syntax(
                                 "Invalid left-hand side in assignment".into(),

@@ -35,7 +35,14 @@ impl Identifier {
     /// [spec]: https://tc39.es/ecma262/#sec-names-and-keywords
     pub(super) fn is_identifier_start(ch: u32) -> bool {
         const ID_START: CodePointSetDataBorrowed<'static> = CodePointSetData::new::<IdStart>();
-        matches!(ch, 0x0024 /* $ */ | 0x005F /* _ */) || ID_START.contains32(ch)
+        // In ASCII, ID_Start is exactly the letters: no property lookup is needed.
+        if ch < 0x80 {
+            return matches!(
+                ch,
+                0x41..=0x5A /* A-Z */ | 0x61..=0x7A /* a-z */ | 0x24 /* $ */ | 0x5F /* _ */
+            );
+        }
+        ID_START.contains32(ch)
     }
 
     /// Checks if a character is `IdentifierPart` as per ECMAScript standards.
@@ -44,13 +51,21 @@ impl Identifier {
     ///  - [ECMAScript reference][spec]
     ///
     /// [spec]: https://tc39.es/ecma262/#sec-names-and-keywords
-    fn is_identifier_part(ch: u32) -> bool {
+    pub(super) fn is_identifier_part(ch: u32) -> bool {
         const ID_CONTINUE: CodePointSetDataBorrowed<'static> =
             CodePointSetData::new::<IdContinue>();
-        matches!(
-            ch,
-            0x0024 /* $ */ | 0x005F /* _ */ | 0x200C /* <ZWNJ> */ | 0x200D /* <ZWJ> */
-        ) || ID_CONTINUE.contains32(ch)
+        // In ASCII, ID_Continue is exactly the letters, the digits and `_`.
+        if ch < 0x80 {
+            return matches!(
+                ch,
+                0x30..=0x39 /* 0-9 */
+                    | 0x41..=0x5A /* A-Z */
+                    | 0x61..=0x7A /* a-z */
+                    | 0x24 /* $ */
+                    | 0x5F /* _ */
+            );
+        }
+        matches!(ch, 0x200C /* <ZWNJ> */ | 0x200D /* <ZWJ> */) || ID_CONTINUE.contains32(ch)
     }
 }
 
@@ -64,8 +79,9 @@ impl<R> Tokenizer<R> for Identifier {
     where
         R: ReadChar,
     {
-        let (identifier_name, contains_escaped_chars) =
-            Self::take_identifier_name(cursor, start_pos, self.init)?;
+        let mut identifier_name = cursor.take_name_buffer();
+        let contains_escaped_chars =
+            Self::take_identifier_name_into(cursor, start_pos, self.init, &mut identifier_name)?;
 
         let token_kind = match identifier_name.parse() {
             Ok(keyword) => TokenKind::Keyword((keyword, contains_escaped_chars)),
@@ -79,10 +95,11 @@ impl<R> Tokenizer<R> for Identifier {
                 TokenKind::NullLiteral(ContainsEscapeSequence(contains_escaped_chars))
             }
             Err(_) => TokenKind::IdentifierName((
-                interner.get_or_intern(identifier_name.as_str()),
+                cursor.intern_name(&identifier_name, interner),
                 ContainsEscapeSequence(contains_escaped_chars),
             )),
         };
+        cursor.restore_name_buffer(identifier_name);
 
         Ok(Token::new_by_position_group(
             token_kind,
@@ -101,23 +118,40 @@ impl Identifier {
     where
         R: ReadChar,
     {
+        let mut identifier_name = String::new();
+        let contains_escaped_chars =
+            Self::take_identifier_name_into(cursor, start_pos, init, &mut identifier_name)?;
+        Ok((identifier_name, contains_escaped_chars))
+    }
+
+    /// Reads an identifier name starting with `init` into the empty `identifier_name`,
+    /// returning whether it contains escaped characters.
+    pub(super) fn take_identifier_name_into<R>(
+        cursor: &mut Cursor<R>,
+        start_pos: PositionGroup,
+        init: char,
+        identifier_name: &mut String,
+    ) -> Result<bool, Error>
+    where
+        R: ReadChar,
+    {
         let mut contains_escaped_chars = false;
-        let mut identifier_name = if init == '\\' && cursor.next_if(0x75 /* u */)? {
+        if init == '\\' && cursor.next_if(0x75 /* u */)? {
             let ch = StringLiteral::take_unicode_escape_sequence(cursor, start_pos.position())?;
 
             if Self::is_identifier_start(ch) {
                 contains_escaped_chars = true;
-                String::from(
+                identifier_name.push(
                     char::try_from(ch)
                         .expect("all identifier starts must be convertible to strings"),
-                )
+                );
             } else {
                 return Err(Error::syntax("invalid identifier start", start_pos));
             }
         } else {
             // The caller guarantees that `init` is a valid identifier start
-            String::from(init)
-        };
+            identifier_name.push(init);
+        }
 
         loop {
             let ch = match cursor.peek_char()? {
@@ -144,6 +178,6 @@ impl Identifier {
             identifier_name.push(char::try_from(ch).expect("checked character value"));
         }
 
-        Ok((identifier_name, contains_escaped_chars))
+        Ok(contains_escaped_chars)
     }
 }

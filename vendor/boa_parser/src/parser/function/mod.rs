@@ -71,7 +71,7 @@ where
 
         let Some(start_position) = cursor
             .peek(0, interner)?
-            .filter(|&tok| tok.kind() != &TokenKind::Punctuator(Punctuator::CloseParen))
+            .filter(|&tok| !matches!(tok.kind(), TokenKind::Punctuator(Punctuator::CloseParen)))
             .map(|tok| tok.span().start())
         else {
             return Ok(FormalParameterList::default());
@@ -83,7 +83,7 @@ where
             let mut rest_param = false;
 
             let next_param = match cursor.peek(0, interner)? {
-                Some(tok) if tok.kind() == &TokenKind::Punctuator(Punctuator::Spread) => {
+                Some(tok) if matches!(tok.kind(), TokenKind::Punctuator(Punctuator::Spread)) => {
                     rest_param = true;
                     FunctionRestParameter::new(self.allow_yield, self.allow_await)
                         .parse(cursor, interner)?
@@ -101,10 +101,9 @@ where
 
             params.push(next_param);
 
-            if cursor
-                .peek(0, interner)?
-                .is_none_or(|tok| tok.kind() == &TokenKind::Punctuator(Punctuator::CloseParen))
-            {
+            if cursor.peek(0, interner)?.is_none_or(|tok| {
+                matches!(tok.kind(), TokenKind::Punctuator(Punctuator::CloseParen))
+            }) {
                 break;
             }
 
@@ -118,10 +117,9 @@ where
             }
 
             cursor.expect(Punctuator::Comma, "parameter list", interner)?;
-            if cursor
-                .peek(0, interner)?
-                .is_none_or(|tok| tok.kind() == &TokenKind::Punctuator(Punctuator::CloseParen))
-            {
+            if cursor.peek(0, interner)?.is_none_or(|tok| {
+                matches!(tok.kind(), TokenKind::Punctuator(Punctuator::CloseParen))
+            }) {
                 break;
             }
         }
@@ -383,10 +381,9 @@ where
                 _ => {
                     let ident = BindingIdentifier::new(self.allow_yield, self.allow_await)
                         .parse(cursor, interner)?;
-                    let init = if cursor
-                        .peek(0, interner)?
-                        .is_some_and(|tok| tok.kind() == &TokenKind::Punctuator(Punctuator::Assign))
-                    {
+                    let init = if cursor.peek(0, interner)?.is_some_and(|tok| {
+                        matches!(tok.kind(), TokenKind::Punctuator(Punctuator::Assign))
+                    }) {
                         Some(
                             Initializer::new(true, self.allow_yield, self.allow_await)
                                 .parse(cursor, interner)?,
@@ -497,7 +494,7 @@ where
             )));
         }
 
-        if contains_invalid_object_literal(&body) {
+        if cursor.cover_initialized_name_seen() && contains_invalid_object_literal(&body) {
             return Err(Error::lex(LexError::Syntax(
                 "invalid object literal in function statement list".into(),
                 Position::new(1, 1),

@@ -109,7 +109,7 @@ where
                     1
                 };
                 if let Some(tok) = cursor.peek_no_skip_line_term(skip_n, interner)?
-                    && tok.kind() == &TokenKind::Punctuator(Punctuator::Arrow)
+                    && matches!(tok.kind(), TokenKind::Punctuator(Punctuator::Arrow))
                 {
                     return ArrowFunction::new(self.allow_in, self.allow_yield, self.allow_await)
                         .parse(cursor, interner)
@@ -158,7 +158,7 @@ where
             .parse(cursor, interner)?;
 
         // If the left hand side is a parameter list, we must parse an arrow function.
-        let mut lhs = match lhs {
+        let lhs = match lhs {
             FormalParameterListOrExpression::FormalParameterList {
                 fpl: parameters, ..
             } => {
@@ -235,58 +235,58 @@ where
         };
 
         // Review if we are trying to assign to an invalid left hand side expression.
-        if let Some(tok) = cursor.peek(0, interner)?.cloned() {
-            match tok.kind() {
+        // The left hand side is moved into the assignment target, not cloned.
+        let (simple, assignop, position) = match cursor.peek(0, interner)? {
+            Some(tok) => match tok.kind() {
                 TokenKind::Punctuator(Punctuator::Assign) => {
-                    cursor.advance(interner);
-                    cursor.set_goal(InputElement::RegExp);
-
-                    let lhs_name = if let Expression::Identifier(ident) = lhs {
-                        Some(ident)
-                    } else {
-                        None
-                    };
-
-                    if let Some(target) = AssignTarget::from_expression(&lhs, cursor.strict()) {
-                        let mut expr = self.parse(cursor, interner)?;
-                        if let Some(ident) = lhs_name {
-                            expr.set_anonymous_function_definition_name(&ident);
-                        }
-                        lhs = Assign::new(AssignOp::Assign, target, expr).into();
-                    } else {
-                        return Err(Error::lex(LexError::Syntax(
-                            "Invalid left-hand side in assignment".into(),
-                            tok.span().start(),
-                        )));
-                    }
+                    (true, AssignOp::Assign, tok.span().start())
                 }
-                TokenKind::Punctuator(p) if p.as_assign_op().is_some() => {
-                    cursor.advance(interner);
-                    if let Some(target) =
-                        AssignTarget::from_expression_simple(&lhs, cursor.strict())
-                    {
-                        let assignop = p.as_assign_op().expect("assignop disappeared");
+                TokenKind::Punctuator(p) => match p.as_assign_op() {
+                    Some(assignop) => (false, assignop, tok.span().start()),
+                    None => return Ok(lhs),
+                },
+                _ => return Ok(lhs),
+            },
+            None => return Ok(lhs),
+        };
+        cursor.advance(interner);
 
-                        let mut rhs = self.parse(cursor, interner)?;
-                        if (assignop == AssignOp::BoolAnd
-                            || assignop == AssignOp::BoolOr
-                            || assignop == AssignOp::Coalesce)
-                            && let AssignTarget::Identifier(ident) = target
-                        {
-                            rhs.set_anonymous_function_definition_name(&ident);
-                        }
-                        lhs = Assign::new(assignop, target, rhs).into();
-                    } else {
-                        return Err(Error::lex(LexError::Syntax(
-                            "Invalid left-hand side in assignment".into(),
-                            tok.span().start(),
-                        )));
-                    }
-                }
-                _ => {}
+        if simple {
+            cursor.set_goal(InputElement::RegExp);
+
+            let lhs_name = if let Expression::Identifier(ident) = lhs {
+                Some(ident)
+            } else {
+                None
+            };
+
+            let Some(target) = AssignTarget::from_expression_owned(lhs, cursor.strict()) else {
+                return Err(Error::lex(LexError::Syntax(
+                    "Invalid left-hand side in assignment".into(),
+                    position,
+                )));
+            };
+            let mut expr = self.parse(cursor, interner)?;
+            if let Some(ident) = lhs_name {
+                expr.set_anonymous_function_definition_name(&ident);
             }
+            return Ok(Assign::new(AssignOp::Assign, target, expr).into());
         }
 
-        Ok(lhs)
+        let Some(target) = AssignTarget::from_expression_simple_owned(lhs, cursor.strict()) else {
+            return Err(Error::lex(LexError::Syntax(
+                "Invalid left-hand side in assignment".into(),
+                position,
+            )));
+        };
+        let mut rhs = self.parse(cursor, interner)?;
+        if (assignop == AssignOp::BoolAnd
+            || assignop == AssignOp::BoolOr
+            || assignop == AssignOp::Coalesce)
+            && let AssignTarget::Identifier(ident) = target
+        {
+            rhs.set_anonymous_function_definition_name(&ident);
+        }
+        Ok(Assign::new(assignop, target, rhs).into())
     }
 }

@@ -37,6 +37,18 @@ pub(super) struct Cursor<R> {
 
     /// Tracks the number of tagged templates that are currently being parsed.
     tagged_templates_count: u32,
+
+    /// Syntax parsed so far that early-error checks look for.
+    seen: SeenSyntax,
+}
+
+/// Syntax that whole-tree early-error checks look for, recorded as it is parsed.
+#[derive(Debug, Default, Clone, Copy)]
+struct SeenSyntax {
+    /// A `new.target` expression.
+    new_target: bool,
+    /// An object literal property of the form `a = b` (a `CoverInitializedName`).
+    cover_initialized_name: bool,
 }
 
 impl<R> Cursor<R>
@@ -51,6 +63,7 @@ where
             json_parse: false,
             identifier: 0,
             tagged_templates_count: 0,
+            seen: SeenSyntax::default(),
         }
     }
 
@@ -88,6 +101,7 @@ where
     }
 
     /// Advances the cursor and returns the next token.
+    #[inline]
     pub(super) fn next(&mut self, interner: &mut Interner) -> ParseResult<Option<Token>> {
         self.buffered_lexer.next(true, interner)
     }
@@ -107,6 +121,7 @@ where
     /// This peeking **skips** line terminators.
     ///
     /// You can skip some tokens with the `skip_n` option.
+    #[inline]
     pub(super) fn peek(
         &mut self,
         skip_n: usize,
@@ -119,6 +134,7 @@ where
     /// This peeking **does not skips** line terminators.
     ///
     /// You can skip some tokens with the `skip_n` option.
+    #[inline]
     pub(super) fn peek_no_skip_line_term(
         &mut self,
         skip_n: usize,
@@ -258,7 +274,7 @@ where
     ) -> ParseResult<&Token> {
         let tok = self.peek_no_skip_line_term(skip_n, interner).or_abrupt()?;
 
-        if tok.kind() == &TokenKind::LineTerminator {
+        if matches!(tok.kind(), TokenKind::LineTerminator) {
             Err(Error::unexpected(
                 tok.to_string(interner),
                 tok.span(),
@@ -277,7 +293,7 @@ where
     ) -> ParseResult<Option<bool>> {
         self.peek_no_skip_line_term(skip_n, interner)?
             .map_or(Ok(None), |t| {
-                Ok(Some(t.kind() == &TokenKind::LineTerminator))
+                Ok(Some(matches!(t.kind(), TokenKind::LineTerminator)))
             })
     }
 
@@ -311,5 +327,40 @@ where
 
     pub(super) fn take_source(&mut self) -> boa_ast::SourceText {
         self.buffered_lexer.take_source()
+    }
+
+    // The early-error checks that walk a whole statement list look for syntax that most
+    // scripts never use. The cursor records whether such syntax has been seen at all, so
+    // that a walk which cannot find anything is skipped. A `false` answer is exact; a
+    // `true` answer only means the walk has to run.
+
+    /// Whether a `super` keyword has been lexed so far.
+    pub(super) const fn super_seen(&self) -> bool {
+        self.buffered_lexer.super_seen()
+    }
+
+    /// Whether a private identifier (`#name`) has been lexed so far.
+    pub(super) const fn private_identifier_seen(&self) -> bool {
+        self.buffered_lexer.private_identifier_seen()
+    }
+
+    /// Whether a `new.target` expression has been parsed so far.
+    pub(super) const fn new_target_seen(&self) -> bool {
+        self.seen.new_target
+    }
+
+    /// Records that a `new.target` expression was parsed.
+    pub(super) fn set_new_target_seen(&mut self) {
+        self.seen.new_target = true;
+    }
+
+    /// Whether a `CoverInitializedName` (`{ a = b }`) has been parsed so far.
+    pub(super) const fn cover_initialized_name_seen(&self) -> bool {
+        self.seen.cover_initialized_name
+    }
+
+    /// Records that a `CoverInitializedName` was parsed.
+    pub(super) fn set_cover_initialized_name_seen(&mut self) {
+        self.seen.cover_initialized_name = true;
     }
 }

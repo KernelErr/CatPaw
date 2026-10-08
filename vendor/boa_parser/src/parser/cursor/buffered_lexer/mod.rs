@@ -4,7 +4,7 @@ use crate::{
     parser::ParseResult,
     source::{ReadChar, UTF8Input},
 };
-use boa_ast::{LinearPosition, PositionGroup};
+use boa_ast::{Keyword, LinearPosition, PositionGroup};
 use boa_interner::Interner;
 
 #[cfg(test)]
@@ -30,6 +30,10 @@ pub(super) struct BufferedLexer<R> {
     read_index: usize,
     write_index: usize,
     last_linear_pos: LinearPosition,
+    /// Whether a `super` keyword has been lexed.
+    super_seen: bool,
+    /// Whether a private identifier (`#name`) has been lexed.
+    private_identifier_seen: bool,
 }
 
 impl<R> From<Lexer<R>> for BufferedLexer<R>
@@ -53,6 +57,8 @@ where
             read_index: 0,
             write_index: 0,
             last_linear_pos: LinearPosition::default(),
+            super_seen: false,
+            private_identifier_seen: false,
         }
     }
 }
@@ -135,7 +141,7 @@ where
         let previous_index = self.write_index.checked_sub(1).unwrap_or(PEEK_BUF_SIZE - 1);
 
         if let Some(ref token) = self.peeked[previous_index]
-            && token.kind() == &TokenKind::LineTerminator
+            && matches!(token.kind(), TokenKind::LineTerminator)
         {
             // We don't want to have multiple contiguous line terminators in the buffer, since
             // they have no meaning.
@@ -156,6 +162,14 @@ where
             self.peeked[self.write_index] = next;
         } else {
             self.peeked[self.write_index] = self.lexer.next(interner)?;
+        }
+
+        if let Some(token) = &self.peeked[self.write_index] {
+            match token.kind() {
+                TokenKind::Keyword((Keyword::Super, _)) => self.super_seen = true,
+                TokenKind::PrivateIdentifier(_) => self.private_identifier_seen = true,
+                _ => {}
+            }
         }
 
         self.write_index = (self.write_index + 1) % PEEK_BUF_SIZE;
@@ -188,7 +202,7 @@ where
         }
 
         if let Some(ref token) = self.peeked[self.read_index] {
-            if skip_line_terminators && token.kind() == &TokenKind::LineTerminator {
+            if skip_line_terminators && matches!(token.kind(), TokenKind::LineTerminator) {
                 // We only store 1 contiguous line terminator, so if the one at `self.read_index`
                 // was a line terminator, we know that the next won't be one.
                 self.read_index = (self.read_index + 1) % PEEK_BUF_SIZE;
@@ -227,7 +241,30 @@ where
     ///  - `peek(1, false) == \n`
     ///  - `peek(2, true) == None` (End of stream)
     ///  - `peek(2, false) == B`
+    #[inline]
     pub(super) fn peek(
+        &mut self,
+        skip_n: usize,
+        skip_line_terminators: bool,
+        interner: &mut Interner,
+    ) -> ParseResult<Option<&Token>> {
+        // Fast path: the next token is already buffered and need not be skipped.
+        if skip_n == 0 && self.read_index != self.write_index {
+            let ready = match &self.peeked[self.read_index] {
+                Some(token) => {
+                    !(skip_line_terminators && matches!(token.kind(), TokenKind::LineTerminator))
+                }
+                None => true,
+            };
+            if ready {
+                return Ok(self.peeked[self.read_index].as_ref());
+            }
+        }
+        self.peek_slow(skip_n, skip_line_terminators, interner)
+    }
+
+    /// The general case of [`BufferedLexer::peek`].
+    fn peek_slow(
         &mut self,
         skip_n: usize,
         skip_line_terminators: bool,
@@ -246,7 +283,7 @@ where
             }
 
             if let Some(ref token) = self.peeked[read_index] {
-                if skip_line_terminators && token.kind() == &TokenKind::LineTerminator {
+                if skip_line_terminators && matches!(token.kind(), TokenKind::LineTerminator) {
                     read_index = (read_index + 1) % PEEK_BUF_SIZE;
                     // We only store 1 contiguous line terminator, so if the one at `self.read_index`
                     // was a line terminator, we know that the next won't be one.
@@ -275,5 +312,15 @@ where
 
     pub(super) fn take_source(&mut self) -> boa_ast::SourceText {
         self.lexer.take_source()
+    }
+
+    /// Whether a `super` keyword has been lexed so far.
+    pub(super) const fn super_seen(&self) -> bool {
+        self.super_seen
+    }
+
+    /// Whether a private identifier has been lexed so far.
+    pub(super) const fn private_identifier_seen(&self) -> bool {
+        self.private_identifier_seen
     }
 }

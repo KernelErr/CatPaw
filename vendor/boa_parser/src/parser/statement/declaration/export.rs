@@ -171,7 +171,7 @@ where
                 match tok.kind() {
                     TokenKind::Keyword((Keyword::Function, false)) => {
                         let next_token = cursor.peek(1, interner).or_abrupt()?;
-                        if next_token.kind() == &TokenKind::Punctuator(Punctuator::Mul) {
+                        if matches!(next_token.kind(), TokenKind::Punctuator(Punctuator::Mul)) {
                             AstExportDeclaration::DefaultGeneratorDeclaration(
                                 GeneratorDeclaration::new(false, true, true)
                                     .parse(cursor, interner)?,
@@ -185,7 +185,7 @@ where
                     }
                     TokenKind::Keyword((Keyword::Async, false)) => {
                         let next_token = cursor.peek(2, interner).or_abrupt()?;
-                        if next_token.kind() == &TokenKind::Punctuator(Punctuator::Mul) {
+                        if matches!(next_token.kind(), TokenKind::Punctuator(Punctuator::Mul)) {
                             AstExportDeclaration::DefaultAsyncGeneratorDeclaration(
                                 AsyncGeneratorDeclaration::new(false, true, true)
                                     .parse(cursor, interner)?,

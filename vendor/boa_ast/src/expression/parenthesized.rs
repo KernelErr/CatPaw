@@ -39,6 +39,13 @@ impl Parenthesized {
     pub const fn expression(&self) -> &Expression {
         &self.expression
     }
+
+    /// Takes the expression out of this parenthesized expression.
+    #[inline]
+    #[must_use]
+    pub fn into_expression(self) -> Expression {
+        *self.expression
+    }
 }
 
 impl Spanned for Parenthesized {

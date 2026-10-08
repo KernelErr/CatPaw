@@ -1178,3 +1178,60 @@ mod carriage_return {
         expect_tokens_with_lines(3, "-\r\n\n\r3");
     }
 }
+
+// CatPaw: the ASCII fast path of the identifier character checks must agree
+// with the Unicode properties it stands in for.
+#[test]
+fn identifier_ascii_fast_path_matches_unicode_properties() {
+    use crate::lexer::identifier::Identifier;
+    use icu_properties::{
+        CodePointSetData,
+        props::{IdContinue, IdStart},
+    };
+
+    let id_start = CodePointSetData::new::<IdStart>();
+    let id_continue = CodePointSetData::new::<IdContinue>();
+    for ch in 0..0x80_u32 {
+        let start = matches!(ch, 0x24 | 0x5F) || id_start.contains32(ch);
+        let part = matches!(ch, 0x24 | 0x5F) || id_continue.contains32(ch);
+        assert_eq!(Identifier::is_identifier_start(ch), start, "start {ch:#x}");
+        assert_eq!(Identifier::is_identifier_part(ch), part, "part {ch:#x}");
+    }
+}
+
+// CatPaw: identifier names go through a small cache in front of the interner;
+// the symbols must be the ones the interner gives, also for names that share a
+// cache entry.
+#[test]
+fn identifier_names_intern_through_the_cache() {
+    use std::fmt::Write;
+
+    let names: Vec<String> = (0..5000)
+        .map(|i| format!("n{i}"))
+        .chain(["é", "ü", "n0", "true", "x\u{200C}"].map(String::from))
+        .collect();
+    let mut source = String::new();
+    for _ in 0..3 {
+        for name in &names {
+            let _ = write!(source, "{name} ");
+        }
+    }
+    let mut lexer = Lexer::from(source.as_bytes());
+    let interner = &mut Interner::default();
+    let mut expected = Interner::default();
+    for _ in 0..3 {
+        for name in &names {
+            let kind = lexer.next(interner).unwrap().unwrap().kind().clone();
+            if name == "true" {
+                assert_eq!(kind, TokenKind::boolean_literal(true));
+                continue;
+            }
+            assert_eq!(
+                kind,
+                TokenKind::identifier(expected.get_or_intern(name.as_str())),
+                "{name}"
+            );
+        }
+    }
+    assert!(lexer.next(interner).unwrap().is_none());
+}

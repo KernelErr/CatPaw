@@ -85,7 +85,10 @@ where
 
                     if last_spread {
                         let token = cursor.peek(0, interner).or_abrupt()?;
-                        if token.kind() == &TokenKind::Punctuator(Punctuator::CloseBracket) {
+                        if matches!(
+                            token.kind(),
+                            TokenKind::Punctuator(Punctuator::CloseBracket)
+                        ) {
                             has_trailing_comma_spread = true;
                         }
                     }
