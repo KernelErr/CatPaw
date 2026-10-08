@@ -52,6 +52,17 @@ always takes the host's (`sys_locale`), so the same page printed numbers
 and dates differently from one machine to the next, and told sites what
 the machine was set to.
 
+`src/context/icu.rs`, `src/context/mod.rs`,
+`src/builtins/intl/date_time_format/mod.rs`:
+`Context::set_default_time_zone(Some("+05:30"))` gives the time zone
+`Intl.DateTimeFormat` and the `toLocale…` methods of `Date` use when
+script names none (`SystemTimeZoneIdentifier()`; an offset, or a name the
+time zone data knows). The published crate always takes UTC there, even
+when the host hooks give `Date` another zone, so `getHours()` and
+`toLocaleTimeString()` disagreed. `resolvedOptions().timeZone` of an
+offset zone also lost its sign below an hour (`-00:30` read `+00:30`).
+`Temporal.Now` still takes UTC.
+
 ## Parsing and compiling speed
 
 With the parser changes in `vendor/boa_parser` and `vendor/boa_ast`, these

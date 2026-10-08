@@ -78,6 +78,47 @@ fn dates_and_numbers_ignore_the_host_time_zone_and_locale() {
     );
 }
 
+/// What `Intl` shows of midnight UTC on 1 January 1970.
+const INTL_PROBE: &str = r#"[
+  new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: 'numeric' }).format(0),
+  new Intl.DateTimeFormat().resolvedOptions().timeZone,
+  new Date(0).toLocaleString('en-US'),
+  new Date(0).toLocaleTimeString('en-US', { timeZone: 'UTC' }),
+].join(" | ")"#;
+
+fn intl_probe(timezone_offset_minutes: i32) -> String {
+    let state = Rc::new(PageState::new(
+        Url::parse("https://example.test/").unwrap(),
+        PageConfig {
+            timezone_offset_minutes,
+            ..config()
+        },
+    ));
+    let mut page = BoaPage::new(state).expect("page setup");
+    page.eval_to_string(INTL_PROBE)
+        .unwrap_or_else(|e| format!("THROWN {e}"))
+}
+
+#[test]
+fn intl_shows_dates_in_the_page_time_zone() {
+    let utc = "12:00\u{202f}AM | utc | 1/1/70, 12:00:00\u{202f}AM | 12:00:00\u{202f}AM";
+    assert_eq!(intl_probe(0), utc);
+    assert_eq!(
+        intl_probe(5 * 60 + 30),
+        "5:30\u{202f}AM | +05:30 | 1/1/70, 5:30:00\u{202f}AM | 12:00:00\u{202f}AM"
+    );
+    assert_eq!(
+        intl_probe(-(4 * 60 + 30)),
+        "7:30\u{202f}PM | -04:30 | 12/31/69, 7:30:00\u{202f}PM | 12:00:00\u{202f}AM"
+    );
+    assert_eq!(
+        intl_probe(-30),
+        "11:30\u{202f}PM | -00:30 | 12/31/69, 11:30:00\u{202f}PM | 12:00:00\u{202f}AM"
+    );
+    // No time zone is 20 hours from UTC: `Intl` stays in UTC.
+    assert_eq!(intl_probe(20 * 60), utc);
+}
+
 #[test]
 fn the_page_configuration_sets_the_time_zone_and_locale() {
     let shown = probe(PageConfig {

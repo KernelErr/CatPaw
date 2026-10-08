@@ -42,6 +42,8 @@ pub(crate) struct IntlProvider {
     case_mapper: OnceCell<CaseMapper>,
     /// CatPaw: the embedder's default locale, in place of the host's.
     default_locale: Option<icu_locale::Locale>,
+    /// CatPaw: the embedder's time zone, in place of UTC.
+    default_time_zone: Option<String>,
 }
 
 impl<M> DataProvider<M> for IntlProvider
@@ -95,6 +97,7 @@ impl IntlProvider {
             case_mapper: OnceCell::new(),
             inner_provider: Box::new(provider),
             default_locale: None,
+            default_time_zone: None,
         }
     }
 
@@ -102,6 +105,18 @@ impl IntlProvider {
     /// (`None`: the host's).
     pub(crate) fn set_default_locale(&mut self, locale: Option<icu_locale::Locale>) {
         self.default_locale = locale;
+    }
+
+    /// CatPaw: sets the time zone [`IntlProvider::default_time_zone`]
+    /// gives (`None`: UTC).
+    pub(crate) fn set_default_time_zone(&mut self, zone: Option<String>) {
+        self.default_time_zone = zone;
+    }
+
+    /// CatPaw: the time zone the embedder set, if any: what
+    /// `SystemTimeZoneIdentifier()` gives.
+    pub(crate) fn default_time_zone(&self) -> Option<&str> {
+        self.default_time_zone.as_deref()
     }
 
     /// The `DefaultLocale()` of ECMA-402, canonicalized: the one the

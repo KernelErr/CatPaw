@@ -501,6 +501,32 @@ impl Context {
         Ok(())
     }
 
+    /// CatPaw: makes `zone` (a UTC offset such as `+05:30`, or a time zone
+    /// name such as `Asia/Kolkata`) the time zone `Intl.DateTimeFormat` and
+    /// the `toLocale…` methods of `Date` use when script names none
+    /// (ECMA-262's `SystemTimeZoneIdentifier()`), in place of UTC; `None`
+    /// restores UTC.
+    ///
+    /// # Errors
+    ///
+    /// A `RangeError` when `zone` is neither an offset within ±18 hours
+    /// nor a time zone the data knows.
+    #[cfg(feature = "intl")]
+    pub fn set_default_time_zone(&mut self, zone: Option<&str>) -> JsResult<()> {
+        if let Some(zone) = zone {
+            let known = icu_time::zone::UtcOffset::try_from_str(zone).is_ok()
+                || self.timezone_provider().get(zone.as_bytes()).is_ok();
+            if !known {
+                return Err(JsNativeError::range()
+                    .with_message(format!("{zone:?} is not a time zone"))
+                    .into());
+            }
+        }
+        self.intl_provider
+            .set_default_time_zone(zone.map(str::to_string));
+        Ok(())
+    }
+
     /// Returns the currently active realm.
     #[inline]
     #[must_use]

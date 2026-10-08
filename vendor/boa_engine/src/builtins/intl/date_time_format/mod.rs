@@ -388,10 +388,12 @@ impl DateTimeFormat {
 
             let time_zone_str = match &dtf.time_zone {
                 FormatTimeZone::UtcOffset(offset) => {
+                    // CatPaw: the sign of the whole offset, which the hours
+                    // lose when there are none (`-00:30`).
                     let seconds = offset.to_seconds();
-                    let hours = seconds / 3600;
-                    let minutes = (seconds.abs() % 3600) / 60;
-                    format!("{hours:+03}:{minutes:02}")
+                    let sign = if seconds < 0 { '-' } else { '+' };
+                    let seconds = seconds.unsigned_abs();
+                    format!("{sign}{:02}:{:02}", seconds / 3600, seconds % 3600 / 60)
                 }
                 FormatTimeZone::Identifier((tz, _id)) => tz.to_string(),
             };
@@ -676,9 +678,15 @@ pub(crate) fn create_date_time_format(
 
     // 16. If timeZone is undefined, then
     let time_zone = if time_zone.is_undefined() {
-        // TODO (nekevss): Resolve system time zone
         // a. Set timeZone to SystemTimeZoneIdentifier().
-        JsString::from("Etc/UTC")
+        // CatPaw: the zone the embedder set (`Context::set_default_time_zone`),
+        // else UTC.
+        JsString::from(
+            context
+                .intl_provider()
+                .default_time_zone()
+                .unwrap_or("Etc/UTC"),
+        )
     // 17. Else,
     } else {
         // a. Set timeZone to ? ToString(timeZone).

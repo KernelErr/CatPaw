@@ -63,6 +63,17 @@ struct Hooks {
     utc_offset_seconds: i32,
 }
 
+/// A time zone `minutes` east of UTC as `Intl` names it (`+05:30`); `None`
+/// for UTC, its default.
+fn offset_time_zone(minutes: i32) -> Option<String> {
+    if minutes == 0 {
+        return None;
+    }
+    let sign = if minutes < 0 { '-' } else { '+' };
+    let minutes = minutes.unsigned_abs();
+    Some(format!("{sign}{:02}:{:02}", minutes / 60, minutes % 60))
+}
+
 impl HostHooks for Hooks {
     /// `Date` shows local time in the page's configured zone, never the
     /// host's: a run prints the same dates wherever it runs, and sites
@@ -98,9 +109,9 @@ pub struct BoaPage {
 impl BoaPage {
     /// Creates the realm for `page`: the global object becomes its
     /// `Window`, and every window interface in the binding manifest is
-    /// installed. Dates show the page's time zone, `Intl` defaults to its
-    /// first language, and in a seeded run (`random_seed`) `Math.random`
-    /// and `crypto` draw from sequences of the realm's own.
+    /// installed. Dates show the page's time zone (`Intl`'s too), `Intl`
+    /// defaults to its first language, and in a seeded run (`random_seed`)
+    /// `Math.random` and `crypto` draw from sequences of the realm's own.
     pub fn new(page: Rc<PageState>) -> Result<Self, String> {
         Self::with_realm(page, Realm::Window)
     }
@@ -141,6 +152,12 @@ impl BoaPage {
             context
                 .set_default_locale(Some(FALLBACK_LOCALE))
                 .map_err(|e| format!("failed to set the default locale: {e}"))?;
+        }
+        // `Intl` shows dates in the page's time zone too (`Date` has it from
+        // the hooks). An offset no time zone has (beyond 18 hours) leaves it
+        // in UTC.
+        if let Some(zone) = offset_time_zone(page.config.timezone_offset_minutes) {
+            let _ = context.set_default_time_zone(Some(&zone));
         }
 
         // Random sequences of the realm's own (see `seeds`); `crypto`'s is
