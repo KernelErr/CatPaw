@@ -60,6 +60,19 @@ pub enum NetError {
     Proxy(String),
     #[error("replay: {0}")]
     Replay(String),
+    #[error("replay: no recorded answer for {} {}", .0.method, .0.url)]
+    Unrecorded(Box<Unrecorded>),
+}
+
+/// The hop a replay has no answer for, as it would be sent: where a
+/// request made with [`RequestOptions::replay_only`] stopped.
+#[derive(Debug, Clone)]
+pub struct Unrecorded {
+    pub method: Method,
+    pub url: Url,
+    pub body: Option<Bytes>,
+    /// The URLs that redirected to it, in order.
+    pub redirect_chain: Vec<Url>,
 }
 
 #[derive(Debug, Clone)]
@@ -118,6 +131,11 @@ pub struct RequestOptions {
     /// [`NetClient::reserve_place`]); without one it takes the next place
     /// when it is sent.
     pub place: Option<crate::har::Place>,
+    /// While replaying, stop at the first hop the recording has no answer
+    /// for, with [`NetError::Unrecorded`], rather than send it to the
+    /// network ([`crate::Misses::Live`]): the caller sends the rest where
+    /// it can wait for the network.
+    pub replay_only: bool,
 }
 
 impl Default for RequestOptions {
@@ -128,6 +146,7 @@ impl Default for RequestOptions {
             follow_redirects: true,
             credentials: true,
             place: None,
+            replay_only: false,
         }
     }
 }
@@ -625,9 +644,16 @@ impl NetClient {
                 return Err(NetError::UnsupportedScheme(url.scheme().to_string()));
             }
             let entry = place.map(|place| (place, number));
-            let hop = self
+            let hop = match self
                 .send_once(&method, &url, &options, body.clone(), entry)
-                .await?;
+                .await
+            {
+                Err(NetError::Unrecorded(mut unrecorded)) => {
+                    unrecorded.redirect_chain = chain;
+                    return Err(NetError::Unrecorded(unrecorded));
+                }
+                hop => hop?,
+            };
 
             if options.follow_redirects
                 && is_redirect(hop.status)
@@ -748,6 +774,14 @@ impl NetClient {
                     return Err(NetError::Replay(format!(
                         "no recorded answer for {method} {url}"
                     )));
+                }
+                None if options.replay_only => {
+                    return Err(NetError::Unrecorded(Box::new(Unrecorded {
+                        method: method.clone(),
+                        url: url.clone(),
+                        body,
+                        redirect_chain: Vec::new(),
+                    })));
                 }
                 None => {}
             }

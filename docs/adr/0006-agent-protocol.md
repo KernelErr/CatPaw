@@ -205,8 +205,9 @@ of the model on every turn.
     method, host, port and path; each recorded answer is given once, in
     order, however it was matched, the last one repeating when they run
     out; a request the recording lacks fails (`--replay-misses-live` sends
-    it instead), and so does one whose body an older recording left out.
-    Answers arrive at once, in the order the page asked for them.
+    it instead, holding the page up no more than a live request would),
+    and so does one whose body an older recording left out. Answers
+    arrive at once, in the order the page asked for them.
     `--random-seed` gives each document, frame and worker sequences of its
     own for `Math.random`, `crypto` and Web Crypto keys; `--time-origin`
     fixes where the page clock starts; dates show UTC (or `--timezone`)

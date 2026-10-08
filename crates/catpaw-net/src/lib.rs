@@ -15,7 +15,7 @@ pub mod websocket;
 
 pub use bot_auth::{BotAuthConfig, BotAuthError, BotAuthSigner, KeyPair, SignedHeaders};
 pub use bytes::Bytes;
-pub use client::{NetClient, NetConfig, NetError, RequestOptions, Response};
+pub use client::{NetClient, NetConfig, NetError, RequestOptions, Response, Unrecorded};
 pub use cookies::CookieJar;
 pub use har::{Misses, Recording};
 pub use http::{HeaderMap, HeaderName, HeaderValue, Method, StatusCode};

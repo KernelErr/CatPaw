@@ -15,7 +15,7 @@ use std::time::Duration;
 use bytes::Bytes;
 use catpaw_fetch::{FetchedDocument, fetch_document_hop};
 use catpaw_net::har::Place;
-use catpaw_net::{NetClient, NetConfig, NetError, RequestOptions, WsMessage};
+use catpaw_net::{NetClient, NetConfig, NetError, RequestOptions, Response, Unrecorded, WsMessage};
 use catpaw_web::net::{
     NetHost, NetRequest, NetResponse, NetResult, RequestKind, WsEvent, WsOutbound,
 };
@@ -249,9 +249,9 @@ fn header<'a>(request: &'a NetRequest, name: &str) -> Option<&'a str> {
         .map(|(_, v)| v.as_str())
 }
 
-/// Sends a request the page made, its entries going to `place` in a
-/// recording.
-async fn perform(client: &NetClient, request: NetRequest, place: Option<Place>) -> NetResult {
+/// What the client is asked for a request the page made: its method, URL
+/// and options.
+fn client_request(request: NetRequest) -> Result<(Method, Url, RequestOptions), String> {
     let method = Method::from_bytes(request.method.as_bytes())
         .map_err(|_| format!("invalid method `{}`", request.method))?;
     let mut options = RequestOptions::default();
@@ -276,13 +276,50 @@ async fn perform(client: &NetClient, request: NetRequest, place: Option<Place>) 
     options.body = request.body.map(Bytes::from);
     options.credentials = request.credentials;
     options.follow_redirects = request.follow_redirects;
-    options.place = place;
+    Ok((method, request.url, options))
+}
 
+/// Sends a request the page made, its entries going to `place` in a
+/// recording.
+async fn perform(client: &NetClient, request: NetRequest, place: Option<Place>) -> NetResult {
+    let (method, url, mut options) = client_request(request)?;
+    options.place = place;
     let response = client
-        .request(method, &request.url, options)
+        .request(method, &url, options)
         .await
         .map_err(|e| e.to_string())?;
-    Ok(NetResponse {
+    Ok(page_response(response))
+}
+
+/// Sends the rest of a request a replay stopped, from the hop the
+/// recording has no answer for, with the request's options.
+async fn perform_rest(
+    client: &NetClient,
+    rest: Unrecorded,
+    mut options: RequestOptions,
+) -> NetResult {
+    options.body = rest.body;
+    let response = client
+        .request(rest.method, &rest.url, options)
+        .await
+        .map_err(|e| e.to_string())?;
+    let mut response = page_response(response);
+    response.redirected |= !rest.redirect_chain.is_empty();
+    Ok(response)
+}
+
+/// What a replay makes of a request the page made.
+enum Replayed {
+    /// The recording's answer (or why there is none to give).
+    Answered(NetResult),
+    /// The recording has no answer for a hop of it, and misses go to the
+    /// network: the rest of the request, and its options.
+    Unrecorded(Box<Unrecorded>, RequestOptions),
+}
+
+/// A response as the page takes it.
+fn page_response(response: Response) -> NetResponse {
+    NetResponse {
         status: response.status.as_u16(),
         status_text: response
             .status
@@ -302,7 +339,7 @@ async fn perform(client: &NetClient, request: NetRequest, place: Option<Place>) 
         redirected: !response.redirect_chain.is_empty(),
         body: response.body.to_vec(),
         url: response.url,
-    })
+    }
 }
 
 impl EngineNet {
@@ -603,26 +640,73 @@ impl EngineNet {
 
     /// Sends a request started for the page.
     fn dispatch(&self, token: u64, request: NetRequest, index: usize) {
+        let kind = request.kind;
+        let client = self.client.clone();
         if self.client.is_replaying() {
-            let result = self.runtime.block_on(perform(&self.client, request, None));
-            self.finish(index, &result);
-            self.ready.borrow_mut().push_back((token, result));
+            // A recorded answer is there at once, in the order the page
+            // asked; a request the recording lacks goes on to the network
+            // (`--replay-misses-live`) as a live one does, and the page
+            // does not wait for it.
+            match self.replayed(request) {
+                Replayed::Answered(result) => {
+                    self.finish(index, &result);
+                    self.ready.borrow_mut().push_back((token, result));
+                }
+                Replayed::Unrecorded(rest, options) => {
+                    self.spawn(token, index, kind, async move {
+                        perform_rest(&client, *rest, options).await
+                    });
+                }
+            }
             return;
         }
         // The request's place in a recording is taken here, on the page's
         // thread: the recording keeps the order the page made its
         // requests in, whichever is answered first.
         let place = self.client.reserve_place();
-        let client = self.client.clone();
+        self.spawn(token, index, kind, async move {
+            perform(&client, request, place).await
+        });
+    }
+
+    /// Runs a request on the network runtime, its result to come back
+    /// through the channel.
+    fn spawn(
+        &self,
+        token: u64,
+        index: usize,
+        kind: RequestKind,
+        request: impl Future<Output = NetResult> + Send + 'static,
+    ) {
         let tx = self.tx.clone();
-        let kind = request.kind;
         let task = self.runtime.spawn(async move {
-            let result = perform(&client, request, place).await;
-            let _ = tx.send(HostEvent::Response(token, result));
+            let _ = tx.send(HostEvent::Response(token, request.await));
         });
         self.inflight
             .borrow_mut()
             .insert(token, (task.abort_handle(), index, kind));
+    }
+
+    /// The recording's answer to a request, without waiting for the
+    /// network; or, when the recording lacks one and misses go to the
+    /// network, what is left to send there.
+    fn replayed(&self, request: NetRequest) -> Replayed {
+        let (method, url, mut options) = match client_request(request) {
+            Ok(prepared) => prepared,
+            Err(e) => return Replayed::Answered(Err(e)),
+        };
+        options.replay_only = true;
+        let replayed = self
+            .runtime
+            .block_on(self.client.request(method, &url, options.clone()));
+        match replayed {
+            Ok(response) => Replayed::Answered(Ok(page_response(response))),
+            Err(NetError::Unrecorded(rest)) => {
+                options.replay_only = false;
+                Replayed::Unrecorded(rest, options)
+            }
+            Err(e) => Replayed::Answered(Err(e.to_string())),
+        }
     }
 
     /// Runs a future on the network runtime and waits for it. Must not be
@@ -1108,6 +1192,72 @@ mod tests {
         let fetch = host.start(request("1"));
         assert_eq!(host.fetch_blocking(request("2")).unwrap().body, b"2");
         assert_eq!(answers(&host, &[fetch])[&fetch].body, b"1");
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn a_replay_sends_what_the_recording_lacks_without_waiting_for_it() {
+        // `/slow` is answered once let go.
+        let gate = Arc::new((std::sync::Mutex::new(false), std::sync::Condvar::new()));
+        let held = gate.clone();
+        let port = serve(move |path, _| {
+            if path != "/slow" {
+                return (404, String::new());
+            }
+            let (open, opened) = &*held;
+            let open = open.lock().unwrap();
+            let _ = opened
+                .wait_timeout_while(open, Duration::from_secs(60), |open| !*open)
+                .unwrap();
+            (200, "live".to_string())
+        });
+        let base = format!("http://127.0.0.1:{port}");
+        let url = |path: &str| Url::parse(&format!("{base}{path}")).unwrap();
+        // The recording answers `/recorded`, and `/go` with a redirect to
+        // `/slow`, which it lacks.
+        let dir = std::env::temp_dir().join(format!("catpaw-net-misses-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let har = dir.join("run.har");
+        let entry = |path: &str, status: u16, headers: &str, text: &str| {
+            format!(
+                r#"{{"request": {{"method": "GET", "url": "{base}{path}", "headers": []}},
+                "response": {{"status": {status}, "headers": [{headers}], "content": {{"text": "{text}"}}}}}}"#
+            )
+        };
+        let entries = [
+            entry("/recorded", 200, "", "recorded"),
+            entry("/go", 302, r#"{"name": "location", "value": "/slow"}"#, ""),
+        ];
+        std::fs::write(
+            &har,
+            format!(r#"{{"log": {{"entries": [{}]}}}}"#, entries.join(",")),
+        )
+        .unwrap();
+        let replay = catpaw_net::Recording::Replay {
+            path: har,
+            misses: catpaw_net::Misses::Live,
+        };
+        let host = EngineNet::new(config(replay)).unwrap();
+
+        let slow = host.start(NetRequest::get(url("/slow"), RequestKind::Fetch));
+        let redirected = host.start(NetRequest::get(url("/go"), RequestKind::Other));
+        let recorded = host.start(NetRequest::get(url("/recorded"), RequestKind::Fetch));
+        // None of them waited for the network: the recorded answer is
+        // there, the two that need the network are on their way.
+        assert_eq!(host.inflight(), 2);
+        let ready = host.poll(None);
+        assert_eq!(ready.len(), 1);
+        assert_eq!(ready[0].0, recorded);
+        assert_eq!(ready[0].1.as_ref().unwrap().body, b"recorded");
+
+        *gate.0.lock().unwrap() = true;
+        gate.1.notify_all();
+        let answers = answers(&host, &[slow, redirected]);
+        assert_eq!(answers[&slow].body, b"live");
+        assert!(!answers[&slow].redirected);
+        assert_eq!(answers[&redirected].body, b"live");
+        assert!(answers[&redirected].redirected);
+        assert_eq!(answers[&redirected].url, url("/slow"));
         let _ = std::fs::remove_dir_all(dir);
     }
 }
