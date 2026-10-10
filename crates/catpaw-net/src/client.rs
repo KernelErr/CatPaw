@@ -96,8 +96,9 @@ pub struct NetConfig {
     /// addresses (off by default: a page must not reach the machine or its
     /// network).
     pub allow_private_network: bool,
-    /// An HTTP (`CONNECT`) or SOCKS5 proxy every connection goes through.
-    pub proxy: Option<Url>,
+    /// The HTTP (`CONNECT`) or SOCKS5 proxies connections go through; none
+    /// by default.
+    pub proxy: crate::proxy::Proxies,
     /// Cookies to start with, as [`CookieJar::to_json`] writes them.
     pub cookies_json: Option<String>,
     /// Record the traffic as HAR, or answer from such a recording.
@@ -115,7 +116,7 @@ impl Default for NetConfig {
             max_response_bytes: 32 * 1024 * 1024,
             max_decoded_bytes: 64 * 1024 * 1024,
             allow_private_network: false,
-            proxy: None,
+            proxy: crate::proxy::Proxies::default(),
             cookies_json: None,
             recording: None,
         }
@@ -468,7 +469,96 @@ fn is_redirect(status: StatusCode) -> bool {
 
 /// The transport: TLS over a direct connection, or over a tunnel through
 /// the proxy.
-pub(crate) type Connector = HttpsConnector<ProxyOrDirect>;
+pub(crate) type Connector = HttpsConnector<Transport>;
+
+/// The routes out: directly, or through the proxy for the target's scheme
+/// unless its host is to be reached directly.
+#[derive(Clone)]
+pub(crate) struct Transport {
+    direct: ProxyOrDirect,
+    https: Option<ProxyOrDirect>,
+    http: Option<ProxyOrDirect>,
+    proxies: std::sync::Arc<crate::proxy::Proxies>,
+}
+
+impl Transport {
+    fn new(config: &NetConfig) -> Result<Self, NetError> {
+        let mut direct = HttpConnector::new_with_resolver(FilteringResolver {
+            allow_private: config.allow_private_network,
+        });
+        direct.enforce_http(false);
+        let via = |proxy: &Option<Url>| proxy.as_ref().map(proxy_connector).transpose();
+        Ok(Self {
+            direct: ProxyOrDirect::Direct(direct),
+            https: via(&config.proxy.https)?,
+            http: via(&config.proxy.http)?,
+            proxies: std::sync::Arc::new(config.proxy.clone()),
+        })
+    }
+
+    fn route(&mut self, uri: &Uri) -> &mut ProxyOrDirect {
+        let scheme = uri.scheme_str().unwrap_or("http");
+        let host = uri.host().unwrap_or_default();
+        if self.proxies.for_target(scheme, host).is_none() {
+            return &mut self.direct;
+        }
+        let proxy = match scheme {
+            "https" | "wss" => self.https.as_mut(),
+            _ => self.http.as_mut(),
+        };
+        match proxy {
+            Some(proxy) => proxy,
+            None => &mut self.direct,
+        }
+    }
+}
+
+impl tower_service::Service<Uri> for Transport {
+    type Response = hyper_util::rt::TokioIo<tokio::net::TcpStream>;
+    type Error = Box<dyn std::error::Error + Send + Sync>;
+    type Future = std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<Self::Response, Self::Error>> + Send>,
+    >;
+
+    fn poll_ready(
+        &mut self,
+        _cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Result<(), Self::Error>> {
+        // Every route is a connector that is always ready.
+        std::task::Poll::Ready(Ok(()))
+    }
+
+    fn call(&mut self, uri: Uri) -> Self::Future {
+        self.route(&uri).call(uri)
+    }
+}
+
+/// A connector through `proxy`.
+fn proxy_connector(proxy: &Url) -> Result<ProxyOrDirect, NetError> {
+    // The proxy itself may well be on a private network; the target's
+    // address is the proxy's business.
+    let (uri, auth) = policy::proxy_parts(proxy).map_err(NetError::Proxy)?;
+    let mut via = HttpConnector::new_with_resolver(FilteringResolver {
+        allow_private: true,
+    });
+    via.enforce_http(false);
+    Ok(if proxy.scheme().starts_with("socks5") {
+        let mut socks = hyper_util::client::legacy::connect::proxy::SocksV5::new(uri, via);
+        if !proxy.username().is_empty() {
+            socks = socks.with_auth(
+                proxy.username().to_string(),
+                proxy.password().unwrap_or_default().to_string(),
+            );
+        }
+        ProxyOrDirect::Socks(socks)
+    } else {
+        let mut tunnel = hyper_util::client::legacy::connect::proxy::Tunnel::new(uri, via);
+        if let Some(auth) = auth {
+            tunnel = tunnel.with_auth(auth);
+        }
+        ProxyOrDirect::Tunnel(tunnel)
+    })
+}
 
 /// A connection made directly (names resolved and filtered here) or
 /// through a `CONNECT` or SOCKS5 proxy (which resolves the target).
@@ -518,40 +608,7 @@ impl tower_service::Service<Uri> for ProxyOrDirect {
 impl NetClient {
     pub fn new(config: NetConfig) -> Result<Self, NetError> {
         let tls = build_tls_config()?;
-        let mut http = HttpConnector::new_with_resolver(FilteringResolver {
-            allow_private: config.allow_private_network,
-        });
-        http.enforce_http(false);
-        let transport = match &config.proxy {
-            None => ProxyOrDirect::Direct(http),
-            Some(proxy) => {
-                // The proxy itself may well be on a private network; the
-                // target's address is the proxy's business.
-                let (uri, auth) = policy::proxy_parts(proxy).map_err(NetError::Proxy)?;
-                let mut via = HttpConnector::new_with_resolver(FilteringResolver {
-                    allow_private: true,
-                });
-                via.enforce_http(false);
-                if proxy.scheme().starts_with("socks5") {
-                    let mut socks =
-                        hyper_util::client::legacy::connect::proxy::SocksV5::new(uri, via);
-                    if !proxy.username().is_empty() {
-                        socks = socks.with_auth(
-                            proxy.username().to_string(),
-                            proxy.password().unwrap_or_default().to_string(),
-                        );
-                    }
-                    ProxyOrDirect::Socks(socks)
-                } else {
-                    let mut tunnel =
-                        hyper_util::client::legacy::connect::proxy::Tunnel::new(uri, via);
-                    if let Some(auth) = auth {
-                        tunnel = tunnel.with_auth(auth);
-                    }
-                    ProxyOrDirect::Tunnel(tunnel)
-                }
-            }
-        };
+        let transport = Transport::new(&config)?;
         let https = hyper_rustls::HttpsConnectorBuilder::new()
             .with_tls_config(tls.clone())
             .https_or_http()

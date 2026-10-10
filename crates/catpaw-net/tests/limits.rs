@@ -59,7 +59,7 @@ async fn private_addresses_are_refused_unless_allowed() {
 async fn local_names_are_refused_through_a_proxy_too() {
     // A proxy on this machine would otherwise reach its services.
     let client = NetClient::new(NetConfig {
-        proxy: Some(Url::parse("http://127.0.0.1:9").unwrap()),
+        proxy: catpaw_net::Proxies::all(Url::parse("http://127.0.0.1:9").unwrap()),
         ..NetConfig::default()
     })
     .unwrap();

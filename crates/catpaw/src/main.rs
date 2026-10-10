@@ -182,8 +182,10 @@ struct NetArgs {
     /// Let requests reach loopback, private and link-local addresses.
     #[arg(long)]
     allow_private_network: bool,
-    /// An HTTP (CONNECT) or SOCKS5 proxy, e.g. http://user:pass@host:3128
-    /// or socks5h://host:1080.
+    /// An HTTP (CONNECT) or SOCKS5 proxy for every connection, e.g.
+    /// http://user:pass@host:3128 or socks5h://host:1080. Without it, the
+    /// https_proxy, http_proxy, all_proxy and no_proxy environment
+    /// variables are used as curl reads them; `--proxy direct` ignores them.
     #[arg(long)]
     proxy: Option<String>,
     /// A cookie file (JSON) to load before the request and save after it.
@@ -580,10 +582,14 @@ fn net_config(args: &NetArgs) -> Result<NetConfig> {
     config.max_response_bytes = args.max_response_mb.saturating_mul(1024 * 1024);
     config.max_decoded_bytes = config.max_response_bytes.saturating_mul(2);
     config.allow_private_network = args.allow_private_network;
-    if let Some(proxy) = &args.proxy {
-        config.proxy =
-            Some(Url::parse(proxy).with_context(|| format!("parsing the proxy URL {proxy}"))?);
-    }
+    config.proxy = match args.proxy.as_deref() {
+        Some("direct") => catpaw_net::Proxies::default(),
+        Some(proxy) => catpaw_net::Proxies::all(
+            Url::parse(proxy).with_context(|| format!("parsing the proxy URL {proxy}"))?,
+        ),
+        None => catpaw_net::Proxies::from_env(|name| std::env::var(name).ok())
+            .map_err(anyhow::Error::msg)?,
+    };
     if let Some(path) = &args.cookie_jar
         && path.exists()
     {

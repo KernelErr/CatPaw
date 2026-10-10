@@ -236,8 +236,8 @@ What does not work as a browser's would yet, besides the web features
 - **A host whose HTTP/2 connections leave streams unanswered** costs the
   requests it leaves about two seconds before they go again over
   HTTP/1.1 (see `HTTP2_STALL` in `catpaw-net`).
-- **Through a proxy, names are resolved by the proxy.** With `--proxy`,
-  the private-address check covers literal addresses and local names
+- **Through a proxy, names are resolved by the proxy.** With a proxy
+  (`--proxy`, or one from the environment), the private-address check covers literal addresses and local names
   (`localhost`, `.local`) only: a name that resolves to a private address
   on the proxy's side is reached.
 - **The local pages assume a computer not shared with other accounts.**

@@ -8,8 +8,10 @@ differently from a browser, is listed under
 
 - HTTP/1.1 and HTTP/2 over rustls; redirects, cookies, gzip, brotli and
   zstd, encoding sniffing.
-- HTTP `CONNECT` and SOCKS5 proxies (`--proxy`); cookie files kept between
-  runs (`--cookie-jar`).
+- HTTP `CONNECT` and SOCKS5 proxies: `--proxy`, or the `https_proxy`,
+  `http_proxy`, `all_proxy` and `no_proxy` environment variables as curl
+  reads them (`localhost` and loopback addresses always go direct, as in
+  Chrome); cookie files kept between runs (`--cookie-jar`).
 - Response bodies capped on the wire and after decoding
   (`--max-response-mb`).
 - Loopback and private addresses refused unless `--allow-private-network`
