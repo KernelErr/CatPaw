@@ -51,3 +51,21 @@ CatPaw will not pass every site. That is the site owner's decision, and the
 project says so plainly. Pass rates are measured on a Cloudflare zone the
 project controls, with each challenge mode enabled, and reported as numbers
 rather than promised.
+
+## Amendment (2026-10-10): who signs and registers
+
+CatPaw is software people run themselves. A key of the project's would
+have to ship in every copy, where anyone could take it, and a signature
+made with it would say nothing about who sent a request. Decision 3 is
+replaced:
+
+3. **Operational path.** The project signs nothing and registers with no
+   one. Its User-Agent, `CatPaw/<version> (+https://catpaw.sh/bot)`,
+   points site owners to a page that says what CatPaw traffic is and how
+   to block or allow it. Deployers who want a verified identity make a key
+   of their own (`catpaw keygen`), publish its directory on their own
+   domain, sign with it, and register as Signed Agents themselves (Direct
+   for their own use, Intermediary when they run CatPaw for others); the
+   project documents how. The Browser Developer Program was not taking new
+   applications when checked (2026-10-10); the project applies if it
+   reopens.
