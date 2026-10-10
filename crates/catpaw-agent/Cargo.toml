@@ -12,5 +12,5 @@ readme = "../../README.md"
 description = "Agent-facing page views for the CatPaw browser: accessibility snapshots with stable refs, markdown, links and forms"
 
 [dependencies]
-catpaw-dom = { path = "../catpaw-dom", version = "0.0.1" }
+catpaw-dom = { path = "../catpaw-dom", version = "0.1.0" }
 url.workspace = true

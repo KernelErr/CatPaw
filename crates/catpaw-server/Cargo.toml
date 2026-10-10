@@ -8,13 +8,13 @@ publish = false
 description = "CatPaw browser engine: the agent server (MCP over stdio)"
 
 [dependencies]
-catpaw-agent = { path = "../catpaw-agent", version = "0.0.1" }
-catpaw-dom = { path = "../catpaw-dom", version = "0.0.1" }
-catpaw-engine = { path = "../catpaw-engine", version = "0.0.1" }
-catpaw-net = { path = "../catpaw-net", version = "0.0.1" }
-catpaw-protocol = { path = "../catpaw-protocol", version = "0.0.1" }
-catpaw-style = { path = "../catpaw-style", version = "0.0.1" }
-catpaw-web = { path = "../catpaw-web", version = "0.0.1" }
+catpaw-agent = { path = "../catpaw-agent", version = "0.1.0" }
+catpaw-dom = { path = "../catpaw-dom", version = "0.1.0" }
+catpaw-engine = { path = "../catpaw-engine", version = "0.1.0" }
+catpaw-net = { path = "../catpaw-net", version = "0.1.0" }
+catpaw-protocol = { path = "../catpaw-protocol", version = "0.1.0" }
+catpaw-style = { path = "../catpaw-style", version = "0.1.0" }
+catpaw-web = { path = "../catpaw-web", version = "0.1.0" }
 base64.workspace = true
 getrandom.workspace = true
 regex.workspace = true

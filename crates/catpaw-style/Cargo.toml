@@ -12,8 +12,8 @@ readme = "../../README.md"
 description = "Stylo style resolution over the CatPaw arena DOM"
 
 [dependencies]
-catpaw-dom = { path = "../catpaw-dom", version = "0.0.1" }
-catpaw-text = { path = "../catpaw-text", version = "0.0.1" }
+catpaw-dom = { path = "../catpaw-dom", version = "0.1.0" }
+catpaw-text = { path = "../catpaw-text", version = "0.1.0" }
 style = { package = "stylo", version = "0.22" }
 style_traits = { package = "stylo_traits", version = "0.22" }
 style_dom = { package = "stylo_dom", version = "0.22" }

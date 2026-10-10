@@ -8,5 +8,5 @@ publish = false
 description = "CatPaw browser engine: js"
 
 [dependencies]
-catpaw-dom = { path = "../catpaw-dom", version = "0.0.1" }
+catpaw-dom = { path = "../catpaw-dom", version = "0.1.0" }
 slotmap.workspace = true

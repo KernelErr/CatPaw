@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>CatPaw: third-party licenses</title>
+<style>
+body { font: 15px/1.5 system-ui, sans-serif; max-width: 60rem; margin: 2rem auto; padding: 0 1rem; }
+pre { white-space: pre-wrap; background: #8881; padding: .75rem; border-radius: .3rem; }
+li { margin: .1rem 0; }
+</style>
+<h1>Third-party licenses</h1>
+<p>CatPaw is licensed under Apache-2.0 OR MIT. Its binaries include the
+crates below, under the licenses that follow. The source of each crate
+is on crates.io, at the version named; the bundled DejaVu fonts carry
+their own license, in <code>LICENSE-DejaVu-fonts.txt</code>.</p>
+<h2>Overview</h2>
+<ul>
+{{#each overview}}
+  <li><a href="#{{id}}">{{name}}</a> ({{count}})</li>
+{{/each}}
+</ul>
+<h2>Licenses</h2>
+{{#each licenses}}
+<section id="{{id}}">
+<h3>{{name}}</h3>
+<p>Used by:</p>
+<ul>
+{{#each used_by}}
+  <li>{{crate.name}} {{crate.version}}</li>
+{{/each}}
+</ul>
+<pre>{{text}}</pre>
+</section>
+{{/each}}
+</html>

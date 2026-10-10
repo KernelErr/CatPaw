@@ -502,7 +502,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "catpaw-agent",
@@ -522,7 +522,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-agent"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "catpaw-dom",
  "url",
@@ -530,7 +530,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-bindings-boa"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "boa_engine",
  "boa_gc",
@@ -544,11 +544,11 @@ dependencies = [
 
 [[package]]
 name = "catpaw-canvas"
-version = "0.0.1"
+version = "0.1.0"
 
 [[package]]
 name = "catpaw-dom"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "html5ever",
  "markup5ever",
@@ -559,7 +559,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-engine"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "bytes",
  "catpaw-bindings-boa",
@@ -579,7 +579,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-fetch"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "catpaw-net",
  "encoding_rs",
@@ -588,7 +588,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-js"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "catpaw-dom",
  "slotmap",
@@ -596,7 +596,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-js-boa"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "boa_engine",
  "boa_gc",
@@ -605,7 +605,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-layout"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "catpaw-dom",
  "catpaw-style",
@@ -620,7 +620,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-net"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "base64 0.23.1",
  "brotli",
@@ -653,7 +653,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-paint"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "catpaw-dom",
  "catpaw-layout",
@@ -667,7 +667,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-protocol"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -675,7 +675,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-server"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "base64 0.23.1",
  "catpaw-agent",
@@ -696,7 +696,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-style"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "app_units",
  "atomic_refcell",
@@ -717,7 +717,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-text"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "fontique",
  "parley",
@@ -726,7 +726,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-web"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -762,7 +762,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-webidl"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "serde",
@@ -4989,7 +4989,7 @@ checksum = "0637d3a5566a82fa5214bae89087bc8c9fb94cd8e8a3c07feb691bb8d9c632db"
 
 [[package]]
 name = "xtask"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "catpaw-bindings-boa",

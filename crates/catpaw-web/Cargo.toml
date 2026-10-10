@@ -11,12 +11,12 @@ description = "CatPaw browser engine: web"
 getrandom.workspace = true
 sha1 = { workspace = true, features = ["oid"] }
 sha2 = { workspace = true, features = ["oid"] }
-catpaw-dom = { path = "../catpaw-dom", version = "0.0.1" }
-catpaw-js = { path = "../catpaw-js", version = "0.0.1" }
-catpaw-style = { path = "../catpaw-style", version = "0.0.1" }
-catpaw-layout = { path = "../catpaw-layout", version = "0.0.1" }
-catpaw-text = { path = "../catpaw-text", version = "0.0.1" }
-catpaw-paint = { path = "../catpaw-paint", version = "0.0.1" }
+catpaw-dom = { path = "../catpaw-dom", version = "0.1.0" }
+catpaw-js = { path = "../catpaw-js", version = "0.1.0" }
+catpaw-style = { path = "../catpaw-style", version = "0.1.0" }
+catpaw-layout = { path = "../catpaw-layout", version = "0.1.0" }
+catpaw-text = { path = "../catpaw-text", version = "0.1.0" }
+catpaw-paint = { path = "../catpaw-paint", version = "0.1.0" }
 base64.workspace = true
 encoding_rs.workspace = true
 indexmap.workspace = true

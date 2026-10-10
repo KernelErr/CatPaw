@@ -47,3 +47,17 @@ jobs:
         # The engine is the same on every platform; one run of the suites is enough.
         if: runner.os == 'Linux'
         run: cargo run -p xtask --features wpt -- wpt --include dom --include html/dom --include fetch/api --include xhr --include css/cssom-view --jobs 4 --kill-after 20
+
+  licenses:
+    name: licenses
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-about
+      - name: Every crate in the binary is under an accepted license
+        run: >
+          cargo about generate --locked --fail -c release/about.toml
+          -m crates/catpaw/Cargo.toml release/about.hbs -o THIRD-PARTY-LICENSES.html

@@ -23,9 +23,14 @@ use crate::cookies::CookieJar;
 use crate::decode::decode_body;
 use crate::policy::{self, FilteringResolver};
 
-/// The default User-Agent. Deployers are expected to set their own, with a
-/// contact URL, when they register as a signed agent.
-pub const DEFAULT_USER_AGENT: &str = concat!("CatPaw/", env!("CARGO_PKG_VERSION"));
+/// The default User-Agent: the product and where a site owner learns what
+/// it is. Deployers who register as a signed agent set their own, with
+/// their contact URL.
+pub const DEFAULT_USER_AGENT: &str = concat!(
+    "CatPaw/",
+    env!("CARGO_PKG_VERSION"),
+    " (+https://catpaw.sh/bot)"
+);
 
 pub const DEFAULT_ACCEPT: &str = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
 pub const DEFAULT_ACCEPT_ENCODING: &str = "gzip, deflate, br, zstd";

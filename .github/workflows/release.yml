@@ -1,0 +1,136 @@
+name: Release
+
+# A tag `vX.Y.Z` builds every target, packages it, and publishes a GitHub
+# release with the archives and their SHA256SUMS. Run by hand, it builds
+# and packages only (a dry run): nothing is published.
+#
+# The archive names are a contract with the install scripts at
+# https://catpaw.sh: catpaw-<target>.tar.gz (catpaw-<target>.zip on
+# Windows), each holding catpaw-<target>/catpaw[.exe] with the licenses,
+# and SHA256SUMS listing them all.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  notices:
+    name: Third-party notices
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-about
+      - name: Generate
+        run: >
+          cargo about generate --locked --fail -c release/about.toml
+          -m crates/catpaw/Cargo.toml release/about.hbs
+          -o THIRD-PARTY-LICENSES.html
+      - uses: actions/upload-artifact@v4
+        with:
+          name: notices
+          path: THIRD-PARTY-LICENSES.html
+          if-no-files-found: error
+
+  build:
+    name: ${{ matrix.target }}
+    needs: notices
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The oldest supported runners, for the widest glibc reach.
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-22.04
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-22.04-arm
+          - target: aarch64-apple-darwin
+            os: macos-14
+          - target: x86_64-pc-windows-msvc
+            os: windows-2022
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: dist-${{ matrix.target }}
+      - name: Build
+        run: cargo build --locked --profile dist -p catpaw --target ${{ matrix.target }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: notices
+      - name: Package
+        shell: bash
+        run: |
+          set -eu
+          name=catpaw-${{ matrix.target }}
+          exe=catpaw
+          if [ "$RUNNER_OS" = Windows ]; then exe=catpaw.exe; fi
+          mkdir "$name"
+          cp "target/${{ matrix.target }}/dist/$exe" "$name/"
+          cp LICENSE-APACHE LICENSE-MIT README.md THIRD-PARTY-LICENSES.html "$name/"
+          cp crates/catpaw-text/fonts/LICENSE "$name/LICENSE-DejaVu-fonts.txt"
+          "$name/$exe" --version
+          if [ "$RUNNER_OS" = Windows ]; then
+            7z a "$name.zip" "$name" > /dev/null
+          else
+            tar czf "$name.tar.gz" "$name"
+          fi
+          ls -l "$name".*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: catpaw-${{ matrix.target }}.*
+          if-no-files-found: error
+
+  publish:
+    name: Publish
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: "*-*-*"
+          merge-multiple: true
+      - name: Checksums
+        working-directory: dist
+        run: |
+          sha256sum catpaw-*.tar.gz catpaw-*.zip > SHA256SUMS
+          cat SHA256SUMS
+      - name: Release notes
+        run: |
+          set -eu
+          version="${GITHUB_REF_NAME#v}"
+          # The CHANGELOG section of this version, then how to install it.
+          awk -v v="$version" '
+            index($0, "## " v) == 1 { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          test -s notes.md
+          cat release/install.md >> notes.md
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # Not a prerelease: the install scripts fetch releases/latest,
+        # which skips prereleases.
+        run: >
+          gh release create "$GITHUB_REF_NAME" dist/*
+          --verify-tag --title "CatPaw $GITHUB_REF_NAME" --notes-file notes.md

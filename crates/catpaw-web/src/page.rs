@@ -139,7 +139,13 @@ impl Default for PageConfig {
             "Linux x86_64"
         };
         Self {
-            user_agent: concat!("CatPaw/", env!("CARGO_PKG_VERSION")).to_string(),
+            // As the network sends it (catpaw-net's `DEFAULT_USER_AGENT`).
+            user_agent: concat!(
+                "CatPaw/",
+                env!("CARGO_PKG_VERSION"),
+                " (+https://catpaw.sh/bot)"
+            )
+            .to_string(),
             languages: vec!["en-US".to_string(), "en".to_string()],
             platform: platform.to_string(),
             viewport_width: 1280,

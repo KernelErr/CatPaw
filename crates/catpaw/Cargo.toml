@@ -23,17 +23,17 @@ default = ["mimalloc"]
 mimalloc = ["dep:mimalloc"]
 
 [dependencies]
-catpaw-net = { path = "../catpaw-net", version = "0.0.1" }
-catpaw-fetch = { path = "../catpaw-fetch", version = "0.0.1" }
-catpaw-dom = { path = "../catpaw-dom", version = "0.0.1" }
-catpaw-agent = { path = "../catpaw-agent", version = "0.0.1" }
+catpaw-net = { path = "../catpaw-net", version = "0.1.0" }
+catpaw-fetch = { path = "../catpaw-fetch", version = "0.1.0" }
+catpaw-dom = { path = "../catpaw-dom", version = "0.1.0" }
+catpaw-agent = { path = "../catpaw-agent", version = "0.1.0" }
 clap.workspace = true
 tokio.workspace = true
 anyhow.workspace = true
 url.workspace = true
-catpaw-style = { path = "../catpaw-style", version = "0.0.1" }
-catpaw-engine = { path = "../catpaw-engine", version = "0.0.1" }
-catpaw-server = { path = "../catpaw-server", version = "0.0.1" }
+catpaw-style = { path = "../catpaw-style", version = "0.1.0" }
+catpaw-engine = { path = "../catpaw-engine", version = "0.1.0" }
+catpaw-server = { path = "../catpaw-server", version = "0.1.0" }
 serde_json.workspace = true
 toml = "0.9"
 mimalloc = { version = "0.1", optional = true, default-features = false }

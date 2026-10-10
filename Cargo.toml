@@ -3,13 +3,13 @@ resolver = "3"
 members = ["crates/*", "xtask"]
 
 [workspace.package]
-version = "0.0.1"
+version = "0.1.0"
 edition = "2024"
 rust-version = "1.89"
 license = "Apache-2.0 OR MIT"
 authors = ["The CatPaw Contributors"]
 repository = "https://github.com/KernelErr/CatPaw"
-homepage = "https://github.com/KernelErr/CatPaw"
+homepage = "https://catpaw.sh"
 keywords = ["browser", "headless", "agent", "html", "llm"]
 
 [workspace.dependencies]
@@ -90,6 +90,13 @@ opt-level = 3
 
 [profile.release]
 debug = 1
+
+# What releases ship: no debug info, symbols stripped, thin LTO.
+[profile.dist]
+inherits = "release"
+debug = false
+strip = true
+lto = "thin"
 
 [patch.crates-io]
 # boa_ast, boa_engine and boa_parser 0.22.0 with fixes described in

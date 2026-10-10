@@ -12,6 +12,6 @@ readme = "../../README.md"
 description = "Document fetching and HTML encoding sniffing for the CatPaw browser"
 
 [dependencies]
-catpaw-net = { path = "../catpaw-net", version = "0.0.1" }
+catpaw-net = { path = "../catpaw-net", version = "0.1.0" }
 encoding_rs.workspace = true
 url.workspace = true

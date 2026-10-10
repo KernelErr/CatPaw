@@ -10,4 +10,4 @@ description = "CatPaw browser engine: js-boa"
 [dependencies]
 boa_engine = { workspace = true, features = ["annex-b", "intl_bundled"] }
 boa_gc.workspace = true
-catpaw-js = { path = "../catpaw-js", version = "0.0.1" }
+catpaw-js = { path = "../catpaw-js", version = "0.1.0" }
