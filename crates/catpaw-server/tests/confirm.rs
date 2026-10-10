@@ -82,7 +82,7 @@ type Log = Arc<Mutex<Vec<String>>>;
 /// Serves `/order`, answers anything else with a page naming the request,
 /// and logs each request as `METHOD /path` plus, for POSTs, the body.
 fn serve() -> (u16, Log) {
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let listener = listener();
     let port = listener.local_addr().unwrap().port();
     let log: Log = Arc::default();
     let seen = log.clone();
@@ -1638,5 +1638,21 @@ fn the_approval_key_is_never_uploaded() {
             refused.starts_with("error BadArgument that file is CatPaw's approval key"),
             "{refused}"
         );
+    }
+}
+
+/// A local listener on a port pages may fetch from: the system can hand
+/// out one of the ports the Fetch standard blocks (3659, 6000, ...) when its
+/// ephemeral range starts low, and a page's request to it fails.
+fn listener() -> TcpListener {
+    const BLOCKED: &[u16] = &[
+        1719, 1720, 1723, 2049, 3659, 4045, 4190, 5060, 5061, 6000, 6566, 6665, 6666, 6667, 6668,
+        6669, 6679, 6697, 10080,
+    ];
+    loop {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        if !BLOCKED.contains(&listener.local_addr().unwrap().port()) {
+            return listener;
+        }
     }
 }

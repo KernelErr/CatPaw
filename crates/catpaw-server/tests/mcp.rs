@@ -194,7 +194,7 @@ setTimeout(function () {
 /// Serves `pages` by path (the query is ignored), a thread per
 /// connection; `/slow…` answers after 300 ms and `/hang…` after 3 s.
 fn serve(pages: HashMap<&'static str, &'static str>) -> u16 {
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let listener = listener();
     let port = listener.local_addr().unwrap().port();
     std::thread::spawn(move || {
         for stream in listener.incoming() {
@@ -1231,4 +1231,20 @@ fn downloads_scrolling_and_editors() {
         json!({"script": "document.querySelector('[contenteditable]').textContent"}),
     );
     assert_eq!(text, "ok evaluate\nhello");
+}
+
+/// A local listener on a port pages may fetch from: the system can hand
+/// out one of the ports the Fetch standard blocks (3659, 6000, ...) when its
+/// ephemeral range starts low, and a page's request to it fails.
+fn listener() -> TcpListener {
+    const BLOCKED: &[u16] = &[
+        1719, 1720, 1723, 2049, 3659, 4045, 4190, 5060, 5061, 6000, 6566, 6665, 6666, 6667, 6668,
+        6669, 6679, 6697, 10080,
+    ];
+    loop {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        if !BLOCKED.contains(&listener.local_addr().unwrap().port()) {
+            return listener;
+        }
+    }
 }
