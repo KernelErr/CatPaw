@@ -123,6 +123,7 @@ impl IntrinsicObject for DateTimeFormat {
                 Attribute::CONFIGURABLE,
             )
             .method(Self::resolved_options, js_string!("resolvedOptions"), 0)
+            .method(Self::format_to_parts, js_string!("formatToParts"), 1)
             .property(
                 JsSymbol::to_string_tag(),
                 js_string!("Intl.DateTimeFormat"),
@@ -142,7 +143,7 @@ impl BuiltInObject for DateTimeFormat {
 
 impl BuiltInConstructor for DateTimeFormat {
     const CONSTRUCTOR_ARGUMENTS: usize = 0;
-    const PROTOTYPE_STORAGE_SLOTS: usize = 4;
+    const PROTOTYPE_STORAGE_SLOTS: usize = 5;
     const CONSTRUCTOR_STORAGE_SLOTS: usize = 1;
 
     const STANDARD_CONSTRUCTOR: fn(&StandardConstructors) -> &StandardConstructor =
@@ -307,6 +308,127 @@ impl DateTimeFormat {
     ///
     /// [spec]: https://tc39.es/ecma402/#sec-intl.datetimeformat.supportedlocalesof
     /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/supportedLocalesOf
+    /// CatPaw: [`Intl.DateTimeFormat.prototype.formatToParts ( date )`][spec]:
+    /// the formatted date as `{type, value}` parts, from the parts ICU4X
+    /// marks while formatting (their names are ECMA-402's types); the text
+    /// between them is `literal`.
+    ///
+    /// [spec]: https://tc39.es/ecma402/#sec-Intl.DateTimeFormat.prototype.formatToParts
+    fn format_to_parts(
+        this: &JsValue,
+        args: &[JsValue],
+        context: &mut Context,
+    ) -> JsResult<JsValue> {
+        use std::fmt::Write;
+        use writeable::{PartsWrite, Writeable};
+
+        /// What a part says, nested parts (a number's digits) and all.
+        struct Inner(String);
+
+        impl Write for Inner {
+            fn write_str(&mut self, s: &str) -> std::fmt::Result {
+                self.0.push_str(s);
+                Ok(())
+            }
+        }
+
+        impl PartsWrite for Inner {
+            type SubPartsWrite = Self;
+
+            fn with_part(
+                &mut self,
+                _part: writeable::Part,
+                mut f: impl FnMut(&mut Self::SubPartsWrite) -> std::fmt::Result,
+            ) -> std::fmt::Result {
+                f(self)
+            }
+        }
+
+        struct Parts(Vec<(&'static str, String)>);
+
+        impl Parts {
+            fn push(&mut self, typ: &'static str, value: String) {
+                if value.is_empty() {
+                    return;
+                }
+                match self.0.last_mut() {
+                    Some((last, text)) if *last == "literal" && typ == "literal" => {
+                        text.push_str(&value);
+                    }
+                    _ => self.0.push((typ, value)),
+                }
+            }
+        }
+
+        impl Write for Parts {
+            fn write_str(&mut self, s: &str) -> std::fmt::Result {
+                self.push("literal", s.to_string());
+                Ok(())
+            }
+        }
+
+        impl PartsWrite for Parts {
+            type SubPartsWrite = Inner;
+
+            fn with_part(
+                &mut self,
+                part: writeable::Part,
+                mut f: impl FnMut(&mut Self::SubPartsWrite) -> std::fmt::Result,
+            ) -> std::fmt::Result {
+                let mut inner = Inner(String::new());
+                f(&mut inner)?;
+                let typ = if part.category == "datetime" {
+                    part.value
+                } else {
+                    "literal"
+                };
+                self.push(typ, inner.0);
+                Ok(())
+            }
+        }
+
+        // 1. Let dtf be the this value.
+        // 2. Perform ? RequireInternalSlot(dtf, [[InitializedDateTimeFormat]]).
+        let dtf = unwrap_date_time_format(this, context)?;
+        // 3. If date is undefined, let x be ! Call(%Date.now%, undefined).
+        // 4. Else, let x be ? ToNumber(date).
+        let date = args.get_or_undefined(0);
+        let x = if date.is_undefined() {
+            context.clock().system_time_millis() as f64
+        } else {
+            date.to_number(context)?
+        };
+        // 5. Return ? FormatDateTimeToParts(dtf, x).
+        let parts = with_formatted_timestamp(dtf.borrow().data(), x, context, |formatted| {
+            let mut parts = Parts(Vec::new());
+            formatted
+                .write_to_parts(&mut parts)
+                .map(|()| parts.0)
+                .map_err(|e| crate::JsError::from(JsNativeError::typ().with_message(e.to_string())))
+        })??;
+        let result = crate::builtins::Array::array_create(0, None, context)
+            .js_expect("creating an empty array with default proto must not fail")?;
+        for (n, (typ, value)) in parts.into_iter().enumerate() {
+            let o = context
+                .intrinsics()
+                .templates()
+                .ordinary_object()
+                .create(crate::builtins::OrdinaryObject, vec![]);
+            o.create_data_property_or_throw(js_string!("type"), js_string!(typ), context)
+                .js_expect("operation must not fail per the spec")?;
+            o.create_data_property_or_throw(
+                js_string!("value"),
+                JsString::from(value.as_str()),
+                context,
+            )
+            .js_expect("operation must not fail per the spec")?;
+            result
+                .create_data_property_or_throw(n, o, context)
+                .js_expect("operation must not fail per the spec")?;
+        }
+        Ok(result.into())
+    }
+
     fn supported_locales_of(
         _: &JsValue,
         args: &[JsValue],
@@ -871,6 +993,19 @@ pub(crate) fn format_timestamp_with_dtf(
     timestamp: f64,
     context: &mut Context,
 ) -> JsResult<JsValue> {
+    with_formatted_timestamp(dtf, timestamp, context, |formatted| {
+        JsString::from(formatted.to_string()).into()
+    })
+}
+
+/// CatPaw: `format_timestamp_with_dtf`, handing the formatted date to `f`
+/// (which `formatToParts` takes apart).
+fn with_formatted_timestamp<R>(
+    dtf: &DateTimeFormat,
+    timestamp: f64,
+    context: &mut Context,
+    f: impl FnOnce(&icu_datetime::FormattedDateTime<'_>) -> R,
+) -> JsResult<R> {
     // PartitionDateTimePattern ( dtf, x ) step 1:
     // 1. Let x be TimeClip(x).
     let x = time_clip(timestamp);
@@ -918,8 +1053,7 @@ pub(crate) fn format_timestamp_with_dtf(
         time: dt.time,
         zone: tz_info_at_time,
     };
-    let result = dtf.formatter.format(&zdt).to_string();
-    Ok(JsString::from(result).into())
+    Ok(f(&dtf.formatter.format(&zdt)))
 }
 
 fn date_time_style_format(
@@ -959,6 +1093,10 @@ fn best_fit_date_time_format(format_options: &FormatOptions) -> JsResult<Composi
     builder.date_fields = format_options.to_date_fields();
     builder.time_precision = format_options.to_time_fields();
     builder.zone_style = format_options.to_zone_style();
+    if builder.date_fields.is_some() {
+        builder.year_style = format_options.to_year_style();
+    }
+    builder.alignment = format_options.to_alignment();
     builder
         .build_composite()
         .map_err(|e| JsNativeError::range().with_message(e.to_string()).into())

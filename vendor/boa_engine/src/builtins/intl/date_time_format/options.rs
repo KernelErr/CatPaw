@@ -19,7 +19,7 @@ use icu_calendar::cal::{
 use icu_datetime::{
     DateTimeFormatterPreferences,
     fieldsets::builder::{DateFields, ZoneStyle},
-    options::{Length, SubsecondDigits as IcuSubsecondDigits, TimePrecision},
+    options::{Alignment, Length, SubsecondDigits as IcuSubsecondDigits, TimePrecision, YearStyle},
     preferences::{CalendarAlgorithm, HijriCalendarAlgorithm, HourCycle as IcuHourCycle},
     scaffold::CldrCalendar,
 };
@@ -283,6 +283,26 @@ impl FormatOptions {
             (None, None, None, Some(era)) => Some(era.to_length()),
             (None, None, None, None) => None,
         }
+    }
+
+    /// CatPaw: the year as asked for. `numeric` is the whole year
+    /// (`1/1/1970`, not ICU4X's default `1/1/70`); an era option shows the
+    /// era too; `2-digit` is ICU4X's default.
+    pub(super) fn to_year_style(&self) -> Option<YearStyle> {
+        match (self.year, self.era) {
+            (Some(_), Some(_)) => Some(YearStyle::WithEra),
+            (Some(Year::Numeric), None) => Some(YearStyle::Full),
+            _ => None,
+        }
+    }
+
+    /// CatPaw: `2-digit` months, days and hours are padded, which ICU4X
+    /// does for fields aligned in a column (`01/01/1970`).
+    pub(super) fn to_alignment(&self) -> Option<Alignment> {
+        let padded = matches!(self.month, Some(Month::TwoDigit))
+            || matches!(self.day, Some(Day::TwoDigit))
+            || matches!(self.hour, Some(Hour::TwoDigit));
+        padded.then_some(Alignment::Column)
     }
 
     /// Convert the current `FormatOptions` to a [`DateFields`].

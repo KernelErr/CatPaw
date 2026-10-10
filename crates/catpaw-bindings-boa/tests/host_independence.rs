@@ -101,19 +101,19 @@ fn intl_probe(timezone_offset_minutes: i32) -> String {
 
 #[test]
 fn intl_shows_dates_in_the_page_time_zone() {
-    let utc = "12:00\u{202f}AM | utc | 1/1/70, 12:00:00\u{202f}AM | 12:00:00\u{202f}AM";
+    let utc = "12:00\u{202f}AM | utc | 1/1/1970, 12:00:00\u{202f}AM | 12:00:00\u{202f}AM";
     assert_eq!(intl_probe(0), utc);
     assert_eq!(
         intl_probe(5 * 60 + 30),
-        "5:30\u{202f}AM | +05:30 | 1/1/70, 5:30:00\u{202f}AM | 12:00:00\u{202f}AM"
+        "5:30\u{202f}AM | +05:30 | 1/1/1970, 5:30:00\u{202f}AM | 12:00:00\u{202f}AM"
     );
     assert_eq!(
         intl_probe(-(4 * 60 + 30)),
-        "7:30\u{202f}PM | -04:30 | 12/31/69, 7:30:00\u{202f}PM | 12:00:00\u{202f}AM"
+        "7:30\u{202f}PM | -04:30 | 12/31/1969, 7:30:00\u{202f}PM | 12:00:00\u{202f}AM"
     );
     assert_eq!(
         intl_probe(-30),
-        "11:30\u{202f}PM | -00:30 | 12/31/69, 11:30:00\u{202f}PM | 12:00:00\u{202f}AM"
+        "11:30\u{202f}PM | -00:30 | 12/31/1969, 11:30:00\u{202f}PM | 12:00:00\u{202f}AM"
     );
     // No time zone is 20 hours from UTC: `Intl` stays in UTC.
     assert_eq!(intl_probe(20 * 60), utc);

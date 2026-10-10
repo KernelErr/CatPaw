@@ -1319,6 +1319,15 @@ fn vendored_engine_fixes_hold() {
             "try { Object.getOwnPropertyDescriptor(RegExp, '$1').get.call({}); 'read' } catch (e) { e.name }",
             "TypeError",
         ),
+        // Dates by parts, and years and padding as asked for.
+        (
+            "new Intl.DateTimeFormat('en-US', {year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC'}).formatToParts(0).map(function (p) { return p.type + ':' + p.value; }).join('|')",
+            "month:01|literal:/|day:01|literal:/|year:1970",
+        ),
+        (
+            "[new Intl.DateTimeFormat('en-US', {timeZone: 'UTC'}).format(0), new Intl.DateTimeFormat('en-US', {year: '2-digit', month: 'numeric', timeZone: 'UTC'}).format(0)].join(' ')",
+            "1/1/1970 1/70",
+        ),
     ] {
         assert_eq!(eval(&mut page, source), expected, "{source}");
     }

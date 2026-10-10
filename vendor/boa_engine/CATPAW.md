@@ -85,6 +85,23 @@ when read), and the accessors on the constructor read it, throwing a
 `TypeError` on any other receiver. Pages that format dates with
 `RegExp.$1` failed without them.
 
+## `Intl.DateTimeFormat.prototype.formatToParts`
+
+`src/builtins/intl/date_time_format/mod.rs`: the published crate has
+`format` only. `formatToParts` formats as `format` does and collects the
+parts ICU4X marks while writing (`writeable::PartsWrite`): a `datetime`
+part's name is ECMA-402's `type` (`year`, `month`, `day`, `weekday`,
+`hour`, `minute`, `second`, `dayPeriod`, `era`, `timeZoneName`, …), and
+the text between parts is `literal`. Fractional seconds stay part of
+`second`. Sites that format dates by parts failed without it.
+
+`date_time_format/options.rs`, `best_fit_date_time_format`: `year:
+"numeric"` (also the default) asks ICU4X for the whole year
+(`YearStyle::Full`, or `WithEra` with an `era` option) and `2-digit`
+months, days and hours for column alignment, which pads them: `1/1/1970`
+and `01/01/1970` as browsers give, where the published crate gave
+`1/1/70` for both.
+
 ## Parsing and compiling speed
 
 With the parser changes in `vendor/boa_parser` and `vendor/boa_ast`, these
