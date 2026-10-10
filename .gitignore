@@ -1,4 +1,6 @@
 /target
+# The vendored crates build on their own (cargo package, cargo publish).
+/vendor/*/target
 **/*.rs.bk
 *.log
 .DS_Store
