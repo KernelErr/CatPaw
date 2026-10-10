@@ -179,12 +179,22 @@ impl MdWriter<'_> {
     fn node(&mut self, id: NodeId) {
         match self.dom.kind(id) {
             NodeKind::Text(t) => {
-                if self.pre_depth > 0 || !t.trim().is_empty() || !self.inline.is_empty() {
+                let shown = self
+                    .dom
+                    .parent(id)
+                    .is_none_or(|p| crate::visibility::text_shown(self.dom, p, self.oracle));
+                if shown && (self.pre_depth > 0 || !t.trim().is_empty() || !self.inline.is_empty())
+                {
                     self.inline.push_str(t);
                 }
             }
             NodeKind::Element(el) => {
-                if is_hidden(self.dom, id, self.oracle) {
+                if crate::visibility::hides_subtree(self.dom, id, self.oracle) {
+                    return;
+                }
+                // Hidden itself, but not what in it shows again.
+                if self.oracle.is_visibility_hidden(self.dom, id) {
+                    self.block_children(id);
                     return;
                 }
                 if crate::visibility::masked_text(self.dom, id, self.oracle) {
@@ -668,7 +678,11 @@ pub fn links(dom: &Dom, oracle: &dyn StyleOracle, mut refs: Option<RefScope<'_>>
         let Some(href) = el.attr("href") else {
             continue;
         };
-        if is_hidden(dom, n, oracle) || dom.ancestors(n).any(|a| is_hidden(dom, a, oracle)) {
+        if is_hidden(dom, n, oracle)
+            || dom
+                .ancestors(n)
+                .any(|a| crate::visibility::hides_subtree(dom, a, oracle))
+        {
             continue;
         }
         let resolved = base

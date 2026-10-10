@@ -11,6 +11,7 @@ use style::data::ElementDataWrapper;
 use style::properties::PropertyDeclarationBlock;
 use style::servo_arc::Arc;
 use style::shared_lock::{Locked, SharedRwLock};
+use style::stylist::CascadeData;
 use style_dom::ElementState;
 
 /// Everything Stylo wants to read or write on an element.
@@ -62,10 +63,12 @@ impl Default for StyleSlot {
     }
 }
 
-/// The side table: one [`StyleSlot`] per element node, plus the document's
+/// The side table: one [`StyleSlot`] per element node, the rules of the
+/// shadow roots that have style sheets of their own, and the document's
 /// shared lock for stylesheet data.
 pub struct StyleTable {
     slots: SecondaryMap<NodeId, StyleSlot>,
+    shadows: SecondaryMap<NodeId, Arc<CascadeData>>,
     lock: SharedRwLock,
 }
 
@@ -73,8 +76,31 @@ impl StyleTable {
     pub fn new(lock: SharedRwLock) -> Self {
         Self {
             slots: SecondaryMap::new(),
+            shadows: SecondaryMap::new(),
             lock,
         }
+    }
+
+    /// The rules of a shadow root's own style sheets, if it has any.
+    pub fn shadow_rules(&self, shadow_root: NodeId) -> Option<&CascadeData> {
+        self.shadows.get(shadow_root).map(|data| &**data)
+    }
+
+    /// Sets (or with `None`, drops) a shadow root's rules.
+    pub fn set_shadow_rules(&mut self, shadow_root: NodeId, rules: Option<Arc<CascadeData>>) {
+        match rules {
+            Some(rules) => {
+                self.shadows.insert(shadow_root, rules);
+            }
+            None => {
+                self.shadows.remove(shadow_root);
+            }
+        }
+    }
+
+    /// The shadow roots that have rules of their own.
+    pub fn shadow_roots(&self) -> Vec<NodeId> {
+        self.shadows.keys().collect()
     }
 
     pub fn lock(&self) -> &SharedRwLock {

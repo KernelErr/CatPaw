@@ -7,6 +7,7 @@ use std::sync::{Mutex, Once};
 
 use catpaw_dom::{Dom, NodeId};
 use selectors::matching::QuirksMode;
+use style::author_styles::AuthorStyles;
 use style::context::{
     RegisteredSpeculativePainter, RegisteredSpeculativePainters, SharedStyleContext, StyleContext,
     ThreadLocalStyleContext,
@@ -22,8 +23,10 @@ use style::selector_parser::{PseudoElement, SnapshotMap};
 use style::servo::media_features::PointerCapabilities;
 use style::servo_arc::Arc;
 use style::shared_lock::{SharedRwLock, StylesheetGuards};
-use style::stylesheets::{AllowImportRules, DocumentStyleSheet, Origin, Stylesheet, UrlExtraData};
-use style::stylist::{RuleInclusion, Stylist};
+use style::stylesheets::{
+    AllowImportRules, CustomMediaMap, DocumentStyleSheet, Origin, Stylesheet, UrlExtraData,
+};
+use style::stylist::{CascadeData, RuleInclusion, Stylist};
 use style::thread_state::{self, ThreadState};
 use style::traversal::{DomTraversal, UndisplayedStyleCache, recalc_style_at, resolve_style};
 use style::traversal_flags::TraversalFlags;
@@ -163,7 +166,19 @@ pub struct StyleEngine {
     /// The styles of anonymous block boxes, by the address of their
     /// parent's style (which each entry keeps alive).
     anonymous: RefCell<HashMap<usize, AnonymousStyle>>,
+    /// Each shadow root's own sheets as last set, by the hashes of their
+    /// texts.
+    shadow_sheets: HashMap<NodeId, Vec<u64>>,
+    /// Parsed shadow sheets and the rules of lists of them, by the hashes
+    /// of their texts: the many instances of a component share both.
+    shadow_parsed: HashMap<u64, DocumentStyleSheet>,
+    shadow_rules: HashMap<Vec<u64>, Arc<CascadeData>>,
+    /// The shadow roots the slots were made for.
+    pub(crate) known_shadows: std::collections::HashSet<NodeId>,
 }
+
+/// How many parsed shadow sheets, or lists of them, are kept for reuse.
+const SHADOW_CACHE: usize = 512;
 
 impl StyleEngine {
     pub fn new(options: &StyleOptions) -> Self {
@@ -187,6 +202,10 @@ impl StyleEngine {
             url_data,
             quirks_mode: QuirksMode::NoQuirks,
             author_sheets: Vec::new(),
+            shadow_sheets: HashMap::new(),
+            shadow_parsed: HashMap::new(),
+            shadow_rules: HashMap::new(),
+            known_shadows: Default::default(),
             resolved: UndisplayedStyleCache::default(),
             synced: None,
             styled: false,
@@ -360,6 +379,81 @@ impl StyleEngine {
 
     pub fn author_sheet_count(&self) -> usize {
         self.author_sheets.len()
+    }
+
+    /// Sets the style sheets of the shadow roots that have any: each root
+    /// with the texts of its sheets, in cascade order. Roots left out have
+    /// none. Their rules apply within their shadow trees only (and to the
+    /// host and slotted elements through `:host` and `::slotted()`).
+    /// Returns whether anything changed; the styles then start over.
+    pub fn set_shadow_stylesheets(&mut self, roots: &[(NodeId, Vec<&str>)]) -> bool {
+        let hash = |text: &str| {
+            use std::hash::{DefaultHasher, Hash, Hasher};
+            let mut hasher = DefaultHasher::new();
+            text.hash(&mut hasher);
+            hasher.finish()
+        };
+        let wanted: HashMap<NodeId, Vec<u64>> = roots
+            .iter()
+            .map(|(root, texts)| (*root, texts.iter().map(|t| hash(t)).collect()))
+            .collect();
+        if wanted == self.shadow_sheets {
+            return false;
+        }
+        if self.shadow_parsed.len() > SHADOW_CACHE {
+            self.shadow_parsed.clear();
+        }
+        if self.shadow_rules.len() > SHADOW_CACHE {
+            self.shadow_rules.clear();
+        }
+        let lock = self.table.lock().clone();
+        let guard = lock.read();
+        for root in self.table.shadow_roots() {
+            if !wanted.contains_key(&root) {
+                self.table.set_shadow_rules(root, None);
+            }
+        }
+        for (root, texts) in roots {
+            let keys = &wanted[root];
+            if self.shadow_sheets.get(root) == Some(keys) {
+                continue;
+            }
+            let rules = match self.shadow_rules.get(keys) {
+                Some(rules) => rules.clone(),
+                None => {
+                    let mut styles = AuthorStyles::<DocumentStyleSheet>::new();
+                    for (key, css) in keys.iter().zip(texts) {
+                        let sheet = self
+                            .shadow_parsed
+                            .entry(*key)
+                            .or_insert_with(|| {
+                                make_stylesheet(
+                                    css,
+                                    Origin::Author,
+                                    &lock,
+                                    &self.url_data,
+                                    self.quirks_mode,
+                                )
+                            })
+                            .clone();
+                        styles.stylesheets.append_stylesheet(
+                            None,
+                            &CustomMediaMap::default(),
+                            sheet,
+                            &guard,
+                        );
+                    }
+                    styles.flush(&mut self.stylist, &guard);
+                    self.shadow_rules.insert(keys.clone(), styles.data.clone());
+                    styles.data
+                }
+            };
+            self.table.set_shadow_rules(*root, Some(rules));
+        }
+        drop(guard);
+        self.shadow_sheets = wanted;
+        self.invalidate();
+        true
     }
 
     /// The computed style of a connected element or one of its

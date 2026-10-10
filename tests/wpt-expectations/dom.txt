@@ -644,7 +644,6 @@ dom/nodes/ParentNode-querySelector-All.html	-
 dom/nodes/ParentNode-querySelector-basic-has.html	Basic :has() support in querySelector
 dom/nodes/ParentNode-querySelector-escapes.html	"\\ud83dsurrogateFirst" should never match with "#\\\\d83d surrogateFirst"
 dom/nodes/ParentNode-querySelector-escapes.html	"surrogateSecond\\udd11" should never match with "#surrogateSecond\\\\dd11"
-dom/nodes/ParentNode-querySelector-host-pseudo-class.html	Using :host pseudo-class selector in shadow DOM
 dom/nodes/ParentNode-querySelectorAll-nested-not-has.html	querySelectorAll with :not(:has(..))
 dom/nodes/ParentNode-querySelectorAll-scope-change.html	Change the scope of querySelectorAll
 dom/nodes/ParentNode-replaceChildren.html	Document.replaceChildren() with a DocumentFragment containing a single element, replacing an existing doctype and element.

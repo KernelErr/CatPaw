@@ -591,7 +591,6 @@ css/cssom-view/scrollIntoView-scrollPadding.html	scrollIntoView({block: "center"
 css/cssom-view/scrollIntoView-scrollPadding.html	scrollIntoView({block: "end", inline: "end"})
 css/cssom-view/scrollIntoView-scrollPadding.html	scrollIntoView({block: "start", inline: "start"})
 css/cssom-view/scrollIntoView-scrolling-container.html	scrollIntoView on a scrolling container should scroll its outer scrollers into view but not scroll itself.
-css/cssom-view/scrollIntoView-shadow.html	scrollIntoView should behave correctly if applies to shadow dom elements
 css/cssom-view/scrollIntoView-should-treat-slot-as-scroll-container.html	-
 css/cssom-view/scrollIntoView-sideways-lr-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"center","inline":"center"})
 css/cssom-view/scrollIntoView-sideways-lr-writing-mode-and-rtl-direction.html	scrollIntoView({"block":"center","inline":"end"})

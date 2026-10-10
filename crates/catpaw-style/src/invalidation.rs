@@ -44,18 +44,21 @@ fn attr_of<'a>(attrs: &'a [Attr], local: &str) -> Option<&'a str> {
         .map(|a| a.value.as_str())
 }
 
-/// Sets the dirty-descendants bit on `from` and its ancestors, so that
-/// the traversal finds its way down to what is below `from`.
+/// Sets the dirty-descendants bit on `from` and its ancestors in the flat
+/// tree (the way the traversal goes: through slots and shadow hosts), so
+/// that the traversal finds its way down to what is below `from`.
 fn mark_dirty(dom: &Dom, table: &StyleTable, from: NodeId) {
     let mut current = Some(from);
     while let Some(id) = current {
         if !dom.is_element(id) {
-            break;
+            // From the top of a shadow tree, on from its host.
+            current = dom.shadow_host(id);
+            continue;
         }
         if let Some(slot) = table.slot(id) {
             slot.dirty_descendants.store(true, Ordering::SeqCst);
         }
-        current = dom.parent(id);
+        current = dom.flat_parent(id);
     }
 }
 
@@ -112,6 +115,9 @@ impl StyleEngine {
         for id in dom.shadow_including_descendants(dom.document()) {
             if dom.is_element(id) {
                 self.refresh_slot(dom, id);
+                if let Some(shadow) = dom.element(id).and_then(|e| e.shadow_root) {
+                    self.known_shadows.insert(shadow);
+                }
             }
         }
     }
@@ -174,6 +180,9 @@ impl StyleEngine {
             if let Some(slot) = self.table.slot_mut(id) {
                 slot.clear_data();
             }
+            if let Some(shadow) = dom.element(id).and_then(|e| e.shadow_root) {
+                self.known_shadows.insert(shadow);
+            }
         }
         // Where it went since is logged too.
         if dom.parent(node) == Some(parent) {
@@ -204,7 +213,16 @@ impl StyleEngine {
             return;
         }
         match dom.kind(parent) {
-            NodeKind::Element(_) => {}
+            NodeKind::Element(el) => {
+                // A host's children are rendered through its slots, which
+                // they may now go to or leave.
+                if el.shadow_root.is_some() {
+                    if dom.is_connected(parent) {
+                        self.restyle_subtree(dom, parent);
+                    }
+                    return;
+                }
+            }
             // The root element came or went (or something else at the top
             // whose kind is gone with it): start over.
             NodeKind::Document(_) if parent == dom.document() => {
@@ -213,9 +231,21 @@ impl StyleEngine {
                 }
                 return;
             }
-            // Shadow roots and fragments: their children are not styled
-            // by the traversal.
-            _ => return,
+            // The top of a shadow tree: the traversal reaches it through
+            // the host.
+            _ => {
+                if let Some(host) = dom.shadow_host(parent)
+                    && dom.is_connected(host)
+                    && self
+                        .table
+                        .slot(host)
+                        .is_some_and(|slot| slot.has_data.load(Ordering::SeqCst))
+                {
+                    self.pending = true;
+                    mark_dirty(dom, &self.table, host);
+                }
+                return;
+            }
         }
         if !dom.is_connected(parent) {
             return;
@@ -357,12 +387,44 @@ impl StyleEngine {
     /// A connected element's attributes may have changed.
     fn element_changed(&mut self, dom: &Dom, el: NodeId) {
         let change = self.refresh_slot(dom, el);
-        // A shadow root attached since needs slots for its tree.
+        // A shadow root attached since needs slots for its tree, and the
+        // host is rendered with it from now on: its own children only
+        // through slots, and the style they had goes.
         if let Some(shadow) = dom.element(el).and_then(|e| e.shadow_root) {
             for id in dom.shadow_including_descendants(shadow) {
                 if dom.is_element(id) && !self.table.contains(id) {
                     self.refresh_slot(dom, id);
                 }
+            }
+            if self.known_shadows.insert(shadow) {
+                for id in dom.descendants(el).skip(1) {
+                    if let Some(slot) = self.table.slot_mut(id) {
+                        slot.clear_data();
+                    }
+                }
+                self.restyle_subtree(dom, el);
+            }
+        }
+        // Slotting: an element that names another slot, or a slot that
+        // takes another name, moves nodes between slots.
+        if let Some(old) = &change.attrs {
+            let slot_changed = attr_of(old, "slot") != dom.attr(el, "slot");
+            let name_changed =
+                dom.is_html_element(el, "slot") && attr_of(old, "name") != dom.attr(el, "name");
+            let host = if slot_changed {
+                dom.parent(el)
+                    .filter(|&p| dom.element(p).is_some_and(|e| e.shadow_root.is_some()))
+            } else if name_changed {
+                dom.containing_shadow_root(el)
+                    .and_then(|root| dom.shadow_host(root))
+            } else {
+                None
+            };
+            if let Some(host) = host {
+                if slot_changed && let Some(slot) = self.table.slot_mut(el) {
+                    slot.clear_data();
+                }
+                self.restyle_subtree(dom, host);
             }
         }
         let Some(old_attrs) = change.attrs else {

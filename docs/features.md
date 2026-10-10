@@ -24,7 +24,9 @@ differently from a browser, is listed under
   tree-construction tests pass; the rest are documented upstream gaps.
 - Style resolved by Stylo from the UA style sheet and the page's linked and
   inline style sheets; inline and computed styles, and the CSSOM
-  (`CSSStyleSheet`, `adoptedStyleSheets`, `CSS.supports`).
+  (`CSSStyleSheet`, `adoptedStyleSheets`, `CSS.supports`). Shadow trees
+  are styled by their own and adopted style sheets, render through their
+  slots, and show in snapshots and reading as they render.
 
 ## JavaScript
 

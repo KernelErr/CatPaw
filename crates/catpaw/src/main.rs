@@ -1026,25 +1026,25 @@ fn fetch_with_scripts_on(
         }
 
         let view = chosen_view(args);
-        let page_url = page.url();
-        let dom = page.dom();
-        let oracle: Box<dyn StyleOracle> = if args.no_css || view == View::Html {
-            Box::new(AttributeOracle)
-        } else {
-            let style_started = Instant::now();
-            let (engine, fetched) =
-                page.net()
-                    .block_on(style_document(page.net().client(), &dom, &page_url));
+        if args.no_css || view == View::Html {
+            let dom = page.dom();
+            return render(args, view, &dom, &AttributeOracle);
+        }
+        // The page's own styles, as the agent's tools see them: its sheets
+        // as scripts left them, shadow trees and form state included.
+        let state = page
+            .frame_state(catpaw_engine::FrameId(0))
+            .cloned()
+            .context("the page has no document")?;
+        let style_started = Instant::now();
+        catpaw_server::with_page_styles(&state, |dom, oracle| {
             eprintln!(
-                "{} nodes; styled with {} author sheet(s) ({} fetched) in {} ms",
+                "{} nodes; styled in {} ms",
                 dom.len(),
-                engine.author_sheet_count(),
-                fetched,
                 style_started.elapsed().as_millis()
             );
-            Box::new(EngineOracle(engine))
-        };
-        render(args, view, &dom, oracle.as_ref())
+            render(args, view, dom, oracle)
+        })
     }
 }
 

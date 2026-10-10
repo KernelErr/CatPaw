@@ -39,6 +39,8 @@ Binaries for Linux (x86_64, aarch64), macOS on Apple silicon and Windows
 - HTML parsing, style by Stylo, JavaScript by Boa with bindings generated
   from Web IDL, an event loop with virtual time, frames, popups, workers,
   WebSocket, storage, Web Crypto and Canvas 2D.
+- Shadow trees styled and shown as they render: their own and adopted
+  style sheets, slots, and document rules kept out of them.
 - Layout by Taffy and Parley when something asks for geometry, and
   screenshots by tiny-skia.
 - web-platform-tests run in CI against recorded expectations.

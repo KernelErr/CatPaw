@@ -790,6 +790,18 @@ impl Dom {
             return Vec::new();
         };
         let name = el.attr("name").unwrap_or_default();
+        // Of slots with the same name, the first in tree order takes the
+        // nodes.
+        let first = self.descendants(root).find(|&n| {
+            self.element(n).is_some_and(|other| {
+                other.is_html()
+                    && &*other.name.local == "slot"
+                    && other.attr("name").unwrap_or_default() == name
+            })
+        });
+        if first != Some(slot) {
+            return Vec::new();
+        }
         self.children(*host)
             .filter(|&c| match &self.nodes[c].kind {
                 NodeKind::Element(child) => child.attr("slot").unwrap_or_default() == name,
@@ -797,6 +809,37 @@ impl Dom {
                 _ => false,
             })
             .collect()
+    }
+
+    /// The node `id` is rendered under, its parent in the flat tree: the
+    /// slot it is assigned to when its parent hosts a shadow tree (`None`
+    /// when no slot takes it: it is not rendered), the host for the top of
+    /// a shadow tree, and otherwise its parent.
+    pub fn flat_parent(&self, id: NodeId) -> Option<NodeId> {
+        let parent = self.nodes.get(id)?.parent?;
+        match &self.nodes[parent].kind {
+            NodeKind::DocumentFragment(FragmentKind::ShadowRoot { host, .. }) => Some(*host),
+            NodeKind::Element(el) if el.shadow_root.is_some() => self.assigned_slot(id),
+            _ => Some(parent),
+        }
+    }
+
+    /// The shadow root whose tree `id` is in, if it is in one.
+    pub fn containing_shadow_root(&self, id: NodeId) -> Option<NodeId> {
+        let root = self.root_of(id);
+        matches!(
+            self.nodes[root].kind,
+            NodeKind::DocumentFragment(FragmentKind::ShadowRoot { .. })
+        )
+        .then_some(root)
+    }
+
+    /// The host of a shadow root.
+    pub fn shadow_host(&self, shadow_root: NodeId) -> Option<NodeId> {
+        match &self.nodes.get(shadow_root)?.kind {
+            NodeKind::DocumentFragment(FragmentKind::ShadowRoot { host, .. }) => Some(*host),
+            _ => None,
+        }
     }
 
     /// The slot in the parent's shadow tree that `node` is assigned to.

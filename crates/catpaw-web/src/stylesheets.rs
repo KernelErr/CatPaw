@@ -286,58 +286,80 @@ fn sheet_key(owner: NodeId, text: &str) -> u64 {
     hasher.finish()
 }
 
+/// The sheet of a `style` or `link` element as it applies now (script's
+/// edits included), with a key for it: `None` when the element has none,
+/// or its media do not apply.
+fn element_sheet(page: &PageState, dom: &Dom, node: NodeId) -> Option<(u64, Rc<str>)> {
+    let el = dom.element(node)?;
+    if !el.is_html() {
+        return None;
+    }
+    let text: Rc<str> = match &*el.name.local {
+        "style" => {
+            let is_css = el.attr("type").is_none_or(|t| {
+                let t = t.trim();
+                t.is_empty() || t.eq_ignore_ascii_case("text/css")
+            });
+            if !is_css {
+                return None;
+            }
+            child_text_content(dom, node).into()
+        }
+        "link" => loaded_link_text(page, node)?,
+        _ => return None,
+    };
+    // Script's view of the sheet, where it has one, is what applies.
+    let object = page.styles.sheet_objects.borrow().get(&node).copied();
+    match object {
+        Some(id) => {
+            cssom::sync_element_sheet(page, id, &text);
+            let (media, edited) = cssom::engine_view(page, id)?;
+            media_applies(page, Some(&media.join(", ")))
+                .then(|| (sheet_key(node, &edited), edited.into()))
+        }
+        None => media_applies(page, el.attr("media")).then(|| (sheet_key(node, &text), text)),
+    }
+}
+
 /// The document's style sheets in tree order, then the ones it adopted:
 /// a key for each with its text.
 fn collect_sheets(page: &PageState, dom: &Dom) -> Vec<(u64, Rc<str>)> {
-    let mut sheets = Vec::new();
-    for node in dom.descendants(dom.document()) {
-        let Some(el) = dom.element(node) else {
-            continue;
-        };
-        if !el.is_html() {
-            continue;
-        }
-        let text: Rc<str> = match &*el.name.local {
-            "style" => {
-                let is_css = el.attr("type").is_none_or(|t| {
-                    let t = t.trim();
-                    t.is_empty() || t.eq_ignore_ascii_case("text/css")
-                });
-                if !is_css {
-                    continue;
-                }
-                child_text_content(dom, node).into()
-            }
-            "link" => match loaded_link_text(page, node) {
-                Some(text) => text,
-                None => continue,
-            },
-            _ => continue,
-        };
-        // Script's view of the sheet, where it has one, is what applies.
-        let object = page.styles.sheet_objects.borrow().get(&node).copied();
-        match object {
-            Some(id) => {
-                cssom::sync_element_sheet(page, id, &text);
-                if let Some((media, edited)) = cssom::engine_view(page, id)
-                    && media_applies(page, Some(&media.join(", ")))
-                {
-                    sheets.push((sheet_key(node, &edited), edited.into()));
-                }
-            }
-            None => {
-                if media_applies(page, el.attr("media")) {
-                    sheets.push((sheet_key(node, &text), text));
-                }
-            }
-        }
-    }
+    let mut sheets: Vec<(u64, Rc<str>)> = dom
+        .descendants(dom.document())
+        .filter_map(|node| element_sheet(page, dom, node))
+        .collect();
     for (key, media, text) in cssom::adopted_for_engine(page, dom.document()) {
         if media_applies(page, Some(&media.join(", "))) {
             sheets.push((key, text.into()));
         }
     }
     sheets
+}
+
+/// The sheets of each shadow tree in the document that has any: those of
+/// its `style` and `link` elements in tree order, then the ones it
+/// adopted. They apply within that tree only.
+fn collect_shadow_sheets(page: &PageState, dom: &Dom) -> Vec<(NodeId, Vec<Rc<str>>)> {
+    let mut out = Vec::new();
+    for host in dom.shadow_including_descendants(dom.document()) {
+        let Some(shadow) = dom.element(host).and_then(|e| e.shadow_root) else {
+            continue;
+        };
+        let mut sheets: Vec<Rc<str>> = dom
+            .descendants(shadow)
+            .filter_map(|node| element_sheet(page, dom, node))
+            .map(|(_, text)| text)
+            .collect();
+        for (_, media, text) in cssom::adopted_for_engine(page, shadow) {
+            if media_applies(page, Some(&media.join(", "))) {
+                sheets.push(text.into());
+            }
+        }
+        if !sheets.is_empty() {
+            out.push((shadow, sheets));
+        }
+    }
+    out
 }
 
 /// Whether the changes to the document since it was at `since` can have
@@ -347,15 +369,22 @@ fn sheets_may_have_changed(dom: &Dom, since: u64) -> bool {
     let Some(changes) = dom.changes_since(since) else {
         return true;
     };
-    let owns_sheet = |n: NodeId| dom.is_html_element(n, "style") || dom.is_html_element(n, "link");
+    let owns_sheet =
+        |n: &NodeId| dom.is_html_element(*n, "style") || dom.is_html_element(*n, "link");
     let in_style = |n: NodeId| dom.contains(n) && dom.is_html_element(n, "style");
     changes.iter().any(|change| match *change {
         Change::Inserted { parent, node } | Change::Removed { parent, node } => {
-            // What a freed subtree held is not known.
-            in_style(parent) || !dom.contains(node) || dom.traverse(node).any(owns_sheet)
+            // What a freed subtree held is not known; a host brings the
+            // sheets of its shadow tree.
+            in_style(parent)
+                || !dom.contains(node)
+                || dom
+                    .shadow_including_descendants(node)
+                    .iter()
+                    .any(owns_sheet)
         }
         Change::Data(node) => {
-            dom.contains(node) && (owns_sheet(node) || dom.parent(node).is_some_and(in_style))
+            dom.contains(node) && (owns_sheet(&node) || dom.parent(node).is_some_and(in_style))
         }
         Change::Freed(_) => false,
     })
@@ -384,7 +413,13 @@ pub(crate) fn with_engine<R>(page: &PageState, f: impl FnOnce(&mut StyleEngine, 
             let sheets = collect_sheets(page, &dom);
             let keyed: Vec<(u64, &str)> =
                 sheets.iter().map(|(key, text)| (*key, &**text)).collect();
-            let changed = engine.set_author_stylesheets(&keyed);
+            let mut changed = engine.set_author_stylesheets(&keyed);
+            let shadow_sheets = collect_shadow_sheets(page, &dom);
+            let shadow_keyed: Vec<(NodeId, Vec<&str>)> = shadow_sheets
+                .iter()
+                .map(|(root, texts)| (*root, texts.iter().map(|t| &**t).collect()))
+                .collect();
+            changed |= engine.set_shadow_stylesheets(&shadow_keyed);
             crate::layout::log_step(if changed { "sheets-changed" } else { "sheets" }, started);
         }
         page.styles.version.set(Some(version));

@@ -167,6 +167,30 @@ poll();
 /// placed off the page, and one with no size.
 const REACH: &str = r#"<!doctype html><title>Reach</title><body style="margin:0"><div style="height:100vh"><div style="height:1200px"></div><button id=low onclick="this.textContent='Done'">Low</button></div><button style="position:absolute;left:-5000px;top:0">Away</button><button id=flat style="width:0;height:0;padding:0;border:0;overflow:hidden">Flat</button>"#;
 
+/// Shadow trees as pages build them: styles of their own, slots, adopted
+/// sheets, one attached late; `visibility` turned back on inside a hidden
+/// element; and a deferred script whose `document.write` must not wipe
+/// the page.
+const SHADOWS: &str = r#"<!doctype html><title>Shadows</title>
+<style>.gone { display: none }</style>
+<div id=card><span slot=title>Light title</span><span>Not slotted</span></div>
+<div id=adopted></div>
+<div id=late></div>
+<div style="visibility:hidden">Veiled <span style="visibility:visible">Shown again</span></div>
+<script src="/write.js" defer></script>
+<script>
+var card = document.getElementById('card').attachShadow({mode: 'open'});
+card.innerHTML = '<style>.secret { display: none }</style><h2><slot name=title></slot></h2><p class=secret>Scoped away</p><p class=gone>Document rules stop here</p><button>Inside</button>';
+var adopted = document.getElementById('adopted').attachShadow({mode: 'closed'});
+var sheet = new CSSStyleSheet();
+sheet.replaceSync('.off { display: none }');
+adopted.adoptedStyleSheets = [sheet];
+adopted.innerHTML = '<p>Adopted on</p><p class=off>Adopted off</p>';
+setTimeout(function () {
+  document.getElementById('late').attachShadow({mode: 'open'}).innerHTML = '<a href="/next">Late link</a>';
+}, 50);
+</script>"#;
+
 /// Serves `pages` by path (the query is ignored), a thread per
 /// connection; `/slow…` answers after 300 ms and `/hang…` after 3 s.
 fn serve(pages: HashMap<&'static str, &'static str>) -> u16 {
@@ -251,6 +275,8 @@ impl Client {
             ("/drag", DRAG),
             ("/p5", P5),
             ("/reach", REACH),
+            ("/shadows", SHADOWS),
+            ("/write.js", "document.write('<p>Written over</p>');"),
             ("/data.csv", "id,name\n1,Ada\n"),
             ("/poll", "ok"),
         ]));
@@ -776,6 +802,45 @@ fn frames_show_inside_their_host_and_take_actions() {
         json!({"for": "text", "text": "Paid", "timeoutMs": 500}),
     );
     assert!(waited.starts_with("ok wait"), "{waited}");
+}
+
+#[test]
+fn shadow_trees_show_as_they_render() {
+    let mut client = Client::new();
+    let url = format!("{}/shadows", client.base);
+    client.ok("navigate", json!({ "url": url }));
+    let page = client.ok("snapshot", json!({"filter": "all"}));
+    for shown in [
+        "Light title",
+        "button \"Inside\"",
+        "Document rules stop here",
+        "Adopted on",
+        "link \"Late link\"",
+        "Shown again",
+    ] {
+        assert!(page.contains(shown), "{shown:?} should show:\n{page}");
+    }
+    for hidden in [
+        "Not slotted",
+        "Scoped away",
+        "Adopted off",
+        "Veiled",
+        "Written over",
+    ] {
+        assert!(
+            !page.contains(hidden),
+            "{hidden:?} should not show:\n{page}"
+        );
+    }
+    // The slotted title sits in the heading it is slotted into.
+    assert!(page.contains("heading \"Light title\""), "{page}");
+    let inside = ref_of(&page, "button \"Inside\"");
+    client.ok("click", json!({"target": inside}));
+    let text = client.ok("read", json!({"view": "text"}));
+    assert!(
+        text.contains("Shown again") && !text.contains("Veiled"),
+        "{text}"
+    );
 }
 
 #[test]

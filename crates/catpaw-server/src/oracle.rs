@@ -55,3 +55,13 @@ impl StyleOracle for EngineOracle<'_> {
         agent::has_activation_listener(self.page, id)
     }
 }
+
+/// Runs `f` with the document of a page's frame and an oracle that answers
+/// from the page's own style engine and form state: the page as the
+/// agent's tools see it.
+pub fn with_page_styles<R>(
+    page: &PageState,
+    f: impl FnOnce(&Dom, &dyn catpaw_agent::StyleOracle) -> R,
+) -> R {
+    agent::with_styles(page, |engine, dom| f(dom, &EngineOracle { engine, page }))
+}

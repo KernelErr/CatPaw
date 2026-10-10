@@ -36,6 +36,11 @@ pub struct ScriptState {
     /// `document.write`). While positive, `document.write` has an insertion
     /// point.
     parser_script_depth: Cell<u32>,
+    /// How many external or module scripts are running: while positive,
+    /// `document.open()` (and `document.write()` without an insertion
+    /// point) does nothing rather than wipe the document (the HTML
+    /// standard's ignore-destructive-writes counter).
+    ignore_destructive_writes: Cell<u32>,
     /// `defer` scripts, in document order, waiting for the end of parsing.
     deferred: RefCell<Vec<Deferred>>,
     /// Fetches that must finish before the `load` event.
@@ -256,7 +261,11 @@ fn execute(cx: &mut Cx<'_>, el: NodeId, source: &str, url: &str, parser_inserted
 fn execute_module(cx: &mut Cx<'_>, source: &str, url: &str) -> bool {
     // `document.currentScript` is null while a module runs.
     let previous = cx.page.document_state.borrow_mut().current_script.take();
+    let counter = &cx.page.scripts.ignore_destructive_writes;
+    counter.set(counter.get() + 1);
     let result = cx.script.eval_module(source, url);
+    let counter = &cx.page.scripts.ignore_destructive_writes;
+    counter.set(counter.get() - 1);
     cx.page.document_state.borrow_mut().current_script = previous;
     match result {
         Ok(()) => true,
@@ -289,7 +298,11 @@ fn execute_fetched(
         }
         Ok(response) if response.is_success() => {
             let source = decode_text(&response.body, response.header("content-type"));
+            let counter = &cx.page.scripts.ignore_destructive_writes;
+            counter.set(counter.get() + 1);
             execute(cx, el, &source, response.url.as_str(), parser_inserted, 1);
+            let counter = &cx.page.scripts.ignore_destructive_writes;
+            counter.set(counter.get() - 1);
             fire_simple(cx, el, "load");
         }
         Ok(response) => {
@@ -616,6 +629,15 @@ pub fn load_document(cx: &mut Cx<'_>, html: &str) {
 /// empty document and a fresh parser.
 pub(crate) fn document_open(cx: &mut Cx<'_>) {
     if cx.page.scripts.parser.borrow().is_some() {
+        return;
+    }
+    // An external script (an ad, a widget loaded late) does not get to
+    // wipe the document.
+    if cx.page.scripts.ignore_destructive_writes.get() > 0 {
+        cx.page.log(
+            ConsoleLevel::Warn,
+            "A call to document.write() or document.open() from an external script was ignored",
+        );
         return;
     }
     let document = cx.document();

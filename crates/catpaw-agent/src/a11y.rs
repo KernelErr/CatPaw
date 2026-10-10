@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use catpaw_dom::{Dom, ElementData, NodeId, NodeKind};
 
-use crate::visibility::{StyleOracle, is_hidden};
+use crate::visibility::StyleOracle;
 
 /// Roles whose accessible name may come from their content.
 pub const NAME_FROM_CONTENT: &[&str] = &[
@@ -562,11 +562,20 @@ pub fn subtree_text(dom: &Dom, id: NodeId, oracle: &dyn StyleOracle) -> String {
 }
 
 fn collect_text(dom: &Dom, id: NodeId, oracle: &dyn StyleOracle, out: &mut String) {
+    let texts_shown = crate::visibility::text_shown(dom, id, oracle);
     for child in dom.rendered_children(id) {
         match dom.kind(child) {
-            NodeKind::Text(t) => out.push_str(t),
+            NodeKind::Text(t) => {
+                if texts_shown {
+                    out.push_str(t);
+                }
+            }
             NodeKind::Element(el) => {
-                if is_hidden(dom, child, oracle) {
+                if crate::visibility::hides_subtree(dom, child, oracle) {
+                    continue;
+                }
+                if oracle.is_visibility_hidden(dom, child) {
+                    collect_text(dom, child, oracle, out);
                     continue;
                 }
                 if crate::visibility::masked_text(dom, child, oracle) {

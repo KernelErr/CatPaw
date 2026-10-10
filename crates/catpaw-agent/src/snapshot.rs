@@ -622,11 +622,23 @@ impl<'a> Snapshotter<'a> {
             }
             run.clear();
         };
+        let texts_shown = crate::visibility::text_shown(self.dom, parent, self.oracle);
         for child in self.dom.rendered_children(parent) {
             match self.dom.kind(child) {
-                NodeKind::Text(t) => run.push_str(t),
+                NodeKind::Text(t) => {
+                    if texts_shown {
+                        run.push_str(t);
+                    }
+                }
                 NodeKind::Element(el) => {
-                    if is_hidden(self.dom, child, self.oracle) {
+                    if crate::visibility::hides_subtree(self.dom, child, self.oracle) {
+                        continue;
+                    }
+                    // `visibility: hidden` hides the element, not what in
+                    // it shows again: that takes its place.
+                    if self.oracle.is_visibility_hidden(self.dom, child) {
+                        flush(&mut run, &mut out, &mut after_block);
+                        out.extend(self.build_children(child, options));
                         continue;
                     }
                     flush(&mut run, &mut out, &mut after_block);

@@ -83,9 +83,24 @@ pub fn is_never_rendered(local: &str) -> bool {
     )
 }
 
-/// True when the element itself is hidden: `hidden` attribute, `aria-hidden`,
-/// `display:none` per the oracle, or never-rendered element kinds.
+/// True when the element itself is hidden: what hides its subtree
+/// ([`hides_subtree`]), or `visibility: hidden` on it.
 pub fn is_hidden(dom: &Dom, id: NodeId, oracle: &dyn StyleOracle) -> bool {
+    hides_subtree(dom, id, oracle) || oracle.is_visibility_hidden(dom, id)
+}
+
+/// Whether text in `parent` shows: `visibility` is inherited, so a text
+/// node is visible exactly when the element it is in is.
+pub fn text_shown(dom: &Dom, parent: NodeId, oracle: &dyn StyleOracle) -> bool {
+    !dom.is_element(parent) || !oracle.is_visibility_hidden(dom, parent)
+}
+
+/// True when the element and everything in it are hidden: `hidden`
+/// attribute, `aria-hidden`, `display: none` per the oracle, or element
+/// kinds never rendered. (`visibility: hidden` hides the element only:
+/// a descendant with `visibility: visible` shows, as pages hiding the
+/// whole document until their app is ready rely on.)
+pub fn hides_subtree(dom: &Dom, id: NodeId, oracle: &dyn StyleOracle) -> bool {
     let Some(el) = dom.element(id) else {
         return false;
     };
@@ -106,10 +121,7 @@ pub fn is_hidden(dom: &Dom, id: NodeId, oracle: &dyn StyleOracle) -> bool {
     {
         return true;
     }
-    // `visibility: hidden` elements are not interactable and Chromium drops
-    // them from the accessibility tree; so do we (descendants that opt back
-    // in with `visibility: visible` are rare enough to ignore for now).
-    oracle.is_display_none(dom, id) || oracle.is_visibility_hidden(dom, id)
+    oracle.is_display_none(dom, id)
 }
 
 /// Approximates the style oracle from the `hidden` attribute and the inline

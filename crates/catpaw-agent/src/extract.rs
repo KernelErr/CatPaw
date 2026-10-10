@@ -10,11 +10,13 @@ use crate::refs::RefScope;
 use crate::snapshot::{quote, truncate};
 use crate::visibility::{StyleOracle, is_hidden};
 
-/// Whether `id` or an ancestor is hidden.
+/// Whether `id` is hidden, itself or by an ancestor that hides what is in
+/// it.
 fn hidden(dom: &Dom, id: NodeId, oracle: &dyn StyleOracle) -> bool {
-    std::iter::once(id)
-        .chain(dom.ancestors(id))
-        .any(|n| is_hidden(dom, n, oracle))
+    is_hidden(dom, id, oracle)
+        || dom
+            .ancestors(id)
+            .any(|n| crate::visibility::hides_subtree(dom, n, oracle))
 }
 
 fn is_html(dom: &Dom, id: NodeId, local: &str) -> bool {
@@ -61,11 +63,21 @@ fn cell_content(
     assign: &mut dyn FnMut(NodeId) -> String,
     out: &mut String,
 ) {
+    let texts_shown = crate::visibility::text_shown(dom, node, oracle);
     for child in dom.rendered_children(node) {
         match dom.kind(child) {
-            NodeKind::Text(t) => out.push_str(t),
+            NodeKind::Text(t) => {
+                if texts_shown {
+                    out.push_str(t);
+                }
+            }
             NodeKind::Element(el) => {
-                if is_hidden(dom, child, oracle) {
+                if crate::visibility::hides_subtree(dom, child, oracle) {
+                    continue;
+                }
+                // Hidden itself, but not what in it shows again.
+                if oracle.is_visibility_hidden(dom, child) {
+                    cell_content(dom, child, oracle, assign, out);
                     continue;
                 }
                 if let Some(role) = role_for(dom, child).filter(|role| is_interactive(role)) {

@@ -187,14 +187,18 @@ impl TShadowRoot for CatNode {
     }
 
     fn host(&self) -> <Self::ConcreteNode as TNode>::ConcreteElement {
-        unreachable!("shadow roots are never handed to Stylo yet")
+        CatNode::new(
+            self.dom()
+                .shadow_host(self.id)
+                .expect("a shadow root has a host"),
+        )
     }
 
     fn style_data<'b>(&self) -> Option<&'b CascadeData>
     where
         Self: 'b,
     {
-        None
+        self.table().shadow_rules(self.id)
     }
 }
 
@@ -231,8 +235,13 @@ impl TNode for CatNode {
         self.dom().is_connected(self.id)
     }
 
+    /// The parent in the flat tree: what the element is rendered under,
+    /// and inherits from.
     fn traversal_parent(&self) -> Option<Self::ConcreteElement> {
-        self.parent_node().and_then(|n| n.as_element())
+        self.dom()
+            .flat_parent(self.id)
+            .map(CatNode::new)
+            .and_then(|n| n.as_element())
     }
 
     fn opaque(&self) -> OpaqueNode {
@@ -256,23 +265,31 @@ impl TNode for CatNode {
     }
 
     fn as_shadow_root(&self) -> Option<Self::ConcreteShadowRoot> {
-        None
+        self.dom().shadow_host(self.id).map(|_| *self)
     }
 }
 
-/// Children of a node, for Stylo's traversal.
-pub struct CatChildren {
-    next: Option<NodeId>,
+/// Children of an element in the flat tree, for Stylo's traversal: its
+/// own, or for a shadow host those of its shadow tree, and for a slot the
+/// nodes assigned to it.
+pub enum CatChildren {
+    Siblings(Option<NodeId>),
+    Listed(std::vec::IntoIter<NodeId>),
 }
 
 impl Iterator for CatChildren {
     type Item = CatNode;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let id = self.next?;
-        let node = CatNode::new(id);
-        self.next = node.dom().next_sibling(id);
-        Some(node)
+        match self {
+            CatChildren::Siblings(next) => {
+                let id = (*next)?;
+                let node = CatNode::new(id);
+                *next = node.dom().next_sibling(id);
+                Some(node)
+            }
+            CatChildren::Listed(ids) => ids.next().map(CatNode::new),
+        }
     }
 }
 
@@ -288,16 +305,25 @@ impl Element for CatNode {
         OpaqueElement::from_non_null_ptr(ptr)
     }
 
+    /// The parent selectors see: in the same tree (the flat tree is for
+    /// inheritance, not for combinators).
     fn parent_element(&self) -> Option<Self> {
-        TElement::traversal_parent(self)
+        let dom = self.dom();
+        let parent = dom.parent(self.id)?;
+        dom.is_element(parent).then(|| CatNode::new(parent))
     }
 
     fn parent_node_is_shadow_root(&self) -> bool {
-        false
+        let dom = self.dom();
+        dom.parent(self.id)
+            .is_some_and(|parent| dom.shadow_host(parent).is_some())
     }
 
     fn containing_shadow_host(&self) -> Option<Self> {
-        None
+        let dom = self.dom();
+        dom.containing_shadow_root(self.id)
+            .and_then(|root| dom.shadow_host(root))
+            .map(CatNode::new)
     }
 
     fn is_pseudo_element(&self) -> bool {
@@ -419,7 +445,7 @@ impl Element for CatNode {
         }
         let parent_flags = flags.for_parent();
         if !parent_flags.is_empty()
-            && let Some(parent) = TElement::traversal_parent(self)
+            && let Some(parent) = Element::parent_element(self)
             && let Some(slot) = parent.table().slot(parent.id)
         {
             slot.selector_flags
@@ -434,7 +460,11 @@ impl Element for CatNode {
     }
 
     fn is_html_slot_element(&self) -> bool {
-        false
+        self.is_html_element_named("slot")
+    }
+
+    fn assigned_slot(&self) -> Option<Self> {
+        self.dom().assigned_slot(self.id).map(CatNode::new)
     }
 
     fn has_id(&self, id: &AtomIdent, case_sensitivity: CaseSensitivity) -> bool {
@@ -500,9 +530,21 @@ impl TElement for CatNode {
     }
 
     fn traversal_children(&self) -> LayoutIterator<Self::TraversalChildrenIterator> {
-        LayoutIterator(CatChildren {
-            next: self.dom().first_child(self.id),
+        let dom = self.dom();
+        let flat = self
+            .element()
+            .is_some_and(|e| e.shadow_root.is_some() || (e.is_html() && &*e.name.local == "slot"));
+        LayoutIterator(if flat {
+            CatChildren::Listed(dom.rendered_children(self.id).into_iter())
+        } else {
+            CatChildren::Siblings(dom.first_child(self.id))
         })
+    }
+
+    /// Styles inherit along the flat tree: a slotted element from its slot,
+    /// the top of a shadow tree from its host.
+    fn inheritance_parent(&self) -> Option<Self> {
+        TElement::traversal_parent(self)
     }
 
     fn is_html_element(&self) -> bool {
@@ -671,11 +713,11 @@ impl TElement for CatNode {
     }
 
     fn shadow_root(&self) -> Option<<Self::ConcreteNode as TNode>::ConcreteShadowRoot> {
-        None
+        self.element()?.shadow_root.map(CatNode::new)
     }
 
     fn containing_shadow(&self) -> Option<<Self::ConcreteNode as TNode>::ConcreteShadowRoot> {
-        None
+        self.dom().containing_shadow_root(self.id).map(CatNode::new)
     }
 
     fn get_attr(&self, attr: &style::LocalName, ns: &style::Namespace) -> Option<String> {

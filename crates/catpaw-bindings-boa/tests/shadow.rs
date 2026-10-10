@@ -66,9 +66,11 @@ fn a_shadow_tree_hangs_off_its_host() {
                 "[inner.isConnected, inner.getRootNode() === root, inner.getRootNode({ composed: true }) === document, inner.parentNode === root, inner.ownerDocument === document, root.isConnected].join()",
                 "true,true,true,true,true,true",
             ),
+            // The document's rules stop at the shadow tree: its paragraph
+            // inherits its color from the host.
             (
                 "getComputedStyle(inner).display + ' ' + getComputedStyle(inner).color",
-                "block rgb(1, 2, 3)",
+                "block rgb(0, 0, 0)",
             ),
             (
                 "host.remove(); inner.isConnected + ' ' + root.isConnected",
@@ -178,9 +180,11 @@ fn slots_report_what_they_show() {
                 "slots[1].assignedNodes().map(function (n) { return n.nodeName; }).join() + ' | ' + slots[1].assignedElements().map(function (n) { return n.nodeName; }).join()",
                 "#text,I | I",
             ),
+            // The slot nested in `y` is the second named `x`: the first
+            // takes what is slotted there, so it has nothing to flatten.
             (
                 "slots[2].assignedNodes().length + ' ' + slots[2].assignedNodes({ flatten: true }).map(function (n) { return n.nodeName; }).join()",
-                "0 B",
+                "0 ",
             ),
             (
                 "r.innerHTML = '<slot name=z><em>fb</em></slot>'; var z = r.querySelector('slot'); z.assignedNodes().length + ' ' + z.assignedNodes({ flatten: true }).map(function (n) { return n.nodeName; }).join()",

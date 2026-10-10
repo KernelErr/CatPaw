@@ -28,6 +28,7 @@ pub use confirm::ApprovalConfig;
 pub use journal::JournalConfig;
 pub use mcp::{McpServer, serve_stdio, serve_stdio_with};
 pub use open::Opener;
+pub use oracle::with_page_styles;
 pub use output::ToolOutput;
 pub use policy::{Policy, Preset};
 pub use session::{Approval, Host, NoHost, Session, SessionConfig, SessionError};
