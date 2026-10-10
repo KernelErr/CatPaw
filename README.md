@@ -188,18 +188,25 @@ Side effects wait for the user. Under the default policy a navigation
 that sends data (a form submission) and an upload stop with
 `needs_confirmation c1: click e8 button "Login" would submit → POST
 https://…/authenticate (fields: username=tomsmith, password=***)`. A host
-that supports MCP elicitation asks its user there and then; otherwise the
-user approves on a local page whose address the result gives, with a key
-the agent never sees, and the agent repeats the call with
-`confirmation: "c1"`: the held submission goes, once, and nothing is
-clicked again. `--policy strict` also asks before scripts send data to
+that supports MCP elicitation asks its user there and then; otherwise
+CatPaw opens a local page in the user's browser for them to approve on,
+and the agent repeats the call with `confirmation: "c1"`: the held
+submission goes, once, and nothing is clicked again. The page's address
+carries a pass, good once, that the agent never sees; where no browser
+can be opened (or with `--no-open`), the agent gives the user the
+address and the page asks for the key, which `catpaw approval-key`
+prints for the user, not for the agent. `--policy strict` also asks before scripts send data to
 other sites and before `evaluate`, and `--policy open` asks for nothing.
 `--trust <host>` exempts a host from asking, and `--allowed-domain
 <domain>` limits the documents tabs show (pages, popups and frames, not
 the requests a page makes for its resources and data) to that domain.
 When a site needs a person (a login, a check meant for humans),
-`handoff` gives the user the tab on a local page in their own browser,
-where anything the page would send waits for them to allow it, and
+`handoff` opens the tab for the user on a local page in their own
+browser, where they click, type (an input method and pasting too) and
+scroll as on the page itself. What they submit to the site they are on
+goes; anything else the page would send waits there for them to allow
+it, and so does everything when the agent ran a script in that page,
+since a script could make a click send something else.
 `wait({"for":"handoff"})` returns once they are done, with the page as it
 is then and what they typed masked.
 `--flight-log <dir>` keeps a journal of every call (`--flight-screens`

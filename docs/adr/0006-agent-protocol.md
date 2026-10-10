@@ -114,53 +114,58 @@ of the model on every turn.
 8. **Confirmation.** A policy decides what waits for the user. Under
    `default`, a navigation that sends data (a form posted by a click, a
    key or script) and choosing files to upload; `strict` adds script
-   requests that send data to another site and `evaluate`; `open` asks
-   for nothing (test runs). `--trust <host>` exempts a host,
-   `--allowed-domain <domain>` limits the documents tabs may show: pages,
-   popups and frames, every redirect hop judged as the first (anything
-   else is `blocked policy: …`, or `! blocked frame …` for a frame). It
-   does not limit the requests a page makes for its scripts, styles,
-   images and data. Navigations and script requests (synchronous ones, and
-   WebSocket connections, are refused rather than held: they cannot wait)
-   are held where they would leave for the network, after the action ran,
-   so an approved action is let go and never carried out again; uploads
-   and `evaluate` are stopped before they run (an upload's question says
-   the page can read the files as soon as they are in: a form that sends
-   them asks again, as any submission does). Holds are numbered per
-   page, and a confirmation is tied to the holds its action made:
-   approving lets exactly those go (with their preflights and redirect
-   hops), declining or running out drops them, and one whose holds the
-   page dropped (it navigated, the frame asked for another navigation)
-   no longer applies (`blocked superseded`). The result names what would
-   happen, with secrets masked:
-   `needs_confirmation c1: click e8 button "Login" would submit → POST
-   https://…/authenticate (fields: username=tomsmith, password=***)`. A
-   host that offers MCP elicitation asks its user within the same call
-   (a boolean `approve`). Declining gives `blocked user: declined c1`
-   and what the action did before it was held, as the question would
-   have; approving gives what the approval led to, with what the action
-   led to before it was held (its requests as they went, a script's
-   value), and a diff from the snapshot the agent last saw.
-   Otherwise the result gives the address of a page on 127.0.0.1 where
-   the user approves with a key kept in a file (made on first use in the
-   user's data directory, or `--approval-key-file`; readable by its owner
-   alone). The page is served on a port that stays the same between
-   sessions while it is free (47115, or `--approval-port`), so the browser
-   that approved once keeps the key in its storage for that origin —
-   never in a cookie, which every port of the host would receive; the
+   requests that send data to another site and `evaluate`; `open` asks for
+   nothing (test runs). `--trust <host>` exempts a host, `--allowed-domain
+   <domain>` limits the documents tabs may show: pages, popups and frames,
+   every redirect hop judged as the first (anything else is `blocked
+   policy: …`, or `! blocked frame …` for a frame). It does not limit the
+   requests a page makes for its scripts, styles, images and data.
+   Navigations and script requests (synchronous ones, and WebSocket
+   connections, are refused rather than held: they cannot wait) are held
+   where they would leave for the network, after the action ran, so an
+   approved action is let go and never carried out again; uploads and
+   `evaluate` are stopped before they run (an upload's question says the
+   page can read the files as soon as they are in: a form that sends them
+   asks again, as any submission does). Holds are numbered per page, and a
+   confirmation is tied to the holds its action made: approving lets
+   exactly those go (with their preflights and redirect hops), declining
+   or running out drops them, and one whose holds the page dropped (it
+   navigated, the frame asked for another navigation) no longer applies
+   (`blocked superseded`). The result names what would happen, with
+   secrets masked: `needs_confirmation c1: click e8 button "Login" would
+   submit → POST https://…/authenticate (fields: username=tomsmith,
+   password=***)`. A host that offers MCP elicitation asks its user within
+   the same call (a boolean `approve`). Declining gives `blocked user:
+   declined c1` and what the action did before it was held, as the
+   question would have; approving gives what the approval led to, with
+   what the action led to before it was held (its requests as they went, a
+   script's value), and a diff from the snapshot the agent last saw.
+   Otherwise CatPaw opens a page on 127.0.0.1 in the user's browser, where
+   the user approves (`opened in the user's browser to approve at …`); its
+   address carries a pass, good once for ten minutes, that the page trades
+   for the session's token, so the user never handles a key. Where no
+   browser can be opened, or with `--no-open`, the result asks the agent
+   to give the user the address (`ask the user to approve at …`), and the
+   page asks for the key kept in a file (made on first use in the user's
+   data directory, or `--approval-key-file`; readable by its owner alone),
+   which `catpaw approval-key` prints for the user; the page says not to
+   give it to the agent. The page is served on a port that stays the same
+   between sessions while it is free (47115, or `--approval-port`), so the
+   browser that approved once keeps the key in its storage for that origin
+   — never in a cookie, which every port of the host would receive; the
    server answers several connections at a time, refuses oversized
    requests, other host names and other origins, and stops with the
-   session. The agent never sees the key: no result prints it, its
-   browser refuses private addresses, and an upload of the key file (or a
-   link to it, or a copy) is refused. The result gives the exact call to
-   repeat with `confirmation: "c1"`; the repeat must match it or it is
-   refused, a repeat sent before the user decided waits for the decision
-   (up to 45 seconds, then `(still pending)`), and confirmations run out
-   after ten minutes. With elicitation, only an explicit yes approves; a
-   cancelled question is `blocked user: cancelled`, and a host that does
-   not answer falls back to the approval page. This bounds an agent that
-   holds only the browser tools; an agent with a shell is bounded by its
-   host's own permission prompts.
+   session. The agent never sees the key: no result prints it, its browser
+   refuses private addresses, and an upload of the key file (or a link to
+   it, or a copy) is refused. The result gives the exact call to repeat
+   with `confirmation: "c1"`; the repeat must match it or it is refused, a
+   repeat sent before the user decided waits for the decision (up to 45
+   seconds, then `(still pending)`), and confirmations run out after ten
+   minutes. With elicitation, only an explicit yes approves; a cancelled
+   question is `blocked user: cancelled`, and a host that does not answer
+   falls back to the approval page. This bounds an agent that holds only
+   the browser tools; an agent with a shell is bounded by its host's own
+   permission prompts.
 
 9. **Diffs after actions.** An action answers with what changed since
    the last snapshot of the tab a result showed (ADR 0005, amended): `~`
@@ -254,30 +259,35 @@ of the model on every turn.
     first: a damaged one leaves the session as it was; tabs load again,
     refs start afresh) and lists them.
 15. **Hand-off.** `handoff({reason})` gives the user the current tab on a
-    page served by the same local server as the approval page (its address
-    carries a token; acting needs the approval key as well, so the link
-    alone lets nobody act): a screenshot of the tab, kept current, that
-    passes the user's clicks, typing, keys and scrolling to it, and a Done
-    button. Whatever the page would send while the user has the tab (a
-    form they submit, a request a script makes) waits on that page, which
-    names it, with what they typed masked, for the user to allow or block:
-    a click of theirs never sends what a script the agent planted would
-    send behind it. What the agent's own calls held stays held, and what
-    is still held when the tab comes back is asked about as after any
-    call. Until the tab is given back, the agent's calls on it (switching
-    to it, and repeating a confirmed call there) are `error Busy`. The
-    agent calls `wait({for: "handoff"})`, which returns once the user is
-    done (or after 50 seconds, to be called again; at most 30 minutes; it
-    answers pings, stops when cancelled, and notices a tab that closed),
-    with what happened meanwhile (`→ https://…/welcome (POST, 200)`, a
-    popup the user opened) and the whole page. What the user typed into
-    fields shows `***` in snapshots, reads and confirmations until the
-    agent sets the field itself (adding to it keeps it masked), and an
-    `evaluate` in a page that holds it asks the user first, since a script
-    could read it; the journal keeps no hand-off input. A hand-off the
-    user keeps past 30 minutes lapses, and the tab is the agent's again.
-    For logins, checks meant for a person (ADR 0003), and anything else
-    the agent should not do or see.
+    page served by the same local server as the approval page, opened in
+    their browser as the approval page is (its address carries a token;
+    acting needs the approval key, or the pass of an opened page, as well,
+    so the link alone lets nobody act): a screenshot of the tab, kept
+    current, that passes the user's clicks, typing (through a field of its
+    own, so that input methods and pasting work; what is typed close
+    together goes at once), keys and scrolling to it, and a Done button. A
+    navigation the user's click or key starts to the site they are on
+    goes, as in any browser. Whatever else the page would send while the
+    user has the tab (a submission to another site, a request a script
+    makes) waits on that page, which names it, with what they typed
+    masked, for the user to allow or block; in a page the agent ran a
+    script in, everything does, so a click of theirs never sends what a
+    script the agent planted would send behind it. What the agent's own
+    calls held stays held, and what is still held when the tab comes back
+    is asked about as after any call. Until the tab is given back, the
+    agent's calls on it (switching to it, and repeating a confirmed call
+    there) are `error Busy`. The agent calls `wait({for: "handoff"})`,
+    which returns once the user is done (or after 50 seconds, to be called
+    again; at most 30 minutes; it answers pings, stops when cancelled, and
+    notices a tab that closed), with what happened meanwhile (`→
+    https://…/welcome (POST, 200)`, a popup the user opened) and the whole
+    page. What the user typed into fields shows `***` in snapshots, reads
+    and confirmations until the agent sets the field itself (adding to it
+    keeps it masked), and an `evaluate` in a page that holds it asks the
+    user first, since a script could read it; the journal keeps no
+    hand-off input. A hand-off the user keeps past 30 minutes lapses, and
+    the tab is the agent's again. For logins, checks meant for a person
+    (ADR 0003), and anything else the agent should not do or see.
 16. **Setting up a host.** `catpaw setup claude-code|codex|cursor` prints
     the command or configuration that registers `catpaw mcp --stdio`
     (with any `catpaw mcp` options after `--`); `--write` writes it:

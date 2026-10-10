@@ -799,6 +799,12 @@ impl GroupState {
         limits: &LoopLimits,
     ) -> CallResult {
         let (root, _) = self.root_state(tab)?;
+        // A script can make the page do anything later, a user's click
+        // included: noted for hand-offs.
+        let epoch = self.page.document_epoch(root);
+        if let Some(entry) = self.tabs.get_mut(&tab) {
+            entry.scripted = epoch;
+        }
         let aim = match &p.target {
             Some(target) => Some(self.aim(tab, target)?),
             None => None,

@@ -63,8 +63,15 @@ impl Session {
             "handoff",
             json!({"id": format!("h{id}"), "tab": format!("t{tab}"), "reason": reason}),
         );
+        // The page comes to the user when it can: no address to copy, no
+        // key to find.
+        let ask = if self.open_for_user(&path) {
+            format!("opened in the user's browser at {url} for them to")
+        } else {
+            format!("ask the user to open {url} and")
+        };
         Ok(ToolOutput::ok(format!(
-            "ok handoff h{id} t{tab}: ask the user to open {url} and {}; then wait({{\"for\":\"handoff\"}})",
+            "ok handoff h{id} t{tab}: {ask} {}; then wait({{\"for\":\"handoff\"}})",
             reason_phrase(&reason)
         )))
     }

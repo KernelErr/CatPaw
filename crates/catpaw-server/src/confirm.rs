@@ -142,6 +142,10 @@ pub struct ApprovalConfig {
     /// How long a repeated call waits for a decision still to come before
     /// it answers (45 seconds).
     pub decision_wait: Duration,
+    /// Opens the local pages in the user's browser when the user is needed
+    /// there (a hand-off, a confirmation the host cannot ask about); with
+    /// none, the agent gives the user the address.
+    pub opener: Option<crate::Opener>,
 }
 
 impl Default for ApprovalConfig {
@@ -151,8 +155,18 @@ impl Default for ApprovalConfig {
             port: None,
             lifetime: LIFETIME,
             decision_wait: DECISION_WAIT,
+            opener: None,
         }
     }
+}
+
+/// The approval key and the file it is kept in (made when missing): for
+/// the user to give the local pages by hand when they were not opened for
+/// them, never for the agent.
+pub fn approval_key(config: &ApprovalConfig) -> std::io::Result<(PathBuf, String)> {
+    let path = key_file(config)?;
+    let key = load_or_make_key(&path)?;
+    Ok((path, key))
 }
 
 pub struct Confirmations {
@@ -428,15 +442,29 @@ fn approval_page(id: u32, confirmation: &Confirmation, state: &str, key_file: &P
     body.push_str(&format!(
         r#"<p><small>c{id}, expires in {minutes} min</small></p>
 <div id=keyrow><p><label>Approval key <input id=key type=password autocomplete=off></label><br>
-<small>From <code>{file}</code>. This browser keeps a pass for this session only. <label><input id=remember type=checkbox style="width:auto"> Remember the key itself here (it then works for every session)</label></small></p></div>
+<small>Run <code>catpaw approval-key</code> in a terminal yourself, or open <code>{file}</code>; an agent that sees the key can approve on its own. This browser keeps a pass for this session only. <label><input id=remember type=checkbox style="width:auto"> Remember the key itself here (it then works for every session)</label></small></p></div>
 <p id=buttons><button id=approve>Approve</button><button id=decline>Decline</button></p>
 <p id=said></p>
 <script>
 const said = document.getElementById('said');
 const keyField = document.getElementById('key');
+// A page CatPaw opened for the user brings a pass, good once: it leaves
+// the address at once.
+const pass = new URLSearchParams(location.search).get('pass');
+if (pass) history.replaceState(null, '', location.pathname);
 let key = null;
 try {{ key = localStorage.getItem('catpaw-approval-key') || localStorage.getItem('catpaw-session-token'); }} catch (e) {{}}
 if (key) document.getElementById('keyrow').hidden = true;
+(async () => {{
+  if (!pass) return;
+  try {{
+    const r = await fetch('/session', {{method: 'POST', headers: {{'Content-Type': 'application/json'}}, body: JSON.stringify({{pass}})}});
+    if (!r.ok) return;
+    key = (await r.json()).token;
+    document.getElementById('keyrow').hidden = true;
+    localStorage.setItem('catpaw-session-token', key);
+  }} catch (e) {{}}
+}})();
 function forget() {{
   try {{ localStorage.removeItem('catpaw-approval-key'); localStorage.removeItem('catpaw-session-token'); }} catch (e) {{}}
   key = null;
@@ -522,6 +550,7 @@ mod tests {
             repeat: "click {}".into(),
         });
         let server = LocalServer::start(Some(0), |port| Pages {
+            passes: Default::default(),
             key: key.clone(),
             token: "t".repeat(64),
             key_file: key_file.clone(),

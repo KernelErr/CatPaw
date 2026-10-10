@@ -145,6 +145,8 @@ struct Tab {
     refs: RefTable,
     next_snapshot: u64,
     taken: Option<Taken>,
+    /// The epoch of the top document the agent last ran a script in.
+    scripted: Option<u64>,
     /// The epoch of the document shown.
     doc_epoch: u64,
     history: VecDeque<Stored>,
@@ -162,6 +164,7 @@ impl Tab {
             refs: RefTable::new(),
             next_snapshot: 1,
             taken: None,
+            scripted: None,
             doc_epoch: epoch,
             history: VecDeque::new(),
             marks: VecDeque::new(),
@@ -278,6 +281,9 @@ pub(crate) struct HandState {
     /// What the page holds for the user to decide: hold numbers and what
     /// each would do.
     pub held: Vec<(u64, String)>,
+    /// What the user's input just sent to the site they are on (hold
+    /// numbers and what each did), with no question asked.
+    pub let_go: Vec<(u64, String)>,
 }
 
 /// A page event taken in, kept for the next result of the tab it
@@ -541,6 +547,7 @@ impl GroupState {
             url: state.url.borrow().to_string(),
             title: title_of(state),
             held: self.hand_held(tab),
+            let_go: Vec::new(),
         })
     }
 
@@ -551,8 +558,11 @@ impl GroupState {
     }
 
     /// Input from the user during a hand-off; where the tab is after it.
-    /// What the input makes the page hold waits for the user's decision
-    /// ([`GroupState::hand_decide`]).
+    /// A navigation the input starts to the site the user is on goes, as
+    /// in any browser: they did it. One to another site, what the page
+    /// sends on its own, and anything in a page the agent ran a script in
+    /// (the script could have made the click send something else) waits
+    /// for the user's decision ([`GroupState::hand_decide`]).
     pub(crate) fn hand_input(
         &mut self,
         tab: u32,
@@ -565,6 +575,13 @@ impl GroupState {
             .get(&tab)
             .map(|t| t.root)
             .ok_or("the tab is closed")?;
+        // The site of the page the user acts on, and where the holds the
+        // input makes begin.
+        let site = self
+            .page
+            .frame_state(root)
+            .map(|state| state.url.borrow().clone());
+        let mark = self.page.hold_watermark();
         let typing = matches!(input, Input::Text(_) | Input::Key(_));
         // The field typed into, before the input moves focus on (a code
         // box that passes it to the next).
@@ -593,8 +610,52 @@ impl GroupState {
                 agent::mask_value(state, node);
             }
         }
+        let let_go = match site {
+            Some(site) => self.let_go_own(tab, mark, &site)?,
+            None => Vec::new(),
+        };
         self.absorb_events();
-        self.hand_state(tab)
+        let mut state = self.hand_state(tab)?;
+        state.let_go = let_go;
+        Ok(state)
+    }
+
+    /// Lets go the navigations the user's input made the tab hold (those
+    /// numbered from `mark`) that go to `site`'s site: what each did.
+    fn let_go_own(
+        &mut self,
+        tab: u32,
+        mark: u64,
+        site: &url::Url,
+    ) -> Result<Vec<(u64, String)>, String> {
+        let Some(entry) = self.tabs.get(&tab) else {
+            return Ok(Vec::new());
+        };
+        if entry.scripted.is_some() && entry.scripted == self.page.document_epoch(entry.root) {
+            return Ok(Vec::new());
+        }
+        let web = |url: &url::Url| matches!(url.scheme(), "http" | "https") && url.host().is_some();
+        let frames: Vec<FrameId> = self.frames_of(tab).iter().map(|f| f.id).collect();
+        let typed = self.user_values(tab);
+        let own: Vec<(u64, String)> = self
+            .page
+            .held_navigations()
+            .iter()
+            .filter(|h| h.id >= mark && frames.contains(&h.frame))
+            .filter(|h| {
+                web(site)
+                    && web(&h.request.url)
+                    && catpaw_web::settle::same_site(site, &h.request.url)
+            })
+            .map(|h| (h.id, holds::describe_held(h, &typed)))
+            .collect();
+        for (id, _) in &own {
+            self.page.release_held(*id).map_err(|e| e.to_string())?;
+        }
+        if !own.is_empty() {
+            self.page.settle(&action_limits());
+        }
+        Ok(own)
     }
 
     /// The user's decision on the hand-off page about what the tab holds:

@@ -234,7 +234,7 @@ pub static TOOLS: &[ToolDef] = &[
     ToolDef {
         name: "handoff",
         title: "Hand over to the user",
-        description: "Hand the current tab to the user, on a page they open in their own browser: to log in, pass a check meant for a person, or do anything you should not do or see. Then wait({\"for\":\"handoff\"}) until they give it back; you see the page, with what they typed masked.\nExample: {\"reason\":\"Log in to your account\"}",
+        description: "Hand the current tab to the user, on a page in their own browser: to log in, pass a check meant for a person, or do anything you should not do or see. Then wait({\"for\":\"handoff\"}) until they give it back; you see the page, with what they typed masked.\nExample: {\"reason\":\"Log in to your account\"}",
         schema: r#"{"type":"object","properties":{
 "reason":{"type":"string","description":"What to ask the user to do"}
 },"additionalProperties":false}"#,

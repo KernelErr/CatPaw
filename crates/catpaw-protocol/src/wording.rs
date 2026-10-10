@@ -100,6 +100,8 @@ pub mod outcome {
     pub const BLOCKED: &str = "blocked";
     /// How to get a confirmation approved, before its URL.
     pub const ASK_USER: &str = "ask the user to approve at";
+    /// The same, when its page was opened in the user's browser.
+    pub const OPENED_FOR_USER: &str = "opened in the user's browser to approve at";
     /// A confirmation the user has not answered yet.
     pub const STILL_PENDING: &str = "(still pending)";
     /// The reason a policy gives for asking.

@@ -11,13 +11,18 @@
 //! again. Requests for other host names (DNS rebinding) or from other
 //! origins are refused. It answers a limited number of connections at a
 //! time, each for a limited time, and stops with the session.
+//!
+//! A page the session opens in the user's browser itself carries a pass
+//! in its address: good once, for a few minutes, for the token. The user
+//! then never handles the key; the agent, which is given the address
+//! without the pass, gets nothing from it.
 
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde_json::Value;
 
@@ -29,6 +34,21 @@ use crate::journal::SharedJournal;
 pub const DEFAULT_PORT: u16 = 47115;
 /// Connections handled at once; more are turned away.
 const MAX_CONNECTIONS: usize = 16;
+/// How long the pass of a page opened for the user stays good.
+const PASS_LIFETIME: Duration = Duration::from_secs(600);
+
+/// Passes given out with the pages opened for the user, each good once.
+pub(crate) type Passes = Arc<Mutex<Vec<(String, Instant)>>>;
+
+/// Takes `pass` when it is one given out and still good.
+fn take_pass(passes: &Passes, pass: &str) -> bool {
+    let mut passes = passes.lock().unwrap_or_else(|e| e.into_inner());
+    passes.retain(|(_, given)| given.elapsed() < PASS_LIFETIME);
+    let found = passes
+        .iter()
+        .position(|(p, _)| constant_time_eq(p.as_bytes(), pass.as_bytes()));
+    found.map(|at| passes.remove(at)).is_some()
+}
 
 /// `bytes` random bytes in hex: keys and tokens of the local pages.
 pub(crate) fn random_hex(bytes: usize) -> std::io::Result<String> {
@@ -48,6 +68,8 @@ pub(crate) struct Pages {
     pub approvals: crate::confirm::SharedStore,
     pub handoffs: crate::handoff::SharedStore,
     pub journal: Option<SharedJournal>,
+    /// The passes of the pages opened for the user.
+    pub passes: Passes,
 }
 
 impl Pages {
@@ -84,11 +106,16 @@ impl Pages {
         })
     }
 
-    /// `POST /session` with the key: this session's token, for the pages
-    /// to keep in place of the key.
+    /// `POST /session` with the key, or the pass of a page opened for the
+    /// user: this session's token, for the pages to keep in place of the
+    /// key.
     fn session_token(&self, stream: TcpStream, request: &Request) -> std::io::Result<()> {
         let key = Self::given(request).unwrap_or_default();
-        if request.method != "POST" || !constant_time_eq(key.as_bytes(), self.key.as_bytes()) {
+        let granted = request.method == "POST"
+            && (constant_time_eq(key.as_bytes(), self.key.as_bytes())
+                || body_field(request, "pass")
+                    .is_some_and(|pass| take_pass(&self.passes, pass.trim())));
+        if !granted {
             return respond(
                 stream,
                 "403 Forbidden",
@@ -131,6 +158,7 @@ fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
 
 pub(crate) struct LocalServer {
     port: u16,
+    passes: Passes,
     stop: Arc<AtomicBool>,
     thread: Option<JoinHandle<()>>,
 }
@@ -146,6 +174,7 @@ impl LocalServer {
         };
         let port = listener.local_addr()?.port();
         let pages = Arc::new(pages(port));
+        let passes = pages.passes.clone();
         let stop = Arc::new(AtomicBool::new(false));
         let stopping = stop.clone();
         let thread = std::thread::Builder::new()
@@ -153,9 +182,22 @@ impl LocalServer {
             .spawn(move || serve(listener, &pages, &stopping))?;
         Ok(Self {
             port,
+            passes,
             stop,
             thread: Some(thread),
         })
+    }
+
+    /// The address of a page of this server, with a pass the page trades
+    /// for the session's token: for the user's browser alone.
+    pub fn url_with_pass(&self, path: &str) -> std::io::Result<String> {
+        let pass = random_hex(16)?;
+        self.passes
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .push((pass.clone(), Instant::now()));
+        let joint = if path.contains('?') { '&' } else { '?' };
+        Ok(format!("{}{joint}pass={pass}", self.url(path)))
     }
 
     #[cfg(test)]

@@ -403,11 +403,16 @@ impl Session {
     /// exact call to repeat.
     fn needs_confirmation(&mut self, id: u32, what: &str, rest: &str, repeat: &str) -> CallResult {
         let url = self.approval_url(id)?;
+        // The page comes to the user when it can.
+        let how = if self.open_for_user(&format!("/confirm/c{id}")) {
+            outcome::OPENED_FOR_USER
+        } else {
+            outcome::ASK_USER
+        };
         let config = self.confirmations.config();
         let mut text = format!(
-            "{} c{id}: {what}\n  {} {url} (expires in {}); then repeat{}: {repeat}",
+            "{} c{id}: {what}\n  {how} {url} (expires in {}); then repeat{}: {repeat}",
             outcome::NEEDS_CONFIRMATION,
-            outcome::ASK_USER,
             span(config.lifetime),
             waits(config.decision_wait),
         );

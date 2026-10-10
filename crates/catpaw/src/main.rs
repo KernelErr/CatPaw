@@ -46,6 +46,10 @@ enum Cmd {
     /// Register `catpaw mcp --stdio` with an agent host (claude-code,
     /// codex, cursor): print the command or config, or write it.
     Setup(setup::SetupArgs),
+    /// Print the key the approval and hand-off pages ask for when CatPaw
+    /// could not open them for you (made when missing). For you, not the
+    /// agent: an agent that sees it can approve on its own.
+    ApprovalKey(ApprovalKeyArgs),
 }
 
 #[derive(Clone, Copy, ValueEnum, PartialEq, Eq)]
@@ -253,6 +257,10 @@ struct McpArgs {
     /// any free one).
     #[arg(long)]
     approval_port: Option<u16>,
+    /// Do not open the hand-off and approval pages in the browser when the
+    /// user is needed there; the agent gives the user their address.
+    #[arg(long)]
+    no_open: bool,
     /// Keep a journal of every call (and confirmation) in this directory.
     #[arg(long)]
     flight_log: Option<PathBuf>,
@@ -267,6 +275,13 @@ struct McpArgs {
     /// Offer an optional tool: session (checkpoints); may repeat.
     #[arg(long = "tools", value_name = "TOOL")]
     tools: Vec<String>,
+}
+
+#[derive(Args)]
+struct ApprovalKeyArgs {
+    /// The file with the key (by default in the user's data directory).
+    #[arg(long)]
+    approval_key_file: Option<PathBuf>,
 }
 
 #[derive(Args)]
@@ -297,7 +312,23 @@ fn main() -> Result<()> {
         Cmd::Keygen(args) => keygen(args),
         Cmd::Mcp(args) => mcp(args),
         Cmd::Setup(args) => setup::run(args),
+        Cmd::ApprovalKey(args) => approval_key(args),
     }
+}
+
+fn approval_key(args: ApprovalKeyArgs) -> Result<()> {
+    let config = catpaw_server::ApprovalConfig {
+        key_file: args.approval_key_file,
+        ..catpaw_server::ApprovalConfig::default()
+    };
+    let (path, key) =
+        catpaw_server::confirm::approval_key(&config).context("reading the approval key")?;
+    println!("{key}");
+    eprintln!(
+        "catpaw: from {}; paste it on the approval or hand-off page, and keep it from the agent",
+        path.display()
+    );
+    Ok(())
 }
 
 fn mcp(args: McpArgs) -> Result<()> {
@@ -342,6 +373,7 @@ fn mcp(args: McpArgs) -> Result<()> {
     config.approval = catpaw_server::ApprovalConfig {
         key_file: args.approval_key_file.clone(),
         port: args.approval_port,
+        opener: (!args.no_open).then(catpaw_server::Opener::browser),
         ..catpaw_server::ApprovalConfig::default()
     };
     // A profile keeps a journal of its own; screenshots go with whichever

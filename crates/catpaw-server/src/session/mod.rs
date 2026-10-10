@@ -233,10 +233,41 @@ impl Session {
                 approvals,
                 handoffs,
                 journal,
+                passes: Default::default(),
             })?);
         }
         let local = self.local.as_ref().expect("started above");
         Ok(local.url(path))
+    }
+
+    /// Opens a local page in the user's browser, with a pass that spares
+    /// them the key, when the session has an opener: whether it opened.
+    /// The agent is only ever given the address without the pass.
+    pub(crate) fn open_for_user(&mut self, path: &str) -> bool {
+        let Some(opener) = self.confirmations.config().opener.clone() else {
+            return false;
+        };
+        let page = path.split('?').next().unwrap_or(path).to_string();
+        let opened = self
+            .local_url(path)
+            .and_then(|_| {
+                let local = self.local.as_ref().expect("local_url started it");
+                local.url_with_pass(path)
+            })
+            .and_then(|url| opener.open(&url));
+        match opened {
+            Ok(()) => {
+                self.journal("opened", json!({ "page": page }));
+                true
+            }
+            Err(e) => {
+                self.journal(
+                    "open-failed",
+                    json!({ "page": page, "error": e.to_string() }),
+                );
+                false
+            }
+        }
     }
 
     /// The optional tools this session offers.

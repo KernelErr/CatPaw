@@ -3,7 +3,9 @@
 //! [`crate::local`]) shows the tab and passes the user's clicks, typing
 //! and scrolling to it. The page's address carries a one-time token, and
 //! driving the tab needs the approval key too, so the agent, which sees
-//! the address, cannot drive it itself. The agent learns that the user is
+//! the address, cannot drive it itself; a page the session opens in the
+//! user's browser brings a pass for the key in its address (see
+//! [`crate::local`]). The agent learns that the user is
 //! done and then sees the page as it is; what the user typed into fields
 //! shows masked. For logins, checks that want a person, and anything else
 //! the agent should not do or see.
@@ -339,7 +341,21 @@ pub(crate) fn handle(
                     );
                 }
             };
-            let body = state_json(driver.input(input));
+            let state = driver.input(input);
+            if let Ok(state) = &state
+                && !state.let_go.is_empty()
+            {
+                pages.journal(
+                    "handoff-decision",
+                    json!({
+                        "id": format!("h{id}"),
+                        "holds": state.let_go.iter().map(|(id, _)| id).collect::<Vec<_>>(),
+                        "allowed": true,
+                        "via": "input",
+                    }),
+                );
+            }
+            let body = state_json(state);
             respond(stream, "200 OK", "application/json", &[], &body.to_string())
         }
         ("GET", "state") => {
@@ -377,7 +393,7 @@ fn viewer(id: u32, tab: u32, reason: &str, done: bool, key_file: &str) -> String
     let status = if done {
         "<p class=note>This tab was given back to the agent.</p>".to_string()
     } else {
-        "<p class=note>Click the page to click it, type while it is selected, scroll over it. The agent does not see what you type: fields you typed into show to it masked. Anything the page would send waits above for you to allow it.</p>".to_string()
+        "<p class=note>Click the page to click it, then type (an input method and pasting work too); scroll over it. The agent does not see what you type: fields you typed into show to it masked. What you submit to this site goes; what the page would send to another site, or on its own, waits above for you to allow it.</p>".to_string()
     };
     format!(
         r#"<!doctype html><html lang=en><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
@@ -390,26 +406,36 @@ h1{{font-size:1.05rem;margin:0}} .why{{opacity:.8}}
 button{{font:inherit;padding:.45rem 1.1rem;border-radius:.4rem;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer}}
 input{{font:inherit}} #key{{padding:.35rem;width:min(28rem,100%)}}
 #where{{font-size:.85rem;opacity:.75;overflow-wrap:anywhere;margin:.25rem 0 .5rem}}
+#stage{{position:relative}}
 #screen{{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:.4rem;cursor:pointer;outline-offset:2px}}
-#screen:focus{{outline:2px solid var(--accent)}}
+#stage.typing #screen{{outline:2px solid var(--accent)}}
+#keys{{position:absolute;left:0;top:0;width:2px;height:1.2em;padding:0;border:0;margin:0;opacity:0;resize:none;overflow:hidden;font-size:16px}}
 .note{{font-size:.85rem;opacity:.75}}
 #held{{border:1px solid var(--accent);border-radius:.4rem;padding:.5rem .75rem;margin:.5rem 0}}
 #held li{{overflow-wrap:anywhere}} #held .block{{background:transparent;color:inherit}}
 </style>
-<header><div><h1>Hand-off h{id}: tab t{tab}</h1><div class=why>{reason}</div></div><button id=done>Done, give it back</button></header>
-<div id=keyrow hidden><p><label>Approval key <input id=key type=password autocomplete=off></label> <button id=use>Use</button><br><small>From <code>{key_file}</code>. This browser keeps a pass for this session only. <label><input id=remember type=checkbox> Remember the key itself here</label></small></p></div>
+<header><div><h1>Hand-off h{id}: tab t{tab}</h1><div class=why>{reason}</div></div><button id=done>Done: give it back</button></header>
+<div id=keyrow hidden><p><label>Approval key <input id=key type=password autocomplete=off></label> <button id=use>Use</button><br><small>Run <code>catpaw approval-key</code> in a terminal yourself, or open <code>{key_file}</code>; an agent that sees the key can approve on its own. This browser keeps a pass for this session only. <label><input id=remember type=checkbox> Remember the key itself here</label></small></p></div>
 <div id=where></div>
 <div id=held hidden><p>The page would:</p><ul id=heldlist></ul><button id=allow>Allow</button> <button id=block class=block>Block</button></div>
-<p id=waiting class=note>The tab shows here once the approval key is in.</p>
-<img id=screen hidden tabindex=0 alt="The tab the agent handed over">
+<p id=waiting class=note>Loading the tab…</p>
+<div id=stage><img id=screen hidden alt="The tab the agent handed over"><textarea id=keys aria-label="Type into the tab" autocomplete=off autocapitalize=off spellcheck=false></textarea></div>
 {status}
 <script>
-const base = location.pathname, q = location.search;
+// A page CatPaw opened for the user brings a pass, good once: it leaves
+// the address at once.
+const params = new URLSearchParams(location.search);
+const pass = params.get('pass');
+params.delete('pass');
+const base = location.pathname, q = '?' + params.toString();
+if (pass) history.replaceState(null, '', base + q);
 const img = document.getElementById('screen'), where = document.getElementById('where');
+const stage = document.getElementById('stage'), keys = document.getElementById('keys');
+const waiting = document.getElementById('waiting');
 let key = null;
 try {{ key = localStorage.getItem('catpaw-approval-key') || localStorage.getItem('catpaw-session-token'); }} catch (e) {{}}
 const keyrow = document.getElementById('keyrow');
-function askKey() {{ keyrow.hidden = false; }}
+function askKey() {{ keyrow.hidden = false; waiting.textContent = 'The tab shows here once the approval key is in.'; }}
 function forget() {{
   try {{ localStorage.removeItem('catpaw-approval-key'); localStorage.removeItem('catpaw-session-token'); }} catch (e) {{}}
   key = null;
@@ -427,9 +453,8 @@ document.getElementById('use').onclick = async () => {{
   refresh();
   state();
 }};
-if (!key) askKey();
 const headers = () => ({{'X-CatPaw-Key': key || '', 'Content-Type': 'application/json'}});
-let chain = Promise.resolve(), shown = null, loading = false, heldIds = [];
+let chain = Promise.resolve(), shown = null, loading = false, heldIds = [], first = true;
 const held = document.getElementById('held'), heldlist = document.getElementById('heldlist');
 function show(s) {{
   if (s.url) where.textContent = (s.title ? s.title + ' · ' : '') + s.url;
@@ -460,7 +485,13 @@ async function refresh() {{
     if (r.status === 403) {{ forget(); askKey(); return; }}
     if (r.ok) {{
       const next = URL.createObjectURL(await r.blob());
-      img.onload = () => {{ if (shown) URL.revokeObjectURL(shown); shown = next; img.hidden = false; document.getElementById('waiting').hidden = true; }};
+      img.onload = () => {{
+        if (shown) URL.revokeObjectURL(shown);
+        shown = next;
+        img.hidden = false;
+        waiting.hidden = true;
+        if (first) {{ first = false; keys.focus({{preventScroll: true}}); }}
+      }};
       img.src = next;
     }}
   }} catch (e) {{}} finally {{ loading = false; }}
@@ -473,30 +504,65 @@ function send(input) {{
     await refresh();
   }}).catch(() => {{}});
 }}
+// Typing goes through a field of this page, kept where the user last
+// clicked: an input method composes there, and what is typed close
+// together goes as one.
+let typed = '', flushing = null, composing = false;
+function flush() {{
+  if (flushing) {{ clearTimeout(flushing); flushing = null; }}
+  if (typed) {{ const text = typed; typed = ''; send({{kind: 'text', text}}); }}
+}}
+function type(text) {{
+  typed += text;
+  if (!flushing) flushing = setTimeout(flush, 60);
+}}
+function take() {{ if (keys.value) {{ type(keys.value); keys.value = ''; }} }}
 img.addEventListener('click', e => {{
+  flush();
   const box = img.getBoundingClientRect();
   send({{kind: 'click', x: (e.clientX - box.left) * img.naturalWidth / box.width, y: (e.clientY - box.top) * img.naturalHeight / box.height}});
-  img.focus();
+  keys.style.left = (e.clientX - box.left) + 'px';
+  keys.style.top = (e.clientY - box.top) + 'px';
+  keys.focus({{preventScroll: true}});
 }});
-const keys = ['Enter', 'Tab', 'Backspace', 'Delete', 'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
-img.addEventListener('keydown', e => {{
-  if (e.ctrlKey || e.metaKey || e.altKey) return;
-  if (e.key.length === 1) send({{kind: 'text', text: e.key}});
-  else if (keys.includes(e.key)) send({{kind: 'key', key: e.key}});
-  else return;
+const special = ['Enter', 'Tab', 'Backspace', 'Delete', 'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
+keys.addEventListener('keydown', e => {{
+  if (composing || e.isComposing || e.keyCode === 229) return;
+  if (e.ctrlKey || e.metaKey || e.altKey || !special.includes(e.key)) return;
+  flush();
+  send({{kind: 'key', key: e.key}});
   e.preventDefault();
 }});
-document.addEventListener('paste', e => {{ if (document.activeElement === img) {{ send({{kind: 'text', text: e.clipboardData.getData('text')}}); e.preventDefault(); }} }});
-img.addEventListener('wheel', e => {{ send({{kind: 'scroll', dy: e.deltaY}}); e.preventDefault(); }}, {{passive: false}});
+keys.addEventListener('compositionstart', () => {{ composing = true; }});
+keys.addEventListener('compositionend', () => {{ composing = false; take(); }});
+keys.addEventListener('input', e => {{ if (!composing && !e.isComposing) take(); }});
+keys.addEventListener('paste', e => {{ const text = e.clipboardData.getData('text'); if (text) type(text); e.preventDefault(); }});
+keys.addEventListener('focus', () => stage.classList.add('typing'));
+keys.addEventListener('blur', () => stage.classList.remove('typing'));
+img.addEventListener('wheel', e => {{ flush(); send({{kind: 'scroll', dy: e.deltaY}}); e.preventDefault(); }}, {{passive: false}});
 document.getElementById('done').addEventListener('click', async () => {{
   if (!key) {{ askKey(); return; }}
+  flush();
   await chain;
   const r = await fetch(base + '/done' + q, {{method: 'POST', headers: headers()}});
   if (r.ok) document.body.innerHTML = '<p class=note>Given back to the agent. You can close this tab.</p>';
 }});
-refresh();
-state();
-setInterval(() => {{ refresh(); state(); }}, 1000);
+async function start() {{
+  if (pass) {{
+    try {{
+      const r = await fetch('/session', {{method: 'POST', headers: {{'Content-Type': 'application/json'}}, body: JSON.stringify({{pass}})}});
+      if (r.ok) {{
+        key = (await r.json()).token;
+        try {{ localStorage.setItem('catpaw-session-token', key); }} catch (e) {{}}
+      }}
+    }} catch (e) {{}}
+  }}
+  if (!key) askKey();
+  refresh();
+  state();
+  setInterval(() => {{ refresh(); state(); }}, 1000);
+}}
+start();
 </script></html>"#,
         reason = escape(reason),
         key_file = escape(key_file),

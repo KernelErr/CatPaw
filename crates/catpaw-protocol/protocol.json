@@ -667,7 +667,7 @@
       "title": "Wait"
     },
     {
-      "description": "Hand the current tab to the user, on a page they open in their own browser: to log in, pass a check meant for a person, or do anything you should not do or see. Then wait({\"for\":\"handoff\"}) until they give it back; you see the page, with what they typed masked.\nExample: {\"reason\":\"Log in to your account\"}",
+      "description": "Hand the current tab to the user, on a page in their own browser: to log in, pass a check meant for a person, or do anything you should not do or see. Then wait({\"for\":\"handoff\"}) until they give it back; you see the page, with what they typed masked.\nExample: {\"reason\":\"Log in to your account\"}",
       "inputSchema": {
         "additionalProperties": false,
         "properties": {

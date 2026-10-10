@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use catpaw_server::{
-    Approval, ApprovalConfig, Host, JournalConfig, McpServer, Policy, Preset, Session,
+    Approval, ApprovalConfig, Host, JournalConfig, McpServer, Opener, Policy, Preset, Session,
     SessionConfig,
 };
 use serde_json::{Value, json};
@@ -129,6 +129,11 @@ fn serve() -> (u16, Log) {
                     ORDER.to_string()
                 } else if path == "/login" {
                     LOGIN.to_string()
+                } else if path == "/login-elsewhere" {
+                    LOGIN.replace(
+                        "action=/welcome",
+                        &format!("action=http://localhost:{port}/welcome"),
+                    )
                 } else if path == "/two-posts" {
                     TWO_POSTS.to_string()
                 } else if path == "/pay" {
@@ -797,8 +802,9 @@ fn the_user_takes_over_and_gives_back() {
         "/input",
         &json!({"kind": "key", "key": "Enter"}).to_string(),
     );
-    // What the page would send waits on the user's page, what they typed
-    // masked there too: an input alone sends nothing.
+    // The agent ran scripts in this page (to find the fields), so what it
+    // would send waits on the user's page, what they typed masked there
+    // too: an input alone sends nothing.
     let entered: Value = serde_json::from_slice(&entered).unwrap();
     let held = entered["held"].as_array().cloned().unwrap_or_default();
     assert_eq!(held.len(), 1, "{entered}");
@@ -929,6 +935,172 @@ fn a_handed_over_tab_is_the_users_until_given_back() {
             && script.contains("a page that holds what you typed in the hand-off"),
         "{script}"
     );
+}
+
+/// A session that opens its local pages by noting their addresses.
+fn opening(opened: &Arc<Mutex<Vec<String>>>) -> impl FnOnce(&mut SessionConfig) + use<> {
+    let opened = opened.clone();
+    move |config| {
+        config.approval.opener = Some(Opener::new(move |url| {
+            opened.lock().unwrap().push(url.to_string());
+            Ok(())
+        }));
+    }
+}
+
+/// Trades the pass of a page opened for the user for the session's token,
+/// as that page does: the status line and the token.
+fn trade_pass(page: &str) -> (String, String) {
+    let rest = page.strip_prefix("http://127.0.0.1:").unwrap();
+    let port = rest.split_once('/').unwrap().0;
+    let pass = page.rsplit("pass=").next().unwrap();
+    let body = json!({ "pass": pass }).to_string();
+    let mut stream = TcpStream::connect(("127.0.0.1", port.parse::<u16>().unwrap())).unwrap();
+    let request = format!(
+        "POST /session HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{body}",
+        body.len()
+    );
+    stream.write_all(request.as_bytes()).unwrap();
+    let mut out = String::new();
+    stream.read_to_string(&mut out).unwrap();
+    let status = out.lines().next().unwrap_or("").to_string();
+    let token = out
+        .split("\r\n\r\n")
+        .nth(1)
+        .and_then(|b| serde_json::from_str::<Value>(b.trim()).ok())
+        .and_then(|v| v["token"].as_str().map(str::to_string))
+        .unwrap_or_default();
+    (status, token)
+}
+
+#[test]
+fn a_hand_off_page_opened_for_the_user_needs_no_key_and_their_login_goes() {
+    let opened = Arc::new(Mutex::new(Vec::new()));
+    let mut client = Client::new("handoff-opened", opening(&opened));
+    let url = format!("{}/login", client.base);
+    client.call("navigate", json!({ "url": url }));
+    let started = client.call("handoff", json!({"reason": "Sign in"}));
+    assert!(
+        started.starts_with("ok handoff h1 t1: opened in the user's browser at http://127.0.0.1:"),
+        "{started}"
+    );
+    assert!(
+        started.ends_with(" for them to sign in; then wait({\"for\":\"handoff\"})"),
+        "{started}"
+    );
+    let link = started
+        .split_whitespace()
+        .find(|w| w.contains("/handoff/h1?t="))
+        .unwrap()
+        .to_string();
+    // The browser got the page with a pass; the agent, without.
+    let page = opened.lock().unwrap()[0].clone();
+    assert!(page.starts_with(&format!("{link}&pass=")), "{page}");
+    assert!(!started.contains("pass="), "{started}");
+    let (status, token) = trade_pass(&page);
+    assert_eq!(status, "HTTP/1.1 200 OK");
+    assert!(trade_pass(&page).0.contains("403"), "a pass is good once");
+
+    // The user tabs to the fields, types, and presses Enter: their own
+    // submission to the site they are on goes without a question.
+    let user_side = |method: &str, suffix: &str, body: &str| {
+        handoff_request(&link, Some(&token), method, suffix, body)
+    };
+    for input in [
+        json!({"kind": "key", "key": "Tab"}),
+        json!({"kind": "text", "text": "ada"}),
+        json!({"kind": "key", "key": "Tab"}),
+        json!({"kind": "text", "text": "s3cret"}),
+    ] {
+        user_side("POST", "/input", &input.to_string());
+    }
+    let (_, entered) = user_side(
+        "POST",
+        "/input",
+        &json!({"kind": "key", "key": "Enter"}).to_string(),
+    );
+    let entered: Value = serde_json::from_slice(&entered).unwrap();
+    assert_eq!(entered["held"], json!([]), "{entered}");
+    assert!(
+        entered["url"].as_str().unwrap().ends_with("/welcome"),
+        "{entered}"
+    );
+    let sent = posts(&client.log);
+    assert_eq!(sent.len(), 1, "{sent:?}");
+    assert!(sent[0].contains("user=ada&pass=s3cret"), "{sent:?}");
+    assert_eq!(user_side("POST", "/done", "").0, "HTTP/1.1 200 OK");
+    let back = client.call("wait", json!({"for": "handoff"}));
+    assert!(
+        back.starts_with(&format!(
+            "ok wait handoff h1: given back → {}/welcome (POST, 200)",
+            client.base
+        )),
+        "{back}"
+    );
+
+    // To another site, the user's own submission waits for them.
+    let elsewhere = format!("{}/login-elsewhere", client.base);
+    client.call("navigate", json!({ "url": elsewhere }));
+    let started = client.call("handoff", json!({"reason": "Sign in"}));
+    let link = started
+        .split_whitespace()
+        .find(|w| w.contains("/handoff/h2?t="))
+        .unwrap()
+        .to_string();
+    let user_side = |method: &str, suffix: &str, body: &str| {
+        handoff_request(&link, Some(&token), method, suffix, body)
+    };
+    user_side(
+        "POST",
+        "/input",
+        &json!({"kind": "key", "key": "Tab"}).to_string(),
+    );
+    user_side(
+        "POST",
+        "/input",
+        &json!({"kind": "text", "text": "ada"}).to_string(),
+    );
+    let (_, entered) = user_side(
+        "POST",
+        "/input",
+        &json!({"kind": "key", "key": "Enter"}).to_string(),
+    );
+    let entered: Value = serde_json::from_slice(&entered).unwrap();
+    let held = entered["held"].as_array().cloned().unwrap_or_default();
+    assert_eq!(held.len(), 1, "{entered}");
+    assert!(
+        held[0]["what"]
+            .as_str()
+            .unwrap()
+            .starts_with("submit → POST http://localhost:"),
+        "{entered}"
+    );
+    assert_eq!(posts(&client.log).len(), 1, "held, not sent");
+}
+
+#[test]
+fn a_confirmation_the_host_cannot_ask_about_opens_its_page() {
+    let opened = Arc::new(Mutex::new(Vec::new()));
+    let mut client = Client::new("approval-opened", opening(&opened));
+    let url = format!("{}/order", client.base);
+    client.call("navigate", json!({ "url": url }));
+    let asked = client.call("click", json!({"target": "button \"Place order\""}));
+    assert!(
+        asked.contains("\n  opened in the user's browser to approve at http://127.0.0.1:"),
+        "{asked}"
+    );
+    let page = opened.lock().unwrap()[0].clone();
+    assert!(page.contains("/confirm/c1?pass="), "{page}");
+    assert!(!asked.contains("pass="), "{asked}");
+    // The page's pass, traded for the token, approves.
+    let (_, token) = trade_pass(&page);
+    let decided = decide_at(&asked, &token, "approve");
+    assert!(decided.contains("\"state\":\"approved\""), "{decided}");
+    let done = client.call(
+        "click",
+        json!({"target": "button \"Place order\"", "confirmation": "c1"}),
+    );
+    assert!(done.contains("(confirmed c1) → "), "{done}");
 }
 
 #[test]
