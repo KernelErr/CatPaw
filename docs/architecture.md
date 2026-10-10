@@ -247,6 +247,11 @@ What does not work as a browser's would yet, besides the web features
   which another account could serve while CatPaw is not running. On a
   shared computer, use `--no-open` and do not let the browser remember
   the key.
+- **Same-origin frames are kept apart as cross-origin ones are.** A
+  page cannot reach into a frame's document or globals even when they
+  share an origin: `contentDocument` is `null`, and `contentWindow` offers
+  only what any window offers across origins (`postMessage`, `parent`,
+  `closed`…), not the frame's `document` or `Date`.
 - **A frame's document is fetched on the page's thread.** The page waits
   while a frame's document (each redirect hop of it) loads, up to 8
   seconds a hop; frames slow to answer (ads, trackers) slow the page.
