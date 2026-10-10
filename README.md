@@ -22,8 +22,6 @@ browser's would is listed under
 
 ## Install
 
-> v0.1.0 is being prepared: until it is out, build from source (below).
-
 macOS (Apple silicon) and Linux (x86_64, aarch64):
 
 ```sh

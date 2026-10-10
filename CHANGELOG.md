@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 0.1.0 (2026-10-11)
 
 The first preview: a browser an agent drives over MCP, with the user
 asked before anything is sent on their behalf. The tools and their
