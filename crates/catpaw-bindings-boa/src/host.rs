@@ -280,6 +280,9 @@ impl ScriptHost for BoaHost<'_> {
             Ok(module) => {
                 if let Some(loader) = self.ctx.downcast_module_loader::<PageModuleLoader>() {
                     loader.register(url, module.clone());
+                    if let Ok(base) = url::Url::parse(url) {
+                        loader.prefetch_imports(&base, source);
+                    }
                 }
                 let promise = module.load_link_evaluate(self.ctx);
                 // Loading, linking and evaluation all advance through jobs.

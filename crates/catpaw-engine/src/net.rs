@@ -168,6 +168,9 @@ pub struct EngineNet {
     next_token: Cell<u64>,
     /// Requests on their way: the task, the log entry and the kind.
     inflight: RefCell<HashMap<u64, (AbortHandle, usize, RequestKind)>>,
+    /// Scripts started ahead of the blocking fetch that will ask for them
+    /// ([`NetHost::prefetch`]), by URL.
+    prefetched: RefCell<HashMap<String, tokio::task::JoinHandle<NetResult>>>,
     /// Open sockets: what to send them, and whether the handshake is still
     /// pending (then the socket counts as in flight).
     sockets: RefCell<HashMap<u64, (UnboundedSender<WsOutbound>, bool)>>,
@@ -370,6 +373,7 @@ impl EngineNet {
             rx,
             next_token: Cell::new(1),
             inflight: RefCell::new(HashMap::new()),
+            prefetched: RefCell::new(HashMap::new()),
             sockets: RefCell::new(HashMap::new()),
             socket_events: RefCell::new(Vec::new()),
             log: Rc::new(RefCell::new(RequestLog::default())),
@@ -515,6 +519,7 @@ impl EngineNet {
             rx,
             next_token: Cell::new(1),
             inflight: RefCell::new(HashMap::new()),
+            prefetched: RefCell::new(HashMap::new()),
             sockets: RefCell::new(HashMap::new()),
             socket_events: RefCell::new(Vec::new()),
             log: self.log.clone(),
@@ -875,10 +880,43 @@ impl NetHost for EngineNet {
             return result;
         }
         let index = self.record(&request);
-        let place = self.client.reserve_place();
-        let result = self.runtime.block_on(perform(&self.client, request, place));
+        let ahead = (request.kind == RequestKind::Script)
+            .then(|| self.prefetched.borrow_mut().remove(request.url.as_str()))
+            .flatten();
+        let result = match ahead {
+            Some(task) => self
+                .runtime
+                .block_on(task)
+                .unwrap_or_else(|e| Err(e.to_string())),
+            None => {
+                let place = self.client.reserve_place();
+                self.runtime.block_on(perform(&self.client, request, place))
+            }
+        };
         self.finish(index, &result);
         result
+    }
+
+    /// Module scripts are fetched one at a time as the engine asks for
+    /// them; started here, the modules a module imports load side by side
+    /// meanwhile, as a browser loads a module graph. (Not while replaying:
+    /// a recording answers at once, in the order the page asks.)
+    fn prefetch(&self, request: NetRequest) {
+        if request.kind != RequestKind::Script
+            || self.client.is_replaying()
+            || self.prefetched.borrow().contains_key(request.url.as_str())
+        {
+            return;
+        }
+        let key = request.url.to_string();
+        let client = self.client.clone();
+        // The place in a recording is taken now, in the order the page's
+        // modules name their imports.
+        let place = self.client.reserve_place();
+        let task = self
+            .runtime
+            .spawn(async move { perform(&client, request, place).await });
+        self.prefetched.borrow_mut().insert(key, task);
     }
 
     fn start(&self, request: NetRequest) -> u64 {

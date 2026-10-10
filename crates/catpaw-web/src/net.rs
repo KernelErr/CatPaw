@@ -136,6 +136,12 @@ pub trait NetHost {
     /// synchronous XHR).
     fn fetch_blocking(&self, request: NetRequest) -> NetResult;
 
+    /// Starts a request that a [`NetHost::fetch_blocking`] of the same URL
+    /// may ask for soon (the modules a module imports), so that it is on
+    /// its way meanwhile; one never asked for is simply dropped. A host
+    /// may ignore it.
+    fn prefetch(&self, _request: NetRequest) {}
+
     /// Starts a request and returns a token identifying it. The result is
     /// later returned by [`NetHost::poll`].
     fn start(&self, request: NetRequest) -> u64;
@@ -279,6 +285,17 @@ pub fn fetch_blocking(page: &PageState, request: NetRequest) -> NetResult {
     match page.net() {
         Some(net) => net.fetch_blocking(request),
         None => Err("no network available".to_string()),
+    }
+}
+
+/// Asks the network to start `request` ahead of a [`fetch_blocking`] of it
+/// (see [`NetHost::prefetch`]).
+pub fn prefetch(page: &PageState, request: NetRequest) {
+    if local_response(page, &request.url).is_some() {
+        return;
+    }
+    if let Some(net) = page.net() {
+        net.prefetch(request);
     }
 }
 
