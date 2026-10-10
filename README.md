@@ -2,319 +2,182 @@
 
 **A headless-first browser for AI agents, written from scratch in Rust.**
 
-CatPaw is not a Chromium wrapper and not a rendering engine with an
-automation API bolted on. It is a browser whose first user is an LLM agent:
-it executes JavaScript and the DOM faithfully, computes layout only when
-something observes it, and exposes what agents actually need — a compact
-semantic snapshot with stable element references, precise "the page has
-settled" signals, diffs instead of re-dumps, deterministic time, and cheap
-isolated contexts.
+CatPaw is a browser whose first user is an LLM agent. It runs a page's
+JavaScript and DOM as a browser does, lays the page out only when
+something asks for geometry, and gives the agent what it needs: a compact
+snapshot of the page with stable element references, a precise signal
+that the page has settled, and what changed after each action instead of
+the whole page again. It asks the user before anything is sent on their
+behalf, and hands the tab to them when a site needs a person.
 
-> Status: **pre-alpha**. Milestones M0 ("fetch & read"), M1 ("scripts
-> run", JavaScript via Boa), M2 ("interact") and M3 ("the agent API") are
-> complete: `catpaw mcp --stdio` serves the agent tools over MCP, with
-> confirmations, hand-off to the user and a flight journal, and a task set
-> on practice sites replays from recorded traffic in CI (see
-> [From an agent](#from-an-agent-mcp)). See the roadmap below.
->
-> What M2 brought: layout. Block, flex and grid boxes are laid out by Taffy and
-> inline content shaped and line-broken by Parley over a bundled font set,
-> only when something asks for geometry; the CSSOM View answers from it
-> (`getBoundingClientRect`, `getClientRects`, `offset*`/`client*`/`scroll*`,
-> `scrollTo`, `scrollIntoView`, `elementFromPoint`), as do
-> `IntersectionObserver` and `ResizeObserver`. Screenshots
-> (`catpaw fetch --js --screenshot out.png [--full-page]`) paint backgrounds,
-> borders and text with tiny-skia, and what form controls hold (values,
-> checked boxes, the chosen option, a ring around the focused field).
-> Input: trusted pointer and keyboard
-> sequences with focus, typing, activation (links, buttons, labels,
-> `details`), form submission in every encoding and the navigations that
-> follow, driven by `--action "click <selector>"`, `fill`, `type`, `press`,
-> `check`, `select`. Frames: every `iframe` is a page of its own (document,
-> scripts, event loop) in the same thread, sized by its element; frames
-> see each other only through `postMessage`, `parent`/`top`/`contentWindow`
-> and the `load` events, as cross-origin frames do; `--action "frame <selector>"`
-> addresses a frame for the actions and `--eval` that follow (`frame top`,
-> `frame parent` go back). Popups: `window.open()` after a click or key press
-> opens a page of its own with `opener` set; `frame popup` addresses the one
-> opened last, and `window.close()` closes it. Canvas: `getContext('2d')` draws with tiny-skia (paths, arcs,
-> rounded rects, fills, strokes, dashes, clips, gradients, transforms,
-> compositing, text through the same fonts as layout, `drawImage` from
-> other canvases, `getImageData`/`putImageData`, `toDataURL`/`toBlob`),
-> and canvases are painted into screenshots. Web Crypto: `crypto.subtle`
-> with HMAC, AES-GCM/CBC/CTR, PBKDF2, HKDF, ECDSA and ECDH on P-256 and
-> P-384, RSA (PKCS#1 v1.5, PSS, OAEP), Ed25519 and X25519, in raw, JWK,
-> PKCS#8 and SPKI formats, over the RustCrypto crates. Workers: dedicated workers (`new Worker`, from
-> same-origin, `blob:` and `data:` scripts; `postMessage` both ways,
-> `importScripts`, `close`, `terminate`, errors relayed to the owner) run as
-> realms of their own on the page's thread, in turns with the page and its
-> frames. With frames and workers in place, the Cloudflare Turnstile widget
-> loads its challenge frame and completes against the test site key, and the
-> page's callback receives the token. Channels and sockets: `MessageChannel`,
-> `MessagePort` and `BroadcastChannel` within a page; `WebSocket` over the
-> same transport as HTTP (proxy, TLS, cookies and the private-network policy
-> apply), text and binary both ways, close codes and reasons; a page whose
-> only pending work is an open socket counts as settled after a second of
-> silence. Session: `--action back` / `forward` traverse the session history
-> across documents (and within one, for `pushState` entries), as
-> `history.back()` does from script; `--storage <file>` keeps `localStorage`
-> by origin between runs, as `--cookie-jar` keeps cookies. Network: response bodies are capped on the wire and
-> after decoding (`--max-response-mb`), loopback and private addresses are
-> refused unless `--allow-private-network` says otherwise, HTTP `CONNECT`
-> and SOCKS5 proxies (`--proxy`), cookie files kept between runs
-> (`--cookie-jar`).
->
-> With `catpaw fetch --js`: classic scripts (inline, external, `defer`,
-> `async`, script-inserted, `document.write`) and module scripts (static and
-> dynamic imports, import maps) run interleaved with the parser on Boa,
-> against bindings generated from Web IDL for the core DOM (every HTML and
-> SVG element interface, attributes, traversal, XPath, `Range` and
-> `Selection`, `DOMParser`, `document.implementation`, the document
-> collections and named access such as `document.forms` and
-> `document.myForm`), shadow trees and slots, custom elements, events,
-> mutation, intersection and performance observers, timers, history,
-> navigation timing, inline and computed styles (style sheets are fetched and
-> cascaded by Stylo) with the CSSOM (`CSSStyleSheet`, `adoptedStyleSheets`,
-> `CSS.supports`), `fetch`/`XMLHttpRequest` (CORS, preflights, redirects and
-> referrer policy handled by the page as the Fetch standard has them),
-> streams, `data:` URLs, `sendBeacon`, `URL`, storage, encoding, `crypto`
-> random values and digests, the font-loading API in its no-layout form, and
-> console APIs, on an event loop with virtual time. A wall-clock script
-> budget (`--script-budget`, 10 s by default) stops a runaway script.
-> React, Vue, Svelte, Lit, htmx and Alpine sites run; the Boa engine is
-> vendored with fixes described in `vendor/`. web-platform-tests run in CI
-> against recorded expectations, served by an in-process stand-in for WPT's
-> server and the Python handlers its fetch and XHR tests use: `dom` 3019 of
-> 4246 subtests pass, `html/dom` 582 of 1066, `fetch/api` 1908 of 2237,
-> `xhr` 868 of 1203, `css/cssom-view` 485 of 1198 (much of the rest needs
-> frames or workers the test harness does not run, layout, or server
-> behaviour the stand-in does not emulate). Not there yet: images,
-> gradients and rounded corners in screenshots, tables as a grid, images' intrinsic sizes, media,
-> WebAssembly, and the members of HTML elements that go beyond
-> their attributes.
->
-> What works without JavaScript: HTTP/1.1 and HTTP/2 over rustls,
-> redirects, cookies, gzip/brotli/zstd, encoding sniffing, Web Bot Auth
-> request signing (verified against Cloudflare's test endpoint), HTML parsing
-> into the arena DOM (1858 of 1968 WPT tree-construction tests; the rest are
-> documented upstream gaps), Stylo-resolved `display`/`visibility` from UA,
-> linked and inline stylesheets, CST snapshots with stable refs, and
-> markdown/text/links/forms views.
+**Status: v0.1, a preview.** The agent tools work today over MCP
+(milestones M0 to M3 of the [roadmap](#roadmap)); the tools and their
+results may still change before 1.0. What does not yet work as a
+browser's would is listed under
+[Known gaps](docs/architecture.md#known-gaps).
 
-[中文说明](README.zh-CN.md) · [Architecture](docs/architecture.md) ·
-[Decision records](docs/adr/) · [Full design (zh-CN)](docs/design.zh-CN.md)
+[中文说明](README.zh-CN.md) · [What works](docs/features.md) ·
+[Architecture](docs/architecture.md) · [Decision records](docs/adr/) ·
+[Changelog](CHANGELOG.md) · [catpaw.sh](https://catpaw.sh)
+
+## Install
+
+> v0.1.0 is being prepared: until it is out, build from source (below).
+
+macOS (Apple silicon) and Linux (x86_64, aarch64):
+
+```sh
+curl -fsSL https://catpaw.sh/install.sh | sh
+```
+
+Windows (PowerShell):
+
+```powershell
+irm https://catpaw.sh/install.ps1 | iex
+```
+
+The scripts download a [release](https://github.com/KernelErr/CatPaw/releases)
+for your system, check it against the release's `SHA256SUMS`, show what
+they will write and where (one file, `catpaw`, in `~/.catpaw/bin`; on
+Windows `catpaw.exe` in `%LOCALAPPDATA%\Programs\CatPaw`, added to your
+PATH), and ask before writing it. `sh -s -- --dir <dir>` (PowerShell:
+`-Dir`) installs elsewhere, `--yes` answers for you, and `--uninstall`
+removes CatPaw again; `--help` lists the options. Intel Macs and other
+systems build from source, with Rust 1.89 or later:
+
+```sh
+git clone https://github.com/KernelErr/CatPaw && cd CatPaw
+cargo build --release -p catpaw        # target/release/catpaw
+```
+
+The crates on crates.io (`catpaw` 0.0.1 and five library crates) are an
+early preview from before CatPaw ran scripts.
+
+## Use it from an agent
+
+Register `catpaw mcp --stdio` with the agent's host:
+
+```sh
+catpaw setup claude-code                # prints the `claude mcp add` command
+catpaw setup codex --write              # adds it to ~/.codex/config.toml
+catpaw setup cursor -- --policy strict  # options after -- go to `catpaw mcp`
+```
+
+The agent gets fifteen tools: `navigate`, `snapshot`, `click`, `type`,
+`fill`, `press`, `select`, `act` (hover, check, uncheck, focus, clear,
+scroll, upload, drag), `wait`, `read` (markdown, text, links, forms,
+tables, find, html, download), `screenshot`, `evaluate`, `tabs`, `logs` and
+`handoff`. Elements are named by refs that stay valid while the element
+is on the page. An action answers once the page has settled, with what
+happened and what changed:
+
+```text
+ok click e15 button "Add to cart" (after e14 button "View details for Sauce Labs Backpack")
+# s3 changed=1 added=1 removed=1
+~ e10 button "Cart, empty" → "Cart, 1 items"
++ e36 button "Remove" (in e12, after e14)
+- e15 button "Add to cart"
+```
+
+- **The user approves what is sent for them.** Under the default policy a
+  form post and a file upload wait for the user's approval:
+  `needs_confirmation c1: click e8 button "Login" would submit → POST
+  https://…/authenticate (fields: username=tomsmith, password=***)`. A host
+  that supports MCP elicitation (Claude Code does) asks in its own prompt;
+  otherwise CatPaw opens an approval page in the user's browser. Approved,
+  the held submission goes once, and nothing is clicked again.
+  `--policy strict` also asks before scripts send data to other sites and
+  before `evaluate`; `--trust <host>` exempts a host; `--allowed-domain`
+  keeps tabs on the domains given.
+- **Hand-off.** When a site needs a person (a login, a check meant for
+  people), `handoff` opens the tab for the user in their own browser. They
+  click and type as on the page itself; what they submit to the site goes,
+  and anything else the page would send waits for them. The agent gets the
+  page back with what the user typed masked.
+- **A record of every call.** `--flight-log <dir>` keeps a journal
+  (`--flight-screens` adds a screenshot per action; passwords are kept as
+  their length), and `--profile <dir>` keeps cookies, storage, checkpoints
+  and the journal between sessions.
+- **Replays.** `--record-har run.har.zst` keeps a session's traffic, and
+  `--replay-har` serves it back with no network; with `--random-seed` and
+  `--time-origin`, a replay gives the same results byte for byte.
+
+Errors say what to try next, and a page that did not settle says what it
+is waiting on. The protocol is described in
+[ADR 0006](docs/adr/0006-agent-protocol.md) and the snapshot format in
+[ADR 0005](docs/adr/0005-cst-snapshot-format.md).
+
+## Use it from the command line
+
+```sh
+catpaw fetch https://example.com --snapshot
+catpaw fetch https://news.ycombinator.com --markdown
+catpaw fetch https://news.ycombinator.com --js --console   # run the page's scripts first
+catpaw fetch https://example.com --js --eval "document.title"
+catpaw fetch https://example.com --js --screenshot page.png
+# Log in through a form and keep the session for the next run
+catpaw fetch https://site.example/login --js --cookie-jar ./jar.json \
+    --action "fill #username bob" --action "fill #password secret" --action "press Enter" --text
+```
 
 ## What makes it different
 
-- **Agent-native API.** `snapshot` returns a CatPaw Snapshot Text (CST) tree —
-  a superset of Playwright's aria snapshot — with refs that never get reused;
-  every action waits for the page to settle and can return a diff, so one
-  agent step is one round trip. A built-in MCP server; JSON-RPC over
-  WebSocket and a CDP subset (for Puppeteer) come later.
-- **Exact settledness.** Because CatPaw owns the event loop it knows every
-  pending fetch, timer (and its source line), animation frame and microtask.
-  Timeouts name the culprit instead of failing silently.
-- **Layout on demand.** Style (Stylo) and layout (Taffy + Parley) run only when
-  a script or the agent asks for geometry or a screenshot. Headless pages that
-  never do are nearly free.
-- **Honest identity.** CatPaw identifies itself, implements
-  [Web Bot Auth](https://datatracker.ietf.org/wg/webbotauth/about/) (RFC 9421
-  HTTP Message Signatures) in its fetch layer, and hands off to a human when a
-  site asks for something an agent cannot legitimately provide. It ships no
-  fingerprint-impersonation profiles and no CAPTCHA solvers — see
-  [ADR 0003](docs/adr/0003-identity-bot-auth-and-challenges.md).
-- **Pure Rust by default.** Boa is the default JavaScript engine; V8 is a
-  planned optional backend ([ADR 0001](docs/adr/0001-js-engine-boa-default.md)).
+- **An agent-native API.** Snapshots are a compact text tree, a superset of
+  Playwright's aria snapshot, with refs that are never reused; every action
+  waits for the page to settle and answers with a diff, so one agent step is
+  one round trip.
+- **Exact settledness.** CatPaw owns the event loop, so it knows every
+  pending request, timer (and the line that set it), animation frame and
+  microtask, and a timeout names what the page is still doing.
+- **Layout on demand.** Style (Stylo) and layout (Taffy and Parley) run only
+  when a script or the agent asks for geometry or a screenshot.
+- **Honest identity.** CatPaw says what it is (`CatPaw/0.1.0
+  (+https://catpaw.sh/bot)`) and ships no fingerprint impersonation and no
+  CAPTCHA solving. Deployers who want a verified identity sign requests
+  with [Web Bot Auth](https://datatracker.ietf.org/wg/webbotauth/about/)
+  using a key of their own; when a site wants a person, the user steps in
+  ([ADR 0003](docs/adr/0003-identity-bot-auth-and-challenges.md)).
+- **Pure Rust.** Boa is the JavaScript engine; V8 is a planned optional
+  backend ([ADR 0001](docs/adr/0001-js-engine-boa-default.md)).
 
-## Quick start
+## How it compares
 
-```sh
-cargo install catpaw            # published on crates.io; from a checkout use `cargo run -p catpaw --`
-catpaw fetch https://example.com --snapshot
-catpaw fetch https://news.ycombinator.com --markdown
-catpaw fetch https://httpbin.org/forms/post --forms
-# From a checkout (not in the published 0.0.1 yet): run the page's scripts first
-cargo run -p catpaw -- fetch https://news.ycombinator.com --js --console
-cargo run -p catpaw -- fetch https://example.com --js --eval "document.title"
-# Log in through a form and keep the session for the next run
-cargo run -p catpaw -- fetch https://site.example/login --js --cookie-jar ./jar.json \
-    --action "fill #username bob" --action "fill #password secret" --action "press Enter" --text
-catpaw keygen --out ./agent-key.json
-catpaw fetch https://crawltest.com/cdn-cgi/web-bot-auth \
-    --bot-auth-key ./agent-key.json --signature-agent https://your-agent.example --text
-```
-
-### From an agent (MCP)
-
-`catpaw mcp --stdio` serves the browser to an agent over the Model Context
-Protocol. From a checkout, build it and register it with your host:
-
-```sh
-cargo build --release -p catpaw
-./target/release/catpaw setup claude-code   # prints the `claude mcp add` command
-./target/release/catpaw setup codex --write # adds it to ~/.codex/config.toml
-./target/release/catpaw setup cursor -- --policy strict
-```
-
-The tools are `navigate`, `snapshot`, `click`, `type`, `press`, `select`,
-`act` (hover, check, uncheck, focus, clear, scroll, upload, drag), `wait`, `read`
-(markdown, text, links, forms, tables, find, html, download), `screenshot`,
-`evaluate`, `tabs`, `logs` and `handoff`; windows a page opens become tabs. Elements
-are named by refs that stay valid until the element leaves the page. An
-action answers with what happened and what changed on the page, once the
-page has settled (analytics and polling are not waited for):
-
-```text
-ok click e16 button "Add to cart"
-# s4 diff-from=s3 tab=t1 doc=d1 url=(same) scroll=0,0 settled=yes changed=1 added=1 removed=1 unchanged=27
-~ e11 button "Cart, empty" → "Cart, 1 items"
-+ e37 button "Remove" (in e13, after e15)
-- e16 button "Add to cart"
-```
-
-A new document comes back whole. When something is still loading,
-`wait({"for":"text","text":"Order placed"})` runs the page until it shows;
-time a page spends only on timers passes at once.
-
-Errors say what to try next (`error StaleRef e13 button "Remove"
-(removed)`, then the likely replacement and an `advice:` line). The format
-and the protocol are described in
-[ADR 0005](docs/adr/0005-cst-snapshot-format.md) and
-[ADR 0006](docs/adr/0006-agent-protocol.md);
-`cargo run -p xtask --features engine -- snapshot-bench` measures snapshot sizes on
-live pages.
-
-Side effects wait for the user. Under the default policy a navigation
-that sends data (a form submission) and an upload stop with
-`needs_confirmation c1: click e8 button "Login" would submit → POST
-https://…/authenticate (fields: username=tomsmith, password=***)`. A host
-that supports MCP elicitation asks its user there and then; otherwise
-CatPaw opens a local page in the user's browser for them to approve on,
-and the agent repeats the call with `confirmation: "c1"`: the held
-submission goes, once, and nothing is clicked again. The page's address
-carries a pass, good once, that the agent never sees; where no browser
-can be opened (or with `--no-open`), the agent gives the user the
-address and the page asks for the key, which `catpaw approval-key`
-prints for the user, not for the agent. `--policy strict` also asks before scripts send data to
-other sites and before `evaluate`, and `--policy open` asks for nothing.
-`--trust <host>` exempts a host from asking, and `--allowed-domain
-<domain>` limits the documents tabs show (pages, popups and frames, not
-the requests a page makes for its resources and data) to that domain.
-When a site needs a person (a login, a check meant for humans),
-`handoff` opens the tab for the user on a local page in their own
-browser, where they click, type (an input method and pasting too) and
-scroll as on the page itself. What they submit to the site they are on
-goes; anything else the page would send waits there for them to allow
-it, and so does everything when the agent ran a script in that page,
-since a script could make a click send something else.
-`wait({"for":"handoff"})` returns once they are done, with the page as it
-is then and what they typed masked.
-`--flight-log <dir>` keeps a journal of every call (`--flight-screens`
-adds a screenshot per action; typed passwords are kept as their length),
-`--profile <dir>` keeps cookies, localStorage, checkpoints and the journal
-between sessions, and `--tools session` adds a tool that saves and
-restores checkpoints. `act` with `kind: "upload"` chooses local files in a
-file input.
-
-`--record-har run.har.zst` keeps a session's traffic and `--replay-har
-run.har.zst` serves it back with no network; with `--random-seed` and
-`--time-origin` as well, a replay gives the same results byte for byte.
-Twenty tasks on sites made for automation practice (Sauce Demo, Books
-and Quotes to Scrape, the-internet, TodoMVC, httpbin) live in [`tests/tasks/`](tests/tasks/),
-each with its recording and the transcript an agent sees; CI replays them
-twice, offline, and both runs must equal the transcript. What an agent
-reads over each task, against Playwright MCP taking the same steps:
-
-| task | CatPaw calls | CatPaw bytes (~tokens) | Playwright MCP calls | Playwright MCP bytes (~tokens) |
-|---|---|---|---|---|
-| books-category | 3 | 14960 (~4274) | 6 | 64648 (~18471) |
-| books-pagination | 2 | 12576 (~3593) | 4 | 64942 (~18555) |
-| httpbin-form | 6 | 1736 (~496) | 9 | 7477 (~2136) |
-| internet-dropdown | 2 | 394 (~113) | 4 | 1937 (~553) |
-| internet-dynamic | 3 | 535 (~153) | 6 | 2922 (~835) |
-| internet-entry-ad | 2 | 844 (~241) | 4 | 2305 (~659) |
-| internet-frames | 2 | 630 (~180) | 3 | 980 (~280) |
-| internet-keys | 4 | 575 (~164) | 6 | 2302 (~658) |
-| internet-login | 5 | 1309 (~374) | 6 | 2940 (~840) |
-| internet-login-declined | 5 | 1136 (~325) | - | - |
-| internet-prompt | 2 | 622 (~178) | 5 | 1968 (~562) |
-| internet-upload | 5 | 1377 (~393) | 8 | 3239 (~925) |
-| internet-windows | 3 | 479 (~137) | 5 | 2217 (~633) |
-| quotes-js-pagination | 2 | 5768 (~1648) | 4 | 9394 (~2684) |
-| quotes-login | 5 | 3849 (~1100) | 6 | 12497 (~3571) |
-| quotes-scroll | 3 | 4354 (~1244) | 5 | 11922 (~3406) |
-| quotes-table | 2 | 5116 (~1462) | 2 | 8658 (~2474) |
-| saucedemo-checkout | 11 | 6251 (~1786) | 18 | 20992 (~5998) |
-| saucedemo-sort | 4 | 5418 (~1548) | 7 | 12814 (~3661) |
-| todomvc | 5 | 1306 (~373) | 10 | 9128 (~2608) |
-| all | 71 | 68099 (~19457) | 118 | 243282 (~69509) |
-
-Bytes are all the tool results an agent receives over a task (tokens
-estimated at 3.5 bytes each). CatPaw's numbers come from the recordings;
-`@playwright/mcp` 0.0.83 with headless Chrome took the same steps live on
-2026-10-08 (the median of three runs). Playwright MCP keeps the page
-snapshot in a file and links it from a result whenever the page changed;
-an agent reads it to see the page and find its next target, so the file
-counts too, as one more call. CatPaw answers an action with what changed,
-and caps a whole snapshot at 4000 tokens, folding the rest for the agent
-to open; its numbers include the calls that wait for the user's approval
-(logins, the form post, the upload), which Playwright MCP does not make. A
-task in which the user declines has no counterpart there, so the totals
-leave it out. The tool list, a cost on every turn, is 12.1 KB for CatPaw
-and 20.3 KB for Playwright MCP.
-
-On content sites, measured the same way on the same day (these
-recordings stay out of the repository), the budget does most of the
-work: CatPaw folds a long article to 4000 tokens, which the agent opens
-part by part, where Playwright MCP's snapshot of the same article runs to
-160 000.
-
-| task | CatPaw calls | CatPaw bytes (~tokens) | Playwright MCP calls | Playwright MCP bytes (~tokens) |
-|---|---|---|---|---|
-| Hacker News, second page | 2 | 14618 (~4177) | 4 | 98113 (~28032) |
-| Wikipedia, search to an article | 2 | 11224 (~3207) | 4 | 569358 (~162674) |
-
-`cargo run -p xtask --features engine -- tasks report --baseline tools/baseline/playwright-mcp.json`
-regenerates the first table (with `--local`, the second, from tasks and
-recordings of your own in `tests/tasks/local/`), and
-[`tools/baseline/playwright-mcp.mjs`](tools/baseline/playwright-mcp.mjs)
-measures the baseline.
-
-The library crates are published too: `catpaw-net`, `catpaw-fetch`, `catpaw-dom`,
-`catpaw-style`, `catpaw-agent`.
-
-Developer tasks: `cargo xtask tree-construction` runs the html5lib
-tree-construction suite from a pinned, sparse web-platform-tests checkout
-(`tests/wpt.lock`) against `tests/tree-construction-expectations.txt`;
-`cargo xtask wpt --include dom --include html/dom …` (with `--features wpt`) runs testharness.js
-tests from the same checkout in CatPaw pages, served by an in-process stand-in
-for WPT's server, against `tests/wpt-expectations/<dir>.txt` (the known
-failures; `--update-expectations` rewrites them).
-`cargo xtask bindgen` regenerates the JavaScript bindings from the Web IDL
-corpus and `crates/catpaw-webidl/bindings.toml` (`--check` verifies the
-checked-in output, `--list <Interface>` shows what an interface offers).
+Over twenty tasks on sites made for automation practice, an agent reads
+68 KB (about 19 500 tokens) of CatPaw results, against 243 KB (about
+69 500 tokens) from Playwright MCP taking the same steps; on a long
+article, CatPaw folds the page to 4000 tokens where Playwright MCP's
+snapshot runs to 160 000. The tasks, the method and every number are in
+[docs/comparison.md](docs/comparison.md).
 
 ## Roadmap
 
 | Milestone | Scope | Done when |
 |---|---|---|
-| M0 fetch & read (done) | HTTP/1.1+2, cookies, Web Bot Auth signing, HTML parsing into the arena DOM, UA + author stylesheets via Stylo, CST snapshot v0, markdown/text/forms views, CLI | `catpaw fetch … --snapshot` works on real pages; WPT tree-construction suite runs in CI with recorded expectations |
-| M1 scripts run (done) | Boa realms, generated bindings, event loop with virtual time, parser/script interleaving, fetch/XHR, script budget, in-process WPT runner (in place of the WebDriver subset first planned) | WPT `dom/`, `html/dom/`, `fetch/api/`, `xhr/` subsets pass against recorded expectations; React and Vue apps hydrate server-rendered markup (timed in the test suite) |
-| M2 interact (done) | Layout, hit-testing, input events, forms, navigation and history, iframes and popups, storage, observers, screenshots, Canvas 2D, Web Crypto, WebSocket, Workers | Log in to a real site; the Turnstile widget completes (done with the test site key: the widget's frame and worker run, the page's callback receives the token) |
-| M3 agent API (done) | MCP over stdio with compact snapshots, diffs and token budgets, settledness with pending reports, action consequences, read views, popups as tabs, HAR record/replay with virtual time, confirmation policies, flight recorder, checkpoints and profiles, human hand-off, `catpaw setup`; JSON-RPC/WS and SDKs later | A task set on practice sites completes over MCP and replays byte for byte from recorded HARs; confirmation and hand-off work from Claude Code |
-| M4 fidelity & challenges | Challenge detection, test zone with each Cloudflare challenge mode, Signed Agent registration | Measured pass rates |
-| M5 scale & compat | Multi-tenant limits, OpenTelemetry, Docker, CDP subset, V8 backend parity | 1000 contexts on one host; puppeteer-core smoke tests |
+| M0 fetch & read (done) | HTTP/1.1+2, cookies, Web Bot Auth signing, HTML parsing, style by Stylo, snapshots, markdown/text/forms views, CLI | `catpaw fetch … --snapshot` works on real pages; the WPT tree-construction suite runs in CI |
+| M1 scripts run (done) | Boa realms, bindings generated from Web IDL, an event loop with virtual time, parser and script interleaving, fetch/XHR, script budget, an in-process WPT runner | WPT `dom/`, `html/dom/`, `fetch/api/`, `xhr/` pass against recorded expectations; React and Vue apps hydrate |
+| M2 interact (done) | Layout, hit-testing, input, forms, navigation and history, iframes and popups, storage, observers, screenshots, Canvas 2D, Web Crypto, WebSocket, workers | Log in to a real site; the Turnstile widget completes with the test site key |
+| M3 agent API (done) | MCP with snapshots, diffs and budgets, settledness, action consequences, read views, tabs, HAR record/replay, confirmations, flight recorder, checkpoints and profiles, hand-off, `catpaw setup` | A task set on practice sites completes over MCP and replays byte for byte; confirmation and hand-off work from Claude Code |
+| M4 fidelity & challenges | Challenge detection, a test zone with each Cloudflare challenge mode, Web Bot Auth documentation for deployers, Intl and CSSOM | Measured pass rates |
+| M5 scale & compat | Multi-tenant limits, OpenTelemetry, Docker, a CDP subset, V8 backend parity | 1000 contexts on one host; puppeteer-core smoke tests |
 
 ## Repository layout
 
 ```
-crates/            one crate per subsystem (net, fetch, dom, style, layout, paint, js, web, agent, server, cli)
-docs/              architecture notes and ADRs
-tests/             web-platform-tests and html5lib-tests submodules, expectations
-xtask/             bindgen, test runners, IDL sync
+crates/   one crate per subsystem (net, fetch, dom, style, layout, paint, js, web, agent, server, cli)
+docs/     architecture notes, decision records, what works, the comparison
+tests/    the agent task set, web-platform-tests expectations
+xtask/    bindgen, test runners, the task set's tools
+release/  what release archives carry
 ```
+
+## Contributing and security
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the ground rules and the
+developer commands, and [SECURITY.md](SECURITY.md) to report a
+vulnerability.
 
 ## License
 
 Apache-2.0 OR MIT, at your option. Dependencies carry their own licenses
-(Stylo is MPL-2.0).
+(Stylo is MPL-2.0); release archives list them in
+`THIRD-PARTY-LICENSES.html`.

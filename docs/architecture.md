@@ -210,8 +210,8 @@ record/replay.
 
 ## Known gaps
 
-What does not work as a browser's would yet, besides the web features the
-README lists as missing:
+What does not work as a browser's would yet, besides the web features
+[What works](features.md#not-there-yet) lists as missing:
 
 - **Scripts are compiled anew on every navigation.** Nothing keeps compiled
   scripts across documents, and function bodies are compiled up front
