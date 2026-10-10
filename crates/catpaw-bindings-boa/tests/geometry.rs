@@ -256,6 +256,29 @@ fn element_from_point_sees_the_layout() {
     assert_eq!(eval(&mut page, "document.elementFromPoint(10, 10).id"), "c");
 }
 
+/// A box with `pointer-events: none` or hidden lets the pointer through to
+/// what is under it (a decorative overlay over a button); its children can
+/// take it again.
+#[test]
+fn the_pointer_goes_through_boxes_that_do_not_take_it() {
+    let mut page = load(
+        r#"<!doctype html><body style="margin:0">
+<button id=under style="position:absolute;left:0;top:0;width:100px;height:40px">Go</button>
+<div id=overlay style="position:absolute;left:0;top:0;width:400px;height:200px;pointer-events:none">
+  <a id=inside href="/x" style="position:absolute;left:200px;top:0;width:50px;height:20px;pointer-events:auto">x</a>
+</div>
+<button id=second style="position:absolute;left:0;top:300px;width:100px;height:40px">Two</button>
+<div id=veil style="position:absolute;left:0;top:300px;width:400px;height:100px;visibility:hidden"></div>"#,
+    );
+    assert_eq!(
+        eval(
+            &mut page,
+            "[document.elementFromPoint(10, 10).id, document.elementFromPoint(210, 10).id, document.elementFromPoint(10, 310).id].join(',')"
+        ),
+        "under,inside,second"
+    );
+}
+
 #[test]
 fn fixed_boxes_stay_put_when_the_window_scrolls() {
     let mut page = load(

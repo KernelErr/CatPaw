@@ -4,6 +4,7 @@
 use catpaw_dom::{Dom, NodeId};
 use catpaw_text::parley;
 use style::values::specified::box_::Overflow;
+use style::values::specified::ui::PointerEvents;
 
 use crate::inline::node_of_brush;
 use crate::{BoxId, BoxKind, LayoutTree, Positioning, Rect};
@@ -363,7 +364,9 @@ impl LayoutTree {
                 return Some(hit);
             }
         }
-        if !inside {
+        // A box that takes no pointer lets it through to what is under it;
+        // its children may take it again (above).
+        if !inside || !self.takes_pointer(id) {
             return None;
         }
         if b.kind == BoxKind::InlineRoot
@@ -395,6 +398,15 @@ impl LayoutTree {
             }
         }
         self.element_of(id)
+    }
+
+    /// Whether a pointer can land on the box: not `pointer-events: none`,
+    /// and visible.
+    fn takes_pointer(&self, id: BoxId) -> bool {
+        let style = &self.boxes[id].style;
+        style.get_inherited_ui().pointer_events != PointerEvents::None
+            && style.get_inherited_box().visibility
+                == style::computed_values::visibility::T::Visible
     }
 
     /// The element a box stands for: its own, or for an anonymous box the

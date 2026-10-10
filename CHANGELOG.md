@@ -20,6 +20,10 @@ From an agent's report of using CatPaw on a NAS:
   masked; and a tab with the user can be closed.
 - Switching tabs shows what changed since the agent last saw the tab
   (`snapshot: "full"` or `"none"` for the rest), not the whole page.
+- Clicks go through what does not take the pointer: a box with
+  `pointer-events: none` (a decorative overlay over a button) or
+  `visibility: hidden` is not hit, its children may be; clicks no longer
+  stop at "covered by" such a box.
 
 The library crates' public types changed (responses carry a saved file,
 requests a download), hence 0.2.0.
