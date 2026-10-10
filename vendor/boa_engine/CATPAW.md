@@ -63,6 +63,17 @@ when the host hooks give `Date` another zone, so `getHours()` and
 offset zone also lost its sign below an hour (`-00:30` read `+00:30`).
 `Temporal.Now` still takes UTC.
 
+## Sorting with any comparator
+
+`src/builtins/array/mod.rs`: `SortIndexedProperties` (behind
+`Array.prototype.sort`, `toSorted` and the typed array sorts) sorted with
+`slice::sort_by`, which since Rust 1.81 may panic when the comparison is
+no total order. Pages pass comparators that are none (`() => Math.random()
+- 0.5` shuffles), and the panic took the page down. A stable merge sort of
+its own (`merge_sort_by`) now sorts: it stays bounded whatever the
+comparator answers, and the result is then some order of the items, as
+ECMAScript allows.
+
 ## Parsing and compiling speed
 
 With the parser changes in `vendor/boa_parser` and `vendor/boa_ast`, these

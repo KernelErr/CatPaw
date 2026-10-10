@@ -1287,6 +1287,16 @@ fn vendored_engine_fixes_hold() {
             "((x, { y = x + 1 } = {}, [z] = [y * 2], f = function () {}, h = () => {}) => [x, y, z, f.name, h.name].join())(5)",
             "5,6,12,f,h",
         ),
+        // A comparator that is no order (a shuffle) gives some order of the
+        // items, and sorting stays stable.
+        (
+            "var a = []; for (var i = 0; i < 200; i++) a.push(i); a.sort(function () { return Math.random() - 0.5; }); a.slice().sort(function (x, y) { return x - y; }).join() === a.slice().sort(function (x, y) { return x - y; }).join() && a.length",
+            "200",
+        ),
+        (
+            "[{k: 1, v: 'a'}, {k: 0, v: 'b'}, {k: 1, v: 'c'}, {k: 0, v: 'd'}].sort(function (x, y) { return x.k - y.k; }).map(function (o) { return o.v; }).join('')",
+            "bdac",
+        ),
     ] {
         assert_eq!(eval(&mut page, source), expected, "{source}");
     }

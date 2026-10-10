@@ -2667,7 +2667,9 @@ impl Array {
         }
         // 4. Sort items using an implementation-defined sequence of calls to SortCompare. If any such call returns an abrupt completion, stop before performing any further calls to SortCompare and return that Completion Record.
         let mut sort_err = Ok(());
-        items.sort_by(|x, y| {
+        // CatPaw: not `slice::sort_by`, which may panic when the comparison
+        // is no total order; a page's comparator may return anything.
+        merge_sort_by(&mut items, &mut |x, y| {
             if sort_err.is_ok() {
                 sort_compare(x, y, context).unwrap_or_else(|err| {
                     sort_err = Err(err);
@@ -3698,4 +3700,43 @@ fn array_set_length(
 
     // 19. Return true.
     Ok(true)
+}
+
+/// CatPaw: a stable merge sort that stays bounded and never panics whatever
+/// `cmp` answers (the standard library's sort may panic when it is no total
+/// order). With a comparator that is no consistent order, the result is
+/// some permutation of the items, as ECMAScript allows.
+fn merge_sort_by<T: Clone>(items: &mut [T], cmp: &mut impl FnMut(&T, &T) -> Ordering) {
+    let len = items.len();
+    if len <= 8 {
+        for i in 1..len {
+            let mut j = i;
+            while j > 0 && cmp(&items[j - 1], &items[j]) == Ordering::Greater {
+                items.swap(j - 1, j);
+                j -= 1;
+            }
+        }
+        return;
+    }
+    let mid = len / 2;
+    merge_sort_by(&mut items[..mid], cmp);
+    merge_sort_by(&mut items[mid..], cmp);
+    let left = items[..mid].to_vec();
+    let right = items[mid..].to_vec();
+    let (mut i, mut j, mut k) = (0, 0, 0);
+    while i < left.len() && j < right.len() {
+        // Equal items keep their order: the left one goes first.
+        if cmp(&right[j], &left[i]) == Ordering::Less {
+            items[k] = right[j].clone();
+            j += 1;
+        } else {
+            items[k] = left[i].clone();
+            i += 1;
+        }
+        k += 1;
+    }
+    for item in left[i..].iter().chain(&right[j..]) {
+        items[k] = item.clone();
+        k += 1;
+    }
 }
