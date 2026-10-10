@@ -373,6 +373,8 @@ pub struct PageState {
     /// The `FileList` of each file input that chose files (or was asked
     /// for its `files`), pinned.
     pub(crate) file_lists: RefCell<HashMap<NodeId, ObjectId>>,
+    /// What scripts set on media elements (see `media_elements`).
+    pub(crate) media: RefCell<HashMap<NodeId, crate::media_elements::MediaState>>,
     /// Controls whose values the user typed during a hand-off: what the
     /// agent reads shows them masked (see `agent::mask_value`).
     pub(crate) masked_values: RefCell<std::collections::HashSet<NodeId>>,
@@ -515,6 +517,7 @@ impl PageState {
             base_url_cache: RefCell::new(None),
             form_state: RefCell::new(HashMap::new()),
             file_lists: RefCell::new(HashMap::new()),
+            media: RefCell::new(HashMap::new()),
             masked_values: RefCell::new(std::collections::HashSet::new()),
             console: RefCell::new(Vec::new()),
             console_sink: RefCell::new(None),

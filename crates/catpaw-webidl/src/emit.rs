@@ -729,10 +729,17 @@ impl<'a> Emitter<'a> {
             Type::Named(n) => match self.types.classify(n) {
                 Named::Node | Named::Object => (0, format!("rt::is_instance({v}, I::{n}, ctx)")),
                 Named::Callback | Named::CallbackInterface => (1, format!("{v}.is_callable()")),
+                // An object that is no platform object, or nothing: a
+                // dictionary is what a missing argument converts to.
+                Named::Dictionary => (
+                    3,
+                    format!("({v}.is_null_or_undefined() || {v}.is_object())"),
+                ),
                 Named::Enum => (5, "true".into()),
                 _ => (4, "true".into()),
             },
-            Type::Sequence(_) | Type::FrozenArray(_) => (2, format!("{v}.is_object()")),
+            Type::Sequence(_) | Type::FrozenArray(_) => (2, format!("rt::is_iterable({v}, ctx)?")),
+            Type::Object | Type::Record(..) => (3, format!("{v}.is_object()")),
             Type::Boolean => (3, format!("{v}.is_boolean()")),
             Type::Byte
             | Type::Octet
@@ -830,8 +837,10 @@ Ok(if v.is_null() {{ JsValue::undefined() }} else {{ v }})"
             w!(out, "}}\n");
             return;
         }
-        // Overload resolution: longer signatures first, then by how specific
-        // the distinguishing argument's type test is.
+        // Overload resolution: overloads whose distinguishing argument has a
+        // type test first, longer signatures first, then by how specific the
+        // test is; those that take any value there come last, so that
+        // `postMessage(message, {targetOrigin})` finds the dictionary.
         let mut ranked: Vec<(usize, u8, String, &POverload)> = Vec::new();
         for (i, o) in op.overloads.iter().enumerate() {
             let mut rank = 4u8;
@@ -854,7 +863,12 @@ Ok(if v.is_null() {{ JsValue::undefined() }} else {{ v }})"
             }
             ranked.push((o.min_args(), rank, pred, o));
         }
-        ranked.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
+        ranked.sort_by(|a, b| {
+            (a.2 == "true")
+                .cmp(&(b.2 == "true"))
+                .then(b.0.cmp(&a.0))
+                .then(a.1.cmp(&b.1))
+        });
         for (min, _, pred, o) in &ranked {
             w!(out, "if args.len() >= {min} && {pred} {{");
             out.push_str(&self.overload_call(iface, &op.owner, o, op.is_static, &label));

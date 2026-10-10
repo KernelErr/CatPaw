@@ -62,11 +62,14 @@ pub enum InterfaceId {
     IntersectionObserver,
     IntersectionObserverEntry,
     Location,
+    MediaError,
     MediaList,
     MediaQueryList,
     MessageChannel,
     MessageEvent,
     MessagePort,
+    MimeType,
+    MimeTypeArray,
     MutationObserver,
     MutationRecord,
     NamedNodeMap,
@@ -84,6 +87,8 @@ pub enum InterfaceId {
     PerformanceObserverEntryList,
     PerformanceResourceTiming,
     PerformanceTiming,
+    Plugin,
+    PluginArray,
     PopStateEvent,
     ProgressEvent,
     PromiseRejectionEvent,
@@ -102,6 +107,7 @@ pub enum InterfaceId {
     Selection,
     StaticRange,
     Storage,
+    StorageEvent,
     StyleSheet,
     StyleSheetList,
     SubmitEvent,
@@ -109,6 +115,9 @@ pub enum InterfaceId {
     TextDecoder,
     TextEncoder,
     TextMetrics,
+    TextTrack,
+    TextTrackList,
+    TimeRanges,
     TransformStream,
     TransformStreamDefaultController,
     TreeWalker,
@@ -236,6 +245,7 @@ pub enum InterfaceId {
     WheelEvent,
     XMLDocument,
     XMLHttpRequest,
+    CDATASection,
     DragEvent,
     HTMLAnchorElement,
     HTMLAreaElement,
@@ -270,8 +280,8 @@ pub enum InterfaceId {
 }
 
 impl InterfaceId {
-    pub const COUNT: usize = 245;
-    pub const ALL: [InterfaceId; 245] = [
+    pub const COUNT: usize = 255;
+    pub const ALL: [InterfaceId; 255] = [
         InterfaceId::AbortController,
         InterfaceId::AbstractRange,
         InterfaceId::Blob,
@@ -312,11 +322,14 @@ impl InterfaceId {
         InterfaceId::IntersectionObserver,
         InterfaceId::IntersectionObserverEntry,
         InterfaceId::Location,
+        InterfaceId::MediaError,
         InterfaceId::MediaList,
         InterfaceId::MediaQueryList,
         InterfaceId::MessageChannel,
         InterfaceId::MessageEvent,
         InterfaceId::MessagePort,
+        InterfaceId::MimeType,
+        InterfaceId::MimeTypeArray,
         InterfaceId::MutationObserver,
         InterfaceId::MutationRecord,
         InterfaceId::NamedNodeMap,
@@ -334,6 +347,8 @@ impl InterfaceId {
         InterfaceId::PerformanceObserverEntryList,
         InterfaceId::PerformanceResourceTiming,
         InterfaceId::PerformanceTiming,
+        InterfaceId::Plugin,
+        InterfaceId::PluginArray,
         InterfaceId::PopStateEvent,
         InterfaceId::ProgressEvent,
         InterfaceId::PromiseRejectionEvent,
@@ -352,6 +367,7 @@ impl InterfaceId {
         InterfaceId::Selection,
         InterfaceId::StaticRange,
         InterfaceId::Storage,
+        InterfaceId::StorageEvent,
         InterfaceId::StyleSheet,
         InterfaceId::StyleSheetList,
         InterfaceId::SubmitEvent,
@@ -359,6 +375,9 @@ impl InterfaceId {
         InterfaceId::TextDecoder,
         InterfaceId::TextEncoder,
         InterfaceId::TextMetrics,
+        InterfaceId::TextTrack,
+        InterfaceId::TextTrackList,
+        InterfaceId::TimeRanges,
         InterfaceId::TransformStream,
         InterfaceId::TransformStreamDefaultController,
         InterfaceId::TreeWalker,
@@ -486,6 +505,7 @@ impl InterfaceId {
         InterfaceId::WheelEvent,
         InterfaceId::XMLDocument,
         InterfaceId::XMLHttpRequest,
+        InterfaceId::CDATASection,
         InterfaceId::DragEvent,
         InterfaceId::HTMLAnchorElement,
         InterfaceId::HTMLAreaElement,
@@ -561,11 +581,14 @@ impl InterfaceId {
             InterfaceId::IntersectionObserver => "IntersectionObserver",
             InterfaceId::IntersectionObserverEntry => "IntersectionObserverEntry",
             InterfaceId::Location => "Location",
+            InterfaceId::MediaError => "MediaError",
             InterfaceId::MediaList => "MediaList",
             InterfaceId::MediaQueryList => "MediaQueryList",
             InterfaceId::MessageChannel => "MessageChannel",
             InterfaceId::MessageEvent => "MessageEvent",
             InterfaceId::MessagePort => "MessagePort",
+            InterfaceId::MimeType => "MimeType",
+            InterfaceId::MimeTypeArray => "MimeTypeArray",
             InterfaceId::MutationObserver => "MutationObserver",
             InterfaceId::MutationRecord => "MutationRecord",
             InterfaceId::NamedNodeMap => "NamedNodeMap",
@@ -583,6 +606,8 @@ impl InterfaceId {
             InterfaceId::PerformanceObserverEntryList => "PerformanceObserverEntryList",
             InterfaceId::PerformanceResourceTiming => "PerformanceResourceTiming",
             InterfaceId::PerformanceTiming => "PerformanceTiming",
+            InterfaceId::Plugin => "Plugin",
+            InterfaceId::PluginArray => "PluginArray",
             InterfaceId::PopStateEvent => "PopStateEvent",
             InterfaceId::ProgressEvent => "ProgressEvent",
             InterfaceId::PromiseRejectionEvent => "PromiseRejectionEvent",
@@ -601,6 +626,7 @@ impl InterfaceId {
             InterfaceId::Selection => "Selection",
             InterfaceId::StaticRange => "StaticRange",
             InterfaceId::Storage => "Storage",
+            InterfaceId::StorageEvent => "StorageEvent",
             InterfaceId::StyleSheet => "StyleSheet",
             InterfaceId::StyleSheetList => "StyleSheetList",
             InterfaceId::SubmitEvent => "SubmitEvent",
@@ -608,6 +634,9 @@ impl InterfaceId {
             InterfaceId::TextDecoder => "TextDecoder",
             InterfaceId::TextEncoder => "TextEncoder",
             InterfaceId::TextMetrics => "TextMetrics",
+            InterfaceId::TextTrack => "TextTrack",
+            InterfaceId::TextTrackList => "TextTrackList",
+            InterfaceId::TimeRanges => "TimeRanges",
             InterfaceId::TransformStream => "TransformStream",
             InterfaceId::TransformStreamDefaultController => "TransformStreamDefaultController",
             InterfaceId::TreeWalker => "TreeWalker",
@@ -735,6 +764,7 @@ impl InterfaceId {
             InterfaceId::WheelEvent => "WheelEvent",
             InterfaceId::XMLDocument => "XMLDocument",
             InterfaceId::XMLHttpRequest => "XMLHttpRequest",
+            InterfaceId::CDATASection => "CDATASection",
             InterfaceId::DragEvent => "DragEvent",
             InterfaceId::HTMLAnchorElement => "HTMLAnchorElement",
             InterfaceId::HTMLAreaElement => "HTMLAreaElement",
@@ -811,11 +841,14 @@ impl InterfaceId {
             "IntersectionObserver" => InterfaceId::IntersectionObserver,
             "IntersectionObserverEntry" => InterfaceId::IntersectionObserverEntry,
             "Location" => InterfaceId::Location,
+            "MediaError" => InterfaceId::MediaError,
             "MediaList" => InterfaceId::MediaList,
             "MediaQueryList" => InterfaceId::MediaQueryList,
             "MessageChannel" => InterfaceId::MessageChannel,
             "MessageEvent" => InterfaceId::MessageEvent,
             "MessagePort" => InterfaceId::MessagePort,
+            "MimeType" => InterfaceId::MimeType,
+            "MimeTypeArray" => InterfaceId::MimeTypeArray,
             "MutationObserver" => InterfaceId::MutationObserver,
             "MutationRecord" => InterfaceId::MutationRecord,
             "NamedNodeMap" => InterfaceId::NamedNodeMap,
@@ -833,6 +866,8 @@ impl InterfaceId {
             "PerformanceObserverEntryList" => InterfaceId::PerformanceObserverEntryList,
             "PerformanceResourceTiming" => InterfaceId::PerformanceResourceTiming,
             "PerformanceTiming" => InterfaceId::PerformanceTiming,
+            "Plugin" => InterfaceId::Plugin,
+            "PluginArray" => InterfaceId::PluginArray,
             "PopStateEvent" => InterfaceId::PopStateEvent,
             "ProgressEvent" => InterfaceId::ProgressEvent,
             "PromiseRejectionEvent" => InterfaceId::PromiseRejectionEvent,
@@ -851,6 +886,7 @@ impl InterfaceId {
             "Selection" => InterfaceId::Selection,
             "StaticRange" => InterfaceId::StaticRange,
             "Storage" => InterfaceId::Storage,
+            "StorageEvent" => InterfaceId::StorageEvent,
             "StyleSheet" => InterfaceId::StyleSheet,
             "StyleSheetList" => InterfaceId::StyleSheetList,
             "SubmitEvent" => InterfaceId::SubmitEvent,
@@ -858,6 +894,9 @@ impl InterfaceId {
             "TextDecoder" => InterfaceId::TextDecoder,
             "TextEncoder" => InterfaceId::TextEncoder,
             "TextMetrics" => InterfaceId::TextMetrics,
+            "TextTrack" => InterfaceId::TextTrack,
+            "TextTrackList" => InterfaceId::TextTrackList,
+            "TimeRanges" => InterfaceId::TimeRanges,
             "TransformStream" => InterfaceId::TransformStream,
             "TransformStreamDefaultController" => InterfaceId::TransformStreamDefaultController,
             "TreeWalker" => InterfaceId::TreeWalker,
@@ -985,6 +1024,7 @@ impl InterfaceId {
             "WheelEvent" => InterfaceId::WheelEvent,
             "XMLDocument" => InterfaceId::XMLDocument,
             "XMLHttpRequest" => InterfaceId::XMLHttpRequest,
+            "CDATASection" => InterfaceId::CDATASection,
             "DragEvent" => InterfaceId::DragEvent,
             "HTMLAnchorElement" => InterfaceId::HTMLAnchorElement,
             "HTMLAreaElement" => InterfaceId::HTMLAreaElement,
@@ -1062,11 +1102,14 @@ impl InterfaceId {
             InterfaceId::IntersectionObserver => None,
             InterfaceId::IntersectionObserverEntry => None,
             InterfaceId::Location => None,
+            InterfaceId::MediaError => None,
             InterfaceId::MediaList => None,
             InterfaceId::MediaQueryList => Some(InterfaceId::EventTarget),
             InterfaceId::MessageChannel => None,
             InterfaceId::MessageEvent => Some(InterfaceId::Event),
             InterfaceId::MessagePort => Some(InterfaceId::EventTarget),
+            InterfaceId::MimeType => None,
+            InterfaceId::MimeTypeArray => None,
             InterfaceId::MutationObserver => None,
             InterfaceId::MutationRecord => None,
             InterfaceId::NamedNodeMap => None,
@@ -1084,6 +1127,8 @@ impl InterfaceId {
             InterfaceId::PerformanceObserverEntryList => None,
             InterfaceId::PerformanceResourceTiming => Some(InterfaceId::PerformanceEntry),
             InterfaceId::PerformanceTiming => None,
+            InterfaceId::Plugin => None,
+            InterfaceId::PluginArray => None,
             InterfaceId::PopStateEvent => Some(InterfaceId::Event),
             InterfaceId::ProgressEvent => Some(InterfaceId::Event),
             InterfaceId::PromiseRejectionEvent => Some(InterfaceId::Event),
@@ -1102,6 +1147,7 @@ impl InterfaceId {
             InterfaceId::Selection => None,
             InterfaceId::StaticRange => Some(InterfaceId::AbstractRange),
             InterfaceId::Storage => None,
+            InterfaceId::StorageEvent => Some(InterfaceId::Event),
             InterfaceId::StyleSheet => None,
             InterfaceId::StyleSheetList => None,
             InterfaceId::SubmitEvent => Some(InterfaceId::Event),
@@ -1109,6 +1155,9 @@ impl InterfaceId {
             InterfaceId::TextDecoder => None,
             InterfaceId::TextEncoder => None,
             InterfaceId::TextMetrics => None,
+            InterfaceId::TextTrack => Some(InterfaceId::EventTarget),
+            InterfaceId::TextTrackList => Some(InterfaceId::EventTarget),
+            InterfaceId::TimeRanges => None,
             InterfaceId::TransformStream => None,
             InterfaceId::TransformStreamDefaultController => None,
             InterfaceId::TreeWalker => None,
@@ -1238,6 +1287,7 @@ impl InterfaceId {
             InterfaceId::WheelEvent => Some(InterfaceId::MouseEvent),
             InterfaceId::XMLDocument => Some(InterfaceId::Document),
             InterfaceId::XMLHttpRequest => Some(InterfaceId::XMLHttpRequestEventTarget),
+            InterfaceId::CDATASection => Some(InterfaceId::Text),
             InterfaceId::DragEvent => Some(InterfaceId::MouseEvent),
             InterfaceId::HTMLAnchorElement => Some(InterfaceId::HTMLElement),
             InterfaceId::HTMLAreaElement => Some(InterfaceId::HTMLElement),
@@ -1428,6 +1478,32 @@ impl BinaryType {
         Some(match s {
             "blob" => BinaryType::Blob,
             "arraybuffer" => BinaryType::Arraybuffer,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum CanPlayTypeResult {
+    Empty,
+    Maybe,
+    Probably,
+}
+
+impl CanPlayTypeResult {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            CanPlayTypeResult::Empty => "",
+            CanPlayTypeResult::Maybe => "maybe",
+            CanPlayTypeResult::Probably => "probably",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "" => CanPlayTypeResult::Empty,
+            "maybe" => CanPlayTypeResult::Maybe,
+            "probably" => CanPlayTypeResult::Probably,
             _ => return None,
         })
     }
@@ -2379,6 +2455,64 @@ impl SlotAssignmentMode {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum TextTrackKind {
+    Subtitles,
+    Captions,
+    Descriptions,
+    Chapters,
+    Metadata,
+}
+
+impl TextTrackKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            TextTrackKind::Subtitles => "subtitles",
+            TextTrackKind::Captions => "captions",
+            TextTrackKind::Descriptions => "descriptions",
+            TextTrackKind::Chapters => "chapters",
+            TextTrackKind::Metadata => "metadata",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "subtitles" => TextTrackKind::Subtitles,
+            "captions" => TextTrackKind::Captions,
+            "descriptions" => TextTrackKind::Descriptions,
+            "chapters" => TextTrackKind::Chapters,
+            "metadata" => TextTrackKind::Metadata,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum TextTrackMode {
+    Disabled,
+    Hidden,
+    Showing,
+}
+
+impl TextTrackMode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            TextTrackMode::Disabled => "disabled",
+            TextTrackMode::Hidden => "hidden",
+            TextTrackMode::Showing => "showing",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "disabled" => TextTrackMode::Disabled,
+            "hidden" => TextTrackMode::Hidden,
+            "showing" => TextTrackMode::Showing,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum WorkerType {
     Classic,
     Module,
@@ -2926,6 +3060,18 @@ pub struct StaticRangeInit {
 }
 
 #[derive(Clone, Debug)]
+pub struct StorageEventInit {
+    pub bubbles: bool,
+    pub cancelable: bool,
+    pub composed: bool,
+    pub key: Option<String>,
+    pub old_value: Option<String>,
+    pub new_value: Option<String>,
+    pub url: String,
+    pub storage_area: Option<ObjectId>,
+}
+
+#[derive(Clone, Debug)]
 pub struct StreamPipeOptions {
     pub prevent_close: bool,
     pub prevent_abort: bool,
@@ -3094,11 +3240,23 @@ pub enum FileOrString {
 }
 
 #[derive(Clone, Debug)]
+pub enum HTMLElementOrLong {
+    HTMLElement(NodeId),
+    Long(i32),
+}
+
+#[derive(Clone, Debug)]
 pub enum HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement {
     HTMLImageElement(NodeId),
     SVGImageElement(NodeId),
     HTMLVideoElement(NodeId),
     HTMLCanvasElement(NodeId),
+}
+
+#[derive(Clone, Debug)]
+pub enum HTMLOptionElementOrHTMLOptGroupElement {
+    HTMLOptionElement(NodeId),
+    HTMLOptGroupElement(NodeId),
 }
 
 #[derive(Clone, Debug)]
@@ -3690,6 +3848,13 @@ pub trait NavigatorLanguageImpl {
 
 pub trait NavigatorOnLineImpl {
     fn on_line(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+}
+
+pub trait NavigatorPluginsImpl {
+    fn plugins(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn mime_types(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<ObjectId>;
+    fn java_enabled(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
+    fn pdf_viewer_enabled(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
 }
 
 pub trait NonDocumentTypeChildNodeImpl {
@@ -4391,6 +4556,7 @@ pub trait MessageEventImpl {
     fn origin(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
     fn last_event_id(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
     fn source(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<WindowProxyOrMessagePort>>;
+    fn ports(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<ObjectId>>;
     fn constructor(
         cx: &mut Cx<'_>,
         type_: String,
@@ -4413,6 +4579,12 @@ pub trait MessagePortImpl {
     ) -> Fallible<()>;
     fn start(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
     fn close(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+}
+
+pub trait MimeTypeArrayImpl {
+    fn length(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn item(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<ObjectId>>;
+    fn named_item(cx: &mut Cx<'_>, this: ObjectId, name: String) -> Fallible<Option<ObjectId>>;
 }
 
 pub trait MutationObserverImpl {
@@ -4710,6 +4882,13 @@ pub trait PerformanceTimingImpl {
     fn to_json(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
 }
 
+pub trait PluginArrayImpl {
+    fn refresh(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<()>;
+    fn length(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn item(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<ObjectId>>;
+    fn named_item(cx: &mut Cx<'_>, this: ObjectId, name: String) -> Fallible<Option<ObjectId>>;
+}
+
 pub trait PopStateEventImpl {
     fn state(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value>;
     fn has_ua_visual_transition(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<bool>;
@@ -4979,6 +5158,19 @@ pub trait StorageImpl {
     fn named_delete(cx: &mut Cx<'_>, this: ObjectId, name: &str) -> Fallible<bool>;
 }
 
+pub trait StorageEventImpl {
+    fn key(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<String>>;
+    fn old_value(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<String>>;
+    fn new_value(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<String>>;
+    fn url(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn storage_area(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<ObjectId>>;
+    fn constructor(
+        cx: &mut Cx<'_>,
+        type_: String,
+        event_init_dict: StorageEventInit,
+    ) -> Fallible<ObjectId>;
+}
+
 pub trait StyleSheetImpl {
     fn type_(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
     fn href(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<String>>;
@@ -5111,6 +5303,27 @@ pub trait TextMetricsImpl {
     fn hanging_baseline(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
     fn alphabetic_baseline(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
     fn ideographic_baseline(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<f64>;
+}
+
+pub trait TextTrackImpl {
+    fn kind(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<TextTrackKind>;
+    fn label(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn language(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn id(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String>;
+    fn mode(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<TextTrackMode>;
+    fn set_mode(cx: &mut Cx<'_>, this: ObjectId, value: TextTrackMode) -> Fallible<()>;
+}
+
+pub trait TextTrackListImpl {
+    fn length(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn get_track_by_id(cx: &mut Cx<'_>, this: ObjectId, id: String) -> Fallible<Option<ObjectId>>;
+    fn indexed_get(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<Option<ObjectId>>;
+}
+
+pub trait TimeRangesImpl {
+    fn length(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<u32>;
+    fn start(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<f64>;
+    fn end(cx: &mut Cx<'_>, this: ObjectId, index: u32) -> Fallible<f64>;
 }
 
 pub trait TransformStreamImpl {
@@ -5913,6 +6126,42 @@ pub trait HTMLLabelElementImpl {
     fn control(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
 }
 
+pub trait HTMLMediaElementImpl {
+    fn error(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<ObjectId>>;
+    fn current_src(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
+    fn network_state(cx: &mut Cx<'_>, this: NodeId) -> Fallible<u16>;
+    fn buffered(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
+    fn load(cx: &mut Cx<'_>, this: NodeId) -> Fallible<()>;
+    fn can_play_type(cx: &mut Cx<'_>, this: NodeId, type_: String) -> Fallible<CanPlayTypeResult>;
+    fn ready_state(cx: &mut Cx<'_>, this: NodeId) -> Fallible<u16>;
+    fn seeking(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool>;
+    fn current_time(cx: &mut Cx<'_>, this: NodeId) -> Fallible<f64>;
+    fn set_current_time(cx: &mut Cx<'_>, this: NodeId, value: f64) -> Fallible<()>;
+    fn duration(cx: &mut Cx<'_>, this: NodeId) -> Fallible<f64>;
+    fn paused(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool>;
+    fn default_playback_rate(cx: &mut Cx<'_>, this: NodeId) -> Fallible<f64>;
+    fn set_default_playback_rate(cx: &mut Cx<'_>, this: NodeId, value: f64) -> Fallible<()>;
+    fn playback_rate(cx: &mut Cx<'_>, this: NodeId) -> Fallible<f64>;
+    fn set_playback_rate(cx: &mut Cx<'_>, this: NodeId, value: f64) -> Fallible<()>;
+    fn played(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
+    fn seekable(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
+    fn ended(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool>;
+    fn play(cx: &mut Cx<'_>, this: NodeId) -> Fallible<PromiseRef>;
+    fn pause(cx: &mut Cx<'_>, this: NodeId) -> Fallible<()>;
+    fn volume(cx: &mut Cx<'_>, this: NodeId) -> Fallible<f64>;
+    fn set_volume(cx: &mut Cx<'_>, this: NodeId, value: f64) -> Fallible<()>;
+    fn muted(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool>;
+    fn set_muted(cx: &mut Cx<'_>, this: NodeId, value: bool) -> Fallible<()>;
+    fn text_tracks(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
+    fn add_text_track(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        kind: TextTrackKind,
+        label: String,
+        language: String,
+    ) -> Fallible<ObjectId>;
+}
+
 pub trait HTMLOptionElementImpl {
     fn form(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>>;
     fn default_selected(cx: &mut Cx<'_>, this: NodeId) -> Fallible<bool>;
@@ -5938,6 +6187,14 @@ pub trait HTMLSelectElementImpl {
     fn length(cx: &mut Cx<'_>, this: NodeId) -> Fallible<u32>;
     fn set_length(cx: &mut Cx<'_>, this: NodeId, value: u32) -> Fallible<()>;
     fn item(cx: &mut Cx<'_>, this: NodeId, index: u32) -> Fallible<Option<NodeId>>;
+    fn add(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        element: HTMLOptionElementOrHTMLOptGroupElement,
+        before: Option<HTMLElementOrLong>,
+    ) -> Fallible<()>;
+    fn remove(cx: &mut Cx<'_>, this: NodeId) -> Fallible<()>;
+    fn remove_overload2(cx: &mut Cx<'_>, this: NodeId, index: i32) -> Fallible<()>;
     fn selected_options(cx: &mut Cx<'_>, this: NodeId) -> Fallible<ObjectId>;
     fn selected_index(cx: &mut Cx<'_>, this: NodeId) -> Fallible<i32>;
     fn set_selected_index(cx: &mut Cx<'_>, this: NodeId, value: i32) -> Fallible<()>;
@@ -5975,6 +6232,11 @@ pub trait HTMLTextAreaElementImpl {
 pub trait HTMLTitleElementImpl {
     fn text(cx: &mut Cx<'_>, this: NodeId) -> Fallible<String>;
     fn set_text(cx: &mut Cx<'_>, this: NodeId, value: String) -> Fallible<()>;
+}
+
+pub trait HTMLVideoElementImpl {
+    fn video_width(cx: &mut Cx<'_>, this: NodeId) -> Fallible<u32>;
+    fn video_height(cx: &mut Cx<'_>, this: NodeId) -> Fallible<u32>;
 }
 
 pub trait InputEventImpl {

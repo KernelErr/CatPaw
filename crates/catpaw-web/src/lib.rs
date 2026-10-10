@@ -48,6 +48,7 @@ mod intersection_observer;
 mod layout;
 pub use layout::screenshot;
 mod media;
+mod media_elements;
 pub mod mime;
 mod mutation_observer;
 pub mod navigation_timing;

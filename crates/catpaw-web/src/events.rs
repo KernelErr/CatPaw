@@ -60,12 +60,21 @@ pub enum EventData {
         code: u16,
         reason: String,
     },
-    /// `message`: see `frames`.
+    /// `message`: see `frames`. The ports are pinned by the event.
     Message {
         data: Value,
         origin: String,
         last_event_id: String,
         source: Option<web::WindowProxyOrMessagePort>,
+        ports: Vec<ObjectId>,
+    },
+    /// `storage`, as a page makes it; the storage area is pinned.
+    Storage {
+        key: Option<String>,
+        old_value: Option<String>,
+        new_value: Option<String>,
+        url: String,
+        storage_area: Option<ObjectId>,
     },
 }
 
@@ -99,10 +108,13 @@ pub struct Event {
 platform_object!(Event, |e| e.iface, pinned = |e| e.held());
 
 impl Event {
-    /// The objects the event pins: a drag event's `DataTransfer`.
+    /// The objects the event pins: a drag event's `DataTransfer`, a
+    /// message's ports, a storage event's storage area.
     fn held(&self) -> Vec<ObjectId> {
         match &self.data {
             EventData::Ui(state) => state.data_transfer.into_iter().collect(),
+            EventData::Message { ports, .. } => ports.clone(),
+            EventData::Storage { storage_area, .. } => storage_area.iter().copied().collect(),
             _ => Vec::new(),
         }
     }
@@ -1166,6 +1178,66 @@ impl web::HashChangeEventImpl for Web {
             EventData::HashChange {
                 old_url: init.old_url,
                 new_url: init.new_url,
+            },
+        ))
+    }
+}
+
+impl web::StorageEventImpl for Web {
+    fn key(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<String>> {
+        get(cx, this, |e| match &e.data {
+            EventData::Storage { key, .. } => key.clone(),
+            _ => None,
+        })
+    }
+
+    fn old_value(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<String>> {
+        get(cx, this, |e| match &e.data {
+            EventData::Storage { old_value, .. } => old_value.clone(),
+            _ => None,
+        })
+    }
+
+    fn new_value(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<String>> {
+        get(cx, this, |e| match &e.data {
+            EventData::Storage { new_value, .. } => new_value.clone(),
+            _ => None,
+        })
+    }
+
+    fn url(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<String> {
+        get(cx, this, |e| match &e.data {
+            EventData::Storage { url, .. } => url.clone(),
+            _ => String::new(),
+        })
+    }
+
+    fn storage_area(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Option<ObjectId>> {
+        get(cx, this, |e| match &e.data {
+            EventData::Storage { storage_area, .. } => *storage_area,
+            _ => None,
+        })
+    }
+
+    fn constructor(
+        cx: &mut Cx<'_>,
+        type_: String,
+        init: web::StorageEventInit,
+    ) -> Fallible<ObjectId> {
+        if let Some(area) = init.storage_area {
+            cx.pin(area);
+        }
+        Ok(derived_event(
+            cx,
+            InterfaceId::StorageEvent,
+            type_,
+            (init.bubbles, init.cancelable, init.composed),
+            EventData::Storage {
+                key: init.key,
+                old_value: init.old_value,
+                new_value: init.new_value,
+                url: init.url,
+                storage_area: init.storage_area,
             },
         ))
     }

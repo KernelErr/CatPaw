@@ -78,6 +78,8 @@ pub(crate) fn set_prefs() {
         style_config::set_pref!("layout.css.tree-counting-functions.enabled", true);
         style_config::set_pref!("layout.css.progress-function.enabled", true);
         style_config::set_pref!("layout.variable_fonts.enabled", true);
+        style_config::set_pref!("layout.css.has-selector.enabled", true);
+        style_config::set_pref!("layout.css.nth-child-of.enabled", true);
         style_config::set_pref!("layout.threads", -1);
     });
 }

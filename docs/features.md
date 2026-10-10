@@ -66,6 +66,10 @@ differently from a browser, is listed under
   `WebSocket` over the same transport as HTTP (proxy, TLS, cookies and the
   private-network policy apply), text and binary, close codes and reasons.
 - The font-loading API in its no-layout form.
+- Media elements that play nothing: `<video>` and `<audio>` stay paused
+  with no data, `canPlayType` answers "" and `play()` rejects with
+  `NotSupportedError`; what scripts set (time, volume, rate, text tracks)
+  reads back. No plugins and no PDF viewer (`navigator.plugins` is empty).
 
 ## Layout and screenshots
 
@@ -130,5 +134,6 @@ tasks on practice sites replay from recorded traffic in CI, twice (see
 ## Not there yet
 
 Images, gradients and rounded corners in screenshots; tables as a grid;
-images' intrinsic sizes; media; WebAssembly; the members of HTML elements
+images' intrinsic sizes; media playback; IndexedDB; WebAssembly; the
+Web Animations API; the members of HTML elements
 that go beyond their attributes; and the [Known gaps](architecture.md#known-gaps).

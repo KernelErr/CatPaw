@@ -643,6 +643,5 @@ html/dom/usvstring-reflection.https.html	RegisterProtocolHandler URL: unpaired s
 html/dom/usvstring-reflection.https.html	UnregisterProtocolHandler URL: unpaired surrogate codepoint should not make any exceptions.
 html/dom/usvstring-reflection.https.html	document.open : unpaired surrogate codepoint should be replaced with U+FFFD
 html/dom/usvstring-reflection.https.html	location.href : unpaired surrogate codepoint should be replaced with U+FFFD
-html/dom/usvstring-reflection.https.html	storage event : unpaired surrogate codepoint should be replaced with U+FFFD
 html/dom/usvstring-reflection.https.html	websocket url : unpaired surrogate codepoint should be replaced with U+FFFD
 html/dom/usvstring-reflection.https.html	window.open : unpaired surrogate codepoint should be replaced with U+FFFD

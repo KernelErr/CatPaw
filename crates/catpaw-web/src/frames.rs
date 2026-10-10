@@ -422,6 +422,7 @@ pub(crate) fn dispatch_message(
         origin,
         last_event_id: String::new(),
         source: source.map(web::WindowProxyOrMessagePort::WindowProxy),
+        ports: Vec::new(),
     };
     let event = cx.page.alloc(event);
     cx.pin(event);
@@ -745,6 +746,7 @@ fn message<R>(
             origin,
             last_event_id,
             source,
+            ..
         } => Ok(f(data, origin, last_event_id, source.clone())),
         _ => Err(Exception::type_error("not a message event")),
     })?
@@ -759,13 +761,24 @@ impl web::MessageEventImpl for Web {
         let mut event = Event::new(type_, init.bubbles, init.cancelable, cx.page.clock.peek());
         event.iface = InterfaceId::MessageEvent;
         event.composed = init.composed;
+        for &port in &init.ports {
+            cx.pin(port);
+        }
         event.data = EventData::Message {
             data: init.data,
             origin: init.origin,
             last_event_id: init.last_event_id,
             source: init.source,
+            ports: init.ports,
         };
         Ok(cx.page.alloc(event))
+    }
+
+    fn ports(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Vec<ObjectId>> {
+        cx.page.with::<Event, _>(this, |e| match &e.data {
+            EventData::Message { ports, .. } => ports.clone(),
+            _ => Vec::new(),
+        })
     }
 
     fn data(cx: &mut Cx<'_>, this: ObjectId) -> Fallible<Value> {

@@ -15,6 +15,7 @@ use crate::{
     context::intrinsics::{Intrinsics, StandardConstructor, StandardConstructors},
     error::JsNativeError,
     js_string,
+    native_function::NativeFunctionPointer,
     object::{CONSTRUCTOR, JsObject, internal_methods::get_prototype_from_constructor},
     property::Attribute,
     realm::Realm,
@@ -34,6 +35,30 @@ mod regexp_string_iterator;
 pub(crate) use regexp_string_iterator::RegExpStringIterator;
 #[cfg(test)]
 mod tests;
+
+/// CatPaw: what the last successful match found, behind the legacy static
+/// properties of `RegExp` (`$1`…`$9`, `input`, `lastMatch`, `lastParen`,
+/// `leftContext`, `rightContext` and their `$_`, `$&`, `$+`, `` $` ``, `$'`
+/// aliases) that pages still read, as in the TC39 legacy RegExp features
+/// proposal. Substrings are made when read.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct LegacyMatch {
+    /// `RegExp.input`: the matched string, unless a page set another.
+    input: JsString,
+    /// The string matched in, which the ranges index.
+    subject: JsString,
+    range: std::ops::Range<usize>,
+    captures: Vec<Option<std::ops::Range<usize>>>,
+}
+
+impl LegacyMatch {
+    fn slice(&self, range: Option<&std::ops::Range<usize>>) -> JsString {
+        range
+            .filter(|r| r.start <= r.end && r.end <= self.subject.len())
+            .map(|r| self.subject.get_expect(r.clone()))
+            .unwrap_or_default()
+    }
+}
 
 /// The internal representation of a `RegExp` object.
 #[derive(Debug, Clone, Trace, Finalize, JsData)]
@@ -97,7 +122,12 @@ impl IntrinsicObject for RegExp {
         let get_source = BuiltInBuilder::callable(realm, Self::get_source)
             .name(js_string!("get source"))
             .build();
-        let regexp = BuiltInBuilder::from_standard_constructor::<Self>(realm)
+        let legacy = |f: NativeFunctionPointer, name: &str| {
+            BuiltInBuilder::callable(realm, f)
+                .name(JsString::from(name))
+                .build()
+        };
+        let mut regexp = BuiltInBuilder::from_standard_constructor::<Self>(realm)
             .static_method(Self::escape, js_string!("escape"), 1)
             .static_accessor(
                 JsSymbol::species(),
@@ -105,6 +135,55 @@ impl IntrinsicObject for RegExp {
                 None,
                 Attribute::CONFIGURABLE,
             )
+            .static_accessor(
+                js_string!("input"),
+                Some(legacy(Self::get_input, "get input")),
+                Some(legacy(Self::set_input, "set input")),
+                Attribute::CONFIGURABLE,
+            )
+            .static_accessor(
+                js_string!("$_"),
+                Some(legacy(Self::get_input, "get $_")),
+                Some(legacy(Self::set_input, "set $_")),
+                Attribute::CONFIGURABLE,
+            );
+        let statics: [([&str; 2], NativeFunctionPointer); 4] = [
+            (["lastMatch", "$&"], Self::get_last_match),
+            (["lastParen", "$+"], Self::get_last_paren),
+            (["leftContext", "$`"], Self::get_left_context),
+            (["rightContext", "$'"], Self::get_right_context),
+        ];
+        for (names, getter) in statics {
+            for name in names {
+                regexp = regexp.static_accessor(
+                    JsString::from(name),
+                    Some(legacy(getter, &format!("get {name}"))),
+                    None,
+                    Attribute::CONFIGURABLE,
+                );
+            }
+        }
+        let parens: [NativeFunctionPointer; 9] = [
+            Self::get_paren::<1>,
+            Self::get_paren::<2>,
+            Self::get_paren::<3>,
+            Self::get_paren::<4>,
+            Self::get_paren::<5>,
+            Self::get_paren::<6>,
+            Self::get_paren::<7>,
+            Self::get_paren::<8>,
+            Self::get_paren::<9>,
+        ];
+        for (i, getter) in parens.into_iter().enumerate() {
+            let name = format!("${}", i + 1);
+            regexp = regexp.static_accessor(
+                JsString::from(name.as_str()),
+                Some(legacy(getter, &format!("get {name}"))),
+                None,
+                Attribute::CONFIGURABLE,
+            );
+        }
+        let regexp = regexp
             .property(js_string!("lastIndex"), 0, Attribute::all())
             .method(Self::test, js_string!("test"), 1)
             .method(Self::exec, js_string!("exec"), 1)
@@ -188,7 +267,8 @@ impl BuiltInObject for RegExp {
 impl BuiltInConstructor for RegExp {
     const CONSTRUCTOR_ARGUMENTS: usize = 2;
     const PROTOTYPE_STORAGE_SLOTS: usize = 30;
-    const CONSTRUCTOR_STORAGE_SLOTS: usize = 3;
+    // `escape`, `@@species`, and the 19 legacy static accessors.
+    const CONSTRUCTOR_STORAGE_SLOTS: usize = 41;
 
     const STANDARD_CONSTRUCTOR: fn(&StandardConstructors) -> &StandardConstructor =
         StandardConstructors::regexp;
@@ -462,6 +542,78 @@ impl RegExp {
     /// [spec]: https://tc39.es/ecma262/#sec-get-regexp-@@species
     /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/@@species
     #[allow(clippy::unnecessary_wraps)]
+    /// CatPaw: whether `this` is the realm's `RegExp`, the only object with
+    /// the legacy static properties.
+    fn legacy_this(this: &JsValue, context: &Context) -> JsResult<()> {
+        let regexp = context.intrinsics().constructors().regexp().constructor();
+        if this.as_object().is_some_and(|o| JsObject::equals(&o, &regexp)) {
+            Ok(())
+        } else {
+            Err(JsNativeError::typ()
+                .with_message("RegExp legacy static property used on another object")
+                .into())
+        }
+    }
+
+    fn legacy_static(
+        this: &JsValue,
+        context: &Context,
+        f: impl FnOnce(&LegacyMatch) -> JsString,
+    ) -> JsResult<JsValue> {
+        Self::legacy_this(this, context)?;
+        let value = f(&context.realm().legacy_regexp());
+        Ok(value.into())
+    }
+
+    fn get_input(this: &JsValue, _: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
+        Self::legacy_static(this, context, |m| m.input.clone())
+    }
+
+    fn set_input(this: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
+        Self::legacy_this(this, context)?;
+        let value = args.get_or_undefined(0).to_string(context)?;
+        context.realm().legacy_regexp().input = value;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_last_match(this: &JsValue, _: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
+        Self::legacy_static(this, context, |m| m.slice(Some(&m.range)))
+    }
+
+    fn get_last_paren(this: &JsValue, _: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
+        Self::legacy_static(this, context, |m| {
+            m.slice(m.captures.last().and_then(Option::as_ref))
+        })
+    }
+
+    fn get_left_context(
+        this: &JsValue,
+        _: &[JsValue],
+        context: &mut Context,
+    ) -> JsResult<JsValue> {
+        Self::legacy_static(this, context, |m| m.slice(Some(&(0..m.range.start))))
+    }
+
+    fn get_right_context(
+        this: &JsValue,
+        _: &[JsValue],
+        context: &mut Context,
+    ) -> JsResult<JsValue> {
+        Self::legacy_static(this, context, |m| {
+            m.slice(Some(&(m.range.end..m.subject.len())))
+        })
+    }
+
+    fn get_paren<const N: usize>(
+        this: &JsValue,
+        _: &[JsValue],
+        context: &mut Context,
+    ) -> JsResult<JsValue> {
+        Self::legacy_static(this, context, |m| {
+            m.slice(m.captures.get(N - 1).and_then(Option::as_ref))
+        })
+    }
+
     fn get_species(this: &JsValue, _: &[JsValue], _: &mut Context) -> JsResult<JsValue> {
         // 1. Return the this value.
         Ok(this.clone())
@@ -1219,6 +1371,15 @@ impl RegExp {
         if global || sticky {
             // a. Perform ? Set(R, "lastIndex", 𝔽(e), true).
             this.set(js_string!("lastIndex"), e, true, context)?;
+        }
+
+        // CatPaw: UpdateLegacyRegExpStaticProperties.
+        {
+            let mut legacy = context.realm().legacy_regexp();
+            legacy.input = input.clone();
+            legacy.subject = input.clone();
+            legacy.range = last_index as usize..e;
+            legacy.captures.clone_from(&match_value.captures);
         }
 
         // 17. Let n be the number of elements in r's captures List.

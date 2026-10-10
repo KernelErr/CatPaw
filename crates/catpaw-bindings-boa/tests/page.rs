@@ -435,6 +435,15 @@ fn dom_apis_work_from_script() {
         "a c d|true|3|a|acd"
     );
     assert!(run(&mut page, "list.classList.add('has space')").contains("InvalidCharacterError"));
+    // Replacing a token with itself, or with one already there.
+    assert_eq!(
+        run(
+            &mut page,
+            "list.classList.replace('d', 'd') + ' ' + list.classList.replace('d', 'a') + ' ' + list.className"
+        ),
+        "true true a c"
+    );
+    run(&mut page, "list.className = 'a c d'");
     assert_eq!(
         run(
             &mut page,
@@ -1297,9 +1306,90 @@ fn vendored_engine_fixes_hold() {
             "[{k: 1, v: 'a'}, {k: 0, v: 'b'}, {k: 1, v: 'c'}, {k: 0, v: 'd'}].sort(function (x, y) { return x.k - y.k; }).map(function (o) { return o.v; }).join('')",
             "bdac",
         ),
+        // The legacy static properties of `RegExp`, from the last match.
+        (
+            "/(\\d+)-(\\d+)/.test('a 12-34 b'); [RegExp.$1, RegExp.$2, RegExp.$3, RegExp.lastMatch, RegExp['$&'], RegExp.leftContext, RegExp.rightContext, RegExp.lastParen, RegExp.input].join('|')",
+            "12|34||12-34|12-34|a | b|34|a 12-34 b",
+        ),
+        (
+            "'2024-05'.replace(/(\\d+)-(\\d+)/, '$2'); RegExp.$1 + ' ' + RegExp['$_']",
+            "2024 2024-05",
+        ),
+        (
+            "try { Object.getOwnPropertyDescriptor(RegExp, '$1').get.call({}); 'read' } catch (e) { e.name }",
+            "TypeError",
+        ),
     ] {
         assert_eq!(eval(&mut page, source), expected, "{source}");
     }
+}
+
+#[test]
+fn media_plugins_and_other_apis_pages_expect() {
+    let mut page = load(
+        "<script>function attempt(f) { try { return String(f()); } catch (e) { return e.name; } }</script><select id=s></select><video id=v muted></video>",
+    );
+    for (source, expected) in [
+        // No plugins, no PDF viewer.
+        (
+            "[navigator.javaEnabled(), navigator.plugins.length, navigator.plugins === navigator.plugins, navigator.mimeTypes.length, navigator.pdfViewerEnabled, navigator.plugins.item(0), String(navigator.plugins)].join()",
+            "false,0,true,0,false,,[object PluginArray]",
+        ),
+        (
+            "typeof CDATASection + ' ' + typeof Plugin",
+            "function function",
+        ),
+        // Media elements play nothing, and say so.
+        (
+            "var v = document.getElementById('v'); [v.canPlayType('video/mp4'), v.paused, v.duration, v.muted, v.readyState, v.buffered.length, v.textTracks === v.textTracks].join()",
+            ",true,NaN,true,0,0,true",
+        ),
+        (
+            "attempt(function () { return v.buffered.start(0); }) + ' ' + attempt(function () { v.volume = 2; })",
+            "IndexSizeError IndexSizeError",
+        ),
+        (
+            "v.currentTime = 4; v.volume = 0.5; var t = v.addTextTrack('captions', 'English', 'en'); [v.currentTime, v.volume, v.textTracks.length, v.textTracks[0] === t, t.mode, t.kind].join()",
+            "4,0.5,1,true,hidden,captions",
+        ),
+        (
+            "var played = 'pending'; v.play().then(function () { played = 'played'; }, function (e) { played = e.name; }); 'started'",
+            "started",
+        ),
+        ("played", "NotSupportedError"),
+        // Options added before others, and removed by index.
+        (
+            "var s = document.getElementById('s'); s.add(new Option('a', '1')); s.add(new Option('b', '2'), 0); s.add(new Option('c', '3'), s.options[1]); [].map.call(s.options, function (o) { return o.text; }).join('')",
+            "bca",
+        ),
+        (
+            "s.remove(0); attempt(function () { s.add(document.body); }) + ' ' + s.length",
+            "TypeError 2",
+        ),
+        // Messages carry their ports; storage events are made by pages.
+        (
+            "var c = new MessageChannel(); var e = new MessageEvent('message', {ports: [c.port1]}); [new MessageEvent('message').ports.length, e.ports.length, e.ports[0] === c.port1].join()",
+            "0,1,true",
+        ),
+        (
+            "var se = new StorageEvent('storage', {key: 'k', newValue: 'v', storageArea: localStorage}); [se.key, se.oldValue, se.newValue, se.storageArea === localStorage].join()",
+            "k,,v,true",
+        ),
+        // Relational and `of` selectors.
+        (
+            "document.body.insertAdjacentHTML('beforeend', '<p class=x><b></b></p><p class=y></p>'); document.querySelectorAll('p:has(b)').length + ' ' + document.querySelectorAll('p:nth-child(1 of .y)').length",
+            "1 1",
+        ),
+    ] {
+        assert_eq!(eval(&mut page, source), expected, "{source}");
+    }
+    // A dictionary is told from a target origin by its type.
+    eval(
+        &mut page,
+        "var got = []; window.onmessage = function (e) { got.push(e.data); }; window.postMessage('one', {targetOrigin: '*'}); window.postMessage('two', '*'); window.postMessage('three', [c.port2]); 'sent'",
+    );
+    settle(&mut page);
+    assert_eq!(eval(&mut page, "got.join()"), "one,two,three");
 }
 
 #[test]

@@ -782,6 +782,65 @@ impl web::NavigatorConcurrentHardwareImpl for Web {
     }
 }
 
+/// `navigator.plugins`: there are none.
+pub struct PluginArrayObject;
+crate::platform_object!(PluginArrayObject, PluginArray);
+
+/// `navigator.mimeTypes`: there are none.
+pub struct MimeTypeArrayObject;
+crate::platform_object!(MimeTypeArrayObject, MimeTypeArray);
+
+impl web::NavigatorPluginsImpl for Web {
+    fn plugins(cx: &mut Cx<'_>, _this: ObjectId) -> Fallible<ObjectId> {
+        Ok(cx.page.alloc(PluginArrayObject))
+    }
+
+    fn mime_types(cx: &mut Cx<'_>, _this: ObjectId) -> Fallible<ObjectId> {
+        Ok(cx.page.alloc(MimeTypeArrayObject))
+    }
+
+    fn java_enabled(_cx: &mut Cx<'_>, _this: ObjectId) -> Fallible<bool> {
+        Ok(false)
+    }
+
+    /// No PDF viewer: a PDF a navigation brings is a download.
+    fn pdf_viewer_enabled(_cx: &mut Cx<'_>, _this: ObjectId) -> Fallible<bool> {
+        Ok(false)
+    }
+}
+
+impl web::PluginArrayImpl for Web {
+    fn refresh(_cx: &mut Cx<'_>, _this: ObjectId) -> Fallible<()> {
+        Ok(())
+    }
+
+    fn length(_cx: &mut Cx<'_>, _this: ObjectId) -> Fallible<u32> {
+        Ok(0)
+    }
+
+    fn item(_cx: &mut Cx<'_>, _this: ObjectId, _index: u32) -> Fallible<Option<ObjectId>> {
+        Ok(None)
+    }
+
+    fn named_item(_cx: &mut Cx<'_>, _this: ObjectId, _name: String) -> Fallible<Option<ObjectId>> {
+        Ok(None)
+    }
+}
+
+impl web::MimeTypeArrayImpl for Web {
+    fn length(_cx: &mut Cx<'_>, _this: ObjectId) -> Fallible<u32> {
+        Ok(0)
+    }
+
+    fn item(_cx: &mut Cx<'_>, _this: ObjectId, _index: u32) -> Fallible<Option<ObjectId>> {
+        Ok(None)
+    }
+
+    fn named_item(_cx: &mut Cx<'_>, _this: ObjectId, _name: String) -> Fallible<Option<ObjectId>> {
+        Ok(None)
+    }
+}
+
 impl web::NavigatorAutomationInformationImpl for Web {
     /// This browser is always driven by automation, and says so.
     fn webdriver(_cx: &mut Cx<'_>, _this: ObjectId) -> Fallible<bool> {

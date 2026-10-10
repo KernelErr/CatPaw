@@ -32,6 +32,20 @@ impl IntoJs for web::BinaryType {
     }
 }
 
+impl FromJs for web::CanPlayTypeResult {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::CanPlayTypeResult::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid CanPlayTypeResult")))
+    }
+}
+
+impl IntoJs for web::CanPlayTypeResult {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
 impl FromJs for web::CanvasDirection {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let s = rt::string_from_js(v, ctx)?;
@@ -491,6 +505,34 @@ impl FromJs for web::SlotAssignmentMode {
 }
 
 impl IntoJs for web::SlotAssignmentMode {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
+impl FromJs for web::TextTrackKind {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::TextTrackKind::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid TextTrackKind")))
+    }
+}
+
+impl IntoJs for web::TextTrackKind {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        self.as_str().into_js(ctx)
+    }
+}
+
+impl FromJs for web::TextTrackMode {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let s = rt::string_from_js(v, ctx)?;
+        web::TextTrackMode::parse(&s)
+            .ok_or_else(|| rt::type_error(&format!("'{s}' is not a valid TextTrackMode")))
+    }
+}
+
+impl IntoJs for web::TextTrackMode {
     fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
         self.as_str().into_js(ctx)
     }
@@ -2929,6 +2971,85 @@ impl IntoJs for web::StaticRangeInit {
     }
 }
 
+impl FromJs for web::StorageEventInit {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        let obj = rt::dictionary_object(v, "StorageEventInit")?;
+        Ok(Self {
+            bubbles: match rt::dictionary_member(&obj, "bubbles", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            cancelable: match rt::dictionary_member(&obj, "cancelable", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            composed: match rt::dictionary_member(&obj, "composed", ctx)? {
+                Some(m) => (&m).to_boolean(),
+                None => false,
+            },
+            key: match rt::dictionary_member(&obj, "key", ctx)? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(rt::string_from_js((&m), ctx)?)
+                    }
+                }
+                None => None,
+            },
+            old_value: match rt::dictionary_member(&obj, "oldValue", ctx)? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(rt::string_from_js((&m), ctx)?)
+                    }
+                }
+                None => None,
+            },
+            new_value: match rt::dictionary_member(&obj, "newValue", ctx)? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(rt::string_from_js((&m), ctx)?)
+                    }
+                }
+                None => None,
+            },
+            url: match rt::dictionary_member(&obj, "url", ctx)? {
+                Some(m) => rt::string_from_js((&m), ctx)?,
+                None => "".to_string(),
+            },
+            storage_area: match rt::dictionary_member(&obj, "storageArea", ctx)? {
+                Some(m) => {
+                    if (&m).is_null_or_undefined() {
+                        None
+                    } else {
+                        Some(rt::object_from_js((&m), I::Storage, ctx)?)
+                    }
+                }
+                None => None,
+            },
+        })
+    }
+}
+
+impl IntoJs for web::StorageEventInit {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        let obj = rt::new_plain_object(ctx);
+        rt::set_member(&obj, "bubbles", self.bubbles, ctx)?;
+        rt::set_member(&obj, "cancelable", self.cancelable, ctx)?;
+        rt::set_member(&obj, "composed", self.composed, ctx)?;
+        rt::set_member(&obj, "key", self.key, ctx)?;
+        rt::set_member(&obj, "oldValue", self.old_value, ctx)?;
+        rt::set_member(&obj, "newValue", self.new_value, ctx)?;
+        rt::set_member(&obj, "url", self.url, ctx)?;
+        rt::set_member(&obj, "storageArea", self.storage_area, ctx)?;
+        Ok(obj.into())
+    }
+}
+
 impl FromJs for web::StreamPipeOptions {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         let obj = rt::dictionary_object(v, "StreamPipeOptions")?;
@@ -3689,6 +3810,31 @@ impl IntoJs for web::FileOrString {
     }
 }
 
+impl FromJs for web::HTMLElementOrLong {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if rt::is_instance(v, I::HTMLElement, ctx) {
+            return Ok(web::HTMLElementOrLong::HTMLElement(rt::node_from_js(
+                v,
+                I::HTMLElement,
+                ctx,
+            )?));
+        }
+        if v.is_number() {
+            return Ok(web::HTMLElementOrLong::Long(v.to_i32(ctx)?));
+        }
+        Ok(web::HTMLElementOrLong::Long(v.to_i32(ctx)?))
+    }
+}
+
+impl IntoJs for web::HTMLElementOrLong {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+            web::HTMLElementOrLong::HTMLElement(v) => v.into_js(ctx),
+            web::HTMLElementOrLong::Long(v) => v.into_js(ctx),
+        }
+    }
+}
+
 impl FromJs for web::HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement {
     fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
         if rt::is_instance(v, I::HTMLImageElement, ctx) {
@@ -3717,6 +3863,41 @@ web::HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement::SVG
 web::HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement::HTMLVideoElement(v) => v.into_js(ctx),
 web::HTMLImageElementOrSVGImageElementOrHTMLVideoElementOrHTMLCanvasElement::HTMLCanvasElement(v) => v.into_js(ctx),
 }
+    }
+}
+
+impl FromJs for web::HTMLOptionElementOrHTMLOptGroupElement {
+    fn from_js(v: &JsValue, ctx: &mut Context) -> JsResult<Self> {
+        if rt::is_instance(v, I::HTMLOptionElement, ctx) {
+            return Ok(
+                web::HTMLOptionElementOrHTMLOptGroupElement::HTMLOptionElement(rt::node_from_js(
+                    v,
+                    I::HTMLOptionElement,
+                    ctx,
+                )?),
+            );
+        }
+        if rt::is_instance(v, I::HTMLOptGroupElement, ctx) {
+            return Ok(
+                web::HTMLOptionElementOrHTMLOptGroupElement::HTMLOptGroupElement(rt::node_from_js(
+                    v,
+                    I::HTMLOptGroupElement,
+                    ctx,
+                )?),
+            );
+        }
+        Err(rt::type_error(
+            "value is not convertible to HTMLOptionElementOrHTMLOptGroupElement",
+        ))
+    }
+}
+
+impl IntoJs for web::HTMLOptionElementOrHTMLOptGroupElement {
+    fn into_js(self, ctx: &mut Context) -> JsResult<JsValue> {
+        match self {
+            web::HTMLOptionElementOrHTMLOptGroupElement::HTMLOptionElement(v) => v.into_js(ctx),
+            web::HTMLOptionElementOrHTMLOptGroupElement::HTMLOptGroupElement(v) => v.into_js(ctx),
+        }
     }
 }
 
@@ -5720,7 +5901,9 @@ pub mod canvas_rendering_context2_d {
                 <Web as web::CanvasTransformImpl>::set_transform(cx, this, a0, a1, a2, a3, a4, a5)
             });
             rt::ret(r, ctx)
-        } else if args.len() >= 0 && true {
+        } else if args.len() >= 0
+            && (rt::arg(args, 0).is_null_or_undefined() || rt::arg(args, 0).is_object())
+        {
             let a0 = <web::DOMMatrix2DInit as FromJs>::from_js(rt::arg(args, 0), ctx)?;
             let r = rt::with_cx(ctx, |cx| {
                 <Web as web::CanvasTransformImpl>::set_transform_overload2(cx, this, a0)
@@ -6821,7 +7004,17 @@ pub mod cat_paw_remote_window {
     ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_object(this_js, I::CatPawRemoteWindow, ctx)?;
-        if args.len() >= 2 && true {
+        if args.len() >= 1
+            && (rt::arg(args, 1).is_null_or_undefined() || rt::arg(args, 1).is_object())
+        {
+            rt::require_args(args, 1, "CatPawRemoteWindow.postMessage")?;
+            let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+            let a1 = <web::WindowPostMessageOptions as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::CatPawRemoteWindowImpl>::post_message_overload2(cx, this, a0, a1)
+            });
+            rt::ret(r, ctx)
+        } else if args.len() >= 2 && true {
             rt::require_args(args, 2, "CatPawRemoteWindow.postMessage")?;
             let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
             let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
@@ -6834,14 +7027,6 @@ pub mod cat_paw_remote_window {
             };
             let r = rt::with_cx(ctx, |cx| {
                 <Web as web::CatPawRemoteWindowImpl>::post_message(cx, this, a0, a1, a2)
-            });
-            rt::ret(r, ctx)
-        } else if args.len() >= 1 && true {
-            rt::require_args(args, 1, "CatPawRemoteWindow.postMessage")?;
-            let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
-            let a1 = <web::WindowPostMessageOptions as FromJs>::from_js(rt::arg(args, 1), ctx)?;
-            let r = rt::with_cx(ctx, |cx| {
-                <Web as web::CatPawRemoteWindowImpl>::post_message_overload2(cx, this, a0, a1)
             });
             rt::ret(r, ctx)
         } else {
@@ -11106,6 +11291,35 @@ pub mod location {
     };
 }
 
+pub mod media_error {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::MediaError,
+        name: "MediaError",
+        parent: None,
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[
+            ("MEDIA_ERR_ABORTED", 1_f64),
+            ("MEDIA_ERR_NETWORK", 2_f64),
+            ("MEDIA_ERR_DECODE", 3_f64),
+            ("MEDIA_ERR_SRC_NOT_SUPPORTED", 4_f64),
+        ],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod media_list {
     use super::*;
 
@@ -11481,6 +11695,12 @@ pub mod message_event {
         rt::ret(r, ctx)
     }
 
+    fn get_ports(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MessageEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MessageEventImpl>::ports(cx, this));
+        rt::ret(r, ctx)
+    }
+
     fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         rt::require_new(new_target, "MessageEvent")?;
         rt::require_args(args, 1, "MessageEvent constructor")?;
@@ -11523,6 +11743,11 @@ pub mod message_event {
             rt::AttrDef {
                 name: "source",
                 getter: get_source,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "ports",
+                getter: get_ports,
                 setter: None,
             },
         ],
@@ -11612,7 +11837,7 @@ pub mod message_port {
     ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_object(this_js, I::MessagePort, ctx)?;
-        if args.len() >= 2 && rt::arg(args, 1).is_object() {
+        if args.len() >= 2 && rt::is_iterable(rt::arg(args, 1), ctx)? {
             rt::require_args(args, 2, "MessagePort.postMessage")?;
             let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
             let a1 = rt::sequence_from_js(rt::arg(args, 1), ctx, |v, ctx| {
@@ -11622,7 +11847,9 @@ pub mod message_port {
                 <Web as web::MessagePortImpl>::post_message(cx, this, a0, a1)
             });
             rt::ret(r, ctx)
-        } else if args.len() >= 1 && true {
+        } else if args.len() >= 1
+            && (rt::arg(args, 1).is_null_or_undefined() || rt::arg(args, 1).is_object())
+        {
             rt::require_args(args, 1, "MessagePort.postMessage")?;
             let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
             let a1 = <web::StructuredSerializeOptions as FromJs>::from_js(rt::arg(args, 1), ctx)?;
@@ -11694,6 +11921,97 @@ pub mod message_port {
                 name: "close",
                 func: op_close,
                 length: 0,
+            },
+        ],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod mime_type {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::MimeType,
+        name: "MimeType",
+        parent: None,
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod mime_type_array {
+    use super::*;
+
+    fn get_length(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::MimeTypeArray, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::MimeTypeArrayImpl>::length(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_item(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::MimeTypeArray, ctx)?;
+        rt::require_args(args, 1, "MimeTypeArray.item")?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MimeTypeArrayImpl>::item(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_named_item(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::MimeTypeArray, ctx)?;
+        rt::require_args(args, 1, "MimeTypeArray.namedItem")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::MimeTypeArrayImpl>::named_item(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::MimeTypeArray,
+        name: "MimeTypeArray",
+        parent: None,
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "length",
+            getter: get_length,
+            setter: None,
+        }],
+        ops: &[
+            rt::OpDef {
+                name: "item",
+                func: op_item,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "namedItem",
+                func: op_named_item,
+                length: 1,
             },
         ],
         static_attrs: &[],
@@ -12344,6 +12662,48 @@ pub mod navigator {
         rt::ret(r, ctx)
     }
 
+    fn get_plugins(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "plugins", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_object(this_js, I::Navigator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NavigatorPluginsImpl>::plugins(cx, this)
+        });
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "plugins", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_mime_types(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "mimeTypes", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_object(this_js, I::Navigator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NavigatorPluginsImpl>::mime_types(cx, this)
+        });
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "mimeTypes", &v, ctx);
+        Ok(v)
+    }
+
+    fn get_pdf_viewer_enabled(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::Navigator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NavigatorPluginsImpl>::pdf_viewer_enabled(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn get_hardware_concurrency(
         this_js: &JsValue,
         _args: &[JsValue],
@@ -12380,6 +12740,19 @@ pub mod navigator {
         };
         let r = rt::with_cx(ctx, |cx| {
             <Web as web::NavigatorImpl>::send_beacon(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_java_enabled(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::Navigator, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::NavigatorPluginsImpl>::java_enabled(cx, this)
         });
         rt::ret(r, ctx)
     }
@@ -12462,6 +12835,21 @@ pub mod navigator {
                 setter: None,
             },
             rt::AttrDef {
+                name: "plugins",
+                getter: get_plugins,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "mimeTypes",
+                getter: get_mime_types,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "pdfViewerEnabled",
+                getter: get_pdf_viewer_enabled,
+                setter: None,
+            },
+            rt::AttrDef {
                 name: "hardwareConcurrency",
                 getter: get_hardware_concurrency,
                 setter: None,
@@ -12472,11 +12860,18 @@ pub mod navigator {
                 setter: None,
             },
         ],
-        ops: &[rt::OpDef {
-            name: "sendBeacon",
-            func: op_send_beacon,
-            length: 1,
-        }],
+        ops: &[
+            rt::OpDef {
+                name: "sendBeacon",
+                func: op_send_beacon,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "javaEnabled",
+                func: op_java_enabled,
+                length: 0,
+            },
+        ],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -15074,6 +15469,107 @@ pub mod performance_timing {
             func: op_to_json,
             length: 0,
         }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod plugin {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::Plugin,
+        name: "Plugin",
+        parent: None,
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod plugin_array {
+    use super::*;
+
+    fn get_length(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::PluginArray, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::PluginArrayImpl>::length(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_refresh(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::PluginArray, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::PluginArrayImpl>::refresh(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_item(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::PluginArray, ctx)?;
+        rt::require_args(args, 1, "PluginArray.item")?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::PluginArrayImpl>::item(cx, this, a0));
+        rt::ret(r, ctx)
+    }
+
+    fn op_named_item(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::PluginArray, ctx)?;
+        rt::require_args(args, 1, "PluginArray.namedItem")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::PluginArrayImpl>::named_item(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::PluginArray,
+        name: "PluginArray",
+        parent: None,
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "length",
+            getter: get_length,
+            setter: None,
+        }],
+        ops: &[
+            rt::OpDef {
+                name: "refresh",
+                func: op_refresh,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "item",
+                func: op_item,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "namedItem",
+                func: op_named_item,
+                length: 1,
+            },
+        ],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -17845,6 +18341,108 @@ pub mod storage {
     };
 }
 
+pub mod storage_event {
+    use super::*;
+
+    fn get_key(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::StorageEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::StorageEventImpl>::key(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_old_value(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::StorageEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::StorageEventImpl>::old_value(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_new_value(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::StorageEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::StorageEventImpl>::new_value(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_url(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::StorageEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::StorageEventImpl>::url(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_storage_area(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::StorageEvent, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::StorageEventImpl>::storage_area(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn ctor(new_target: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::require_new(new_target, "StorageEvent")?;
+        rt::require_args(args, 1, "StorageEvent constructor")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let a1 = <web::StorageEventInit as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::StorageEventImpl>::constructor(cx, a0, a1)
+        });
+        let id = r.map_err(|e| rt::exception_to_js(e, ctx))?;
+        return rt::wrap_constructed_object(id, new_target, I::StorageEvent, ctx);
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::StorageEvent,
+        name: "StorageEvent",
+        parent: Some(I::Event),
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
+        constructor: Some(ctor),
+        constructor_length: 1,
+        attrs: &[
+            rt::AttrDef {
+                name: "key",
+                getter: get_key,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "oldValue",
+                getter: get_old_value,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "newValue",
+                getter: get_new_value,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "url",
+                getter: get_url,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "storageArea",
+                getter: get_storage_area,
+                setter: None,
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod style_sheet {
     use super::*;
 
@@ -18692,6 +19290,362 @@ pub mod text_metrics {
             },
         ],
         ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod text_track {
+    use super::*;
+
+    fn get_kind(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextTrack, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::TextTrackImpl>::kind(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_label(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextTrack, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::TextTrackImpl>::label(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_language(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextTrack, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::TextTrackImpl>::language(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_id(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextTrack, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::TextTrackImpl>::id(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_mode(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextTrack, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::TextTrackImpl>::mode(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn set_mode(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextTrack, ctx)?;
+        let s = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let Some(a0) = web::TextTrackMode::parse(&s) else {
+            return Ok(JsValue::undefined());
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TextTrackImpl>::set_mode(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_oncuechange(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextTrack, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "cuechange")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_oncuechange(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextTrack, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "cuechange", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::TextTrack,
+        name: "TextTrack",
+        parent: Some(I::EventTarget),
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "kind",
+                getter: get_kind,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "label",
+                getter: get_label,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "language",
+                getter: get_language,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "id",
+                getter: get_id,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "mode",
+                getter: get_mode,
+                setter: Some(set_mode),
+            },
+            rt::AttrDef {
+                name: "oncuechange",
+                getter: get_oncuechange,
+                setter: Some(set_oncuechange),
+            },
+        ],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
+pub mod text_track_list {
+    use super::*;
+
+    fn get_length(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextTrackList, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::TextTrackListImpl>::length(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn get_onchange(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextTrackList, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "change")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onchange(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextTrackList, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "change", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onaddtrack(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextTrackList, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "addtrack")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onaddtrack(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextTrackList, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(cx, EventTargetRef::Object(this), "addtrack", a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_onremovetrack(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextTrackList, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::event_handler(cx, EventTargetRef::Object(this), "removetrack")
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_onremovetrack(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TextTrackList, ctx)?;
+        let a0 = rt::event_handler_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            catpaw_web::events::set_event_handler(
+                cx,
+                EventTargetRef::Object(this),
+                "removetrack",
+                a0,
+            )
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn op_get_track_by_id(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::TextTrackList, ctx)?;
+        rt::require_args(args, 1, "TextTrackList.getTrackById")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TextTrackListImpl>::get_track_by_id(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn exotic_length(h: rt::Handle, ctx: &mut Context) -> JsResult<u32> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| <Web as web::TextTrackListImpl>::length(cx, this));
+        r.map_err(|e| rt::exception_to_js(e, ctx))
+    }
+
+    fn exotic_indexed_get(
+        h: rt::Handle,
+        index: u32,
+        ctx: &mut Context,
+    ) -> JsResult<Option<JsValue>> {
+        let this = h.object();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::TextTrackListImpl>::indexed_get(cx, this, index)
+        });
+        rt::ret_opt(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::TextTrackList,
+        name: "TextTrackList",
+        parent: Some(I::EventTarget),
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[
+            rt::AttrDef {
+                name: "length",
+                getter: get_length,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "onchange",
+                getter: get_onchange,
+                setter: Some(set_onchange),
+            },
+            rt::AttrDef {
+                name: "onaddtrack",
+                getter: get_onaddtrack,
+                setter: Some(set_onaddtrack),
+            },
+            rt::AttrDef {
+                name: "onremovetrack",
+                getter: get_onremovetrack,
+                setter: Some(set_onremovetrack),
+            },
+        ],
+        ops: &[rt::OpDef {
+            name: "getTrackById",
+            func: op_get_track_by_id,
+            length: 1,
+        }],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: Some(rt::ExoticDef {
+            length: Some(exotic_length),
+            indexed_get: Some(exotic_indexed_get),
+            named_get: None,
+            named_properties: None,
+            named_set: None,
+            named_delete: None,
+            override_builtins: false,
+            attribute_like: false,
+            unenumerable_names: false,
+        }),
+    };
+}
+
+pub mod time_ranges {
+    use super::*;
+
+    fn get_length(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_object(this_js, I::TimeRanges, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::TimeRangesImpl>::length(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_start(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::TimeRanges, ctx)?;
+        rt::require_args(args, 1, "TimeRanges.start")?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::TimeRangesImpl>::start(cx, this, a0));
+        rt::ret(r, ctx)
+    }
+
+    fn op_end(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_object(this_js, I::TimeRanges, ctx)?;
+        rt::require_args(args, 1, "TimeRanges.end")?;
+        let a0 = rt::arg(args, 0).to_u32(ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::TimeRangesImpl>::end(cx, this, a0));
+        rt::ret(r, ctx)
+    }
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::TimeRanges,
+        name: "TimeRanges",
+        parent: None,
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[rt::AttrDef {
+            name: "length",
+            getter: get_length,
+            setter: None,
+        }],
+        ops: &[
+            rt::OpDef {
+                name: "start",
+                func: op_start,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "end",
+                func: op_end,
+                length: 1,
+            },
+        ],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -22850,7 +23804,9 @@ pub mod window {
                 <Web as web::WindowImpl>::scroll_overload2(cx, a0, a1)
             });
             rt::ret(r, ctx)
-        } else if args.len() >= 0 && true {
+        } else if args.len() >= 0
+            && (rt::arg(args, 0).is_null_or_undefined() || rt::arg(args, 0).is_object())
+        {
             let a0 = <web::ScrollToOptions as FromJs>::from_js(rt::arg(args, 0), ctx)?;
             let r = rt::with_cx(ctx, |cx| <Web as web::WindowImpl>::scroll(cx, a0));
             rt::ret(r, ctx)
@@ -22872,7 +23828,9 @@ pub mod window {
                 <Web as web::WindowImpl>::scroll_to_overload2(cx, a0, a1)
             });
             rt::ret(r, ctx)
-        } else if args.len() >= 0 && true {
+        } else if args.len() >= 0
+            && (rt::arg(args, 0).is_null_or_undefined() || rt::arg(args, 0).is_object())
+        {
             let a0 = <web::ScrollToOptions as FromJs>::from_js(rt::arg(args, 0), ctx)?;
             let r = rt::with_cx(ctx, |cx| <Web as web::WindowImpl>::scroll_to(cx, a0));
             rt::ret(r, ctx)
@@ -22894,7 +23852,9 @@ pub mod window {
                 <Web as web::WindowImpl>::scroll_by_overload2(cx, a0, a1)
             });
             rt::ret(r, ctx)
-        } else if args.len() >= 0 && true {
+        } else if args.len() >= 0
+            && (rt::arg(args, 0).is_null_or_undefined() || rt::arg(args, 0).is_object())
+        {
             let a0 = <web::ScrollToOptions as FromJs>::from_js(rt::arg(args, 0), ctx)?;
             let r = rt::with_cx(ctx, |cx| <Web as web::WindowImpl>::scroll_by(cx, a0));
             rt::ret(r, ctx)
@@ -23026,7 +23986,17 @@ pub mod window {
     ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         rt::this_window(this_js, ctx)?;
-        if args.len() >= 2 && true {
+        if args.len() >= 1
+            && (rt::arg(args, 1).is_null_or_undefined() || rt::arg(args, 1).is_object())
+        {
+            rt::require_args(args, 1, "Window.postMessage")?;
+            let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
+            let a1 = <web::WindowPostMessageOptions as FromJs>::from_js(rt::arg(args, 1), ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::WindowImpl>::post_message_overload2(cx, a0, a1)
+            });
+            rt::ret(r, ctx)
+        } else if args.len() >= 2 && true {
             rt::require_args(args, 2, "Window.postMessage")?;
             let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
             let a1 = rt::string_from_js(rt::arg(args, 1), ctx)?;
@@ -23039,14 +24009,6 @@ pub mod window {
             };
             let r = rt::with_cx(ctx, |cx| {
                 <Web as web::WindowImpl>::post_message(cx, a0, a1, a2)
-            });
-            rt::ret(r, ctx)
-        } else if args.len() >= 1 && true {
-            rt::require_args(args, 1, "Window.postMessage")?;
-            let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
-            let a1 = <web::WindowPostMessageOptions as FromJs>::from_js(rt::arg(args, 1), ctx)?;
-            let r = rt::with_cx(ctx, |cx| {
-                <Web as web::WindowImpl>::post_message_overload2(cx, a0, a1)
             });
             rt::ret(r, ctx)
         } else {
@@ -24201,7 +25163,7 @@ pub mod worker {
     ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         let this = rt::this_object(this_js, I::Worker, ctx)?;
-        if args.len() >= 2 && rt::arg(args, 1).is_object() {
+        if args.len() >= 2 && rt::is_iterable(rt::arg(args, 1), ctx)? {
             rt::require_args(args, 2, "Worker.postMessage")?;
             let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
             let a1 = rt::sequence_from_js(rt::arg(args, 1), ctx, |v, ctx| {
@@ -24211,7 +25173,9 @@ pub mod worker {
                 <Web as web::WorkerImpl>::post_message(cx, this, a0, a1)
             });
             rt::ret(r, ctx)
-        } else if args.len() >= 1 && true {
+        } else if args.len() >= 1
+            && (rt::arg(args, 1).is_null_or_undefined() || rt::arg(args, 1).is_object())
+        {
             rt::require_args(args, 1, "Worker.postMessage")?;
             let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
             let a1 = <web::StructuredSerializeOptions as FromJs>::from_js(rt::arg(args, 1), ctx)?;
@@ -27579,7 +28543,7 @@ pub mod dedicated_worker_global_scope {
     ) -> JsResult<JsValue> {
         let _ = (this_js, args);
         rt::this_window(this_js, ctx)?;
-        if args.len() >= 2 && rt::arg(args, 1).is_object() {
+        if args.len() >= 2 && rt::is_iterable(rt::arg(args, 1), ctx)? {
             rt::require_args(args, 2, "DedicatedWorkerGlobalScope.postMessage")?;
             let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
             let a1 = rt::sequence_from_js(rt::arg(args, 1), ctx, |v, ctx| {
@@ -27589,7 +28553,9 @@ pub mod dedicated_worker_global_scope {
                 <Web as web::DedicatedWorkerGlobalScopeImpl>::post_message(cx, a0, a1)
             });
             rt::ret(r, ctx)
-        } else if args.len() >= 1 && true {
+        } else if args.len() >= 1
+            && (rt::arg(args, 1).is_null_or_undefined() || rt::arg(args, 1).is_object())
+        {
             rt::require_args(args, 1, "DedicatedWorkerGlobalScope.postMessage")?;
             let a0 = rt::value_from_js(rt::arg(args, 0), ctx)?;
             let a1 = <web::StructuredSerializeOptions as FromJs>::from_js(rt::arg(args, 1), ctx)?;
@@ -32710,7 +33676,9 @@ pub mod element {
                 <Web as web::ElementImpl>::scroll_overload2(cx, this, a0, a1)
             });
             rt::ret(r, ctx)
-        } else if args.len() >= 0 && true {
+        } else if args.len() >= 0
+            && (rt::arg(args, 0).is_null_or_undefined() || rt::arg(args, 0).is_object())
+        {
             let a0 = <web::ScrollToOptions as FromJs>::from_js(rt::arg(args, 0), ctx)?;
             let r = rt::with_cx(ctx, |cx| <Web as web::ElementImpl>::scroll(cx, this, a0));
             rt::ret(r, ctx)
@@ -32732,7 +33700,9 @@ pub mod element {
                 <Web as web::ElementImpl>::scroll_to_overload2(cx, this, a0, a1)
             });
             rt::ret(r, ctx)
-        } else if args.len() >= 0 && true {
+        } else if args.len() >= 0
+            && (rt::arg(args, 0).is_null_or_undefined() || rt::arg(args, 0).is_object())
+        {
             let a0 = <web::ScrollToOptions as FromJs>::from_js(rt::arg(args, 0), ctx)?;
             let r = rt::with_cx(ctx, |cx| <Web as web::ElementImpl>::scroll_to(cx, this, a0));
             rt::ret(r, ctx)
@@ -32754,7 +33724,9 @@ pub mod element {
                 <Web as web::ElementImpl>::scroll_by_overload2(cx, this, a0, a1)
             });
             rt::ret(r, ctx)
-        } else if args.len() >= 0 && true {
+        } else if args.len() >= 0
+            && (rt::arg(args, 0).is_null_or_undefined() || rt::arg(args, 0).is_object())
+        {
             let a0 = <web::ScrollToOptions as FromJs>::from_js(rt::arg(args, 0), ctx)?;
             let r = rt::with_cx(ctx, |cx| <Web as web::ElementImpl>::scroll_by(cx, this, a0));
             rt::ret(r, ctx)
@@ -42201,6 +43173,14 @@ pub mod html_marquee_element {
 pub mod html_media_element {
     use super::*;
 
+    fn get_error(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::error(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn get_src(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
         let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_url(cx, this, "src"));
@@ -42219,6 +43199,176 @@ pub mod html_media_element {
         });
         rt::ret(r, ctx)?;
         Ok(JsValue::undefined())
+    }
+
+    fn get_current_src(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::current_src(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_network_state(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::network_state(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_buffered(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::buffered(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_ready_state(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::ready_state(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_seeking(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::seeking(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_current_time(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::current_time(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_current_time(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::set_current_time(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_duration(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::duration(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_paused(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::paused(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_default_playback_rate(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::default_playback_rate(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_default_playback_rate(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::set_default_playback_rate(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_playback_rate(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::playback_rate(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_playback_rate(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::set_playback_rate(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_played(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::played(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_seekable(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::seekable(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_ended(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::ended(cx, this)
+        });
+        rt::ret(r, ctx)
     }
 
     fn get_autoplay(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
@@ -42293,6 +43443,42 @@ pub mod html_media_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_volume(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::volume(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_volume(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let a0 = rt::to_finite(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::set_volume(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
+    fn get_muted(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::muted(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn set_muted(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let a0 = rt::arg(args, 0).to_boolean();
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::set_muted(cx, this, a0)
+        });
+        rt::ret(r, ctx)?;
+        Ok(JsValue::undefined())
+    }
+
     fn get_default_muted(
         this_js: &JsValue,
         _args: &[JsValue],
@@ -42325,6 +43511,86 @@ pub mod html_media_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_text_tracks(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        if let Some(v) = rt::cached(this_js, "textTracks", ctx) {
+            return Ok(v);
+        }
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::text_tracks(cx, this)
+        });
+        let v = rt::ret(r, ctx)?;
+        rt::cache(this_js, "textTracks", &v, ctx);
+        Ok(v)
+    }
+
+    fn op_load(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::HTMLMediaElementImpl>::load(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_can_play_type(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        rt::require_args(args, 1, "HTMLMediaElement.canPlayType")?;
+        let a0 = rt::string_from_js(rt::arg(args, 0), ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::can_play_type(cx, this, a0)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_play(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| <Web as web::HTMLMediaElementImpl>::play(cx, this));
+        rt::ret(r, ctx)
+    }
+
+    fn op_pause(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::pause(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_add_text_track(
+        this_js: &JsValue,
+        args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::HTMLMediaElement, ctx)?;
+        rt::require_args(args, 1, "HTMLMediaElement.addTextTrack")?;
+        let a0 = <web::TextTrackKind as FromJs>::from_js(rt::arg(args, 0), ctx)?;
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            rt::string_from_js(rt::arg(args, 1), ctx)?
+        } else {
+            "".to_string()
+        };
+        let a2 = if args.len() > 2 && !args[2].is_undefined() {
+            rt::string_from_js(rt::arg(args, 2), ctx)?
+        } else {
+            "".to_string()
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLMediaElementImpl>::add_text_track(cx, this, a0, a1, a2)
+        });
+        rt::ret(r, ctx)
+    }
+
     pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
         id: I::HTMLMediaElement,
         name: "HTMLMediaElement",
@@ -42338,9 +43604,79 @@ pub mod html_media_element {
         constructor_length: 0,
         attrs: &[
             rt::AttrDef {
+                name: "error",
+                getter: get_error,
+                setter: None,
+            },
+            rt::AttrDef {
                 name: "src",
                 getter: get_src,
                 setter: Some(set_src),
+            },
+            rt::AttrDef {
+                name: "currentSrc",
+                getter: get_current_src,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "networkState",
+                getter: get_network_state,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "buffered",
+                getter: get_buffered,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "readyState",
+                getter: get_ready_state,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "seeking",
+                getter: get_seeking,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "currentTime",
+                getter: get_current_time,
+                setter: Some(set_current_time),
+            },
+            rt::AttrDef {
+                name: "duration",
+                getter: get_duration,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "paused",
+                getter: get_paused,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "defaultPlaybackRate",
+                getter: get_default_playback_rate,
+                setter: Some(set_default_playback_rate),
+            },
+            rt::AttrDef {
+                name: "playbackRate",
+                getter: get_playback_rate,
+                setter: Some(set_playback_rate),
+            },
+            rt::AttrDef {
+                name: "played",
+                getter: get_played,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "seekable",
+                getter: get_seekable,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "ended",
+                getter: get_ended,
+                setter: None,
             },
             rt::AttrDef {
                 name: "autoplay",
@@ -42358,12 +43694,53 @@ pub mod html_media_element {
                 setter: Some(set_controls),
             },
             rt::AttrDef {
+                name: "volume",
+                getter: get_volume,
+                setter: Some(set_volume),
+            },
+            rt::AttrDef {
+                name: "muted",
+                getter: get_muted,
+                setter: Some(set_muted),
+            },
+            rt::AttrDef {
                 name: "defaultMuted",
                 getter: get_default_muted,
                 setter: Some(set_default_muted),
             },
+            rt::AttrDef {
+                name: "textTracks",
+                getter: get_text_tracks,
+                setter: None,
+            },
         ],
-        ops: &[],
+        ops: &[
+            rt::OpDef {
+                name: "load",
+                func: op_load,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "canPlayType",
+                func: op_can_play_type,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "play",
+                func: op_play,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "pause",
+                func: op_pause,
+                length: 0,
+            },
+            rt::OpDef {
+                name: "addTextTrack",
+                func: op_add_text_track,
+                length: 1,
+            },
+        ],
         static_attrs: &[],
         static_ops: &[],
         consts: &[
@@ -44922,6 +46299,62 @@ pub mod html_select_element {
         rt::ret(r, ctx)
     }
 
+    fn op_add(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_add_body(this_js, args, ctx))
+    }
+
+    fn op_add_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::HTMLSelectElement, ctx)?;
+        rt::require_args(args, 1, "HTMLSelectElement.add")?;
+        let a0 = <web::HTMLOptionElementOrHTMLOptGroupElement as FromJs>::from_js(
+            rt::arg(args, 0),
+            ctx,
+        )?;
+        let a1 = if args.len() > 1 && !args[1].is_undefined() {
+            if rt::arg(args, 1).is_null_or_undefined() {
+                None
+            } else {
+                Some(<web::HTMLElementOrLong as FromJs>::from_js(
+                    rt::arg(args, 1),
+                    ctx,
+                )?)
+            }
+        } else {
+            None
+        };
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLSelectElementImpl>::add(cx, this, a0, a1)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn op_remove(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        rt::with_ce_reactions(ctx, |ctx| op_remove_body(this_js, args, ctx))
+    }
+
+    fn op_remove_body(this_js: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
+        let _ = (this_js, args);
+        let this = rt::this_node(this_js, I::HTMLSelectElement, ctx)?;
+        if args.len() >= 1 && true {
+            rt::require_args(args, 1, "HTMLSelectElement.remove")?;
+            let a0 = rt::arg(args, 0).to_i32(ctx)?;
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::HTMLSelectElementImpl>::remove_overload2(cx, this, a0)
+            });
+            rt::ret(r, ctx)
+        } else if args.len() >= 0 && true {
+            let r = rt::with_cx(ctx, |cx| {
+                <Web as web::HTMLSelectElementImpl>::remove(cx, this)
+            });
+            rt::ret(r, ctx)
+        } else {
+            Err(rt::type_error(
+                "HTMLSelectElement.remove: no overload matches the arguments",
+            ))
+        }
+    }
+
     fn ctor(new_target: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         rt::html_constructor(new_target, I::HTMLSelectElement, ctx)
     }
@@ -45004,11 +46437,23 @@ pub mod html_select_element {
                 setter: Some(set_value),
             },
         ],
-        ops: &[rt::OpDef {
-            name: "item",
-            func: op_item,
-            length: 1,
-        }],
+        ops: &[
+            rt::OpDef {
+                name: "item",
+                func: op_item,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "add",
+                func: op_add,
+                length: 1,
+            },
+            rt::OpDef {
+                name: "remove",
+                func: op_remove,
+                length: 0,
+            },
+        ],
         static_attrs: &[],
         static_ops: &[],
         consts: &[],
@@ -47890,6 +49335,30 @@ pub mod html_video_element {
         Ok(JsValue::undefined())
     }
 
+    fn get_video_width(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLVideoElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLVideoElementImpl>::video_width(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
+    fn get_video_height(
+        this_js: &JsValue,
+        _args: &[JsValue],
+        ctx: &mut Context,
+    ) -> JsResult<JsValue> {
+        let this = rt::this_node(this_js, I::HTMLVideoElement, ctx)?;
+        let r = rt::with_cx(ctx, |cx| {
+            <Web as web::HTMLVideoElementImpl>::video_height(cx, this)
+        });
+        rt::ret(r, ctx)
+    }
+
     fn get_poster(this_js: &JsValue, _args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
         let this = rt::this_node(this_js, I::HTMLVideoElement, ctx)?;
         let r = rt::with_cx(ctx, |cx| catpaw_web::reflect::get_url(cx, this, "poster"));
@@ -47973,6 +49442,16 @@ pub mod html_video_element {
                 name: "height",
                 getter: get_height,
                 setter: Some(set_height),
+            },
+            rt::AttrDef {
+                name: "videoWidth",
+                getter: get_video_width,
+                setter: None,
+            },
+            rt::AttrDef {
+                name: "videoHeight",
+                getter: get_video_height,
+                setter: None,
             },
             rt::AttrDef {
                 name: "poster",
@@ -53775,6 +55254,30 @@ pub mod xml_http_request {
     };
 }
 
+pub mod cdata_section {
+    use super::*;
+
+    pub static DEF: rt::InterfaceDef = rt::InterfaceDef {
+        id: I::CDATASection,
+        name: "CDATASection",
+        parent: Some(I::Text),
+        global: false,
+        exposed: rt::Exposure {
+            window: true,
+            worker: false,
+        },
+        constructor: None,
+        constructor_length: 0,
+        attrs: &[],
+        ops: &[],
+        static_attrs: &[],
+        static_ops: &[],
+        consts: &[],
+        iterable: rt::Iterable::None,
+        exotic: None,
+    };
+}
+
 pub mod drag_event {
     use super::*;
 
@@ -58124,11 +59627,14 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &intersection_observer::DEF,
     &intersection_observer_entry::DEF,
     &location::DEF,
+    &media_error::DEF,
     &media_list::DEF,
     &media_query_list::DEF,
     &message_channel::DEF,
     &message_event::DEF,
     &message_port::DEF,
+    &mime_type::DEF,
+    &mime_type_array::DEF,
     &mutation_observer::DEF,
     &mutation_record::DEF,
     &named_node_map::DEF,
@@ -58146,6 +59652,8 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &performance_observer_entry_list::DEF,
     &performance_resource_timing::DEF,
     &performance_timing::DEF,
+    &plugin::DEF,
+    &plugin_array::DEF,
     &pop_state_event::DEF,
     &progress_event::DEF,
     &promise_rejection_event::DEF,
@@ -58164,6 +59672,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &selection::DEF,
     &static_range::DEF,
     &storage::DEF,
+    &storage_event::DEF,
     &style_sheet::DEF,
     &style_sheet_list::DEF,
     &submit_event::DEF,
@@ -58171,6 +59680,9 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &text_decoder::DEF,
     &text_encoder::DEF,
     &text_metrics::DEF,
+    &text_track::DEF,
+    &text_track_list::DEF,
+    &time_ranges::DEF,
     &transform_stream::DEF,
     &transform_stream_default_controller::DEF,
     &tree_walker::DEF,
@@ -58298,6 +59810,7 @@ pub static INTERFACES: &[&rt::InterfaceDef] = &[
     &wheel_event::DEF,
     &xml_document::DEF,
     &xml_http_request::DEF,
+    &cdata_section::DEF,
     &drag_event::DEF,
     &html_anchor_element::DEF,
     &html_area_element::DEF,

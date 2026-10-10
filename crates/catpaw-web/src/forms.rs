@@ -821,6 +821,62 @@ impl web::HTMLSelectElementImpl for Web {
         Ok(collections::static_html_collection(cx.page, selected))
     }
 
+    /// <https://html.spec.whatwg.org/#dom-htmloptionscollection-add>
+    fn add(
+        cx: &mut Cx<'_>,
+        this: NodeId,
+        element: web::HTMLOptionElementOrHTMLOptGroupElement,
+        before: Option<web::HTMLElementOrLong>,
+    ) -> Fallible<()> {
+        node::check(cx, this)?;
+        let element = match element {
+            web::HTMLOptionElementOrHTMLOptGroupElement::HTMLOptionElement(e)
+            | web::HTMLOptionElementOrHTMLOptGroupElement::HTMLOptGroupElement(e) => e,
+        };
+        if element == this || cx.dom().ancestors(this).any(|a| a == element) {
+            return Err(Exception::dom(
+                "HierarchyRequestError",
+                "The element to add contains the select element",
+            ));
+        }
+        let reference = match before {
+            Some(web::HTMLElementOrLong::HTMLElement(before)) => {
+                if !cx.dom().ancestors(before).any(|a| a == this) {
+                    return Err(Exception::dom(
+                        "NotFoundError",
+                        "The element to add before is not in the select element",
+                    ));
+                }
+                if before == element {
+                    return Ok(());
+                }
+                Some(before)
+            }
+            Some(web::HTMLElementOrLong::Long(index)) => usize::try_from(index)
+                .ok()
+                .and_then(|i| options_of(&cx.dom(), this).get(i).copied()),
+            None => None,
+        };
+        let parent = reference.and_then(|r| cx.dom().parent(r)).unwrap_or(this);
+        <Web as web::NodeImpl>::insert_before(cx, parent, element, reference)?;
+        Ok(())
+    }
+
+    fn remove(cx: &mut Cx<'_>, this: NodeId) -> Fallible<()> {
+        <Web as web::ChildNodeImpl>::remove(cx, this)
+    }
+
+    fn remove_overload2(cx: &mut Cx<'_>, this: NodeId, index: i32) -> Fallible<()> {
+        node::check(cx, this)?;
+        let option = usize::try_from(index)
+            .ok()
+            .and_then(|i| options_of(&cx.dom(), this).get(i).copied());
+        if let Some(option) = option {
+            <Web as web::ChildNodeImpl>::remove(cx, option)?;
+        }
+        Ok(())
+    }
+
     fn form(cx: &mut Cx<'_>, this: NodeId) -> Fallible<Option<NodeId>> {
         node::check(cx, this)?;
         Ok(form_owner(&cx.dom(), this))

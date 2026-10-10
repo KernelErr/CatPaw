@@ -1534,6 +1534,22 @@ fn trap_get(_this: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<Js
     t.target.get(property_key(key, ctx)?, ctx)
 }
 
+/// A named property set (`style.color = …`, `dataset.x = …`) is a
+/// `[CEReactions]` member in the IDL: the attribute changes it makes reach
+/// custom elements before it returns, not at the next DOM call.
+fn named_set_with_reactions(
+    named_set: NamedSetFn,
+    handle: Handle,
+    name: &str,
+    value: &JsValue,
+    ctx: &mut Context,
+) -> JsResult<()> {
+    with_ce_reactions(ctx, |ctx| {
+        named_set(handle, name, value, ctx).map(|()| JsValue::undefined())
+    })
+    .map(|_| ())
+}
+
 fn trap_set(_this: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
     let t = trap(args, ctx)?;
     let key = arg(args, 1);
@@ -1547,7 +1563,7 @@ fn trap_set(_this: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<Js
             let shadowed =
                 t.def.attribute_like && t.target.has_property(property_key(key, ctx)?, ctx)?;
             if !shadowed {
-                named_set(t.handle, &name, value, ctx)?;
+                named_set_with_reactions(named_set, t.handle, &name, value, ctx)?;
                 return Ok(JsValue::new(true));
             }
         }
@@ -1638,7 +1654,13 @@ fn trap_delete(_this: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult
         }
         if named_visible(&t, &name, key, ctx)?.is_some() {
             return Ok(JsValue::new(match t.def.named_delete {
-                Some(named_delete) => named_delete(t.handle, &name, ctx)?,
+                Some(named_delete) => {
+                    let handle = t.handle;
+                    with_ce_reactions(ctx, |ctx| {
+                        named_delete(handle, &name, ctx).map(JsValue::new)
+                    })?
+                    .to_boolean()
+                }
                 None => false,
             }));
         }
@@ -1767,7 +1789,7 @@ fn trap_define_property(_this: &JsValue, args: &[JsValue], ctx: &mut Context) ->
             && let Some(descriptor) = descriptor.as_object()
         {
             let value = descriptor.get(js_string!("value"), ctx)?;
-            named_set(t.handle, &name, &value, ctx)?;
+            named_set_with_reactions(named_set, t.handle, &name, &value, ctx)?;
             return Ok(JsValue::new(true));
         }
     }

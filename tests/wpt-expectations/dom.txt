@@ -579,7 +579,6 @@ dom/nodes/Document-importNode.html	Import an Attr node with namespace/prefix cor
 dom/nodes/DocumentFragment-getElementById.html	Empty string ID values
 dom/nodes/Element-classlist.html	-
 dom/nodes/Element-closest.html	Element.closest with context node 'test11' and selector ':invalid'
-dom/nodes/Element-closest.html	Element.closest with context node 'test4' and selector ':has(> :scope)'
 dom/nodes/Element-getElementsByTagName-change-document-HTMLNess.html	Element-getElementsByTagName-change-document-HTMLNess
 dom/nodes/Element-matches.html	-
 dom/nodes/Element-matches.html	Selectors-API Level 2 Test Suite: HTML with Selectors Level 3
@@ -641,10 +640,8 @@ dom/nodes/Node-replaceChild.html	If the context node is not a node that can cont
 dom/nodes/Node-replaceChild.html	Should check the 'parent' type before checking whether 'child' is a child of 'parent'
 dom/nodes/ParentNode-querySelector-All-content.html	-
 dom/nodes/ParentNode-querySelector-All.html	-
-dom/nodes/ParentNode-querySelector-basic-has.html	Basic :has() support in querySelector
 dom/nodes/ParentNode-querySelector-escapes.html	"\\ud83dsurrogateFirst" should never match with "#\\\\d83d surrogateFirst"
 dom/nodes/ParentNode-querySelector-escapes.html	"surrogateSecond\\udd11" should never match with "#surrogateSecond\\\\dd11"
-dom/nodes/ParentNode-querySelectorAll-nested-not-has.html	querySelectorAll with :not(:has(..))
 dom/nodes/ParentNode-querySelectorAll-scope-change.html	Change the scope of querySelectorAll
 dom/nodes/ParentNode-replaceChildren.html	Document.replaceChildren() with a DocumentFragment containing a single element, replacing an existing doctype and element.
 dom/nodes/ParentNode-replaceChildren.html	Document.replaceChildren() with a doctype, replacing an existing doctype and element.

@@ -41,6 +41,9 @@ Binaries for Linux (x86_64, aarch64), macOS on Apple silicon and Windows
   WebSocket, storage, Web Crypto and Canvas 2D.
 - Shadow trees styled and shown as they render: their own and adopted
   style sheets, slots, and document rules kept out of them.
+- Media elements that play nothing and say so, no plugins and no PDF
+  viewer; `:has()` and `:nth-child(… of …)` selectors; `RegExp.$1` and the
+  other legacy static properties of `RegExp`.
 - Layout by Taffy and Parley when something asks for geometry, and
   screenshots by tiny-skia.
 - web-platform-tests run in CI against recorded expectations.

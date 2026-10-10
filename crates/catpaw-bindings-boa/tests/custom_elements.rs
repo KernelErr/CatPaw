@@ -320,3 +320,31 @@ fn promises_and_customized_built_ins() {
         "TypeError"
     );
 }
+
+/// Setting a style property or a `dataset` entry is a reaction scope of
+/// its own: the attribute change reaches the element before the set
+/// returns. (A component that mirrors its `style` attribute back into
+/// `this.style` otherwise saw stale values and never stopped.)
+#[test]
+fn named_property_sets_react_at_once() {
+    let mut page = load(
+        r#"<script>
+  var log = [];
+  class XStyle extends HTMLElement {
+    static get observedAttributes() { return ['style', 'data-x']; }
+    attributeChangedCallback(name, oldValue, newValue) {
+      log.push(name + ' ' + oldValue + ' ' + newValue);
+      if (name === 'style' && oldValue !== newValue && log.length < 20) this.style = newValue;
+    }
+  }
+  customElements.define('x-style', XStyle);
+  var el = document.createElement('x-style');
+</script>"#,
+    );
+    assert_eq!(
+        step(&mut page, "el.style.color = 'red'"),
+        "style null color: red; / style color: red; color: red;"
+    );
+    assert_eq!(step(&mut page, "el.dataset.x = '1'"), "data-x null 1");
+    assert_eq!(step(&mut page, "delete el.dataset.x"), "data-x 1 null");
+}

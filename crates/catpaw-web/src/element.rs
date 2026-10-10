@@ -1380,8 +1380,11 @@ impl web::DOMTokenListImpl for Web {
             return Ok(false);
         };
         if let Some(j) = current.iter().position(|t| *t == new_token) {
-            // Keep the earlier of the two positions.
-            current.remove(i.max(j));
+            // Keep the earlier of the two positions (one when the tokens
+            // are the same).
+            if i != j {
+                current.remove(i.max(j));
+            }
             current[i.min(j)] = new_token;
         } else {
             current[i] = new_token;

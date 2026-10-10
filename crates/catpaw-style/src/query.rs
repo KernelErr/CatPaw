@@ -31,6 +31,7 @@ impl Selectors {
     /// Parses a selector list; `None` if it is not valid (callers throw a
     /// `SyntaxError`).
     pub fn parse(css: &str) -> Option<Self> {
+        crate::engine::set_prefs();
         URL_DATA.with(|url_data| {
             SelectorParser::parse_author_origin_no_namespace(css, url_data)
                 .ok()

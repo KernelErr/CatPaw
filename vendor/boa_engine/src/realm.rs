@@ -77,6 +77,10 @@ struct Inner {
     /// set.
     #[unsafe_ignore_trace]
     random: std::cell::Cell<Option<u64>>,
+
+    /// CatPaw: the last match in this realm, for `RegExp.$1` and kin.
+    #[unsafe_ignore_trace]
+    legacy_regexp: std::cell::RefCell<crate::builtins::regexp::LegacyMatch>,
 }
 
 impl Realm {
@@ -106,6 +110,7 @@ impl Realm {
                 host_classes: GcRefCell::default(),
                 host_defined: GcRefCell::default(),
                 random: std::cell::Cell::new(None),
+                legacy_regexp: std::cell::RefCell::default(),
             }),
         };
 
@@ -127,6 +132,13 @@ impl Realm {
     /// sequences.
     pub fn set_random_seed(&self, seed: Option<u64>) {
         self.inner.random.set(seed);
+    }
+
+    /// CatPaw: the last regular expression match in this realm.
+    pub(crate) fn legacy_regexp(
+        &self,
+    ) -> std::cell::RefMut<'_, crate::builtins::regexp::LegacyMatch> {
+        self.inner.legacy_regexp.borrow_mut()
     }
 
     /// CatPaw: the next number of this realm's seeded sequence, if it has

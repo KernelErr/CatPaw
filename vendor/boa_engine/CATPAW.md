@@ -74,6 +74,17 @@ its own (`merge_sort_by`) now sorts: it stays bounded whatever the
 comparator answers, and the result is then some order of the items, as
 ECMAScript allows.
 
+## The legacy static properties of `RegExp`
+
+`src/builtins/regexp/mod.rs`, `src/realm.rs`: `RegExp.$1` to `$9`,
+`input` (`$_`), `lastMatch` (`$&`), `lastParen` (`$+`), `leftContext`
+(`` $` ``) and `rightContext` (`$'`), as in the TC39 legacy RegExp features
+proposal: `RegExpBuiltinExec` records each successful match in the realm
+(`Realm::legacy_regexp`, the string and the ranges; substrings are made
+when read), and the accessors on the constructor read it, throwing a
+`TypeError` on any other receiver. Pages that format dates with
+`RegExp.$1` failed without them.
+
 ## Parsing and compiling speed
 
 With the parser changes in `vendor/boa_parser` and `vendor/boa_ast`, these
