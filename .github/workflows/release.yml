@@ -125,6 +125,9 @@ jobs:
             found { print }
           ' CHANGELOG.md > notes.md
           test -s notes.md
+          # Links into the repository are relative in the CHANGELOG; on
+          # the release page they must name the tag's files.
+          sed -i "s#](docs/#](https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_REF_NAME/docs/#g" notes.md
           cat release/install.md >> notes.md
       - name: Publish
         env:
