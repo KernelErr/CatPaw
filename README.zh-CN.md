@@ -29,11 +29,16 @@ Windows（PowerShell）：
 irm https://catpaw.sh/install.ps1 | iex
 ```
 
+也可以让 agent 来装：对 Claude Code、Codex 或 Cursor 说
+*“请按照 https://catpaw.sh/install.md 帮我安装 CatPaw”*。
+[这个页面](https://catpaw.sh/install.md)（英文）会让 agent 先把安装计划给你看、
+等你同意后才安装，装好后再把 CatPaw 接入它自己。
+
 安装脚本会从 [Release](https://github.com/KernelErr/CatPaw/releases) 下载适合你系统的
 压缩包，用 Release 里的 `SHA256SUMS` 校验，然后列出要写入的内容和位置（只有一个文件
 `catpaw`，放在 `~/.catpaw/bin`；Windows 上是 `%LOCALAPPDATA%\Programs\CatPaw` 下的
 `catpaw.exe`，并把这个目录加入你的 PATH），等你确认后才写入。`sh -s -- --dir <目录>`
-（PowerShell 用 `-Dir`）可以装到别的目录，`--yes` 跳过确认，`--uninstall` 卸载，
+（PowerShell 用 `-Dir`）可以装到别的目录，`--dry-run` 只列出计划、不写入，`--yes` 跳过确认，`--uninstall` 卸载，
 `--help` 列出全部选项。Intel 芯片的 Mac 和其他系统请从源码编译，需要 Rust 1.89 或更新：
 
 ```sh

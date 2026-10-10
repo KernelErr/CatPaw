@@ -34,13 +34,20 @@ Windows (PowerShell):
 irm https://catpaw.sh/install.ps1 | iex
 ```
 
+Or let your agent install it: tell Claude Code, Codex or Cursor
+*"Install CatPaw for me by following https://catpaw.sh/install.md"*.
+[That page](https://catpaw.sh/install.md) has the agent show you the
+installer's plan first and wait for your yes, then connect CatPaw to
+itself.
+
 The scripts download a [release](https://github.com/KernelErr/CatPaw/releases)
 for your system, check it against the release's `SHA256SUMS`, show what
 they will write and where (one file, `catpaw`, in `~/.catpaw/bin`; on
 Windows `catpaw.exe` in `%LOCALAPPDATA%\Programs\CatPaw`, added to your
 PATH), and ask before writing it. `sh -s -- --dir <dir>` (PowerShell:
-`-Dir`) installs elsewhere, `--yes` answers for you, and `--uninstall`
-removes CatPaw again; `--help` lists the options. Intel Macs and other
+`-Dir`) installs elsewhere, `--dry-run` shows the plan and stops,
+`--yes` answers for you, and `--uninstall` removes CatPaw again; `--help`
+lists the options. Intel Macs and other
 systems build from source, with Rust 1.89 or later:
 
 ```sh
