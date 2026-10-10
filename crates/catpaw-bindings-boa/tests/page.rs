@@ -1319,6 +1319,11 @@ fn vendored_engine_fixes_hold() {
             "try { Object.getOwnPropertyDescriptor(RegExp, '$1').get.call({}); 'read' } catch (e) { e.name }",
             "TypeError",
         ),
+        // A stack overflow is a RangeError a page can catch, as in browsers.
+        (
+            "var depth = 0; function down() { depth++; down(); } try { down(); } catch (e) { e.name + ' ' + e.message + ' ' + (depth > 1000) }",
+            "RangeError Maximum call stack size exceeded true",
+        ),
         // Dates by parts, and years and padding as asked for.
         (
             "new Intl.DateTimeFormat('en-US', {year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC'}).formatToParts(0).map(function (p) { return p.type + ':' + p.value; }).join('|')",

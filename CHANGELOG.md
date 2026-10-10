@@ -46,6 +46,9 @@ Binaries for Linux (x86_64, aarch64), macOS on Apple silicon and Windows
   other legacy static properties of `RegExp`; `Intl.DateTimeFormat`
   `formatToParts`, and dates with the whole year and `2-digit` padding as
   asked for.
+- `Date.parse` takes `2026/10/10 15:51:46+00:00`, `2026-10-10 15:51:46 UTC`
+  and its own `toString()` back; a stack overflow is a `RangeError` script
+  can catch, as in browsers.
 - Layout by Taffy and Parley when something asks for geometry, and
   screenshots by tiny-skia.
 - web-platform-tests run in CI against recorded expectations.

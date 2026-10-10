@@ -74,6 +74,25 @@ its own (`merge_sort_by`) now sorts: it stays bounded whatever the
 comparator answers, and the result is then some order of the items, as
 ECMAScript allows.
 
+## A stack overflow script can catch
+
+`src/vm/mod.rs`, `check_runtime_limits`: reaching the recursion or stack
+size limit threw an uncatchable engine error, which ended the page's
+whole task. It is now `RangeError: Maximum call stack size exceeded`, as
+browsers throw: pages recurse until that throws, to measure the stack or
+to stop a deep recursion, and catch it. Recursing again forever from the
+`catch` is stopped by the host's wall-clock deadline. (Boa's own tests of
+uncatchable recursion errors no longer hold.)
+
+## More dates `Date.parse` takes
+
+`src/builtins/date/utils.rs`, `normalize_legacy`: besides the forms
+above, `YYYY/MM/DD` and `YYYY-MM-DD` dates with a time after a space and
+a trailing zone (`2026/10/10 15:51:46+00:00`, `2026-10-10 15:51:46
+UTC`), a zone right after the time, and parenthesized text left out, so
+that `Date.parse(date.toString())` gives the date back, as ECMAScript
+requires (`… GMT+0000 (Coordinated Universal Time)`).
+
 ## The legacy static properties of `RegExp`
 
 `src/builtins/regexp/mod.rs`, `src/realm.rs`: `RegExp.$1` to `$9`,

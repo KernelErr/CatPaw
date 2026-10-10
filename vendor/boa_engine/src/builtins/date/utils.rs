@@ -1182,10 +1182,28 @@ const MONTHS: [&str; 12] = [
     "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec",
 ];
 
-/// The legacy forms: a month name with a day and year in either order, or
-/// `MM/DD/YYYY`, each with an optional `HH:MM[:SS]`, `AM`/`PM`, and a
-/// `GMT`/`UTC`/`Z` or `±HHMM` zone; local time otherwise.
+/// The legacy forms: a month name with a day and year in either order,
+/// `MM/DD/YYYY`, `YYYY/MM/DD` or `YYYY-MM-DD`, each with an optional
+/// `HH:MM[:SS]` (a zone may follow it directly), `AM`/`PM`, and a
+/// `GMT`/`UTC`/`Z` or `±HHMM` zone; local time otherwise. Parenthesized
+/// text is left out, as `Date.prototype.toString` ends with the zone's
+/// name in parentheses.
 fn normalize_legacy(date: &str) -> Option<String> {
+    let mut depth = 0u32;
+    let date: String = date
+        .chars()
+        .filter(|&c| match c {
+            '(' => {
+                depth += 1;
+                false
+            }
+            ')' if depth > 0 => {
+                depth -= 1;
+                false
+            }
+            _ => depth == 0,
+        })
+        .collect();
     let mut year: Option<u32> = None;
     let mut month: Option<u32> = None;
     let mut day: Option<u32> = None;
@@ -1202,16 +1220,43 @@ fn normalize_legacy(date: &str) -> Option<String> {
         let token = token.as_str();
         if token.contains('/') {
             let mut parts = token.split('/');
-            let (m, d, y) = (parts.next()?, parts.next()?, parts.next()?);
+            let (a, b, c) = (parts.next()?, parts.next()?, parts.next()?);
             if parts.next().is_some() {
                 return None;
             }
+            // `YYYY/MM/DD`, or `MM/DD/YYYY`.
+            let (y, m, d) = if a.len() == 4 { (a, b, c) } else { (c, a, b) };
             month = Some(m.parse().ok()?);
             day = Some(d.parse().ok()?);
             year = Some(y.parse().ok()?);
             continue;
         }
+        if let [y, m, d] = token.split('-').collect::<Vec<_>>()[..]
+            && y.len() == 4
+            && [y, m, d]
+                .iter()
+                .all(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit()))
+        {
+            year = Some(y.parse().ok()?);
+            month = Some(m.parse().ok()?);
+            day = Some(d.parse().ok()?);
+            continue;
+        }
         if token.contains(':') && token.as_bytes()[0].is_ascii_digit() {
+            // A zone may follow the time directly: `15:51:46+00:00`.
+            let (token, rest) = match token
+                .char_indices()
+                .skip(1)
+                .find(|(_, c)| matches!(c, '+' | '-' | 'z'))
+            {
+                Some((i, _)) => token.split_at(i),
+                None => (token, ""),
+            };
+            match rest {
+                "" => {}
+                "z" => zone = Some("Z".to_string()),
+                offset => zone = Some(offset.to_string()),
+            }
             let mut parts = token.split(':');
             let h: u32 = parts.next()?.parse().ok()?;
             let m: u32 = parts.next()?.parse().ok()?;

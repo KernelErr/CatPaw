@@ -8,7 +8,6 @@ use crate::{
     Context, JsError, JsExpect, JsNativeError, JsObject, JsResult, JsString, JsValue, Module,
     builtins::promise::{PromiseCapability, ResolvingFunctions},
     environments::EnvironmentStack,
-    error::RuntimeLimitError,
     object::JsFunction,
     realm::Realm,
     script::Script,
@@ -1038,13 +1037,19 @@ impl Context {
         // `host_call_depth` accounts for nested host calls that re-enter the VM by invoking
         // `Context::run()` recursively (for example, accessor calls).
         // Subtract 1 to exclude the dummy frame at index 0.
+        //
+        // CatPaw: as a `RangeError` script can catch, which is what browsers
+        // throw when the stack overflows: pages recurse until it throws (to
+        // measure the stack, or to stop deep recursion), and an uncatchable
+        // error ended their whole task. A script that catches and recurses
+        // again forever is stopped by the host's deadline.
         let recursion_depth = (self.vm.frames.len() - 1).saturating_add(self.vm.host_call_depth);
-        if self.vm.runtime_limits.recursion_limit() <= recursion_depth {
-            return Err(RuntimeLimitError::Recursion.into());
-        }
-        // Must throw if the stack size exceeds the defined maximum length.
-        if self.vm.runtime_limits.stack_size_limit() <= self.vm.stack.stack.len() {
-            return Err(RuntimeLimitError::StackSize.into());
+        if self.vm.runtime_limits.recursion_limit() <= recursion_depth
+            || self.vm.runtime_limits.stack_size_limit() <= self.vm.stack.stack.len()
+        {
+            return Err(JsNativeError::range()
+                .with_message("Maximum call stack size exceeded")
+                .into());
         }
 
         Ok(())
