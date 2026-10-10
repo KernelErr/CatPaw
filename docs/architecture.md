@@ -218,8 +218,10 @@ What does not work as a browser's would yet, besides the web features
   rather than on their first call.
 - **Detached nodes live until the page goes away** (see the DOM ownership
   notes above).
-- **Downloads stay in memory.** A file a navigation brings is kept for
-  `read` (the download view), not written to disk.
+- **Downloads are not resumed.** A file a navigation brings is saved to
+  the download directory as it arrives (up to 4 GiB); one that fails
+  midway is removed, and a new attempt starts from the beginning. While
+  traffic is recorded, downloads stay in memory, as other responses do.
 - **`Intl` falls back to UTC for offsets no time zone has** (beyond 18
   hours); `Date` keeps the offset.
 - **Recordings redact secrets in requests, cookies, credential headers and

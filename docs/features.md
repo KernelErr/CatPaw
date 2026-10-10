@@ -68,6 +68,10 @@ differently from a browser, is listed under
   `WebSocket` over the same transport as HTTP (proxy, TLS, cookies and the
   private-network policy apply), text and binary, close codes and reasons.
 - The font-loading API in its no-layout form.
+- Downloads: a file a navigation brings (an attachment, a type pages are
+  not made of, a `download` link) is saved to the download directory as
+  it arrives, past the limit responses have in memory; the agent waits
+  for it with `wait({"for":"download"})` and sees where it went.
 - Media elements that play nothing: `<video>` and `<audio>` stay paused
   with no data, `canPlayType` answers "" and `play()` rejects with
   `NotSupportedError`; what scripts set (time, volume, rate, text tracks)

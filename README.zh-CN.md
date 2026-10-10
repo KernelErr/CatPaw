@@ -64,10 +64,11 @@ catpaw setup codex --write              # 写入 ~/.codex/config.toml
 catpaw setup cursor -- --policy strict  # -- 之后的参数传给 `catpaw mcp`
 ```
 
-agent 会拿到十五个工具：`navigate`、`snapshot`、`click`、`type`、`fill`、`press`、
+agent 会拿到十六个工具：`navigate`、`snapshot`、`click`、`type`、`fill`、`press`、
 `select`、`act`（hover、check、uncheck、focus、clear、scroll、upload、drag）、`wait`、
 `read`（markdown、text、links、forms、tables、find、html、download）、`screenshot`、
-`evaluate`、`tabs`、`logs` 和 `handoff`。元素用 ref 指代，元素还在页面上时 ref 一直有效。
+`evaluate`、`tabs`、`logs`、`handoff` 和 `settings`（下载保存到哪里、交接页面监听在哪个地址；
+每次修改都要用户批准）。元素用 ref 指代，元素还在页面上时 ref 一直有效。
 每个操作在页面稳定后返回，说明发生了什么、页面变了什么：
 
 ```text

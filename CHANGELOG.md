@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.2.0 (unreleased)
+
+From an agent's report of using CatPaw on a NAS:
+
+- Downloads are saved to disk as they arrive, in `~/Downloads/CatPaw` by
+  default: no longer kept in memory and cut off at the response limit,
+  so large files work. The navigation answers at once with where the file
+  goes, `wait({"for":"download"})` waits until it is saved, and the
+  download view of `read` says how far it is.
+- `settings`, a new tool: shows CatPaw's settings and changes them, the
+  user approving each change, which is saved in `settings.json` next to
+  the approval key: `downloadDir`, and `localAddress`, the address the
+  hand-off and approval pages listen on when the user's browser is on
+  another machine (they listened on 127.0.0.1 only). `--download-dir`,
+  `--local-address` and `--settings-file` set them from the command line.
+- The agent can take a hand-off back (`handoff` with `end: true`) when the
+  user cannot reach the page or will not finish, what they typed staying
+  masked; and a tab with the user can be closed.
+- Switching tabs shows what changed since the agent last saw the tab
+  (`snapshot: "full"` or `"none"` for the rest), not the whole page.
+
+The library crates' public types changed (responses carry a saved file,
+requests a download), hence 0.2.0.
+
 ## 0.1.1 (2026-10-11)
 
 - Proxies from the environment: without `--proxy`, CatPaw reads

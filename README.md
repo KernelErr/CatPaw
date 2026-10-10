@@ -73,13 +73,14 @@ catpaw setup codex --write              # adds it to ~/.codex/config.toml
 catpaw setup cursor -- --policy strict  # options after -- go to `catpaw mcp`
 ```
 
-The agent gets fifteen tools: `navigate`, `snapshot`, `click`, `type`,
+The agent gets sixteen tools: `navigate`, `snapshot`, `click`, `type`,
 `fill`, `press`, `select`, `act` (hover, check, uncheck, focus, clear,
 scroll, upload, drag), `wait`, `read` (markdown, text, links, forms,
-tables, find, html, download), `screenshot`, `evaluate`, `tabs`, `logs` and
-`handoff`. Elements are named by refs that stay valid while the element
-is on the page. An action answers once the page has settled, with what
-happened and what changed:
+tables, find, html, download), `screenshot`, `evaluate`, `tabs`, `logs`,
+`handoff` and `settings` (where downloads are saved, where the hand-off
+page listens; the user approves each change). Elements are named by refs
+that stay valid while the element is on the page. An action answers once
+the page has settled, with what happened and what changed:
 
 ```text
 ok click e15 button "Add to cart" (after e14 button "View details for Sauce Labs Backpack")
