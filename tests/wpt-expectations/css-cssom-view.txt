@@ -281,9 +281,6 @@ css/cssom-view/element-scroll-promises.html	Element.scrollTo(instant): promise b
 css/cssom-view/element-scroll-promises.html	Element.scrollTo(instant): return type
 css/cssom-view/element-scroll-promises.html	Element.scrollTo(smooth): promise behavior
 css/cssom-view/element-scroll-promises.html	Element.scrollTo(smooth): return type
-css/cssom-view/elementFromPoint-002.html	Checking whether dynamic changes to visibility interact correctly with\n  table anonymous boxes
-css/cssom-view/elementFromPoint-003.html	Checking whether dynamic changes to visibility interact correctly with\n  table anonymous boxes
-css/cssom-view/elementFromPoint-dynamic-anon-box.html	Link should be clickable after hiding a scrollbox with an anonymous table inside
 css/cssom-view/elementFromPoint-list-001.html	<li>Image Outside 1</li>
 css/cssom-view/elementFromPoint-list-001.html	<li>Image Outside 2</li>
 css/cssom-view/elementFromPoint-list-001.html	<li>Outside 1</li>
@@ -291,9 +288,7 @@ css/cssom-view/elementFromPoint-list-001.html	<li>Outside 2</li>
 css/cssom-view/elementFromPoint-list-001.html	<li>Outside 3</li>
 css/cssom-view/elementFromPoint-mixed-font-sizes.html	document.elementFromPoint finds container SPAN in the empty region above a child SPAN with a smaller font size
 css/cssom-view/elementFromPoint-ua-shadowroot-crash.html	-
-css/cssom-view/elementFromPoint-visibility-hidden-resizer.html	elementFromPoint on resizer area of an element with visibility:hidden
 css/cssom-view/elementFromPoint.html	Fieldsets
-css/cssom-view/elementFromPoint.html	First element to get mouse events with pointer-events css
 css/cssom-view/elementFromPoint.html	Image Maps
 css/cssom-view/elementFromPoint.html	co-ordinates larger than the viewport from in iframe
 css/cssom-view/elementFromPoint.html	no hit target at x,y
@@ -342,7 +337,6 @@ css/cssom-view/elementsFromPoint-table.html	elementsFromPoint for points between
 css/cssom-view/elementsFromPoint-table.html	elementsFromPoint for points inside cells in a flipped (writing-mode:vertical-lr) table
 css/cssom-view/elementsFromPoint-table.html	elementsFromPoint for points inside cells in a right-to-left table
 css/cssom-view/elementsFromPoint-table.html	elementsFromPoint for points inside table cells
-css/cssom-view/elementsFromPoint.html	First element to get mouse events with pointer-events css
 css/cssom-view/elementsFromPoint.html	co-ordinates larger than the viewport from in iframe
 css/cssom-view/elementsFromPoint.html	no hit target at x,y
 css/cssom-view/elementsFromPoint.html	transformed element at x,y
