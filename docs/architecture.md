@@ -236,6 +236,19 @@ What does not work as a browser's would yet, besides the web features
 - **A host whose HTTP/2 connections leave streams unanswered** costs the
   requests it leaves about two seconds before they go again over
   HTTP/1.1 (see `HTTP2_STALL` in `catpaw-net`).
+- **Through a proxy, names are resolved by the proxy.** With `--proxy`,
+  the private-address check covers literal addresses and local names
+  (`localhost`, `.local`) only: a name that resolves to a private address
+  on the proxy's side is reached.
+- **The local pages assume a computer not shared with other accounts.**
+  The pass in the address of a page CatPaw opens shows in the process
+  list while the browser starts, where other accounts can read it on
+  Linux; and a key a browser remembers belongs to the port's origin,
+  which another account could serve while CatPaw is not running. On a
+  shared computer, use `--no-open` and do not let the browser remember
+  the key.
+- **No memory limit per page.** A page that allocates without end can
+  exhaust memory: the script budget stops long runs, not large ones.
 
 ## Roadmap
 

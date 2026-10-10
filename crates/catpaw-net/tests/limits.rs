@@ -56,6 +56,24 @@ async fn private_addresses_are_refused_unless_allowed() {
 }
 
 #[tokio::test]
+async fn local_names_are_refused_through_a_proxy_too() {
+    // A proxy on this machine would otherwise reach its services.
+    let client = NetClient::new(NetConfig {
+        proxy: Some(Url::parse("http://127.0.0.1:9").unwrap()),
+        ..NetConfig::default()
+    })
+    .unwrap();
+    for url in [
+        "http://localhost:1/",
+        "http://printer.local/",
+        "http://127.0.0.1:1/",
+    ] {
+        let err = client.get(&Url::parse(url).unwrap()).await.unwrap_err();
+        assert!(matches!(err, NetError::PrivateAddress(_)), "{url}: {err}");
+    }
+}
+
+#[tokio::test]
 async fn bodies_past_the_wire_limit_are_refused() {
     let url = serve_once(
         "200 OK",

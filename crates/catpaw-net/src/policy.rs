@@ -16,7 +16,7 @@ use url::{Host, Url};
 pub fn is_private_ip(ip: IpAddr) -> bool {
     match ip {
         IpAddr::V4(v4) => is_private_v4(v4),
-        IpAddr::V6(v6) => match v6.to_ipv4_mapped() {
+        IpAddr::V6(v6) => match v6.to_ipv4_mapped().or_else(|| nat64(v6)) {
             Some(v4) => is_private_v4(v4),
             None => {
                 v6.is_loopback()
@@ -29,9 +29,21 @@ pub fn is_private_ip(ip: IpAddr) -> bool {
                     // Documentation and discard ranges.
                     || v6.segments()[0] == 0x2001 && v6.segments()[1] == 0x0db8
                     || v6.segments()[0] == 0x0100 && v6.segments()[1] == 0
+                    // NAT64 for local use (RFC 8215).
+                    || v6.segments()[..3] == [0x0064, 0xff9b, 0x0001]
             }
         },
     }
+}
+
+/// The IPv4 address a NAT64 address of the well-known prefix
+/// (`64:ff9b::/96`, RFC 6052) stands for: a gateway would reach it.
+fn nat64(v6: std::net::Ipv6Addr) -> Option<Ipv4Addr> {
+    let s = v6.segments();
+    (s[..6] == [0x0064, 0xff9b, 0, 0, 0, 0]).then(|| {
+        let [.., a, b, c, d] = v6.octets();
+        Ipv4Addr::new(a, b, c, d)
+    })
 }
 
 fn is_private_v4(ip: Ipv4Addr) -> bool {
@@ -177,10 +189,19 @@ mod tests {
             "fe80::1",
             "fd00::1",
             "::ffff:10.0.0.1",
+            "64:ff9b::7f00:1",
+            "64:ff9b::a00:1",
+            "64:ff9b:1::1",
         ] {
             assert!(is_private_ip(ip.parse().unwrap()), "{ip}");
         }
-        for ip in ["8.8.8.8", "1.1.1.1", "172.32.0.1", "2606:4700::1111"] {
+        for ip in [
+            "8.8.8.8",
+            "1.1.1.1",
+            "172.32.0.1",
+            "2606:4700::1111",
+            "64:ff9b::808:808",
+        ] {
             assert!(!is_private_ip(ip.parse().unwrap()), "{ip}");
         }
     }

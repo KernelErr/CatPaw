@@ -32,5 +32,8 @@ While CatPaw is a preview (0.x), only the latest release gets fixes.
   an issue unless it looks exploitable.
 
 Not in scope: what an agent does through tools other than CatPaw's (an
-agent with a shell is bounded by its host's permissions), and sites
-choosing to block CatPaw.
+agent with a shell is bounded by its host's permissions), sites choosing
+to block CatPaw, and the limits listed under
+[Known gaps](docs/architecture.md#known-gaps) (the local pages assume a
+computer not shared with other accounts; through a proxy, names are
+resolved by the proxy).

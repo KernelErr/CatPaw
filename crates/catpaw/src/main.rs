@@ -258,7 +258,9 @@ struct McpArgs {
     #[arg(long)]
     approval_port: Option<u16>,
     /// Do not open the hand-off and approval pages in the browser when the
-    /// user is needed there; the agent gives the user their address.
+    /// user is needed there; the agent gives the user their address. For
+    /// computers shared with other accounts, which could see the pass an
+    /// opened page's address carries.
     #[arg(long)]
     no_open: bool,
     /// Keep a journal of every call (and confirmation) in this directory.

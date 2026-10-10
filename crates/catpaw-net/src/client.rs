@@ -714,13 +714,11 @@ impl NetClient {
         entry: Option<(crate::har::Place, usize)>,
     ) -> Result<Hop, NetError> {
         let credentials = options.credentials;
-        if self.config.proxy.is_none() {
-            policy::check_host(url, self.config.allow_private_network)
-                .map_err(NetError::PrivateAddress)?;
-        } else if let Some(url::Host::Ipv4(_) | url::Host::Ipv6(_)) = url.host() {
-            policy::check_host(url, self.config.allow_private_network)
-                .map_err(NetError::PrivateAddress)?;
-        }
+        // Literal addresses and local names, through a proxy too: a proxy
+        // on this machine would otherwise reach its services. (Through a
+        // proxy, other names are resolved there, out of the check's reach.)
+        policy::check_host(url, self.config.allow_private_network)
+            .map_err(NetError::PrivateAddress)?;
         let uri: Uri = url
             .as_str()
             .parse()
