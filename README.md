@@ -47,16 +47,21 @@ Windows `catpaw.exe` in `%LOCALAPPDATA%\Programs\CatPaw`, added to your
 PATH), and ask before writing it. `sh -s -- --dir <dir>` (PowerShell:
 `-Dir`) installs elsewhere, `--dry-run` shows the plan and stops,
 `--yes` answers for you, and `--uninstall` removes CatPaw again; `--help`
-lists the options. Intel Macs and other
-systems build from source, with Rust 1.89 or later:
+lists the options.
+
+Intel Macs and other systems build from source, with Rust 1.91 or later
+and a C compiler: from crates.io,
+
+```sh
+cargo install catpaw
+```
+
+or from a checkout:
 
 ```sh
 git clone https://github.com/KernelErr/CatPaw && cd CatPaw
 cargo build --release -p catpaw        # target/release/catpaw
 ```
-
-The crates on crates.io (`catpaw` 0.0.1 and five library crates) are an
-early preview from before CatPaw ran scripts.
 
 ## Use it from an agent
 

@@ -1162,7 +1162,9 @@ fn normalize_iso_like(date: &str) -> Option<String> {
             let (h, m) = match digits.len() {
                 2 => (digits.clone(), "00".to_string()),
                 4 => (digits[..2].to_string(), digits[2..].to_string()),
-                5 if digits.as_bytes()[2] == b':' => (digits[..2].to_string(), digits[3..].to_string()),
+                5 if digits.as_bytes()[2] == b':' => {
+                    (digits[..2].to_string(), digits[3..].to_string())
+                }
                 _ => return None,
             };
             if !h.bytes().all(|b| b.is_ascii_digit()) || !m.bytes().all(|b| b.is_ascii_digit()) {
@@ -1270,8 +1272,15 @@ fn normalize_legacy(date: &str) -> Option<String> {
             time = Some((h, m, s));
             continue;
         }
-        if let Some(rest) = token.strip_prefix("gmt").or_else(|| token.strip_prefix("utc")) {
-            zone = Some(if rest.is_empty() { "Z".to_string() } else { rest.to_string() });
+        if let Some(rest) = token
+            .strip_prefix("gmt")
+            .or_else(|| token.strip_prefix("utc"))
+        {
+            zone = Some(if rest.is_empty() {
+                "Z".to_string()
+            } else {
+                rest.to_string()
+            });
             continue;
         }
         if token == "z" {

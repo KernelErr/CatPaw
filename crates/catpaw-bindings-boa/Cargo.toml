@@ -4,18 +4,21 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-publish = false
-description = "CatPaw browser engine: bindings-boa"
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories = ["web-programming"]
+description = "JavaScript bindings for the CatPaw browser: glue generated from Web IDL for the Boa engine"
 
 [dependencies]
 boa_engine = { workspace = true, features = ["annex-b", "intl_bundled"] }
 boa_gc.workspace = true
-catpaw-dom = { path = "../catpaw-dom", version = "0.1.0" }
-catpaw-js = { path = "../catpaw-js", version = "0.1.0" }
-catpaw-js-boa = { path = "../catpaw-js-boa", version = "0.1.0" }
-catpaw-web = { path = "../catpaw-web", version = "0.1.0" }
+catpaw-dom = { path = "../catpaw-dom", version = "0.1.1" }
+catpaw-js = { path = "../catpaw-js", version = "0.1.1" }
+catpaw-js-boa = { path = "../catpaw-js-boa", version = "0.1.1" }
+catpaw-web = { path = "../catpaw-web", version = "0.1.1" }
 url.workspace = true
 
 [dev-dependencies]
-catpaw-dom = { path = "../catpaw-dom", version = "0.1.0" }
+catpaw-dom = { path = "../catpaw-dom", version = "0.1.1" }
 png.workspace = true

@@ -4,9 +4,12 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-publish = false
-description = "CatPaw browser engine: js"
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories = ["web-programming"]
+description = "Engine-neutral JavaScript interfaces for the CatPaw browser"
 
 [dependencies]
-catpaw-dom = { path = "../catpaw-dom", version = "0.1.0" }
+catpaw-dom = { path = "../catpaw-dom", version = "0.1.1" }
 slotmap.workspace = true

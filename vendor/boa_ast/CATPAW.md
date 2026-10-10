@@ -1,8 +1,8 @@
 # Vendored `boa_ast` 0.22.0
 
 This is the `boa_ast` 0.22.0 crate from crates.io (Unlicense OR MIT, see
-`ABOUT.md`), used through `[patch.crates-io]` in the workspace `Cargo.toml`
-until a release carries the fix below.
+`ABOUT.md`), with the fixes below, published as `catpaw-boa-ast` (the
+library keeps the name `boa_ast`) until a Boa release carries them.
 
 ## Changes from the published crate
 

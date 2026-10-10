@@ -4,17 +4,20 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-publish = false
-description = "CatPaw browser engine: painting and screenshots"
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories = ["web-programming"]
+description = "Painting for the CatPaw browser: display lists and screenshots with tiny-skia"
 
 [dependencies]
-catpaw-dom = { path = "../catpaw-dom", version = "0.1.0" }
-catpaw-layout = { path = "../catpaw-layout", version = "0.1.0" }
-catpaw-text = { path = "../catpaw-text", version = "0.1.0" }
+catpaw-dom = { path = "../catpaw-dom", version = "0.1.1" }
+catpaw-layout = { path = "../catpaw-layout", version = "0.1.1" }
+catpaw-text = { path = "../catpaw-text", version = "0.1.1" }
 csscolorparser = "0.7"
 png.workspace = true
 style = { package = "stylo", version = "0.22" }
 tiny-skia.workspace = true
 
 [dev-dependencies]
-catpaw-style = { path = "../catpaw-style", version = "0.1.0" }
+catpaw-style = { path = "../catpaw-style", version = "0.1.1" }

@@ -248,91 +248,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "boa_ast"
-version = "0.22.0"
-dependencies = [
- "bitflags",
- "boa_interner",
- "boa_macros",
- "boa_string",
- "indexmap",
- "num-bigint",
- "rustc-hash",
- "strum",
-]
-
-[[package]]
-name = "boa_engine"
-version = "0.22.0"
-dependencies = [
- "aligned-vec",
- "arrayvec",
- "async-channel",
- "bitflags",
- "boa_ast",
- "boa_gc",
- "boa_icu_provider",
- "boa_interner",
- "boa_macros",
- "boa_parser",
- "boa_string",
- "bytemuck",
- "cfg-if",
- "cow-utils",
- "dashmap",
- "dynify",
- "fast-float2",
- "fixed_decimal",
- "float16",
- "futures-concurrency",
- "futures-lite",
- "hashbrown 0.17.1",
- "icu_calendar",
- "icu_casemap",
- "icu_collator",
- "icu_datetime",
- "icu_decimal",
- "icu_list",
- "icu_locale",
- "icu_normalizer",
- "icu_plurals",
- "icu_provider",
- "icu_segmenter",
- "icu_time",
- "indexmap",
- "intrusive-collections",
- "itertools 0.15.0",
- "num-bigint",
- "num-integer",
- "num-traits",
- "num_enum",
- "oneshot",
- "pastey",
- "portable-atomic",
- "rand 0.10.3",
- "regress",
- "rustc-hash",
- "ryu-js",
- "serde",
- "serde_json",
- "small_btree",
- "static_assertions",
- "sys-locale",
- "tag_ptr",
- "tap",
- "temporal_rs",
- "thin-vec",
- "thiserror",
- "time",
- "timezone_provider",
- "tinystr",
- "writeable",
- "xsum",
- "yoke",
- "zerofrom",
-]
-
-[[package]]
 name = "boa_gc"
 version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -399,22 +314,6 @@ dependencies = [
  "quote",
  "syn 3.0.6",
  "synstructure 0.14.0",
-]
-
-[[package]]
-name = "boa_parser"
-version = "0.22.0"
-dependencies = [
- "bitflags",
- "boa_ast",
- "boa_interner",
- "boa_macros",
- "fast-float2",
- "icu_properties",
- "num-bigint",
- "num-traits",
- "regress",
- "rustc-hash",
 ]
 
 [[package]]
@@ -502,7 +401,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "catpaw-agent",
@@ -522,7 +421,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-agent"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "catpaw-dom",
  "url",
@@ -530,10 +429,10 @@ dependencies = [
 
 [[package]]
 name = "catpaw-bindings-boa"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
- "boa_engine",
  "boa_gc",
+ "catpaw-boa-engine",
  "catpaw-dom",
  "catpaw-js",
  "catpaw-js-boa",
@@ -543,12 +442,113 @@ dependencies = [
 ]
 
 [[package]]
+name = "catpaw-boa-ast"
+version = "0.22.0"
+dependencies = [
+ "bitflags",
+ "boa_interner",
+ "boa_macros",
+ "boa_string",
+ "indexmap",
+ "num-bigint",
+ "rustc-hash",
+ "strum",
+]
+
+[[package]]
+name = "catpaw-boa-engine"
+version = "0.22.0"
+dependencies = [
+ "aligned-vec",
+ "arrayvec",
+ "async-channel",
+ "bitflags",
+ "boa_gc",
+ "boa_icu_provider",
+ "boa_interner",
+ "boa_macros",
+ "boa_string",
+ "bytemuck",
+ "catpaw-boa-ast",
+ "catpaw-boa-parser",
+ "cfg-if",
+ "cow-utils",
+ "dashmap",
+ "dynify",
+ "fast-float2",
+ "fixed_decimal",
+ "float16",
+ "futures-concurrency",
+ "futures-lite",
+ "hashbrown 0.17.1",
+ "icu_calendar",
+ "icu_casemap",
+ "icu_collator",
+ "icu_datetime",
+ "icu_decimal",
+ "icu_list",
+ "icu_locale",
+ "icu_normalizer",
+ "icu_plurals",
+ "icu_provider",
+ "icu_segmenter",
+ "icu_time",
+ "indexmap",
+ "intrusive-collections",
+ "itertools 0.15.0",
+ "num-bigint",
+ "num-integer",
+ "num-traits",
+ "num_enum",
+ "oneshot",
+ "pastey",
+ "portable-atomic",
+ "rand 0.10.3",
+ "regress",
+ "rustc-hash",
+ "ryu-js",
+ "serde",
+ "serde_json",
+ "small_btree",
+ "static_assertions",
+ "sys-locale",
+ "tag_ptr",
+ "tap",
+ "temporal_rs",
+ "thin-vec",
+ "thiserror",
+ "time",
+ "timezone_provider",
+ "tinystr",
+ "writeable",
+ "xsum",
+ "yoke",
+ "zerofrom",
+]
+
+[[package]]
+name = "catpaw-boa-parser"
+version = "0.22.0"
+dependencies = [
+ "bitflags",
+ "boa_interner",
+ "boa_macros",
+ "catpaw-boa-ast",
+ "fast-float2",
+ "icu_properties",
+ "num-bigint",
+ "num-traits",
+ "regress",
+ "rustc-hash",
+]
+
+[[package]]
 name = "catpaw-canvas"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "catpaw-dom"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "html5ever",
  "markup5ever",
@@ -559,7 +559,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-engine"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bytes",
  "catpaw-bindings-boa",
@@ -579,7 +579,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-fetch"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "catpaw-net",
  "encoding_rs",
@@ -588,7 +588,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-js"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "catpaw-dom",
  "slotmap",
@@ -596,31 +596,31 @@ dependencies = [
 
 [[package]]
 name = "catpaw-js-boa"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
- "boa_engine",
  "boa_gc",
+ "catpaw-boa-engine",
  "catpaw-js",
 ]
 
 [[package]]
 name = "catpaw-layout"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "catpaw-dom",
  "catpaw-style",
+ "catpaw-stylo-taffy",
  "catpaw-text",
  "markup5ever",
  "parley",
  "slotmap",
  "stylo",
- "stylo_taffy",
  "taffy",
 ]
 
 [[package]]
 name = "catpaw-net"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "base64 0.23.1",
  "brotli",
@@ -653,7 +653,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-paint"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "catpaw-dom",
  "catpaw-layout",
@@ -667,7 +667,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-protocol"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -675,7 +675,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-server"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "base64 0.23.1",
  "catpaw-agent",
@@ -696,7 +696,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-style"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "app_units",
  "atomic_refcell",
@@ -716,8 +716,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "catpaw-stylo-taffy"
+version = "0.3.0-beta.2"
+dependencies = [
+ "stylo",
+ "stylo_atoms",
+ "taffy",
+]
+
+[[package]]
 name = "catpaw-text"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "fontique",
  "parley",
@@ -726,7 +735,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-web"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -762,7 +771,7 @@ dependencies = [
 
 [[package]]
 name = "catpaw-webidl"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "serde",
@@ -4030,15 +4039,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "stylo_taffy"
-version = "0.3.0-beta.2"
-dependencies = [
- "stylo",
- "stylo_atoms",
- "taffy",
-]
-
-[[package]]
 name = "stylo_traits"
 version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4989,7 +4989,7 @@ checksum = "0637d3a5566a82fa5214bae89087bc8c9fb94cd8e8a3c07feb691bb8d9c632db"
 
 [[package]]
 name = "xtask"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "catpaw-bindings-boa",

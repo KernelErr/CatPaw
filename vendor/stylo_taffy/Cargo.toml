@@ -1,15 +1,14 @@
 [package]
-name = "stylo_taffy"
+name = "catpaw-stylo-taffy"
 version = "0.3.0-beta.2"
 edition = "2024"
 rust-version = "1.89.0"
-description = "Interop crate for the stylo and taffy crates"
+description = "stylo_taffy 0.3.0-beta.2 (Blitz's interop between Stylo and Taffy) built against stylo 0.22 for the CatPaw browser; see CATPAW.md."
 homepage = "https://github.com/dioxuslabs/blitz"
-repository = "https://github.com/dioxuslabs/blitz"
+repository = "https://github.com/KernelErr/CatPaw"
 license = "MIT OR Apache-2.0 OR MPL-2.0"
 keywords = ["css", "layout"]
 categories = ["gui"]
-publish = false
 
 [lib]
 name = "stylo_taffy"

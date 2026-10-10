@@ -16,6 +16,7 @@ accepted = [
     "Unicode-3.0",
     "Unlicense",
     "CDLA-Permissive-2.0",
+    "Bitstream-Vera",
 ]
 # What the release binaries are built for.
 targets = [

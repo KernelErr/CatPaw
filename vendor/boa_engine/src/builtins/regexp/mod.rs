@@ -546,7 +546,10 @@ impl RegExp {
     /// the legacy static properties.
     fn legacy_this(this: &JsValue, context: &Context) -> JsResult<()> {
         let regexp = context.intrinsics().constructors().regexp().constructor();
-        if this.as_object().is_some_and(|o| JsObject::equals(&o, &regexp)) {
+        if this
+            .as_object()
+            .is_some_and(|o| JsObject::equals(&o, &regexp))
+        {
             Ok(())
         } else {
             Err(JsNativeError::typ()
@@ -586,11 +589,7 @@ impl RegExp {
         })
     }
 
-    fn get_left_context(
-        this: &JsValue,
-        _: &[JsValue],
-        context: &mut Context,
-    ) -> JsResult<JsValue> {
+    fn get_left_context(this: &JsValue, _: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
         Self::legacy_static(this, context, |m| m.slice(Some(&(0..m.range.start))))
     }
 

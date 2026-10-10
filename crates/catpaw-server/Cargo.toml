@@ -4,17 +4,20 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-publish = false
-description = "CatPaw browser engine: the agent server (MCP over stdio)"
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories = ["web-programming"]
+description = "The CatPaw browser's agent server: MCP tools, sessions, confirmations and hand-off"
 
 [dependencies]
-catpaw-agent = { path = "../catpaw-agent", version = "0.1.0" }
-catpaw-dom = { path = "../catpaw-dom", version = "0.1.0" }
-catpaw-engine = { path = "../catpaw-engine", version = "0.1.0" }
-catpaw-net = { path = "../catpaw-net", version = "0.1.0" }
-catpaw-protocol = { path = "../catpaw-protocol", version = "0.1.0" }
-catpaw-style = { path = "../catpaw-style", version = "0.1.0" }
-catpaw-web = { path = "../catpaw-web", version = "0.1.0" }
+catpaw-agent = { path = "../catpaw-agent", version = "0.1.1" }
+catpaw-dom = { path = "../catpaw-dom", version = "0.1.1" }
+catpaw-engine = { path = "../catpaw-engine", version = "0.1.1" }
+catpaw-net = { path = "../catpaw-net", version = "0.1.1" }
+catpaw-protocol = { path = "../catpaw-protocol", version = "0.1.1" }
+catpaw-style = { path = "../catpaw-style", version = "0.1.1" }
+catpaw-web = { path = "../catpaw-web", version = "0.1.1" }
 base64.workspace = true
 getrandom.workspace = true
 regex.workspace = true

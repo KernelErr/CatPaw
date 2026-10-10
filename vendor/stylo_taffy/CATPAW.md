@@ -2,8 +2,8 @@
 
 This is the `stylo_taffy` 0.3.0-beta.2 crate from crates.io (part of
 [Blitz](https://github.com/dioxuslabs/blitz), MIT OR Apache-2.0 OR MPL-2.0,
-see `LICENSE-MIT` and `LICENSE-APACHE`), used through `[patch.crates-io]` in
-the workspace `Cargo.toml`. It converts Stylo's computed values into Taffy
+see `LICENSE-MIT` and `LICENSE-APACHE`), published as `catpaw-stylo-taffy`
+(the library keeps the name `stylo_taffy`). It converts Stylo's computed values into Taffy
 styles.
 
 ## Changes from the published crate

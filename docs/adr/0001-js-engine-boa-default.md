@@ -31,8 +31,8 @@ its users.
 4. A `js-v8` feature is planned as a first-class backend; once it lands both
    backends run the same CI suites and hydration benchmarks.
 5. Small Boa gaps (atomic interrupt flag, `JsProxy::target()`, V8-style
-   `Error.prototype.stack`) are carried in a `[patch.crates-io]` fork and
-   upstreamed.
+   `Error.prototype.stack`) are carried in a fork (published as `catpaw-boa-engine` and its
+   siblings) and upstreamed.
 
 ## Consequences
 

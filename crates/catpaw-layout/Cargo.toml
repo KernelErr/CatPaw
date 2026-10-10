@@ -4,13 +4,16 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-publish = false
-description = "CatPaw browser engine: box tree, layout and geometry"
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories = ["web-programming"]
+description = "Layout for the CatPaw browser: box tree, Taffy and Parley, geometry and hit testing"
 
 [dependencies]
-catpaw-dom = { path = "../catpaw-dom", version = "0.1.0" }
-catpaw-style = { path = "../catpaw-style", version = "0.1.0" }
-catpaw-text = { path = "../catpaw-text", version = "0.1.0" }
+catpaw-dom = { path = "../catpaw-dom", version = "0.1.1" }
+catpaw-style = { path = "../catpaw-style", version = "0.1.1" }
+catpaw-text = { path = "../catpaw-text", version = "0.1.1" }
 style = { package = "stylo", version = "0.22" }
 taffy.workspace = true
 stylo_taffy.workspace = true

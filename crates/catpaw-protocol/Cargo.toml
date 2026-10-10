@@ -4,8 +4,11 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-publish = false
-description = "CatPaw browser engine: the agent protocol (tool definitions, parameters, wording)"
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories = ["web-programming"]
+description = "The CatPaw browser's agent protocol: tool and result types and their JSON schema"
 
 [dependencies]
 serde.workspace = true

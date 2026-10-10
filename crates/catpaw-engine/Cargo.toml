@@ -4,17 +4,20 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-publish = false
-description = "CatPaw browser engine: engine"
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories = ["web-programming"]
+description = "The CatPaw browser's page engine: pages, frames, popups and workers on one thread, their network and their event loops"
 
 [dependencies]
-catpaw-bindings-boa = { path = "../catpaw-bindings-boa", version = "0.1.0" }
-catpaw-dom = { path = "../catpaw-dom", version = "0.1.0" }
-catpaw-style = { path = "../catpaw-style", version = "0.1.0" }
-catpaw-fetch = { path = "../catpaw-fetch", version = "0.1.0" }
-catpaw-js = { path = "../catpaw-js", version = "0.1.0" }
-catpaw-net = { path = "../catpaw-net", version = "0.1.0" }
-catpaw-web = { path = "../catpaw-web", version = "0.1.0" }
+catpaw-bindings-boa = { path = "../catpaw-bindings-boa", version = "0.1.1" }
+catpaw-dom = { path = "../catpaw-dom", version = "0.1.1" }
+catpaw-style = { path = "../catpaw-style", version = "0.1.1" }
+catpaw-fetch = { path = "../catpaw-fetch", version = "0.1.1" }
+catpaw-js = { path = "../catpaw-js", version = "0.1.1" }
+catpaw-net = { path = "../catpaw-net", version = "0.1.1" }
+catpaw-web = { path = "../catpaw-web", version = "0.1.1" }
 bytes.workspace = true
 http.workspace = true
 thiserror.workspace = true

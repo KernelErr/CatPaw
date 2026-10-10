@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.1 (2026-10-11)
+
+- Proxies from the environment: without `--proxy`, CatPaw reads
+  `https_proxy`, `http_proxy`, `all_proxy` and `no_proxy` as curl does
+  (`localhost` and loopback addresses always go direct, as in Chrome), and
+  `--proxy direct` ignores them. An MCP host passes its environment on to
+  `catpaw mcp`, so a registered server follows the user's proxy settings.
+- On crates.io: `cargo install catpaw` builds it. Boa and stylo_taffy, with
+  the fixes CatPaw needs, are published as `catpaw-boa-ast`,
+  `catpaw-boa-parser`, `catpaw-boa-engine` and `catpaw-stylo-taffy`.
+- Rust 1.91 or later builds it (Boa 0.22 needs 1.91; 0.1.0 said 1.89).
+- The install scripts take `--dry-run` (`-DryRun`), and
+  https://catpaw.sh/install.md lets an agent install CatPaw for its user,
+  with their yes.
+
 ## 0.1.0 (2026-10-11)
 
 The first preview: a browser an agent drives over MCP, with the user

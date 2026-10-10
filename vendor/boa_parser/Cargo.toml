@@ -12,7 +12,7 @@
 [package]
 edition = "2024"
 rust-version = "1.91.0"
-name = "boa_parser"
+name = "catpaw-boa-parser"
 version = "0.22.0"
 authors = ["boa-dev"]
 build = false
@@ -21,7 +21,7 @@ autobins = false
 autoexamples = false
 autotests = false
 autobenches = false
-description = "ECMAScript parser for the Boa JavaScript engine."
+description = "boa_parser 0.22.0 (the Boa JavaScript engine's parser), built on catpaw-boa-ast for the CatPaw browser; see CATPAW.md."
 readme = false
 keywords = [
     "javascript",
@@ -34,7 +34,7 @@ categories = [
     "compilers",
 ]
 license = "Unlicense OR MIT"
-repository = "https://github.com/boa-dev/boa"
+repository = "https://github.com/KernelErr/CatPaw"
 resolver = "2"
 
 [package.metadata.docs.rs]
@@ -52,6 +52,8 @@ version = "2.13.1"
 
 [dependencies.boa_ast]
 version = "~0.22.0"
+package = "catpaw-boa-ast"
+path = "../boa_ast"
 
 [dependencies.boa_interner]
 version = "~0.22.0"

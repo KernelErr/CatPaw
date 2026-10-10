@@ -1,11 +1,14 @@
 [workspace]
 resolver = "3"
 members = ["crates/*", "xtask"]
+# The vendored crates are published on their own (see vendor/*/CATPAW.md),
+# not built, linted or tested with the workspace.
+exclude = ["vendor"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
-rust-version = "1.89"
+rust-version = "1.91"
 license = "Apache-2.0 OR MIT"
 authors = ["The CatPaw Contributors"]
 repository = "https://github.com/KernelErr/CatPaw"
@@ -16,7 +19,9 @@ keywords = ["browser", "headless", "agent", "html", "llm"]
 sha1 = "0.10"
 sha2 = "0.10"
 # --- engine-side ---
-boa_engine = "0.22"
+# boa_engine 0.22.0 with CatPaw's fixes, published as catpaw-boa-engine
+# (see vendor/boa_engine/CATPAW.md).
+boa_engine = { package = "catpaw-boa-engine", version = "0.22.0", path = "vendor/boa_engine" }
 boa_gc = "0.22"
 html5ever = "0.40"
 markup5ever = "0.40"
@@ -28,7 +33,9 @@ stylo_atoms = "0.22"
 selectors = "0.41"
 cssparser = "0.38"
 taffy = { version = "0.14", default-features = false, features = ["std", "taffy_tree", "flexbox", "flexbox_balance", "grid", "block_layout", "float_layout", "calc", "content_size", "detailed_layout_info"] }
-stylo_taffy = { version = "0.3.0-beta.2", default-features = false, features = ["std", "block", "flexbox", "grid", "floats"] }
+# stylo_taffy 0.3.0-beta.2 built against stylo 0.22, published as
+# catpaw-stylo-taffy (see vendor/stylo_taffy/CATPAW.md).
+stylo_taffy = { package = "catpaw-stylo-taffy", version = "0.3.0-beta.2", path = "vendor/stylo_taffy", default-features = false, features = ["std", "block", "flexbox", "grid", "floats"] }
 parley = { version = "0.11", default-features = false, features = ["std", "complex-scripts"] }
 fontique = { version = "0.11", default-features = false, features = ["std"] }
 skrifa = "0.44"
@@ -98,11 +105,3 @@ debug = false
 strip = true
 lto = "thin"
 
-[patch.crates-io]
-# boa_ast, boa_engine and boa_parser 0.22.0 with fixes described in
-# vendor/*/CATPAW.md.
-boa_ast = { path = "vendor/boa_ast" }
-boa_engine = { path = "vendor/boa_engine" }
-boa_parser = { path = "vendor/boa_parser" }
-# stylo_taffy 0.3.0-beta.2 built against stylo 0.22, see vendor/stylo_taffy/CATPAW.md.
-stylo_taffy = { path = "vendor/stylo_taffy" }

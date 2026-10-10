@@ -39,14 +39,20 @@ irm https://catpaw.sh/install.ps1 | iex
 `catpaw`，放在 `~/.catpaw/bin`；Windows 上是 `%LOCALAPPDATA%\Programs\CatPaw` 下的
 `catpaw.exe`，并把这个目录加入你的 PATH），等你确认后才写入。`sh -s -- --dir <目录>`
 （PowerShell 用 `-Dir`）可以装到别的目录，`--dry-run` 只列出计划、不写入，`--yes` 跳过确认，`--uninstall` 卸载，
-`--help` 列出全部选项。Intel 芯片的 Mac 和其他系统请从源码编译，需要 Rust 1.89 或更新：
+`--help` 列出全部选项。
+
+Intel 芯片的 Mac 和其他系统请从源码编译，需要 Rust 1.91 或更新，以及 C 编译器。可以从 crates.io 安装：
+
+```sh
+cargo install catpaw
+```
+
+也可以从仓库编译：
 
 ```sh
 git clone https://github.com/KernelErr/CatPaw && cd CatPaw
 cargo build --release -p catpaw        # 产物在 target/release/catpaw
 ```
-
-crates.io 上的 crate（`catpaw` 0.0.1 和五个库 crate）是早期预览，那时 CatPaw 还不能执行脚本。
 
 ## 供 agent 使用
 

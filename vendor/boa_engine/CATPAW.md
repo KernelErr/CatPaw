@@ -1,8 +1,9 @@
 # Vendored `boa_engine` 0.22.0
 
 This is the `boa_engine` 0.22.0 crate from crates.io (Unlicense OR MIT, see
-`ABOUT.md`), used through `[patch.crates-io]` in the workspace `Cargo.toml`
-until a release carries the fix below. It goes with the vendored `boa_ast`.
+`ABOUT.md`), with the fixes below, published as `catpaw-boa-engine` (the
+library keeps the name `boa_engine`) until a Boa release carries them. It
+goes with `catpaw-boa-ast` and `catpaw-boa-parser`.
 
 ## Changes from the published crate
 

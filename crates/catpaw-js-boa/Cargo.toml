@@ -4,10 +4,13 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-publish = false
-description = "CatPaw browser engine: js-boa"
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories = ["web-programming"]
+description = "The Boa JavaScript engine behind the CatPaw browser's neutral interfaces"
 
 [dependencies]
 boa_engine = { workspace = true, features = ["annex-b", "intl_bundled"] }
 boa_gc.workspace = true
-catpaw-js = { path = "../catpaw-js", version = "0.1.0" }
+catpaw-js = { path = "../catpaw-js", version = "0.1.1" }

@@ -3,9 +3,12 @@ name = "catpaw-text"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
-license.workspace = true
-publish = false
-description = "CatPaw browser engine: fonts and text shaping"
+license = "(Apache-2.0 OR MIT) AND Bitstream-Vera"
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories = ["web-programming"]
+description = "Fonts and text shaping for the CatPaw browser, with the DejaVu fonts bundled"
 
 [dependencies]
 parley.workspace = true

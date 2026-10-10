@@ -1,8 +1,9 @@
 # Vendored `boa_parser` 0.22.0
 
 This is the `boa_parser` 0.22.0 crate from crates.io (Unlicense OR MIT, see
-`ABOUT.md`), used through `[patch.crates-io]` in the workspace `Cargo.toml`
-until a release carries the fix below.
+`ABOUT.md`), with the fix below, published as `catpaw-boa-parser` (the
+library keeps the name `boa_parser`) on `catpaw-boa-ast`, until a Boa
+release carries it.
 
 ## Changes from the published crate
 
