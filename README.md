@@ -120,6 +120,9 @@ catpaw fetch https://site.example/login --js --cookie-jar ./jar.json \
     --action "fill #username bob" --action "fill #password secret" --action "press Enter" --text
 ```
 
+To drive CatPaw from a script of your own (a scraper, a daily job, a
+check in CI), see [Using CatPaw from scripts](docs/scripting.md).
+
 ## What makes it different
 
 - **An agent-native API.** Snapshots are a compact text tree, a superset of
@@ -164,7 +167,7 @@ snapshot runs to 160 000. The tasks, the method and every number are in
 
 ```
 crates/   one crate per subsystem (net, fetch, dom, style, layout, paint, js, web, agent, server, cli)
-docs/     architecture notes, decision records, what works, the comparison
+docs/     architecture notes, decision records, what works, the comparison, scripting
 tests/    the agent task set, web-platform-tests expectations
 xtask/    bindgen, test runners, the task set's tools
 release/  what release archives carry

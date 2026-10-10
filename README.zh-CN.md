@@ -102,6 +102,9 @@ catpaw fetch https://site.example/login --js --cookie-jar ./jar.json \
     --action "fill #username bob" --action "fill #password secret" --action "press Enter" --text
 ```
 
+要在自己的脚本里调用 CatPaw（爬虫、定时任务、CI 里的检查），见
+[在脚本中使用 CatPaw](docs/scripting.md)（英文）。
+
 ## 与众不同之处
 
 - **为 agent 设计的接口。** 快照是紧凑的文本树，是 Playwright aria snapshot 的超集，
