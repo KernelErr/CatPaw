@@ -14,7 +14,7 @@ ok click e3 link "Click Here"
 
 > tabs {"op":"switch","tab":"t2"}
 ok switch t2
-# s1 tab=t2 url=https://the-internet.herokuapp.com/windows/new title="New Window"
+# s1 tab=t2 url=https://the-internet.herokuapp.com/windows/new title="New Window" full=no-baseline
 e1 heading "New Window" [level=3]
 
 ? text_contains "New Window" → yes

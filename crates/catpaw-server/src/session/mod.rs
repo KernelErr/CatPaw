@@ -27,12 +27,15 @@ use crate::tab::{GroupSetup, GroupState, SnapRequest, TabSummary, View, action_l
 
 mod approval;
 mod checkpoint;
+mod downloads;
 mod handover;
 mod router;
+mod settings;
 mod tabs;
 
 use approval::fingerprint;
 use checkpoint::Checkpoint;
+pub(crate) use downloads::download_status;
 use router::Router;
 use tabs::parse_tab;
 
@@ -60,6 +63,18 @@ pub struct SessionConfig {
     pub profile: Option<PathBuf>,
     /// Optional tools to offer (`session`).
     pub tools: Vec<String>,
+    /// The user's settings file (`settings.json` in CatPaw's data
+    /// directory, see [`crate::settings::default_file`]); none keeps
+    /// changes for this session only.
+    pub settings_file: Option<PathBuf>,
+    /// Settings for this session alone (command-line flags): they win
+    /// over the file's.
+    pub settings: crate::settings::Settings,
+    /// Where downloads are saved when no setting names a directory (the
+    /// CLI's: `CatPaw` in the user's Downloads, see
+    /// [`crate::settings::default_download_dir`]); none keeps them in
+    /// memory, as other responses are.
+    pub default_download_dir: Option<PathBuf>,
 }
 
 impl Default for SessionConfig {
@@ -76,6 +91,9 @@ impl Default for SessionConfig {
             journal: None,
             profile: None,
             tools: Vec::new(),
+            settings_file: None,
+            settings: crate::settings::Settings::default(),
+            default_download_dir: None,
         }
     }
 }
@@ -137,6 +155,12 @@ pub struct Session {
     profile_failed: bool,
     checkpoints: BTreeMap<String, Checkpoint>,
     tools: Vec<String>,
+    settings_file: Option<PathBuf>,
+    /// What the settings file holds; changes are made to it.
+    saved_settings: crate::settings::Settings,
+    /// What this session was started with: it wins over the file.
+    pinned_settings: crate::settings::Settings,
+    default_download_dir: Option<PathBuf>,
 }
 
 /// Why a session could not start.
@@ -146,6 +170,8 @@ pub enum SessionError {
     Engine(#[from] EngineError),
     #[error("profile: {0}")]
     Profile(String),
+    #[error("settings: {0}")]
+    Settings(String),
     #[error("journal in {}: {source}", dir.display())]
     Journal {
         dir: PathBuf,
@@ -168,7 +194,17 @@ impl Session {
             }
             options.storage.extend(storage);
         }
+        let saved_settings = match &config.settings_file {
+            Some(file) => crate::settings::Settings::load(file).map_err(SessionError::Settings)?,
+            None => crate::settings::Settings::default(),
+        };
         let net = SharedNet::new(options.net.clone()).map_err(EngineError::from)?;
+        net.client().set_download_dir(
+            saved_settings
+                .with(&config.settings)
+                .download_dir
+                .or_else(|| config.default_download_dir.clone()),
+        );
         let journal_config = config.journal.or_else(|| {
             profile.as_ref().map(|p| JournalConfig {
                 dir: p.journal_dir(),
@@ -211,7 +247,25 @@ impl Session {
             profile_failed: false,
             checkpoints: BTreeMap::new(),
             tools: config.tools,
+            settings_file: config.settings_file,
+            saved_settings,
+            pinned_settings: config.settings,
+            default_download_dir: config.default_download_dir,
         })
+    }
+
+    /// Where downloads are saved: the setting, else the session's default;
+    /// none keeps them in memory.
+    pub fn download_dir(&self) -> Option<PathBuf> {
+        self.settings()
+            .download_dir
+            .or_else(|| self.default_download_dir.clone())
+    }
+
+    /// The settings in effect: the file's, with this session's own over
+    /// them.
+    pub fn settings(&self) -> crate::settings::Settings {
+        self.saved_settings.with(&self.pinned_settings)
     }
 
     /// The address of a local page (`/confirm/c1`), starting the local
@@ -225,10 +279,12 @@ impl Session {
             let handoffs = self.handoffs.shared();
             let journal = self.journal.clone();
             let token = crate::local::random_hex(32)?;
-            self.local = Some(LocalServer::start(config.port, |port| Pages {
+            let address = self.settings().local_address();
+            self.local = Some(LocalServer::start(address, config.port, |port| Pages {
                 key,
                 token,
                 key_file,
+                address,
                 port,
                 approvals,
                 handoffs,
@@ -441,10 +497,12 @@ impl Session {
             }
             Call::Tabs(p) => self.tabs(p),
             Call::Wait(p) if p.until == params::WaitFor::Handoff => self.wait_handoff(p, host),
+            Call::Wait(p) if p.until == params::WaitFor::Download => self.wait_download(p, host),
             Call::Wait(p) => self.on_current(move |g, tab, view| g.wait(tab, p, view)),
             Call::Handoff(p) => self.handoff(p),
             Call::Logs(p) => self.on_current(move |g, tab, _| g.logs(tab, p)),
             Call::Session(p) => self.session_tool(p),
+            Call::Settings(p) => self.settings_tool(p),
         }
     }
 }

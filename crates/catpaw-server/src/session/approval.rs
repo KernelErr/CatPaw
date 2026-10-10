@@ -17,6 +17,10 @@ use crate::output::Held;
 
 /// A call as a confirmation remembers it: the tool and its arguments,
 /// without `confirmation`.
+/// The tab of confirmations about the session itself (a settings change),
+/// not a page: tabs count from 1.
+const SESSION_TAB: u32 = 0;
+
 pub(super) fn fingerprint(name: &str, arguments: &Value) -> String {
     let mut args = match arguments {
         Value::Null => Value::Object(Default::default()),
@@ -126,7 +130,10 @@ impl Session {
         self.refuse_key_upload(&call)?;
         let mut approved = None;
         if let Some(what) = self.ask_first(&call)? {
-            let tab = self.router.current_tab()?;
+            let tab = match &call {
+                Call::Settings(_) => SESSION_TAB,
+                _ => self.router.current_tab()?,
+            };
             let (id, repeat) = self.open_confirmation(
                 NewConfirmation {
                     tab,
@@ -224,6 +231,14 @@ impl Session {
                     "upload {files} into {into} (the page can read {them} right away, before any form is sent)"
                 ))
             }
+            Call::Settings(p) => match &p.set {
+                Some(change) if self.policy.settings() == Verdict::Confirm => {
+                    // A change that cannot be made is refused before asking.
+                    let change = super::settings::parse_change(change)?;
+                    Some(super::settings::describe_change(&change))
+                }
+                _ => None,
+            },
             Call::Evaluate(p) => {
                 let script = quote(&truncate(p.script.trim(), 200));
                 if self.policy.evaluate() == Verdict::Confirm {
@@ -546,6 +561,9 @@ impl Session {
                         };
                         self.release(&call, release, host)
                     }
+                    Stage::BeforeRunning if confirmation.tab == SESSION_TAB => self
+                        .dispatch(call, host)
+                        .map(|output| confirmed(output, id)),
                     Stage::BeforeRunning => {
                         // On the tab where it was asked, whichever is current.
                         if !self.router.routes.contains_key(&confirmation.tab) {

@@ -101,12 +101,14 @@ mod tests {
     #[test]
     fn the_tool_list_stays_small() {
         // A fixed cost on every turn of every conversation: keep it lean
-        // (fill earns its kilobyte by saving a turn per form).
+        // (fill earns its kilobyte by saving a turn per form; taking a
+        // hand-off back, a tab switch's snapshot and settings earn theirs
+        // by unsticking agents).
         let size: usize = TOOLS
             .iter()
             .map(|t| t.name.len() + t.description.len() + t.schema.len())
             .sum();
-        assert!(size < 11_000, "tool definitions grew to {size} bytes");
+        assert!(size < 12_000, "tool definitions grew to {size} bytes");
         assert!(INSTRUCTIONS.split_whitespace().count() < 380);
     }
 }

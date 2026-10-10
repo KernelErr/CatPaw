@@ -299,6 +299,13 @@ pub(crate) fn key_file(config: &ApprovalConfig) -> std::io::Result<PathBuf> {
 
 /// `catpaw/approval-key` in the user's data directory.
 fn default_key_file() -> Option<PathBuf> {
+    data_dir().map(|dir| dir.join("approval-key"))
+}
+
+/// CatPaw's directory in the user's data directory: `%APPDATA%\catpaw`,
+/// `~/Library/Application Support/catpaw`, or `catpaw` under
+/// `$XDG_DATA_HOME` (`~/.local/share`).
+pub(crate) fn data_dir() -> Option<PathBuf> {
     let var = |name: &str| {
         std::env::var_os(name)
             .filter(|v| !v.is_empty())
@@ -311,7 +318,7 @@ fn default_key_file() -> Option<PathBuf> {
     } else {
         var("XDG_DATA_HOME").or_else(|| var("HOME").map(|h| h.join(".local/share")))?
     };
-    Some(base.join("catpaw").join("approval-key"))
+    Some(base.join("catpaw"))
 }
 
 /// The key in `path`, or a fresh one written there (readable by the user
@@ -549,15 +556,18 @@ mod tests {
             holds: vec![1],
             repeat: "click {}".into(),
         });
-        let server = LocalServer::start(Some(0), |port| Pages {
-            passes: Default::default(),
-            key: key.clone(),
-            token: "t".repeat(64),
-            key_file: key_file.clone(),
-            port,
-            approvals: confirmations.shared(),
-            handoffs: Arc::default(),
-            journal: None,
+        let server = LocalServer::start(std::net::Ipv4Addr::LOCALHOST.into(), Some(0), |port| {
+            Pages {
+                passes: Default::default(),
+                address: std::net::Ipv4Addr::LOCALHOST.into(),
+                key: key.clone(),
+                token: "t".repeat(64),
+                key_file: key_file.clone(),
+                port,
+                approvals: confirmations.shared(),
+                handoffs: Arc::default(),
+                journal: None,
+            }
         })
         .unwrap();
         let port = server.port();

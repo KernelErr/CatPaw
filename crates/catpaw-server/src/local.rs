@@ -64,6 +64,8 @@ pub(crate) struct Pages {
     /// only.
     pub token: String,
     pub key_file: PathBuf,
+    /// The address the server listens on.
+    pub address: std::net::IpAddr,
     pub port: u16,
     pub approvals: crate::confirm::SharedStore,
     pub handoffs: crate::handoff::SharedStore,
@@ -73,12 +75,14 @@ pub(crate) struct Pages {
 }
 
 impl Pages {
-    /// The host names this server answers to.
-    fn hosts(&self) -> [String; 2] {
-        [
-            format!("127.0.0.1:{}", self.port),
-            format!("localhost:{}", self.port),
-        ]
+    /// The host names this server answers to: its address, and
+    /// `localhost` when that is where it listens.
+    fn hosts(&self) -> Vec<String> {
+        let mut hosts = vec![format!("{}:{}", host(self.address), self.port)];
+        if self.address.is_loopback() {
+            hosts.push(format!("localhost:{}", self.port));
+        }
+        hosts
     }
 
     /// What the request gives as its key: `X-CatPaw-Key`, a bearer token,
@@ -157,6 +161,7 @@ fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
 }
 
 pub(crate) struct LocalServer {
+    address: std::net::IpAddr,
     port: u16,
     passes: Passes,
     stop: Arc<AtomicBool>,
@@ -164,13 +169,18 @@ pub(crate) struct LocalServer {
 }
 
 impl LocalServer {
-    /// Starts the server: on `port` when given (0 for any free one), else
-    /// on [`DEFAULT_PORT`] or, when that is taken, any free one.
-    pub fn start(port: Option<u16>, pages: impl FnOnce(u16) -> Pages) -> std::io::Result<Self> {
+    /// Starts the server on `address`: on `port` when given (0 for any
+    /// free one), else on [`DEFAULT_PORT`] or, when that is taken, any free
+    /// one.
+    pub fn start(
+        address: std::net::IpAddr,
+        port: Option<u16>,
+        pages: impl FnOnce(u16) -> Pages,
+    ) -> std::io::Result<Self> {
         let listener = match port {
-            Some(port) => TcpListener::bind(("127.0.0.1", port))?,
-            None => TcpListener::bind(("127.0.0.1", DEFAULT_PORT))
-                .or_else(|_| TcpListener::bind(("127.0.0.1", 0)))?,
+            Some(port) => TcpListener::bind((address, port))?,
+            None => TcpListener::bind((address, DEFAULT_PORT))
+                .or_else(|_| TcpListener::bind((address, 0)))?,
         };
         let port = listener.local_addr()?.port();
         let pages = Arc::new(pages(port));
@@ -181,6 +191,7 @@ impl LocalServer {
             .name("catpaw-local".to_string())
             .spawn(move || serve(listener, &pages, &stopping))?;
         Ok(Self {
+            address,
             port,
             passes,
             stop,
@@ -207,7 +218,7 @@ impl LocalServer {
 
     /// The address of a page of this server.
     pub fn url(&self, path: &str) -> String {
-        format!("http://127.0.0.1:{}{path}", self.port)
+        format!("http://{}:{}{path}", host(self.address), self.port)
     }
 }
 
@@ -215,10 +226,18 @@ impl Drop for LocalServer {
     fn drop(&mut self) {
         self.stop.store(true, Ordering::SeqCst);
         // Wake the accept loop so that it sees the flag.
-        let _ = TcpStream::connect(("127.0.0.1", self.port));
+        let _ = TcpStream::connect((self.address, self.port));
         if let Some(thread) = self.thread.take() {
             let _ = thread.join();
         }
+    }
+}
+
+/// An address as a URL's host: IPv6 in brackets.
+fn host(address: std::net::IpAddr) -> String {
+    match address {
+        std::net::IpAddr::V4(v4) => v4.to_string(),
+        std::net::IpAddr::V6(v6) => format!("[{v6}]"),
     }
 }
 

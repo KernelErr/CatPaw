@@ -309,6 +309,7 @@ impl GroupState {
                     name,
                     mime,
                     size,
+                    saved_to,
                 } => {
                     events.push(format!("download {name} {url}"));
                     let kind = if mime.is_empty() {
@@ -316,11 +317,22 @@ impl GroupState {
                     } else {
                         format!("{mime}, ")
                     };
+                    let size = if size == 0 && saved_to.is_some() {
+                        "size unknown".to_string()
+                    } else {
+                        crate::files::size(size as u64)
+                    };
+                    let place = match saved_to {
+                        Some(path) => format!(
+                            " saving to {}; wait({{\"for\":\"download\"}}) until it is saved",
+                            path.display()
+                        ),
+                        None => String::new(),
+                    };
                     report.lines.push(format!(
-                        "! {} {} ({kind}{})",
+                        "! {} {} ({kind}{size}){place}",
                         consequence::DOWNLOAD,
                         quote(&truncate(&name, 80)),
-                        crate::files::size(size as u64)
                     ));
                 }
                 PageEvent::PopupClosed { .. } => {

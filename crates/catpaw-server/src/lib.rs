@@ -20,6 +20,7 @@ mod output;
 pub mod policy;
 pub mod profile;
 pub mod session;
+pub mod settings;
 mod tab;
 mod target;
 
@@ -32,3 +33,4 @@ pub use oracle::with_page_styles;
 pub use output::ToolOutput;
 pub use policy::{Policy, Preset};
 pub use session::{Approval, Host, NoHost, Session, SessionConfig, SessionError};
+pub use settings::Settings;

@@ -593,6 +593,15 @@
             ],
             "type": "string"
           },
+          "snapshot": {
+            "description": "For switch: diff (default) shows what changed since you last saw the tab",
+            "enum": [
+              "diff",
+              "full",
+              "none"
+            ],
+            "type": "string"
+          },
           "tab": {
             "description": "Tab id; close defaults to the current tab",
             "type": "string"
@@ -623,7 +632,8 @@
               "visible",
               "url",
               "time",
-              "handoff"
+              "handoff",
+              "download"
             ],
             "type": "string"
           },
@@ -649,7 +659,7 @@
             "type": "string"
           },
           "timeoutMs": {
-            "description": "Default 10000, at most 120000; for handoff 50000 (wait again if need be), at most 1800000",
+            "description": "Default 10000, at most 120000; for handoff and download 50000 (wait again if need be), at most 1800000",
             "minimum": 1,
             "type": "integer"
           },
@@ -671,6 +681,10 @@
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
+          "end": {
+            "description": "Take the tab back unfinished",
+            "type": "boolean"
+          },
           "reason": {
             "description": "What to ask the user to do",
             "type": "string"
@@ -729,6 +743,32 @@
       },
       "name": "logs",
       "title": "Logs"
+    },
+    {
+      "description": "Show CatPaw's settings, or change them: the user approves each change, which lasts beyond this session. downloadDir: where saved downloads go. localAddress: the IP address the hand-off and approval pages listen on, when the user's browser is on another machine (they are on 127.0.0.1 otherwise).\nExample: {\"set\":{\"localAddress\":\"192.168.1.20\"}}",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmation": {
+            "type": "string"
+          },
+          "set": {
+            "additionalProperties": false,
+            "properties": {
+              "downloadDir": {
+                "type": "string"
+              },
+              "localAddress": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
+      "name": "settings",
+      "title": "Settings"
     }
   ]
 }

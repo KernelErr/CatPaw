@@ -294,6 +294,8 @@ pub enum PageEvent {
         name: String,
         mime: String,
         size: usize,
+        /// Where the file is being saved, when it is.
+        saved_to: Option<std::path::PathBuf>,
     },
 }
 
@@ -303,9 +305,14 @@ pub struct Download {
     pub url: Url,
     pub name: String,
     pub mime: String,
-    /// The bytes, the first [`DOWNLOAD_KEPT`] of them.
+    /// The bytes, the first [`DOWNLOAD_KEPT`] of them; none when the file
+    /// is saved to disk.
     pub bytes: Vec<u8>,
+    /// Its size: as declared, for a file being saved (0 when unknown).
     pub size: usize,
+    /// The file on disk and how saving it goes, when the client saves
+    /// downloads (see `catpaw_net::NetClient::set_download_dir`).
+    pub saved: Option<std::sync::Arc<catpaw_net::DownloadProgress>>,
 }
 
 /// The most of one download a page keeps.
@@ -313,97 +320,32 @@ pub const DOWNLOAD_KEPT: usize = 8 * 1024 * 1024;
 /// Downloads a page keeps, the latest.
 const DOWNLOADS_KEPT: usize = 8;
 
-/// Types a browser shows as a page; others are saved.
-fn shows_as_page(mime: &str) -> bool {
-    matches!(
-        mime,
-        "" | "text/html"
-            | "application/xhtml+xml"
-            | "text/plain"
-            | "text/xml"
-            | "application/xml"
-            | "application/json"
-            | "image/svg+xml"
-    ) || mime.ends_with("+xml")
-        || mime.ends_with("+json")
-}
-
 /// The file a response is when it is not a page: an attachment, a type
-/// pages are not made of, or what a `download` link asked for.
+/// pages are not made of, or what a `download` link asked for. A file the
+/// client saves to disk comes with its progress, its bytes not in memory.
 fn as_download(fetched: &FetchedDocument, asked: Option<&str>) -> Option<Download> {
     let response = &fetched.response;
-    if !response.status.is_success() {
+    if !catpaw_net::download::is_download(response.status, &response.headers, asked) {
         return None;
     }
     let mime = response.mime_essence().unwrap_or_default();
-    let attachment = response
-        .headers
-        .get("content-disposition")
-        .and_then(|v| v.to_str().ok())
-        .is_some_and(|v| v.trim().to_ascii_lowercase().starts_with("attachment"));
-    if asked.is_none() && !attachment && shows_as_page(&mime) {
-        return None;
-    }
-    let size = response.body.len();
+    let name =
+        catpaw_net::download::download_name(&response.url, &response.headers, asked.unwrap_or(""));
+    let (bytes, size) = match &response.saved {
+        Some(saved) => (Vec::new(), saved.total().unwrap_or(0) as usize),
+        None => {
+            let size = response.body.len();
+            (response.body[..size.min(DOWNLOAD_KEPT)].to_vec(), size)
+        }
+    };
     Some(Download {
         url: response.url.clone(),
-        name: download_name(response, asked.unwrap_or("")),
+        name,
         mime,
-        bytes: response.body[..size.min(DOWNLOAD_KEPT)].to_vec(),
+        bytes,
         size,
+        saved: response.saved.clone(),
     })
-}
-
-/// The file name a response offers: `Content-Disposition`'s, else the
-/// last part of its URL.
-fn download_name(response: &catpaw_net::Response, asked: &str) -> String {
-    if !asked.trim().is_empty() {
-        return asked.trim().to_string();
-    }
-    let header = response
-        .headers
-        .get("content-disposition")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("");
-    for part in header.split(';').map(str::trim) {
-        if let Some(name) = part.strip_prefix("filename*=") {
-            let name = name.rsplit("''").next().unwrap_or(name);
-            return percent_decode(name.trim_matches('"'));
-        }
-    }
-    for part in header.split(';').map(str::trim) {
-        if let Some(name) = part.strip_prefix("filename=") {
-            return name.trim_matches('"').to_string();
-        }
-    }
-    response
-        .url
-        .path_segments()
-        .and_then(|mut s| s.next_back())
-        .filter(|s| !s.is_empty())
-        .map(percent_decode)
-        .unwrap_or_else(|| "download".to_string())
-}
-
-fn percent_decode(text: &str) -> String {
-    let bytes = text.as_bytes();
-    let mut out = Vec::with_capacity(bytes.len());
-    let mut i = 0;
-    while i < bytes.len() {
-        if bytes[i] == b'%'
-            && let Some(v) = bytes
-                .get(i + 1..i + 3)
-                .and_then(|hex| std::str::from_utf8(hex).ok())
-                .and_then(|hex| u8::from_str_radix(hex, 16).ok())
-        {
-            out.push(v);
-            i += 3;
-            continue;
-        }
-        out.push(bytes[i]);
-        i += 1;
-    }
-    String::from_utf8_lossy(&out).into_owned()
 }
 
 /// A frame of a page, as the embedder sees it.
@@ -940,12 +882,20 @@ impl Page {
             ),
         };
         let net = self.net.clone();
-        let fetched = net.fetch_document_checked(
+        // A file it brings is saved to disk as it arrives.
+        let download = catpaw_net::DownloadRequest {
+            asked: request.download.clone(),
+        };
+        let fetched = net.fetch_document_within(
             &method,
             &url,
             body,
             referrer.as_ref(),
             &mut |method, url, body| self.judge_hop(FrameId(0), approved, method, url, body),
+            &crate::net::FetchOptions {
+                hop_timeout: None,
+                download: Some(download),
+            },
         );
         let fetched = match fetched {
             Ok(crate::net::DocumentFetch::Loaded(fetched)) => fetched,
@@ -984,6 +934,7 @@ impl Page {
                 name: download.name.clone(),
                 mime: download.mime.clone(),
                 size: download.size,
+                saved_to: download.saved.as_ref().map(|s| s.path().to_path_buf()),
             });
             self.downloads.push(download);
             if self.downloads.len() > DOWNLOADS_KEPT {
@@ -1354,7 +1305,10 @@ impl Page {
                         None,
                         Some(&referrer),
                         &mut |method, hop, body| self.judge_hop(id, true, method, hop, body),
-                        element.map(|_| FRAME_DOCUMENT_TIMEOUT),
+                        &crate::net::FetchOptions {
+                            hop_timeout: element.map(|_| FRAME_DOCUMENT_TIMEOUT),
+                            download: None,
+                        },
                     )
                     .and_then(|outcome| match outcome {
                         crate::net::DocumentFetch::Loaded(fetched) => Ok(fetched),
@@ -1768,7 +1722,10 @@ impl Page {
                 request.body.clone(),
                 Some(&referrer),
                 &mut |method, url, body| self.judge_hop(id, approved, method, url, body),
-                element.map(|_| FRAME_DOCUMENT_TIMEOUT),
+                &crate::net::FetchOptions {
+                    hop_timeout: element.map(|_| FRAME_DOCUMENT_TIMEOUT),
+                    download: None,
+                },
             )
         });
         let (info, html) = match fetched {

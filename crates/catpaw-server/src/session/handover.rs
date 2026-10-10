@@ -30,6 +30,9 @@ impl Session {
     /// `handoff`: the user takes over the current tab on a page of their
     /// own (in place of a hand-off the tab had).
     pub(super) fn handoff(&mut self, p: params::Handoff) -> CallResult {
+        if p.end {
+            return self.take_back_handoff();
+        }
         let tab = self.router.current_tab()?;
         let group = self
             .router
@@ -141,11 +144,46 @@ impl Session {
         self.on_tab(tab, move |g, tab, view| g.after_handoff(tab, status, view))
     }
 
+    /// `handoff({end: true})`: the agent takes back the current tab's
+    /// hand-off, given back or not: the user could not reach the page, or
+    /// will not finish. What they typed stays masked; the page tells them.
+    fn take_back_handoff(&mut self) -> CallResult {
+        let tab = self.router.current_tab()?;
+        let id = self
+            .handoffs
+            .open(Some(tab))
+            .ok_or_else(|| Failure::bad_argument(format!("t{tab} is not handed over")))?;
+        let given_back = matches!(self.handoffs.state(id), Some(Standing::GivenBack(_)));
+        self.handoffs.close(id);
+        let how = if given_back {
+            "given back"
+        } else {
+            "taken back"
+        };
+        self.journal(
+            if given_back {
+                "handoff-done"
+            } else {
+                "handoff-taken-back"
+            },
+            json!({"id": format!("h{id}")}),
+        );
+        if !self.tab_alive(tab) {
+            return Err(Failure::new(
+                ErrorCode::NoTab,
+                format!("t{tab} closed during hand-off h{id}"),
+            ));
+        }
+        let status = format!("ok handoff h{id}: {how}");
+        self.on_tab(tab, move |g, tab, view| g.after_handoff(tab, status, view))
+    }
+
     /// Refuses a call on a tab the user has: the agent neither acts on it
     /// nor reads it (switching to it shows it) until it is given back.
+    /// Closing it is allowed, and ends the hand-off.
     pub(super) fn refuse_handed_over(&self, call: &Call) -> Result<(), Failure> {
         let tab = match call {
-            Call::Tabs(p) if matches!(p.op, params::TabsOp::Close | params::TabsOp::Switch) => p
+            Call::Tabs(p) if p.op == params::TabsOp::Switch => p
                 .tab
                 .as_deref()
                 .and_then(|t| parse_tab(t).ok())

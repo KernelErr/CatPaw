@@ -106,7 +106,7 @@ impl GroupState {
                 .page
                 .url_of(root)
                 .is_some_and(|u| u.as_str().contains(p.url.as_deref().unwrap_or(""))),
-            WaitFor::Settled | WaitFor::Time | WaitFor::Handoff => false,
+            WaitFor::Settled | WaitFor::Time | WaitFor::Handoff | WaitFor::Download => false,
         })
     }
 
@@ -119,8 +119,10 @@ impl GroupState {
 
     pub(crate) fn wait(&mut self, tab: u32, p: params::Wait, view: View) -> CallResult {
         let what = match p.until {
-            // The session waits for hand-offs; it never sends one here.
+            // The session waits for hand-offs and downloads; it never
+            // sends one here.
             WaitFor::Handoff => return Err(Failure::bad_argument("no hand-off is open")),
+            WaitFor::Download => return Err(Failure::bad_argument("no download is being saved")),
             WaitFor::Settled => "settled".to_string(),
             WaitFor::Text => format!(
                 "text {}",

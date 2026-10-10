@@ -9,6 +9,7 @@ pub mod bot_auth;
 pub mod client;
 pub mod cookies;
 pub mod decode;
+pub mod download;
 pub mod har;
 pub mod policy;
 pub mod proxy;
@@ -18,6 +19,7 @@ pub use bot_auth::{BotAuthConfig, BotAuthError, BotAuthSigner, KeyPair, SignedHe
 pub use bytes::Bytes;
 pub use client::{NetClient, NetConfig, NetError, RequestOptions, Response, Unrecorded};
 pub use cookies::CookieJar;
+pub use download::{DownloadProgress, DownloadRequest, DownloadState};
 pub use har::{Misses, Recording};
 pub use http::{HeaderMap, HeaderName, HeaderValue, Method, StatusCode};
 pub use proxy::{NoProxy, Proxies};

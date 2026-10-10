@@ -213,6 +213,17 @@ impl GroupState {
 
     /// A file a navigation brought (the latest, or the one `name` names),
     /// as text: a line saying what it is, then its content when it is text.
+    /// The group's latest download: its name, and the file it is saved
+    /// to when it is.
+    pub(crate) fn latest_download(
+        &self,
+    ) -> Option<(String, Option<std::sync::Arc<catpaw_net::DownloadProgress>>)> {
+        self.page
+            .downloads()
+            .last()
+            .map(|d| (d.name.clone(), d.saved.clone()))
+    }
+
     fn download_text(&self, name: Option<&str>) -> Result<String, Failure> {
         let downloads = self.page.downloads();
         let chosen = match name {
@@ -241,6 +252,27 @@ impl GroupState {
             format!("{}, ", file.mime)
         };
         let mut text = format!("{} ({kind}{size})", quote(&file.name));
+        // A file saved to disk: where, how far, and its beginning once
+        // complete.
+        if let Some(saved) = &file.saved {
+            let _ = write!(text, " {}", crate::session::download_status(saved));
+            if saved.state() != catpaw_net::DownloadState::Done {
+                return Ok(text);
+            }
+            let mut head = Vec::new();
+            if let Ok(f) = std::fs::File::open(saved.path()) {
+                use std::io::Read;
+                let _ = f.take(8 * 1024 * 1024).read_to_end(&mut head);
+            }
+            match as_text(&head) {
+                Some(content) => {
+                    text.push('\n');
+                    text.push_str(content);
+                }
+                None => text.push_str("\n(not text)"),
+            }
+            return Ok(text);
+        }
         if file.bytes.len() < file.size {
             let _ = write!(
                 text,
@@ -248,12 +280,12 @@ impl GroupState {
                 crate::files::size(file.bytes.len() as u64)
             );
         }
-        match std::str::from_utf8(&file.bytes) {
-            Ok(content) if !content.contains('\0') => {
+        match as_text(&file.bytes) {
+            Some(content) => {
                 text.push('\n');
                 text.push_str(content);
             }
-            _ => text.push_str("\n(not text)"),
+            None => text.push_str("\n(not text)"),
         }
         Ok(text)
     }
@@ -507,4 +539,15 @@ fn render_forms(forms: &[catpaw_agent::FormInfo]) -> String {
         }
     }
     out
+}
+
+/// A file's bytes as text, when they are: UTF-8 with hardly any control
+/// characters but line breaks and tabs.
+fn as_text(bytes: &[u8]) -> Option<&str> {
+    let text = std::str::from_utf8(bytes).ok()?;
+    let controls = text
+        .chars()
+        .filter(|c| c.is_control() && !matches!(c, '\n' | '\r' | '\t' | '\x0c'))
+        .count();
+    (controls * 100 <= text.len()).then_some(text)
 }

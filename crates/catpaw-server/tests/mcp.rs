@@ -483,6 +483,18 @@ fn popups_become_tabs() {
     assert!(switched.contains("# s1 tab=t2"), "{switched}");
     let title = client.ok("evaluate", json!({"script": "document.title;"}));
     assert_eq!(title, "ok evaluate\nNext");
+    // Back and forth, a tab already seen shows what changed only; or
+    // nothing at all.
+    let back = client.ok("tabs", json!({"op": "switch", "tab": "t1"}));
+    assert!(
+        back.contains(" no changes") && !back.contains("button"),
+        "{back}"
+    );
+    let quiet = client.ok(
+        "tabs",
+        json!({"op": "switch", "tab": "t2", "snapshot": "none"}),
+    );
+    assert_eq!(quiet, "ok switch t2");
 
     let closed = client.ok("tabs", json!({"op": "close"}));
     assert!(closed.contains("! current tab is now t1"), "{closed}");

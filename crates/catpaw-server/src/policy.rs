@@ -129,6 +129,15 @@ impl Policy {
         }
     }
 
+    /// Changing the user's settings (where downloads go, where the local
+    /// pages listen).
+    pub fn settings(&self) -> Verdict {
+        match self.preset {
+            Preset::Open => Verdict::Allow,
+            _ => Verdict::Confirm,
+        }
+    }
+
     /// Running the agent's script in the page.
     pub fn evaluate(&self) -> Verdict {
         match self.preset {

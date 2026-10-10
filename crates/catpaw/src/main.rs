@@ -265,6 +265,23 @@ struct McpArgs {
     /// opened page's address carries.
     #[arg(long)]
     no_open: bool,
+    /// Where the hand-off and approval pages listen, for a CatPaw on
+    /// another machine than the user's browser (a NAS, a server): an IP
+    /// address of this machine, such as its LAN address. Others on that
+    /// network can reach the pages (the approval key still guards them,
+    /// over plain HTTP); an SSH tunnel to 127.0.0.1 is the safer way. For
+    /// this session; the settings tool saves one for later ones.
+    #[arg(long, value_name = "IP")]
+    local_address: Option<String>,
+    /// Where saved downloads go (by default CatPaw in the user's Downloads
+    /// directory). For this session; the settings tool saves one for later
+    /// ones.
+    #[arg(long, value_name = "DIR")]
+    download_dir: Option<PathBuf>,
+    /// The settings file the settings tool reads and changes (by default
+    /// settings.json in CatPaw's data directory).
+    #[arg(long, value_name = "FILE")]
+    settings_file: Option<PathBuf>,
     /// Keep a journal of every call (and confirmation) in this directory.
     #[arg(long)]
     flight_log: Option<PathBuf>,
@@ -379,6 +396,25 @@ fn mcp(args: McpArgs) -> Result<()> {
         port: args.approval_port,
         opener: (!args.no_open).then(catpaw_server::Opener::browser),
         ..catpaw_server::ApprovalConfig::default()
+    };
+    config.settings_file = args
+        .settings_file
+        .clone()
+        .or_else(catpaw_server::settings::default_file);
+    config.default_download_dir = catpaw_server::settings::default_download_dir();
+    config.settings = catpaw_server::Settings {
+        local_address: args
+            .local_address
+            .as_deref()
+            .map(catpaw_server::settings::parse_local_address)
+            .transpose()
+            .map_err(anyhow::Error::msg)?,
+        download_dir: args
+            .download_dir
+            .as_ref()
+            .map(std::path::absolute)
+            .transpose()
+            .context("--download-dir")?,
     };
     // A profile keeps a journal of its own; screenshots go with whichever
     // journal there is.

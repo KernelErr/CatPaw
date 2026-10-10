@@ -137,9 +137,18 @@ impl Session {
                     );
                 }
                 self.router.current = Some(tab);
+                let mode = p.snapshot.unwrap_or(params::SnapshotMode::Diff);
+                if mode == params::SnapshotMode::None {
+                    return Ok(ToolOutput::ok(format!("ok switch t{tab}")));
+                }
+                // Tabs switched back and forth show only what changed.
                 let snapshot = self.on_tab(tab, move |g, tab, view| {
-                    g.snapshot_text(tab, &SnapRequest::default(), view)
-                        .map(ToolOutput::ok)
+                    let request = SnapRequest::default();
+                    match mode {
+                        params::SnapshotMode::Full => g.snapshot_text(tab, &request, view),
+                        _ => g.diff_or_full(tab, &request, view),
+                    }
+                    .map(ToolOutput::ok)
                 })?;
                 Ok(ToolOutput::ok(format!(
                     "ok switch t{tab}\n{}",

@@ -51,6 +51,8 @@ pub enum NetError {
     TooManyRedirects(usize),
     #[error("timed out after {0:?}")]
     Timeout(Duration),
+    #[error("could not save the download: {0}")]
+    Download(String),
     #[error("content decoding failed: {0}")]
     Decode(String),
     #[error("TLS configuration failed: {0}")]
@@ -92,6 +94,8 @@ pub struct NetConfig {
     pub max_response_bytes: usize,
     /// The most bytes a response body may decode to.
     pub max_decoded_bytes: usize,
+    /// The most bytes a download saved to disk may have.
+    pub max_download_bytes: u64,
     /// Whether requests may go to loopback, private and link-local
     /// addresses (off by default: a page must not reach the machine or its
     /// network).
@@ -114,6 +118,7 @@ impl Default for NetConfig {
             timeout: Duration::from_secs(30),
             bot_auth: None,
             max_response_bytes: 32 * 1024 * 1024,
+            max_download_bytes: 4 * 1024 * 1024 * 1024,
             max_decoded_bytes: 64 * 1024 * 1024,
             allow_private_network: false,
             proxy: crate::proxy::Proxies::default(),
@@ -142,6 +147,10 @@ pub struct RequestOptions {
     /// network ([`crate::Misses::Live`]): the caller sends the rest where
     /// it can wait for the network.
     pub replay_only: bool,
+    /// A navigation: a file it is answered with is saved to disk as it
+    /// arrives (when the client has a download directory and does not
+    /// record), the response then carrying [`Response::saved`].
+    pub download: Option<crate::download::DownloadRequest>,
 }
 
 impl Default for RequestOptions {
@@ -153,6 +162,7 @@ impl Default for RequestOptions {
             credentials: true,
             place: None,
             replay_only: false,
+            download: None,
         }
     }
 }
@@ -167,6 +177,9 @@ pub struct Response {
     pub body: Bytes,
     /// URLs that redirected, in order.
     pub redirect_chain: Vec<Url>,
+    /// A file the response is being saved to, the body then empty (see
+    /// [`RequestOptions::download`]).
+    pub saved: Option<std::sync::Arc<crate::download::DownloadProgress>>,
 }
 
 impl Response {
@@ -223,6 +236,7 @@ struct Hop {
     status: StatusCode,
     headers: HeaderMap,
     body: Bytes,
+    saved: Option<std::sync::Arc<crate::download::DownloadProgress>>,
 }
 
 /// An HTTP client with its own cookie jar and identity.
@@ -242,6 +256,9 @@ pub struct NetClient {
     signer: Option<BotAuthSigner>,
     recorder: Option<crate::har::Recorder>,
     replayer: Option<crate::har::Replayer>,
+    /// Where downloads are saved; none keeps them in memory, as other
+    /// responses are.
+    download_dir: std::sync::Mutex<Option<std::path::PathBuf>>,
 }
 
 /// What the client has learnt about the HTTP versions of hosts.
@@ -653,7 +670,21 @@ impl NetClient {
             signer,
             recorder,
             replayer,
+            download_dir: std::sync::Mutex::new(None),
         })
+    }
+
+    /// Where navigations' downloads are saved from now on; none keeps them
+    /// in memory, within the response limit.
+    pub fn set_download_dir(&self, dir: Option<std::path::PathBuf>) {
+        *self.download_dir.lock().unwrap_or_else(|e| e.into_inner()) = dir;
+    }
+
+    pub fn download_dir(&self) -> Option<std::path::PathBuf> {
+        self.download_dir
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
     }
 
     pub(crate) fn connector(&self) -> Connector {
@@ -755,6 +786,7 @@ impl NetClient {
                 headers: hop.headers,
                 body: hop.body,
                 redirect_chain: chain,
+                saved: hop.saved,
             });
         }
         Err(NetError::TooManyRedirects(self.config.max_redirects))
@@ -836,6 +868,7 @@ impl NetClient {
                         status: answer.status,
                         headers: answer.headers,
                         body: answer.body,
+                        saved: None,
                     });
                 }
                 Some(Err(reason)) => return Err(NetError::Replay(reason)),
@@ -923,6 +956,46 @@ impl NetClient {
             self.cookies.store_response(url, &parts.headers);
         }
 
+        // A navigation answered with a file: saved as it arrives, not
+        // read. (Not while recording, which keeps every body; nor when the
+        // bytes on the wire are not the file's.)
+        if let Some(download) = &options.download
+            && self.recorder.is_none()
+            && let Some(dir) = self.download_dir()
+            && crate::download::is_download(parts.status, &parts.headers, download.asked.as_deref())
+            && parts
+                .headers
+                .get(CONTENT_ENCODING)
+                .is_none_or(|v| v.as_bytes().eq_ignore_ascii_case(b"identity"))
+        {
+            let name = crate::download::download_name(
+                url,
+                &parts.headers,
+                download.asked.as_deref().unwrap_or(""),
+            );
+            let total = parts
+                .headers
+                .get(CONTENT_LENGTH)
+                .and_then(|v| v.to_str().ok())
+                .and_then(|v| v.trim().parse::<u64>().ok());
+            let saved = crate::download::save(
+                &dir,
+                &name,
+                total,
+                incoming,
+                self.config.max_download_bytes,
+                timeout,
+            )
+            .await
+            .map_err(|e| NetError::Download(format!("{}: {e}", dir.display())))?;
+            return Ok(Hop {
+                status: parts.status,
+                headers: parts.headers,
+                body: Bytes::new(),
+                saved: Some(saved),
+            });
+        }
+
         // A body that would exceed the limit is dropped as soon as that is
         // known, by the declared length or as it arrives.
         let limit = self.config.max_response_bytes;
@@ -974,6 +1047,7 @@ impl NetClient {
             status: parts.status,
             headers,
             body: decoded,
+            saved: None,
         })
     }
 }
@@ -1018,6 +1092,7 @@ mod tests {
             headers,
             body: Bytes::new(),
             redirect_chain: vec![],
+            saved: None,
         };
         assert_eq!(r.mime_essence().as_deref(), Some("text/html"));
         assert_eq!(r.charset().as_deref(), Some("iso-8859-1"));

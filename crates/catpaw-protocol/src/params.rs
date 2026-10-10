@@ -321,6 +321,8 @@ pub enum WaitFor {
     Time,
     /// The user gives back a tab handed over with `handoff`.
     Handoff,
+    /// The latest download being saved is complete (or failed).
+    Download,
 }
 
 impl WaitFor {
@@ -333,6 +335,7 @@ impl WaitFor {
             WaitFor::Visible => "visible",
             WaitFor::Time => "time",
             WaitFor::Handoff => "handoff",
+            WaitFor::Download => "download",
         }
     }
 }
@@ -387,6 +390,9 @@ pub struct Tabs {
     pub op: TabsOp,
     pub tab: Option<String>,
     pub url: Option<String>,
+    /// What a switch shows of the tab: by default what changed since the
+    /// agent last saw it (all of it, the first time).
+    pub snapshot: Option<SnapshotMode>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -403,6 +409,29 @@ pub enum TabsOp {
 pub struct Handoff {
     /// What the user is asked to do.
     pub reason: Option<String>,
+    /// Take back the tab handed over, before the user gives it back.
+    #[serde(default)]
+    pub end: bool,
+}
+
+/// `settings`: show the user's settings, or ask to change them.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct Settings {
+    pub set: Option<SettingsChange>,
+    /// The confirmation (`cN`) an approved change resumes.
+    pub confirmation: Option<String>,
+}
+
+/// The settings a `settings` call asks to change.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct SettingsChange {
+    /// Where saved downloads go: an absolute directory.
+    pub download_dir: Option<String>,
+    /// The address the local pages listen on: an IP address of this
+    /// machine.
+    pub local_address: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -439,6 +468,7 @@ pub enum Call {
     Logs(Logs),
     Handoff(Handoff),
     Session(Session),
+    Settings(Settings),
 }
 
 impl Call {
@@ -461,6 +491,7 @@ impl Call {
             | Call::Logs(_)
             | Call::Handoff(_)
             | Call::Session(_) => None,
+            Call::Settings(p) => p.confirmation.as_deref(),
         }
     }
 
@@ -480,7 +511,7 @@ impl Call {
             | Call::Evaluate(_)
             | Call::Logs(_) => true,
             Call::Wait(p) => p.until != WaitFor::Handoff,
-            Call::Tabs(_) | Call::Handoff(_) | Call::Session(_) => false,
+            Call::Tabs(_) | Call::Handoff(_) | Call::Session(_) | Call::Settings(_) => false,
         }
     }
 
@@ -499,11 +530,9 @@ impl Call {
             | Call::Wait(_) => true,
             Call::Tabs(p) => p.op != TabsOp::List,
             Call::Session(p) => p.op != SessionOp::List,
-            Call::Snapshot(_)
-            | Call::Read(_)
-            | Call::Screenshot(_)
-            | Call::Logs(_)
-            | Call::Handoff(_) => false,
+            Call::Settings(p) => p.set.is_some(),
+            Call::Snapshot(_) | Call::Read(_) | Call::Screenshot(_) | Call::Logs(_) => false,
+            Call::Handoff(p) => p.end,
         }
     }
 }
@@ -536,6 +565,7 @@ pub fn parse(name: &str, value: serde_json::Value) -> Result<Call, String> {
         "logs" => Call::Logs(args(value)?),
         "handoff" => Call::Handoff(args(value)?),
         "session" => Call::Session(args(value)?),
+        "settings" => Call::Settings(args(value)?),
         other => return Err(format!("no tool is called {other:?}")),
     })
 }

@@ -585,7 +585,7 @@ impl GroupState {
     }
 
     /// [`GroupState::diff_view`] as text.
-    fn diff_or_full(
+    pub(crate) fn diff_or_full(
         &mut self,
         tab: u32,
         request: &SnapRequest,

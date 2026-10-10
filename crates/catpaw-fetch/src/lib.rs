@@ -43,7 +43,7 @@ pub async fn fetch_document_with(
     body: Option<(String, Vec<u8>)>,
     referrer: Option<&Url>,
 ) -> Result<FetchedDocument, NetError> {
-    fetch_document_opts(client, method, url, body, referrer, true).await
+    fetch_document_opts(client, method, url, body, referrer, true, None).await
 }
 
 /// One hop of a document request: like [`fetch_document_with`], but a
@@ -56,7 +56,21 @@ pub async fn fetch_document_hop(
     body: Option<(String, Vec<u8>)>,
     referrer: Option<&Url>,
 ) -> Result<FetchedDocument, NetError> {
-    fetch_document_opts(client, method, url, body, referrer, false).await
+    fetch_document_opts(client, method, url, body, referrer, false, None).await
+}
+
+/// [`fetch_document_hop`] for a navigation: a file it is answered with is
+/// saved in the client's download directory as it arrives (see
+/// [`catpaw_net::RequestOptions::download`]).
+pub async fn fetch_navigation_hop(
+    client: &NetClient,
+    method: &str,
+    url: &Url,
+    body: Option<(String, Vec<u8>)>,
+    referrer: Option<&Url>,
+    download: catpaw_net::DownloadRequest,
+) -> Result<FetchedDocument, NetError> {
+    fetch_document_opts(client, method, url, body, referrer, false, Some(download)).await
 }
 
 async fn fetch_document_opts(
@@ -66,6 +80,7 @@ async fn fetch_document_opts(
     body: Option<(String, Vec<u8>)>,
     referrer: Option<&Url>,
     follow_redirects: bool,
+    download: Option<catpaw_net::DownloadRequest>,
 ) -> Result<FetchedDocument, NetError> {
     use catpaw_net::{HeaderValue, Method};
     let method = Method::from_bytes(method.as_bytes()).unwrap_or(Method::GET);
@@ -82,6 +97,7 @@ async fn fetch_document_opts(
         options.headers.insert("referer", value);
     }
     options.follow_redirects = follow_redirects;
+    options.download = download;
     let response = client.request(method, url, options).await?;
     let charset = response.charset();
     let decoded = decode_document(&response.body, charset.as_deref());

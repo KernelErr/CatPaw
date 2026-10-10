@@ -212,7 +212,8 @@ pub static TOOLS: &[ToolDef] = &[
         schema: r#"{"type":"object","properties":{
 "op":{"type":"string","enum":["list","switch","open","close"]},
 "tab":{"type":"string","description":"Tab id; close defaults to the current tab"},
-"url":{"type":"string","description":"For open"}
+"url":{"type":"string","description":"For open"},
+"snapshot":{"type":"string","enum":["diff","full","none"],"description":"For switch: diff (default) shows what changed since you last saw the tab"}
 },"required":["op"],"additionalProperties":false}"#,
         read_only: false,
     },
@@ -221,12 +222,12 @@ pub static TOOLS: &[ToolDef] = &[
         title: "Wait",
         description: "Let the page run until it settles, a text appears or goes, an element is visible, the URL contains a string, or ms milliseconds pass; or until the user gives back a handed-over tab. Time the page spends only waiting on timers passes at once. Returns what changed.\nExample: {\"for\":\"text\",\"text\":\"Order placed\"}",
         schema: r#"{"type":"object","properties":{
-"for":{"type":"string","enum":["settled","text","gone","visible","url","time","handoff"]},
+"for":{"type":"string","enum":["settled","text","gone","visible","url","time","handoff","download"]},
 "text":{"type":"string","description":"For text and gone"},
 "target":{"type":"string","description":"For visible and gone: a target, as for click"},
 "url":{"type":"string","description":"For url: part of the URL"},
 "ms":{"type":"integer","minimum":1,"description":"For time"},
-"timeoutMs":{"type":"integer","minimum":1,"description":"Default 10000, at most 120000; for handoff 50000 (wait again if need be), at most 1800000"},
+"timeoutMs":{"type":"integer","minimum":1,"description":"Default 10000, at most 120000; for handoff and download 50000 (wait again if need be), at most 1800000"},
 "snapshot":{"type":"string","enum":["diff","full","none"]}
 },"required":["for"],"additionalProperties":false}"#,
         read_only: false,
@@ -236,7 +237,8 @@ pub static TOOLS: &[ToolDef] = &[
         title: "Hand over to the user",
         description: "Hand the current tab to the user, on a page in their own browser: to log in, pass a check meant for a person, or do anything you should not do or see. Then wait({\"for\":\"handoff\"}) until they give it back; you see the page, with what they typed masked.\nExample: {\"reason\":\"Log in to your account\"}",
         schema: r#"{"type":"object","properties":{
-"reason":{"type":"string","description":"What to ask the user to do"}
+"reason":{"type":"string","description":"What to ask the user to do"},
+"end":{"type":"boolean","description":"Take the tab back unfinished"}
 },"additionalProperties":false}"#,
         read_only: false,
     },
@@ -252,5 +254,15 @@ pub static TOOLS: &[ToolDef] = &[
 "limit":{"type":"integer","minimum":1,"maximum":200}
 },"required":["kind"],"additionalProperties":false}"#,
         read_only: true,
+    },
+    ToolDef {
+        name: "settings",
+        title: "Settings",
+        description: "Show CatPaw's settings, or change them: the user approves each change, which lasts beyond this session. downloadDir: where saved downloads go. localAddress: the IP address the hand-off and approval pages listen on, when the user's browser is on another machine (they are on 127.0.0.1 otherwise).\nExample: {\"set\":{\"localAddress\":\"192.168.1.20\"}}",
+        schema: r#"{"type":"object","properties":{
+"set":{"type":"object","properties":{"downloadDir":{"type":"string"},"localAddress":{"type":"string"}},"additionalProperties":false},
+"confirmation":{"type":"string"}
+},"additionalProperties":false}"#,
+        read_only: false,
     },
 ];

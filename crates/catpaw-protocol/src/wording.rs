@@ -65,8 +65,9 @@ pub mod advice {
     pub const FULL_NAME: &str = "advice: use the ref, or the name in full as the snapshot shows it";
     pub const OTHER_ROLE: &str = "advice: use the ref, or the role the snapshot shows";
     pub const NO_TAB: &str = "advice: navigate to a URL first";
-    pub const HANDED_OVER: &str = "advice: the user finishes on that page or gives the tab back there (unfinished, if need be); wait({\"for\":\"handoff\"}) until then, or use another tab";
-    pub const HANDOFF: &str = "advice: the user still has the tab; wait({\"for\":\"handoff\"}) again once they say they are done";
+    pub const HANDED_OVER: &str = "advice: the user finishes on that page or gives the tab back there (unfinished, if need be); wait({\"for\":\"handoff\"}) until then, use another tab, or take it back with handoff({\"end\":true}) if the user cannot reach the page";
+    pub const HANDOFF: &str = "advice: the user still has the tab; wait({\"for\":\"handoff\"}) again once they say they are done, or take it back with handoff({\"end\":true}) if they cannot finish";
+    pub const DOWNLOAD_WAIT: &str = "advice: the file goes on saving; wait({\"for\":\"download\"}) again, or read view download for how far it is";
     pub const HANDOFF_LAPSED: &str = "advice: the tab is back as the user left it; take a snapshot, or call handoff again if they still need it";
     pub const NOT_EDITABLE: &str =
         "advice: type into a text field or editable element; click the one that takes the text";

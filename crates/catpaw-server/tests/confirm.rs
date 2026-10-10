@@ -1656,3 +1656,101 @@ fn listener() -> TcpListener {
         }
     }
 }
+
+/// The user cannot always finish (they cannot reach the page, or will not
+/// go on): the agent takes the tab back, what they typed still masked,
+/// and their page says the hand-off is over. A tab with the user can be
+/// closed too.
+#[test]
+fn the_agent_can_take_a_hand_off_back_or_close_the_tab() {
+    let mut client = Client::new("handoff-take-back", |_| {});
+    let url = format!("{}/login", client.base);
+    client.call("navigate", json!({ "url": url }));
+    let started = client.call("handoff", json!({"reason": "Sign in"}));
+    let link = started
+        .split_whitespace()
+        .find(|w| w.contains("/handoff/h1?t="))
+        .unwrap()
+        .to_string();
+    let key = client.key();
+    handoff_request(
+        &link,
+        Some(&key),
+        "POST",
+        "/input",
+        &json!({"kind": "text", "text": "secret-ish"}).to_string(),
+    );
+    let busy = client.call("snapshot", json!({}));
+    assert!(busy.contains("handoff({\"end\":true})"), "{busy}");
+
+    let back = client.call("handoff", json!({"end": true}));
+    assert!(back.starts_with("ok handoff h1: taken back"), "{back}");
+    assert!(!back.contains("secret-ish"), "{back}");
+    let (status, _) = handoff_request(&link, Some(&key), "GET", "/screen", "");
+    assert_eq!(status, "HTTP/1.1 404 Not Found");
+    let again = client.call("handoff", json!({"end": true}));
+    assert!(again.starts_with("error"), "{again}");
+
+    // Handed over again, then closed.
+    client.call("handoff", json!({}));
+    let closed = client.call("tabs", json!({"op": "close", "tab": "t1"}));
+    assert!(closed.starts_with("ok"), "{closed}");
+    let none = client.call("wait", json!({"for": "handoff", "timeoutMs": 10}));
+    assert!(none.starts_with("error"), "{none}");
+}
+
+/// Settings change with the user's yes only, are saved in the settings
+/// file, and a new local address moves the hand-off page there.
+#[test]
+fn settings_change_with_the_users_yes_and_move_the_local_pages() {
+    let files = temp_dir("settings-files");
+    let settings_file = files.join("settings.json");
+    let downloads = files.join("downloads");
+    let file = settings_file.clone();
+    let mut client = Client::new("settings", move |config| {
+        config.settings_file = Some(file);
+    });
+    client.can_ask();
+    let shown = client.call("settings", json!({}));
+    assert!(
+        shown.contains("localAddress: 127.0.0.1 (default)"),
+        "{shown}"
+    );
+    assert!(shown.contains("settings.json"), "{shown}");
+
+    // A value that cannot be used is refused before anyone is asked.
+    let bad = client.call("settings", json!({"set": {"localAddress": "0.0.0.0"}}));
+    assert!(bad.starts_with("error"), "{bad}");
+    let relative = client.call("settings", json!({"set": {"downloadDir": "downloads"}}));
+    assert!(relative.starts_with("error"), "{relative}");
+
+    // Declined, nothing changes.
+    let set = json!({"set": {"downloadDir": downloads.display().to_string()}});
+    let mut no = Answer(false, Vec::new());
+    let declined = client.call_asking("settings", set.clone(), &mut no);
+    assert!(declined.contains("declined"), "{declined}");
+    assert!(no.1[0].contains("save downloads in"), "{:?}", no.1);
+    assert!(!settings_file.exists());
+
+    // Approved, saved; the hand-off page moves to the new address.
+    let mut yes = Answer(true, Vec::new());
+    let set =
+        json!({"set": {"localAddress": "::1", "downloadDir": downloads.display().to_string()}});
+    let changed = client.call_asking("settings", set, &mut yes);
+    assert!(changed.starts_with("ok settings (confirmed c"), "{changed}");
+    assert!(
+        changed.contains("localAddress: ::1 (settings file)"),
+        "{changed}"
+    );
+    assert!(
+        yes.1[0].contains("on ::1, this machine only"),
+        "{:?}",
+        yes.1
+    );
+    let saved = std::fs::read_to_string(&settings_file).unwrap();
+    assert!(saved.contains("\"localAddress\": \"::1\""), "{saved}");
+    let url = format!("{}/login", client.base);
+    client.call("navigate", json!({ "url": url }));
+    let started = client.call("handoff", json!({}));
+    assert!(started.contains("http://[::1]:"), "{started}");
+}

@@ -483,6 +483,10 @@ async function refresh() {{
   try {{
     const r = await fetch(base + '/screen' + q, {{cache: 'no-store', headers: headers()}});
     if (r.status === 403) {{ forget(); askKey(); return; }}
+    if (r.status === 404 || r.status === 410) {{
+      document.body.innerHTML = '<p class=note>This hand-off is over: the agent took the tab back, or the tab closed. You can close this page.</p>';
+      return;
+    }}
     if (r.ok) {{
       const next = URL.createObjectURL(await r.blob());
       img.onload = () => {{
