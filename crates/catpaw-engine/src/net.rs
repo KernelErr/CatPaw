@@ -420,6 +420,22 @@ impl EngineNet {
         referrer: Option<&Url>,
         check: &mut HopCheck<'_>,
     ) -> Result<DocumentFetch, NetError> {
+        self.fetch_document_within(method, url, body, referrer, check, None)
+    }
+
+    /// [`Self::fetch_document_checked`], each hop given at most `limit`
+    /// (besides the client's own timeout). A frame's document is fetched
+    /// on the page's thread, which waits meanwhile: a frame that does not
+    /// answer must not hold the page for long.
+    pub fn fetch_document_within(
+        &self,
+        method: &str,
+        url: &Url,
+        body: Option<(String, Vec<u8>)>,
+        referrer: Option<&Url>,
+        check: &mut HopCheck<'_>,
+        limit: Option<Duration>,
+    ) -> Result<DocumentFetch, NetError> {
         let mut method = method.to_string();
         let mut url = url.clone();
         let mut body = body;
@@ -428,13 +444,19 @@ impl EngineNet {
             let hop_referrer = referrer.and_then(|from| navigation_referrer(from, &url));
             // Blocked on here, the hop takes its place in a recording on
             // the page's thread, in the order of the page's requests.
-            let result = self.block_on(fetch_document_hop(
+            let hop = fetch_document_hop(
                 &self.client,
                 &method,
                 &url,
                 body.clone(),
                 hop_referrer.as_ref(),
-            ));
+            );
+            let result = match limit {
+                Some(limit) => self
+                    .block_on(async move { tokio::time::timeout(limit, hop).await })
+                    .unwrap_or(Err(NetError::Timeout(limit))),
+                None => self.block_on(hop),
+            };
             self.record_document(
                 &method,
                 &url,

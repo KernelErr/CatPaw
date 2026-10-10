@@ -191,3 +191,24 @@ fn frames_in_shadow_trees_open_too() {
         assert_eq!(page.eval("got").unwrap(), "from shadow");
     });
 }
+
+#[test]
+fn about_blank_by_name_needs_no_network() {
+    let html = r#"<!doctype html>
+<iframe id="f" src="about:blank" onload="loaded++"></iframe>
+<script>var loaded = 0;</script>"#;
+    run(html, |page| {
+        assert!(page.is_settled(), "{:?}", page.report());
+        assert_eq!(page.eval("loaded").unwrap(), "1");
+        let frames = page.frames();
+        assert_eq!(frames.len(), 2);
+        assert_eq!(frames[1].url.as_str(), "about:blank");
+        let failed = page
+            .state()
+            .console_messages()
+            .into_iter()
+            .filter(|m| m.text.contains("Failed to load frame"))
+            .count();
+        assert_eq!(failed, 0);
+    });
+}

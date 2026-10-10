@@ -42,6 +42,12 @@ const FRAME_SLICE_MS: f64 = 1000.0;
 /// in native code; the memory is only committed as it is used.
 pub const PAGE_STACK_SIZE: usize = 256 * 1024 * 1024;
 
+/// How long each hop of a frame's document may take. The page's thread
+/// waits for it (see `EngineNet::fetch_document_within`), so a frame that
+/// does not answer (an ad or tracker, often) must not hold the page for
+/// the whole network timeout.
+const FRAME_DOCUMENT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(8);
+
 #[derive(Clone, Debug)]
 pub struct PageOptions {
     pub net: NetConfig,
@@ -1324,6 +1330,9 @@ impl Page {
         }
         let referrer = parent_page.url.borrow().clone();
         let parent_origin = self.origin_of(parent);
+        // `about:blank` (asked for by name) is the empty document a frame
+        // starts with, from no network.
+        let url = url.filter(|url| url.scheme() != "about");
         let (info, html, origin) = match (srcdoc, url) {
             (Some(html), _) => {
                 let url = Url::parse("about:srcdoc").expect("about:srcdoc parses");
@@ -1339,12 +1348,13 @@ impl Page {
                 }
                 let net = self.net.clone();
                 let fetched = net
-                    .fetch_document_checked(
+                    .fetch_document_within(
                         "GET",
                         &url,
                         None,
                         Some(&referrer),
                         &mut |method, hop, body| self.judge_hop(id, true, method, hop, body),
+                        element.map(|_| FRAME_DOCUMENT_TIMEOUT),
                     )
                     .and_then(|outcome| match outcome {
                         crate::net::DocumentFetch::Loaded(fetched) => Ok(fetched),
@@ -1750,24 +1760,35 @@ impl Page {
         }
         let method = request.method.clone();
         let net = self.net.clone();
-        let fetched = net.fetch_document_checked(
-            &request.method,
-            &request.url,
-            request.body.clone(),
-            Some(&referrer),
-            &mut |method, url, body| self.judge_hop(id, approved, method, url, body),
-        );
-        let fetched = match fetched {
-            Ok(crate::net::DocumentFetch::Loaded(fetched)) => {
+        // `about:blank` is an empty document, from no network.
+        let fetched = (request.url.scheme() != "about").then(|| {
+            net.fetch_document_within(
+                &request.method,
+                &request.url,
+                request.body.clone(),
+                Some(&referrer),
+                &mut |method, url, body| self.judge_hop(id, approved, method, url, body),
+                element.map(|_| FRAME_DOCUMENT_TIMEOUT),
+            )
+        });
+        let (info, html) = match fetched {
+            None => {
                 self.unhold(id);
-                fetched
+                (DocumentInfo::local(&request.url, ""), String::new())
             }
-            Ok(crate::net::DocumentFetch::Stopped {
+            Some(Ok(crate::net::DocumentFetch::Loaded(fetched))) => {
+                self.unhold(id);
+                (
+                    DocumentInfo::from_fetch(&fetched),
+                    fetched.html().to_string(),
+                )
+            }
+            Some(Ok(crate::net::DocumentFetch::Stopped {
                 method,
                 url,
                 body,
                 gate,
-            }) => {
+            })) => {
                 if gate == Gate::Hold {
                     let hop = NavigationRequest {
                         url,
@@ -1781,7 +1802,7 @@ impl Page {
                 }
                 return;
             }
-            Err(e) => {
+            Some(Err(e)) => {
                 parent_page.log(
                     ConsoleLevel::Error,
                     format!("Failed to load frame {}: {e}", request.url),
@@ -1794,7 +1815,6 @@ impl Page {
                 return;
             }
         };
-        let info = DocumentInfo::from_fetch(&fetched);
         let inner: Vec<FrameId> = self
             .frames
             .iter()
@@ -1840,7 +1860,7 @@ impl Page {
         match load(
             &net,
             &info,
-            fetched.html(),
+            &html,
             Some(&referrer),
             &self.options,
             &self.storage,

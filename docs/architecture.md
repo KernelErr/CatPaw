@@ -247,6 +247,9 @@ What does not work as a browser's would yet, besides the web features
   which another account could serve while CatPaw is not running. On a
   shared computer, use `--no-open` and do not let the browser remember
   the key.
+- **A frame's document is fetched on the page's thread.** The page waits
+  while a frame's document (each redirect hop of it) loads, up to 8
+  seconds a hop; frames slow to answer (ads, trackers) slow the page.
 - **No memory limit per page.** A page that allocates without end can
   exhaust memory: the script budget stops long runs, not large ones.
 
