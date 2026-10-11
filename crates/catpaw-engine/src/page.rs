@@ -368,6 +368,9 @@ pub struct Page {
     boa: BoaPage,
     /// The frames below the top one, in opening order.
     frames: Vec<Frame>,
+    /// Frames opened since the last pump, their first documents still to
+    /// fetch (see `load_pending_frames`).
+    pending_frames: Vec<PendingFrame>,
     /// The tree the frames' pages share.
     tree: Rc<RefCell<FrameTree>>,
     /// The dedicated workers of the page and its frames.
@@ -415,6 +418,18 @@ pub enum ActionError {
 }
 
 /// Where a document goes in the frame tree.
+/// A frame (or popup) opened, whose first document is fetched together
+/// with those of the others opened in the same pump (see
+/// `Page::load_pending_frames`).
+struct PendingFrame {
+    parent: FrameId,
+    id: FrameId,
+    element: Option<NodeId>,
+    depth: u32,
+    url: Url,
+    referrer: Url,
+}
+
 struct Placement {
     frame: FrameId,
     tree: Rc<RefCell<FrameTree>>,
@@ -506,18 +521,24 @@ impl Page {
     /// see [`with_page`].
     pub fn open(url: &Url, options: &PageOptions) -> Result<Self, EngineError> {
         let net = Rc::new(EngineNet::new(options.net.clone())?);
-        let fetched = net.fetch_document("GET", url, None, None)?;
+        let fetched = {
+            let _span = catpaw_web::profile::span("wait", || "document".to_string());
+            net.fetch_document("GET", url, None, None)?
+        };
         let info = DocumentInfo::from_fetch(&fetched);
         let tree = Rc::new(RefCell::new(FrameTree::default()));
-        let boa = load(
-            &net,
-            &info,
-            fetched.html(),
-            None,
-            options,
-            &options.storage,
-            top_placement(&tree, (0, 0)),
-        )?;
+        let boa = {
+            let _span = catpaw_web::profile::span("setup", || "page".to_string());
+            load(
+                &net,
+                &info,
+                fetched.html(),
+                None,
+                options,
+                &options.storage,
+                top_placement(&tree, (0, 0)),
+            )?
+        };
         let mut page = Self::with_top(boa, tree, net, info, options);
         page.run_frames();
         page.follow_navigations()?;
@@ -534,6 +555,7 @@ impl Page {
         Self {
             boa,
             frames: Vec::new(),
+            pending_frames: Vec::new(),
             tree,
             workers: Vec::new(),
             next_worker: 1,
@@ -1268,7 +1290,7 @@ impl Page {
         } else {
             0
         };
-        if depth > MAX_FRAME_DEPTH || self.frames.len() >= MAX_FRAMES {
+        if depth > MAX_FRAME_DEPTH || self.frames.len() + self.pending_frames.len() >= MAX_FRAMES {
             parent_page.log(
                 ConsoleLevel::Warn,
                 format!(
@@ -1292,49 +1314,124 @@ impl Page {
             (None, Some(url)) => {
                 // A popup's or a frame's first document (and each redirect
                 // hop of it) can be refused (a domain the tab may not
-                // show), not held.
+                // show), not held. It is fetched after this pump, with
+                // the documents of the other frames opened in it.
                 if let Gate::Deny(_) = self.judge_hop(id, true, "GET", &url, None) {
                     fail(&parent_page);
                     return;
                 }
-                let net = self.net.clone();
-                let fetched = net
-                    .fetch_document_within(
-                        "GET",
-                        &url,
-                        None,
-                        Some(&referrer),
-                        &mut |method, hop, body| self.judge_hop(id, true, method, hop, body),
-                        &crate::net::FetchOptions {
-                            hop_timeout: element.map(|_| FRAME_DOCUMENT_TIMEOUT),
-                            download: None,
-                        },
-                    )
-                    .and_then(|outcome| match outcome {
-                        crate::net::DocumentFetch::Loaded(fetched) => Ok(fetched),
-                        crate::net::DocumentFetch::Stopped { url, .. } => Err(
-                            catpaw_net::NetError::InvalidUrl(format!("{url} was refused")),
-                        ),
-                    });
-                match fetched {
-                    Ok(fetched) => {
-                        let info = DocumentInfo::from_fetch(&fetched);
-                        let origin = frames::origin_of(&info.url);
-                        (info, fetched.html().to_string(), origin)
-                    }
-                    Err(e) => {
-                        parent_page.log(
-                            ConsoleLevel::Error,
-                            format!("Failed to load frame {url}: {e}"),
-                        );
-                        fail(&parent_page);
-                        return;
-                    }
-                }
+                self.pending_frames.push(PendingFrame {
+                    parent,
+                    id,
+                    element,
+                    depth,
+                    url,
+                    referrer,
+                });
+                return;
             }
             (None, None) => {
                 let url = Url::parse("about:blank").expect("about:blank parses");
                 (DocumentInfo::local(&url, ""), String::new(), parent_origin)
+            }
+        };
+        self.finish_open_frame(
+            PendingFrame {
+                parent,
+                id,
+                element,
+                depth,
+                url: info.url.clone(),
+                referrer,
+            },
+            info,
+            html,
+            origin,
+        );
+    }
+
+    /// Fetches the first documents of the frames opened since the last
+    /// pump, side by side, and opens the frames on them. Returns whether
+    /// there were any.
+    fn load_pending_frames(&mut self) -> bool {
+        let pending = std::mem::take(&mut self.pending_frames);
+        if pending.is_empty() {
+            return false;
+        }
+        let requests = pending
+            .iter()
+            .map(|frame| crate::net::DocumentRequest {
+                url: frame.url.clone(),
+                referrer: Some(frame.referrer.clone()),
+                // A frame's document holds the page up; a popup's may take
+                // its time.
+                hop_timeout: frame.element.map(|_| FRAME_DOCUMENT_TIMEOUT),
+            })
+            .collect();
+        let net = self.net.clone();
+        let outcomes = {
+            let _span = catpaw_web::profile::span("wait", || "frame documents".to_string());
+            net.fetch_documents_together(requests, &mut |i, method, hop, body| {
+                self.judge_hop(pending[i].id, true, method, hop, body)
+            })
+        };
+        for (frame, outcome) in pending.into_iter().zip(outcomes) {
+            let fetched = outcome.and_then(|outcome| match outcome {
+                crate::net::DocumentFetch::Loaded(fetched) => Ok(fetched),
+                crate::net::DocumentFetch::Stopped { url, .. } => Err(
+                    catpaw_net::NetError::InvalidUrl(format!("{url} was refused")),
+                ),
+            });
+            match fetched {
+                Ok(fetched) => {
+                    let info = DocumentInfo::from_fetch(&fetched);
+                    let origin = frames::origin_of(&info.url);
+                    let html = fetched.html().to_string();
+                    self.finish_open_frame(frame, info, html, origin);
+                }
+                Err(e) => {
+                    let Some(parent_page) = self.page_of(frame.parent).cloned() else {
+                        continue;
+                    };
+                    parent_page.log(
+                        ConsoleLevel::Error,
+                        format!("Failed to load frame {}: {e}", frame.url),
+                    );
+                    if let Some(element) = frame.element {
+                        frames::frame_failed(&parent_page, element);
+                    } else {
+                        parent_page.frames.tree().borrow_mut().remove(frame.id);
+                    }
+                }
+            }
+        }
+        true
+    }
+
+    /// Opens a frame on the document fetched (or made) for it.
+    fn finish_open_frame(
+        &mut self,
+        frame: PendingFrame,
+        info: DocumentInfo,
+        html: String,
+        origin: String,
+    ) {
+        let PendingFrame {
+            parent,
+            id,
+            element,
+            depth,
+            referrer,
+            ..
+        } = frame;
+        let Some(parent_page) = self.page_of(parent).cloned() else {
+            return;
+        };
+        let fail = |page: &PageState| {
+            if let Some(element) = element {
+                frames::frame_failed(page, element);
+            } else {
+                page.frames.tree().borrow_mut().remove(id);
             }
         };
         let placement = Placement {
@@ -1528,7 +1625,10 @@ impl Page {
             Some(Ok(response)) => Ok((response.url, response.body)),
             Some(Err(e)) => Err(e),
             None => {
-                let result = self.net.block_on(self.net.client().get(&url));
+                let result = {
+                    let _span = catpaw_web::profile::span("wait", || "worker script".to_string());
+                    self.net.block_on(self.net.client().get(&url))
+                };
                 self.net.record_document(
                     "GET",
                     &url,
@@ -1716,6 +1816,7 @@ impl Page {
         let net = self.net.clone();
         // `about:blank` is an empty document, from no network.
         let fetched = (request.url.scheme() != "about").then(|| {
+            let _span = catpaw_web::profile::span("wait", || "frame document".to_string());
             net.fetch_document_within(
                 &request.method,
                 &request.url,
@@ -1898,6 +1999,9 @@ impl Page {
                     self.navigate_frame(id, request);
                 }
             }
+        }
+        if self.load_pending_frames() {
+            did = true;
         }
         // Frames whose documents finished loading are reported to their
         // parents.

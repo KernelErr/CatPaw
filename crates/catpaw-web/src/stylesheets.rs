@@ -109,6 +109,30 @@ fn link_target(page: &PageState, dom: &Dom, el: NodeId) -> Option<(Url, Option<S
     Some((url, data.attr("media").map(str::to_string)))
 }
 
+/// `<link rel="modulepreload">`: the module is fetched ahead of the script
+/// that imports it (a browser fetches its imports ahead too).
+fn preload_module(page: &PageState, dom: &Dom, el: NodeId) {
+    let Some(data) = dom.element(el) else { return };
+    let Some(rel) = data.attr("rel") else { return };
+    if !rel
+        .split_ascii_whitespace()
+        .any(|token| token.eq_ignore_ascii_case("modulepreload"))
+    {
+        return;
+    }
+    let Some(url) = data
+        .attr("href")
+        .map(str::trim)
+        .filter(|href| !href.is_empty())
+        .and_then(|href| page.resolve_url(href))
+    else {
+        return;
+    };
+    let mut request = NetRequest::get(url.clone(), RequestKind::Script);
+    request.referrer = crate::referrer::for_document(page, &url);
+    net::prefetch(page, request);
+}
+
 /// Drops what is known about a `link` element's sheet, abandoning its fetch.
 fn forget(page: &PageState, el: NodeId) {
     let Some(link) = page.styles.links.borrow_mut().remove(&el) else {
@@ -136,6 +160,7 @@ pub(crate) fn link_changed(page: &PageState, el: NodeId, parser_inserted: bool) 
         if !dom.contains(el) || !dom.is_html_element(el, "link") {
             return;
         }
+        preload_module(page, &dom, el);
         link_target(page, &dom, el)
     };
     {

@@ -237,6 +237,20 @@ struct HeldRequest {
 /// Judges a redirect hop of a document fetch: its method, URL and body.
 pub type HopCheck<'a> = dyn FnMut(&str, &Url, Option<&(String, Vec<u8>)>) -> Gate + 'a;
 
+/// A [`HopCheck`] for documents fetched together: told which of the
+/// requests the hop belongs to.
+pub type IndexedHopCheck<'a> =
+    dyn FnMut(usize, &str, &Url, Option<&(String, Vec<u8>)>) -> Gate + 'a;
+
+/// A document a frame asks for, fetched with others by
+/// [`EngineNet::fetch_documents_together`].
+pub struct DocumentRequest {
+    pub url: Url,
+    pub referrer: Option<Url>,
+    /// How long each hop may take.
+    pub hop_timeout: Option<Duration>,
+}
+
 /// A request the gate holds (see [`EngineNet::held_requests`]).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HeldRequestInfo {
@@ -536,6 +550,161 @@ impl EngineNet {
             return Ok(DocumentFetch::Loaded(fetched));
         }
         Err(NetError::TooManyRedirects(MAX_REDIRECTS))
+    }
+
+    /// Fetches documents side by side: the frames a page opened at once
+    /// wait for the slowest of them, not for each in turn. Every redirect
+    /// hop is checked on this thread as [`EngineNet::fetch_document_within`]
+    /// checks them, `check` told which request it is about. The outcomes
+    /// come in the requests' order. (While replaying, one at a time: a
+    /// recording answers in the order the page asked.)
+    pub fn fetch_documents_together(
+        &self,
+        requests: Vec<DocumentRequest>,
+        check: &mut IndexedHopCheck<'_>,
+    ) -> Vec<Result<DocumentFetch, NetError>> {
+        if self.client.is_replaying() {
+            return requests
+                .iter()
+                .enumerate()
+                .map(|(i, request)| {
+                    self.fetch_document_within(
+                        "GET",
+                        &request.url,
+                        None,
+                        request.referrer.as_ref(),
+                        &mut |method, url, body| check(i, method, url, body),
+                        &FetchOptions {
+                            hop_timeout: request.hop_timeout,
+                            download: None,
+                        },
+                    )
+                })
+                .collect();
+        }
+        struct Hop {
+            index: usize,
+            method: String,
+            url: Url,
+            body: Option<(String, Vec<u8>)>,
+            chain: Vec<Url>,
+        }
+        type Outcome = Result<DocumentFetch, NetError>;
+        let mut outcomes: Vec<Option<Outcome>> = requests.iter().map(|_| None).collect();
+        let mut pending: Vec<Hop> = requests
+            .iter()
+            .enumerate()
+            .map(|(index, request)| Hop {
+                index,
+                method: "GET".to_string(),
+                url: request.url.clone(),
+                body: None,
+                chain: Vec::new(),
+            })
+            .collect();
+        while !pending.is_empty() {
+            // Every pending hop goes out at once; the places in a recording
+            // are taken here, in order.
+            let handles: Vec<_> = pending
+                .iter()
+                .map(|hop| {
+                    let request = &requests[hop.index];
+                    let client = self.client.clone();
+                    let (method, url, body) =
+                        (hop.method.clone(), hop.url.clone(), hop.body.clone());
+                    let referrer = request
+                        .referrer
+                        .as_ref()
+                        .and_then(|from| navigation_referrer(from, &hop.url));
+                    let limit = request.hop_timeout;
+                    self.runtime.spawn(async move {
+                        let fetch =
+                            fetch_document_hop(&client, &method, &url, body, referrer.as_ref());
+                        match limit {
+                            Some(limit) => tokio::time::timeout(limit, fetch)
+                                .await
+                                .unwrap_or(Err(NetError::Timeout(limit))),
+                            None => fetch.await,
+                        }
+                    })
+                })
+                .collect();
+            let results = self.block_on(async move {
+                let mut results = Vec::with_capacity(handles.len());
+                for handle in handles {
+                    results.push(handle.await.unwrap_or_else(|e| {
+                        Err(NetError::Decode(format!("the fetch was cut short: {e}")))
+                    }));
+                }
+                results
+            });
+            let mut next = Vec::new();
+            for (hop, result) in pending.into_iter().zip(results) {
+                self.record_document(
+                    &hop.method,
+                    &hop.url,
+                    result.as_ref().ok().map(|d| d.response.status.as_u16()),
+                );
+                let mut fetched = match result {
+                    Ok(fetched) => fetched,
+                    Err(e) => {
+                        outcomes[hop.index] = Some(Err(e));
+                        continue;
+                    }
+                };
+                let status = fetched.response.status.as_u16();
+                let to = fetched
+                    .response
+                    .headers
+                    .get("location")
+                    .and_then(|v| v.to_str().ok())
+                    .and_then(|location| hop.url.join(location).ok())
+                    .filter(|_| matches!(status, 301 | 302 | 303 | 307 | 308));
+                let Some(to) = to else {
+                    fetched.response.redirect_chain = hop.chain;
+                    outcomes[hop.index] = Some(Ok(DocumentFetch::Loaded(fetched)));
+                    continue;
+                };
+                if hop.chain.len() >= MAX_REDIRECTS {
+                    outcomes[hop.index] = Some(Err(NetError::TooManyRedirects(MAX_REDIRECTS)));
+                    continue;
+                }
+                // 303, and 301/302 after a POST, go on as GET without a body.
+                let to_get = (status == 303 && hop.method != "GET" && hop.method != "HEAD")
+                    || (matches!(status, 301 | 302) && hop.method == "POST");
+                let (method, body) = if to_get {
+                    ("GET".to_string(), None)
+                } else {
+                    (hop.method.clone(), hop.body.clone())
+                };
+                match check(hop.index, &method, &to, body.as_ref()) {
+                    Gate::Allow => {}
+                    gate => {
+                        outcomes[hop.index] = Some(Ok(DocumentFetch::Stopped {
+                            method,
+                            url: to,
+                            body,
+                            gate,
+                        }));
+                        continue;
+                    }
+                }
+                let mut chain = hop.chain;
+                chain.push(hop.url);
+                next.push(Hop {
+                    index: hop.index,
+                    method,
+                    url: to,
+                    body,
+                    chain,
+                });
+            }
+            pending = next;
+        }
+        outcomes
+            .into_iter()
+            .map(|outcome| outcome.expect("every request has its outcome"))
+            .collect()
     }
 
     /// A host for another frame of the same page: the same runtime, client
@@ -910,6 +1079,7 @@ impl NetHost for EngineNet {
             self.finish(index, &result);
             return result;
         }
+        let _span = catpaw_web::profile::span("wait", || format!("blocking {:?}", request.kind));
         let index = self.record(&request);
         let ahead = (request.kind == RequestKind::Script)
             .then(|| self.prefetched.borrow_mut().remove(request.url.as_str()))
@@ -971,7 +1141,17 @@ impl NetHost for EngineNet {
                 self.finish(index, &result);
                 self.ready.borrow_mut().push_back((token, result));
             }
-            Some(Gate::Allow) | None => self.dispatch(token, request, index),
+            Some(Gate::Allow) | None => {
+                let ahead = (request.kind == RequestKind::Script)
+                    .then(|| self.prefetched.borrow_mut().remove(request.url.as_str()))
+                    .flatten();
+                match ahead {
+                    Some(task) => self.spawn(token, index, request.kind, async move {
+                        task.await.unwrap_or_else(|e| Err(e.to_string()))
+                    }),
+                    None => self.dispatch(token, request, index),
+                }
+            }
         }
         token
     }

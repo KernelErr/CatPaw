@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.2.1 (unreleased)
+
+Pages load faster. A profile of real sites (`catpaw fetch --js
+--profile`, new) showed their time going to waiting for the network one
+thing at a time, not to their scripts:
+
+- The imports of a module load side by side, as a browser loads a module
+  graph; they were fetched one after another, each waiting its turn. An
+  import map's bare specifiers are started ahead too, and
+  `<link rel="modulepreload">` is honoured.
+- The frames a page opens at once have their documents fetched together,
+  the page waiting for the slowest rather than for each in turn.
+- The external scripts a document names are fetched before the parser
+  reaches them, as a browser's preload scanner has them: a script the
+  parser waits for no longer holds up the ones after it.
+- `catpaw fetch --js --profile` tells where a page's time went: the event
+  loop's steps by kind, scripts by source (compiling apart from running),
+  parsing, rendering, and the waits for the network.
+
+On the sites measured, the time waiting for the network fell by a third
+to a half (github.com 13 s to 6–8 s on a quiet network, techcrunch.com
+35 s to 18–24 s, figma.com 19 s to 13 s, crates.io 6.5 s to 4.4 s).
+Network latency sets the rest: on these sites the scripts themselves
+took 0.3–3 s a page, with a few heavy ones (an obfuscated bot check that
+runs for the whole 10 s script budget) as the exceptions.
+
 ## 0.2.0 (2026-10-11)
 
 From an agent's report of using CatPaw on a NAS:

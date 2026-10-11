@@ -16,8 +16,33 @@ use url::Url;
 pub struct PageModuleLoader {
     page: Rc<PageState>,
     modules: RefCell<HashMap<String, Module>>,
+    /// The loads under way, by URL: an import of a URL being loaded for
+    /// another waits for that load (see [`LoadResult`]).
+    loading: RefCell<HashMap<String, Rc<LoadSlot>>>,
     /// The URLs started ahead (see [`PageModuleLoader::prefetch_imports`]).
     prefetched: RefCell<HashSet<String>>,
+}
+
+/// Where a load under way leaves its outcome for the imports waiting on
+/// it: the module, or why there is none.
+type LoadSlot = RefCell<Option<JsResult<Module>>>;
+
+/// The outcome of a load under way, for an import that waits for it; like
+/// the response it waits for, it is polled again rather than woken.
+struct LoadResult(Rc<LoadSlot>);
+
+impl std::future::Future for LoadResult {
+    type Output = JsResult<Module>;
+
+    fn poll(
+        self: std::pin::Pin<&mut Self>,
+        _cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<JsResult<Module>> {
+        match &*self.0.borrow() {
+            Some(result) => std::task::Poll::Ready(result.clone()),
+            None => std::task::Poll::Pending,
+        }
+    }
 }
 
 /// The most modules a page's loader starts ahead.
@@ -52,10 +77,9 @@ fn static_imports(source: &str) -> Vec<String> {
                 continue;
             };
             let specifier = &source[i + 1..i + 1 + len];
-            let looks_like_a_path = ["./", "../", "/", "https://", "http://"]
-                .iter()
-                .any(|p| specifier.starts_with(p));
-            if looks_like_a_path
+            // A bare specifier (`"@scope/lib"`) is kept for the import map to
+            // resolve; one it does not know is dropped there.
+            if !specifier.is_empty()
                 && specifier.len() < 2048
                 && !specifier.contains(|c: char| c.is_whitespace())
             {
@@ -75,6 +99,7 @@ impl PageModuleLoader {
         Self {
             page,
             modules: RefCell::new(HashMap::new()),
+            loading: RefCell::new(HashMap::new()),
             prefetched: RefCell::new(HashSet::new()),
         }
     }
@@ -115,9 +140,13 @@ impl PageModuleLoader {
         }
     }
 
-    fn fetch(&self, url: &Url) -> JsResult<String> {
+    /// Fetches a module's source. Awaited inside the engine's job
+    /// executor, which brings responses in while the imports of a module
+    /// are all on their way.
+    async fn fetch(&self, url: &Url) -> JsResult<String> {
         let request = self.request(url);
-        let response = catpaw_web::net::fetch_blocking(&self.page, request)
+        let response = catpaw_web::net::fetch_pending(&self.page, request)
+            .await
             .map_err(|reason| load_error(format!("Failed to fetch module {url}: {reason}")))?;
         if !response.is_success() {
             return Err(load_error(format!(
@@ -128,6 +157,38 @@ impl PageModuleLoader {
         // Modules are always UTF-8.
         let text = String::from_utf8_lossy(&response.body);
         Ok(text.strip_prefix('\u{FEFF}').unwrap_or(&text).to_string())
+    }
+}
+
+impl PageModuleLoader {
+    /// Fetches, parses and keeps the module at `url`.
+    async fn load_fresh(
+        &self,
+        url: &Url,
+        request: &ModuleRequest,
+        context: &RefCell<&mut Context>,
+    ) -> JsResult<Module> {
+        let text = self.fetch(url).await?;
+        let is_json = request
+            .get_attribute("type")
+            .is_some_and(|ty| ty.to_std_string_lossy() == "json");
+        if !is_json {
+            self.prefetch_imports(url, &text);
+        }
+        let module = if is_json {
+            Module::parse_json(JsString::from(text.as_str()), &mut context.borrow_mut())?
+        } else {
+            let _span = catpaw_web::profile::span_bytes("compile", || url.to_string(), text.len());
+            Module::parse(
+                Source::from_bytes(&text).with_path(Path::new(url.as_str())),
+                None,
+                &mut context.borrow_mut(),
+            )?
+        };
+        self.modules
+            .borrow_mut()
+            .insert(url.to_string(), module.clone());
+        Ok(module)
     }
 }
 
@@ -156,26 +217,28 @@ impl ModuleLoader for PageModuleLoader {
             return Ok(module);
         }
 
-        let text = self.fetch(&url)?;
-        let is_json = request
-            .get_attribute("type")
-            .is_some_and(|ty| ty.to_std_string_lossy() == "json");
-        if !is_json {
-            self.prefetch_imports(&url, &text);
-        }
-        let module = if is_json {
-            Module::parse_json(JsString::from(text.as_str()), &mut context.borrow_mut())?
-        } else {
-            Module::parse(
-                Source::from_bytes(&text).with_path(Path::new(url.as_str())),
-                None,
-                &mut context.borrow_mut(),
-            )?
+        // Imports load side by side: one of the same URL, under way for
+        // another import (of this module or another), is waited for, so
+        // that a URL is one module.
+        let slot = {
+            let mut loading = self.loading.borrow_mut();
+            match loading.get(url.as_str()) {
+                Some(theirs) => Err(theirs.clone()),
+                None => {
+                    let mine = Rc::new(RefCell::new(None));
+                    loading.insert(url.to_string(), mine.clone());
+                    Ok(mine)
+                }
+            }
         };
-        self.modules
-            .borrow_mut()
-            .insert(url.to_string(), module.clone());
-        Ok(module)
+        let slot = match slot {
+            Ok(mine) => mine,
+            Err(theirs) => return LoadResult(theirs).await,
+        };
+        let result = self.load_fresh(&url, &request, context).await;
+        self.loading.borrow_mut().remove(url.as_str());
+        *slot.borrow_mut() = Some(result.clone());
+        result
     }
 
     fn init_import_meta(

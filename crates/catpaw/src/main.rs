@@ -122,6 +122,11 @@ struct FetchArgs {
     /// too).
     #[arg(long, requires = "js")]
     console: bool,
+    /// With --js: report on stderr where the time went, once the page has
+    /// settled: the event loop's steps by kind, scripts by source
+    /// (compiling apart from running), parsing, rendering and waiting.
+    #[arg(long, requires = "js")]
+    profile: bool,
     /// With --js: the time zone dates show, as an offset from UTC
     /// (`+08:00`, `-0430`, `+9`) or `UTC`; UTC by default, whatever the
     /// machine's.
@@ -934,6 +939,9 @@ fn run_action(page: &mut catpaw_engine::Page, spec: &str) -> Result<()> {
 /// `fetch --js`: load the page in the engine, let its scripts run until it
 /// settles, then print the requested view of the resulting document.
 fn fetch_with_scripts(args: FetchArgs) -> Result<()> {
+    if args.profile {
+        catpaw_engine::profile::enable();
+    }
     let url = parse_url(&args.url)?;
     let options = PageOptions {
         net: net_config(&args.net)?,
@@ -1010,6 +1018,9 @@ fn fetch_with_scripts_on(
             describe_stop(page.report()),
             state.errors.borrow().len(),
         );
+        if args.profile {
+            eprint!("{}", catpaw_engine::profile::report());
+        }
         if args.requests {
             for request in &requests {
                 let status = request

@@ -336,6 +336,42 @@ pub fn start_request(
     Some(token)
 }
 
+/// Starts a request and gives a future of its result, for a load that
+/// waits inside the engine (a module's import): the event loop delivers
+/// the response, and the future sees it when it is polled next. It never
+/// wakes anyone: whoever polls it, polls again.
+pub fn fetch_pending(page: &PageState, request: NetRequest) -> PendingResponse {
+    let slot = std::rc::Rc::new(std::cell::RefCell::new(None));
+    if let Some(result) = local_response(page, &request.url) {
+        *slot.borrow_mut() = Some(result);
+    } else if page.net().is_none() {
+        *slot.borrow_mut() = Some(Err("no network available".to_string()));
+    } else {
+        let filled = slot.clone();
+        start_request(page, request, move |_cx, result| {
+            *filled.borrow_mut() = Some(result);
+        });
+    }
+    PendingResponse(slot)
+}
+
+/// A response on its way; see [`fetch_pending`].
+pub struct PendingResponse(std::rc::Rc<std::cell::RefCell<Option<NetResult>>>);
+
+impl std::future::Future for PendingResponse {
+    type Output = NetResult;
+
+    fn poll(
+        self: std::pin::Pin<&mut Self>,
+        _cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<NetResult> {
+        match self.0.borrow_mut().take() {
+            Some(result) => std::task::Poll::Ready(result),
+            None => std::task::Poll::Pending,
+        }
+    }
+}
+
 /// Abandons a request started with [`start_request`].
 pub fn abort_request(page: &PageState, token: u64) {
     page.net_started.borrow_mut().remove(&token);
@@ -411,10 +447,15 @@ pub fn deliver(cx: &mut Cx<'_>, wait: Option<Duration>) -> usize {
     };
     let mut delivered = 0;
     let page = cx.page;
-    for (token, result) in net.poll(wait) {
+    let results: Vec<_> = {
+        let _span = crate::profile::span("wait", || "network".to_string());
+        net.poll(wait).into_iter().collect()
+    };
+    for (token, result) in results {
         page.net_started.borrow_mut().remove(&token);
         let callback = page.net_callbacks.borrow_mut().remove(&token);
         if let Some(callback) = callback {
+            let _span = crate::profile::span("step", || "network response".to_string());
             let initiator = crate::settle::Initiator::Task("network");
             crate::settle::with_initiator(page, initiator, || {
                 callback(cx, result);
@@ -424,6 +465,7 @@ pub fn deliver(cx: &mut Cx<'_>, wait: Option<Duration>) -> usize {
         }
     }
     for (token, event) in net.poll_sockets() {
+        let _span = crate::profile::span("step", || "network socket".to_string());
         let initiator = crate::settle::Initiator::Task("socket");
         crate::settle::with_initiator(page, initiator, || {
             crate::websocket::on_event(cx, token, event);

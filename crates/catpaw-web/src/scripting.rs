@@ -491,7 +491,12 @@ fn parse<R>(page: &PageState, run: impl FnOnce() -> R) -> R {
 }
 
 fn pump(cx: &mut Cx<'_>, stream: &HtmlStream) {
-    while let Some(script) = parse(cx.page, || stream.pump()) {
+    loop {
+        let script = {
+            let _span = crate::profile::span("parse", || "html".to_string());
+            parse(cx.page, || stream.pump())
+        };
+        let Some(script) = script else { return };
         run_parser_script(cx, script);
         if cx.page.navigation.borrow().is_some() {
             return;
@@ -604,11 +609,101 @@ fn new_stream(cx: &Cx<'_>) -> Rc<HtmlStream> {
     Rc::new(HtmlStream::new(cx.page.dom.clone(), &options))
 }
 
+/// How many of a document's scripts the preload scan starts ahead.
+const MAX_PRELOADED_SCRIPTS: usize = 256;
+
+/// Starts fetching the external scripts a document names before the
+/// parser reaches them, as a browser's preload scanner does: a script the
+/// parser waits for is fetched while the ones after it are on their way.
+/// A scan of the text, not a parse: a `src` in a comment costs a request,
+/// nothing more.
+fn preload_scripts(page: &PageState, html: &str) {
+    let mut started = 0;
+    let mut rest = html;
+    while let Some(at) = rest.find("<script") {
+        rest = &rest[at + "<script".len()..];
+        if !rest.starts_with(|c: char| c.is_ascii_whitespace() || c == '/' || c == '>') {
+            continue;
+        }
+        let Some(end) = rest.find('>') else { break };
+        let tag = &rest[..end];
+        rest = &rest[end + 1..];
+        let Some(src) = tag_attribute(tag, "src") else {
+            continue;
+        };
+        let Some(url) = page.resolve_url(src.trim()) else {
+            continue;
+        };
+        if !matches!(url.scheme(), "http" | "https") {
+            continue;
+        }
+        let mut request = NetRequest::get(url.clone(), RequestKind::Script);
+        request.referrer = crate::referrer::for_document(page, &url);
+        net::prefetch(page, request);
+        started += 1;
+        if started >= MAX_PRELOADED_SCRIPTS {
+            break;
+        }
+    }
+}
+
+/// The value of the attribute `name` among a start tag's attributes
+/// (`tag` is what follows the tag name, up to `>`).
+fn tag_attribute<'a>(tag: &'a str, name: &str) -> Option<&'a str> {
+    let bytes = tag.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        while i < bytes.len() && (bytes[i].is_ascii_whitespace() || bytes[i] == b'/') {
+            i += 1;
+        }
+        let start = i;
+        while i < bytes.len() && !bytes[i].is_ascii_whitespace() && !matches!(bytes[i], b'=' | b'/')
+        {
+            i += 1;
+        }
+        if start == i {
+            break;
+        }
+        let attribute = &tag[start..i];
+        while i < bytes.len() && bytes[i].is_ascii_whitespace() {
+            i += 1;
+        }
+        let mut value = "";
+        if i < bytes.len() && bytes[i] == b'=' {
+            i += 1;
+            while i < bytes.len() && bytes[i].is_ascii_whitespace() {
+                i += 1;
+            }
+            let from = i;
+            if i < bytes.len() && matches!(bytes[i], b'"' | b'\'') {
+                let quote = bytes[i];
+                i += 1;
+                let from = i;
+                while i < bytes.len() && bytes[i] != quote {
+                    i += 1;
+                }
+                value = &tag[from..i];
+                i += 1;
+            } else {
+                while i < bytes.len() && !bytes[i].is_ascii_whitespace() {
+                    i += 1;
+                }
+                value = &tag[from..i];
+            }
+        }
+        if attribute.eq_ignore_ascii_case(name) {
+            return Some(value);
+        }
+    }
+    None
+}
+
 /// Parses `html` as the page's document, running scripts as they are
 /// encountered. On return the document is parsed and `DOMContentLoaded` has
 /// fired; the `load` event follows from the event loop once async scripts
 /// have finished.
 pub fn load_document(cx: &mut Cx<'_>, html: &str) {
+    preload_scripts(cx.page, html);
     let stream = new_stream(cx);
     *cx.page.scripts.parser.borrow_mut() = Some(stream.clone());
     let page = cx.page;

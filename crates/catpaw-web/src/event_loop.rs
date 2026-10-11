@@ -8,6 +8,7 @@ use catpaw_js::{Callback, SourceSite, Value};
 
 use crate::net;
 use crate::page::{Cx, PageState};
+use crate::profile;
 use crate::settle::{self, Initiator, PendingReport, SettlePolicy};
 
 /// A unit of work run by the event loop with script quiescent.
@@ -28,6 +29,7 @@ pub fn run_one_task(cx: &mut Cx<'_>) -> bool {
 }
 
 fn run_task(cx: &mut Cx<'_>, task: Task) {
+    let _span = profile::span("step", || format!("task {}", task.label));
     let page = cx.page;
     settle::with_initiator(page, Initiator::Task(task.label), || {
         (task.run)(cx);
@@ -176,6 +178,13 @@ pub fn clear_timer(page: &PageState, id: i32) {
 }
 
 fn run_timer(cx: &mut Cx<'_>, fired_at: f64, timer: Timer) {
+    let _span = profile::span("step", || match timer.site {
+        Some(i) => match cx.page.settle.sites.borrow().get(i) {
+            Some(site) => format!("timer {}", site.site),
+            None => "timer".to_string(),
+        },
+        None => "timer (no site)".to_string(),
+    });
     // Re-arm an interval before running it, so the callback can clear it.
     if let Some(interval) = timer.interval {
         let nesting = timer.nesting + 1;
@@ -272,6 +281,7 @@ pub fn cancel_animation_frame(page: &PageState, id: u32) {
 }
 
 fn run_frame(cx: &mut Cx<'_>) {
+    let _span = profile::span("step", || "frame".to_string());
     let page = cx.page;
     let before = settle::content_changes(page);
     settle::with_initiator(page, Initiator::Frame, || run_frame_callbacks(cx));

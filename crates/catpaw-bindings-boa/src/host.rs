@@ -9,12 +9,13 @@ use boa_engine::builtins::promise::PromiseState;
 use boa_engine::job::PromiseJob;
 use boa_engine::module::Module;
 use boa_engine::object::builtins::JsPromise;
-use boa_engine::{Context, JsError, JsString, JsValue, NativeFunction, Source};
+use boa_engine::{Context, JsError, JsString, JsValue, NativeFunction, Script, Source};
 use catpaw_js::{
     Callback, CallbackKind, Exception, Fallible, ObjectId, PromiseRef, ScriptHost, Value,
 };
 use catpaw_js_boa::inspect;
 use catpaw_web::ConsoleLevel;
+use catpaw_web::profile;
 
 use crate::modules::PageModuleLoader;
 use crate::rt::{self, IntoJs, Runtime};
@@ -101,6 +102,23 @@ impl<'a> BoaHost<'a> {
         if self.rt.depth.get() == 0 {
             self.ctx.set_deadline(None);
         }
+    }
+
+    /// `Context::eval`, with parsing and compiling timed apart from running
+    /// for the profile.
+    fn eval_timed(&mut self, source: &str, url: &str) -> Result<JsValue, JsError> {
+        let script = {
+            let _span = profile::span_bytes("compile", || url.to_string(), source.len());
+            let script = Script::parse(
+                Source::from_bytes(source).with_path(Path::new(url)),
+                None,
+                self.ctx,
+            )?;
+            script.codeblock(self.ctx)?;
+            script
+        };
+        let _span = profile::span("run", || url.to_string());
+        script.evaluate(self.ctx)
     }
 
     fn js_value(&mut self, value: &Value) -> JsValue {
@@ -261,9 +279,7 @@ impl ScriptHost for BoaHost<'_> {
         } else {
             source
         };
-        let result = self
-            .ctx
-            .eval(Source::from_bytes(source).with_path(Path::new(url)));
+        let result = self.eval_timed(source, url);
         let out = self.finish(result);
         self.leave();
         out
@@ -271,13 +287,17 @@ impl ScriptHost for BoaHost<'_> {
 
     fn eval_module(&mut self, source: &str, url: &str) -> Fallible<()> {
         self.enter();
-        let parsed = Module::parse(
-            Source::from_bytes(source).with_path(Path::new(url)),
-            None,
-            self.ctx,
-        );
+        let parsed = {
+            let _span = profile::span_bytes("compile", || url.to_string(), source.len());
+            Module::parse(
+                Source::from_bytes(source).with_path(Path::new(url)),
+                None,
+                self.ctx,
+            )
+        };
         let out = match parsed {
             Ok(module) => {
+                let _span = profile::span("run", || url.to_string());
                 if let Some(loader) = self.ctx.downcast_module_loader::<PageModuleLoader>() {
                     loader.register(url, module.clone());
                     if let Ok(base) = url::Url::parse(url) {
@@ -317,9 +337,11 @@ impl ScriptHost for BoaHost<'_> {
             "(function({}) {{\nwith (this && this.ownerDocument ? this.ownerDocument : document) {{ with (this || {{}}) {{\n{body}\n}} }}\n}})",
             params.join(", ")
         );
-        let result = self
-            .ctx
-            .eval(Source::from_bytes(&source).with_path(Path::new(url)));
+        let result = {
+            let _span = profile::span_bytes("compile", || url.to_string(), source.len());
+            self.ctx
+                .eval(Source::from_bytes(&source).with_path(Path::new(url)))
+        };
         match result {
             Ok(function) => Ok(Callback {
                 root: rt::root(function),

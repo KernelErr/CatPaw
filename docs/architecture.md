@@ -255,8 +255,9 @@ What does not work as a browser's would yet, besides the web features
   only what any window offers across origins (`postMessage`, `parent`,
   `closed`…), not the frame's `document` or `Date`.
 - **A frame's document is fetched on the page's thread.** The page waits
-  while a frame's document (each redirect hop of it) loads, up to 8
-  seconds a hop; frames slow to answer (ads, trackers) slow the page.
+  while the documents of the frames it opened load (those opened at once
+  load side by side, each redirect hop given up to 8 seconds); a frame
+  slow to answer (an ad, a tracker) slows the page by that much.
 - **No memory limit per page.** A page that allocates without end can
   exhaust memory: the script budget stops long runs, not large ones.
 

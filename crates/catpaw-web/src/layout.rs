@@ -55,6 +55,7 @@ fn stats_enabled() -> bool {
 
 /// Logs a step of rendering work begun at `started`, when asked to.
 pub(crate) fn log_step(what: &str, started: Instant) {
+    crate::profile::record("render", what, started.elapsed(), 0);
     if stats_enabled() {
         let ms = started.elapsed().as_secs_f64() * 1000.0;
         eprintln!("[render] {what} {ms:.2}ms");

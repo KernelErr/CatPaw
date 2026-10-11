@@ -56,6 +56,7 @@ pub mod net;
 mod node;
 pub mod page;
 mod performance;
+pub mod profile;
 pub mod promises;
 mod range;
 mod referrer;

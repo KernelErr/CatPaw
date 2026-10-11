@@ -125,6 +125,11 @@ impl BoaPage {
 
     fn with_realm(page: Rc<PageState>, realm: Realm) -> Result<Self, String> {
         let jobs = Jobs::new();
+        jobs.set_idle(Box::new(|ctx| {
+            rt::with_cx(ctx, |cx| {
+                catpaw_web::net::deliver(cx, Some(std::time::Duration::from_millis(50))) > 0
+            })
+        }));
         let hooks = Hooks {
             utc_offset_seconds: page.config.timezone_offset_minutes.saturating_mul(60),
         };
