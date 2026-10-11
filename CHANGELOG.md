@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.1 (unreleased)
+## 0.2.1 (2026-10-11)
 
 Pages load faster. A profile of real sites (`catpaw fetch --js
 --profile`, new) showed their time going to waiting for the network one

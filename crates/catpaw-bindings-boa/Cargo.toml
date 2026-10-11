@@ -13,12 +13,12 @@ description = "JavaScript bindings for the CatPaw browser: glue generated from W
 [dependencies]
 boa_engine = { workspace = true, features = ["annex-b", "intl_bundled"] }
 boa_gc.workspace = true
-catpaw-dom = { path = "../catpaw-dom", version = "0.2.0" }
-catpaw-js = { path = "../catpaw-js", version = "0.2.0" }
-catpaw-js-boa = { path = "../catpaw-js-boa", version = "0.2.0" }
-catpaw-web = { path = "../catpaw-web", version = "0.2.0" }
+catpaw-dom = { path = "../catpaw-dom", version = "0.2.1" }
+catpaw-js = { path = "../catpaw-js", version = "0.2.1" }
+catpaw-js-boa = { path = "../catpaw-js-boa", version = "0.2.1" }
+catpaw-web = { path = "../catpaw-web", version = "0.2.1" }
 url.workspace = true
 
 [dev-dependencies]
-catpaw-dom = { path = "../catpaw-dom", version = "0.2.0" }
+catpaw-dom = { path = "../catpaw-dom", version = "0.2.1" }
 png.workspace = true
