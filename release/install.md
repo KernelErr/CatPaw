@@ -16,4 +16,5 @@ PATH. Then connect it to your agent:
 
     catpaw setup claude-code
 
-Intel Macs and other systems build from source: see the README.
+Intel Macs and other systems: `cargo install catpaw` (Rust 1.91 or
+later) builds it, see the README.
