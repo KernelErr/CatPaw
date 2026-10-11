@@ -619,3 +619,61 @@ fn a_held_beacon_does_not_hide_a_request_on_its_way() {
     })
     .unwrap();
 }
+
+#[test]
+fn a_frames_redirect_meets_the_gate_at_every_hop() {
+    let (port, log) = serve(HashMap::from([
+        ("/start", "<!doctype html><title>start</title>"),
+        (
+            "/framed",
+            "<!doctype html><iframe src=/frame-hop onload=\"document.title='frame load fired'\"></iframe>",
+        ),
+        ("/frame-hop", "redirect:/frame-forbidden"),
+        (
+            "/frame-forbidden",
+            "<!doctype html><title>forbidden</title>",
+        ),
+        (
+            "/framed-held",
+            "<!doctype html><iframe src=/frame-hop-held></iframe>",
+        ),
+        ("/frame-hop-held", "redirect:/frame-held"),
+        ("/frame-held", "<!doctype html><title>held</title>"),
+    ]));
+    let base = format!("http://127.0.0.1:{port}");
+    let url = Url::parse(&format!("{base}/start")).unwrap();
+    let seen = log.clone();
+    with_page(url, options(), move |page| {
+        page.set_navigation_gate(Some(Box::new(|request| match request.url.path() {
+            "/frame-forbidden" => Gate::Deny("not on the list".to_string()),
+            "/frame-held" => Gate::Hold,
+            _ => Gate::Allow,
+        })));
+        // A hop the gate refuses ends the frame's load: the frame does not
+        // open, and `load` fires on its element as for a document that
+        // failed to load.
+        page.goto(Url::parse(&format!("{base}/framed")).unwrap())
+            .unwrap();
+        assert_eq!(count(&seen, "GET /frame-hop"), 1);
+        assert_eq!(count(&seen, "GET /frame-forbidden"), 0);
+        assert_eq!(page.frames().len(), 1);
+        assert_eq!(page.eval("document.title").unwrap(), "frame load fired");
+        let refused = page
+            .state()
+            .console_messages()
+            .into_iter()
+            .filter(|m| m.text.contains("was refused"))
+            .count();
+        assert_eq!(refused, 1);
+        // A frame's first document is never held: a hop the gate would
+        // hold goes on.
+        page.goto(Url::parse(&format!("{base}/framed-held")).unwrap())
+            .unwrap();
+        assert_eq!(count(&seen, "GET /frame-held"), 1);
+        let frames = page.frames();
+        assert_eq!(frames.len(), 2, "{frames:?}");
+        assert!(frames[1].url.path().ends_with("/frame-held"));
+        assert!(page.held_navigations().is_empty());
+    })
+    .unwrap();
+}

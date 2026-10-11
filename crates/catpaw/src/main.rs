@@ -886,6 +886,7 @@ fn describe_stop(report: &catpaw_engine::LoopReport) -> String {
         ),
         StopReason::StepBudget => "stopped at the step limit".to_string(),
         StopReason::Navigation => "stopped by a navigation".to_string(),
+        StopReason::Commands => "stopped to open a frame or start a worker".to_string(),
     }
 }
 

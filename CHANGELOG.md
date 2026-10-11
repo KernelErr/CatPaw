@@ -10,8 +10,15 @@ thing at a time, not to their scripts:
   graph; they were fetched one after another, each waiting its turn. An
   import map's bare specifiers are started ahead too, and
   `<link rel="modulepreload">` is honoured.
-- The frames a page opens at once have their documents fetched together,
-  the page waiting for the slowest rather than for each in turn.
+- A frame's document loads off the page's thread, as a browser loads
+  one: the page's scripts, timers and other frames run meanwhile, and the
+  page waits for it as for a request of its own, under the settle
+  policy's rules (a frame on an ignored host never holds an action up, a
+  slow third party's for three seconds at most). The page used to fetch
+  each frame's document in turn before going on, a frame that did not
+  answer costing up to eight seconds a redirect hop. A frame that opens
+  now runs before its parent's clock moves on, so its `load` fires where
+  a browser's would, before the parent's later timers.
 - The external scripts a document names are fetched before the parser
   reaches them, as a browser's preload scanner has them: a script the
   parser waits for no longer holds up the ones after it.
@@ -21,7 +28,7 @@ thing at a time, not to their scripts:
 
 On the sites measured, the time waiting for the network fell by a third
 to a half (github.com 13 s to 6–8 s on a quiet network, techcrunch.com
-35 s to 18–24 s, figma.com 19 s to 13 s, crates.io 6.5 s to 4.4 s).
+35 s to 16–17 s, figma.com 19 s to 13 s, crates.io 6.5 s to 4.4 s).
 Network latency sets the rest: on these sites the scripts themselves
 took 0.3–3 s a page, with a few heavy ones (an obfuscated bot check that
 runs for the whole 10 s script budget) as the exceptions.

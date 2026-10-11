@@ -190,6 +190,9 @@ pub struct FrameState {
     /// The page asked to close itself (`window.close()` in a popup).
     closing: Cell<bool>,
     commands: RefCell<Vec<FrameCommand>>,
+    /// Something besides a command wants the embedder (a frame's document
+    /// that arrived); see [`FrameState::ask_embedder`].
+    attention: Cell<bool>,
 }
 
 impl FrameState {
@@ -274,11 +277,21 @@ impl FrameState {
 
     /// Takes the commands queued since the last call.
     pub fn take_commands(&self) -> Vec<FrameCommand> {
+        self.attention.set(false);
         std::mem::take(&mut *self.commands.borrow_mut())
     }
 
+    /// Whether the embedder has something to do for the page: the event
+    /// loop hands over before it waits or moves the clock on.
     pub fn has_commands(&self) -> bool {
-        !self.commands.borrow().is_empty()
+        self.attention.get() || !self.commands.borrow().is_empty()
+    }
+
+    /// Asks the embedder to look between runs of the event loop, as the
+    /// commands do: for what reaches it by another way (a frame's
+    /// document, delivered as a response).
+    pub fn ask_embedder(&self) {
+        self.attention.set(true);
     }
 
     fn push(&self, command: FrameCommand) {

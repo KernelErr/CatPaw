@@ -106,6 +106,14 @@ context and spares the WindowProxy machinery. Messages between frames
 cross as JSON. The engine runs the frames' loops in turns of virtual
 time, carries their commands (open, close, message) and tells a parent
 when a child has loaded; a document's `load` waits for its frames. A
+frame's document is fetched off the thread, one redirect hop at a time,
+each hop judged by the navigation gate as the page's own would be; the
+parent's page waits for it as for a request of its own, so a settle
+policy's rules apply (a frame on an ignored host never holds an action
+up, a slow third party's holds it for three seconds at most), and the
+page's scripts, timers and other frames run meanwhile. A frame that
+opens runs before its parent's clock moves on, so its document is parsed
+and its `load` fires where a browser's would. A
 popup (`window.open()`, allowed within five seconds of a trusted click
 or key press, as browsers gate it) is a frame without an element: a top
 of its own in the same tree, with an opener instead of a parent. A
@@ -254,10 +262,11 @@ What does not work as a browser's would yet, besides the web features
   share an origin: `contentDocument` is `null`, and `contentWindow` offers
   only what any window offers across origins (`postMessage`, `parent`,
   `closed`…), not the frame's `document` or `Date`.
-- **A frame's document is fetched on the page's thread.** The page waits
-  while the documents of the frames it opened load (those opened at once
-  load side by side, each redirect hop given up to 8 seconds); a frame
-  slow to answer (an ad, a tracker) slows the page by that much.
+- **A frame that does not answer is given up after 8 seconds a hop.**
+  `load` then fires on its element as for a document that failed to
+  load, where a browser would wait on. A settle policy stops waiting for
+  the frame sooner, as for any slow request, but the parent document's
+  `load` comes only then.
 - **No memory limit per page.** A page that allocates without end can
   exhaust memory: the script budget stops long runs, not large ones.
 

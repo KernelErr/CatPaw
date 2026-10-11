@@ -273,3 +273,97 @@ fn dialogs_are_answered_by_the_policy() {
     })
     .unwrap();
 }
+
+const FRAMED: &str = r#"<!doctype html>
+<iframe src="/slow/child" onload="log.push('frame')"></iframe>
+<script>
+window.log = [];
+setTimeout(() => log.push('timer'), 800);
+</script>"#;
+
+/// A frame's document comes off the page's thread; the page waits for it
+/// as for a request of its own, its clock following real time meanwhile
+/// rather than jumping to the timer.
+#[test]
+fn a_frames_document_is_waited_for_as_a_request_is() {
+    let port = serve(HashMap::from([
+        ("/", FRAMED),
+        ("/slow/child", "<p>child</p>"),
+    ]));
+    let url = Url::parse(&format!("http://127.0.0.1:{port}/")).unwrap();
+    with_page(url, options(Some(SettlePolicy::default())), |page| {
+        assert!(page.is_settled(), "{:?}", page.report());
+        assert_eq!(page.eval("log.join(',')").unwrap(), "frame,timer");
+        let frames = page.frames();
+        assert_eq!(frames.len(), 2, "{frames:?}");
+        assert!(frames[1].url.path().ends_with("/slow/child"));
+        let failed = page
+            .state()
+            .console_messages()
+            .into_iter()
+            .filter(|m| m.text.contains("Failed to load frame"))
+            .count();
+        assert_eq!(failed, 0);
+    })
+    .unwrap();
+}
+
+const HUNG_FRAME: &str = r#"<!doctype html><p id=out>start</p>
+<iframe id=f src="/hang/child"></iframe>
+<script>
+setTimeout(() => { document.getElementById('out').textContent = 'ran'; }, 100);
+</script>"#;
+
+/// A frame that does not answer holds the page up only as long as the
+/// policy waits for a request; the page's own work goes on meanwhile,
+/// and the frame is let go when its element is removed.
+#[test]
+fn a_frame_that_does_not_answer_lets_the_page_settle_without_it() {
+    let port = serve(HashMap::from([("/", HUNG_FRAME)]));
+    let url = Url::parse(&format!("http://127.0.0.1:{port}/")).unwrap();
+    let policy = SettlePolicy {
+        stream_timeout: Duration::from_millis(500),
+        ..SettlePolicy::default()
+    };
+    let limits = options(Some(policy.clone())).limits;
+    let started = Instant::now();
+    with_page(url, options(Some(policy)), move |page| {
+        assert!(page.is_settled(), "{:?}", page.report());
+        assert_eq!(page.report().stop, StopReason::Settled);
+        assert_eq!(
+            page.eval("document.getElementById('out').textContent")
+                .unwrap(),
+            "ran"
+        );
+        assert_eq!(page.frames().len(), 1, "the frame is still loading");
+        let pending = page.pending_of(FrameId(0)).unwrap();
+        let document = pending
+            .requests
+            .iter()
+            .find(|r| r.kind == catpaw_web::net::RequestKind::Document)
+            .expect("the frame's document is reported");
+        assert!(document.url.path().ends_with("/hang/child"));
+        assert_eq!(document.class, RequestClass::LongStream);
+        assert!(!pending.blocking());
+
+        // The element goes: so does the document on its way for it.
+        page.eval("document.getElementById('f').remove()").unwrap();
+        page.settle(&limits);
+        assert!(page.is_settled(), "{:?}", page.report());
+        let pending = page.pending_of(FrameId(0)).unwrap();
+        assert!(pending.requests.is_empty(), "{pending:?}");
+        let failed = page
+            .state()
+            .console_messages()
+            .into_iter()
+            .filter(|m| m.text.contains("Failed to load frame"))
+            .count();
+        assert_eq!(failed, 0);
+    })
+    .unwrap();
+    assert!(
+        started.elapsed() < Duration::from_secs(5),
+        "the page did not wait for the frame: {:?}",
+        started.elapsed()
+    );
+}

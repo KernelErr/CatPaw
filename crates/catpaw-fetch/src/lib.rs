@@ -43,7 +43,17 @@ pub async fn fetch_document_with(
     body: Option<(String, Vec<u8>)>,
     referrer: Option<&Url>,
 ) -> Result<FetchedDocument, NetError> {
-    fetch_document_opts(client, method, url, body, referrer, true, None).await
+    fetch_document_opts(
+        client,
+        method,
+        url,
+        body,
+        referrer,
+        true,
+        None,
+        HopOptions::default(),
+    )
+    .await
 }
 
 /// One hop of a document request: like [`fetch_document_with`], but a
@@ -56,7 +66,31 @@ pub async fn fetch_document_hop(
     body: Option<(String, Vec<u8>)>,
     referrer: Option<&Url>,
 ) -> Result<FetchedDocument, NetError> {
-    fetch_document_opts(client, method, url, body, referrer, false, None).await
+    fetch_document_hop_with(client, method, url, body, referrer, HopOptions::default()).await
+}
+
+/// How [`fetch_document_hop_with`] sends a hop.
+#[derive(Debug, Default)]
+pub struct HopOptions {
+    /// Where the hop's entry goes in a recording (see
+    /// [`catpaw_net::RequestOptions::place`]).
+    pub place: Option<catpaw_net::har::Place>,
+    /// While replaying, stop with [`NetError::Unrecorded`] at a hop the
+    /// recording has no answer for rather than send it to the network
+    /// (see [`catpaw_net::RequestOptions::replay_only`]).
+    pub replay_only: bool,
+}
+
+/// [`fetch_document_hop`], sent as `options` say.
+pub async fn fetch_document_hop_with(
+    client: &NetClient,
+    method: &str,
+    url: &Url,
+    body: Option<(String, Vec<u8>)>,
+    referrer: Option<&Url>,
+    options: HopOptions,
+) -> Result<FetchedDocument, NetError> {
+    fetch_document_opts(client, method, url, body, referrer, false, None, options).await
 }
 
 /// [`fetch_document_hop`] for a navigation: a file it is answered with is
@@ -70,9 +104,20 @@ pub async fn fetch_navigation_hop(
     referrer: Option<&Url>,
     download: catpaw_net::DownloadRequest,
 ) -> Result<FetchedDocument, NetError> {
-    fetch_document_opts(client, method, url, body, referrer, false, Some(download)).await
+    fetch_document_opts(
+        client,
+        method,
+        url,
+        body,
+        referrer,
+        false,
+        Some(download),
+        HopOptions::default(),
+    )
+    .await
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn fetch_document_opts(
     client: &NetClient,
     method: &str,
@@ -81,6 +126,7 @@ async fn fetch_document_opts(
     referrer: Option<&Url>,
     follow_redirects: bool,
     download: Option<catpaw_net::DownloadRequest>,
+    hop: HopOptions,
 ) -> Result<FetchedDocument, NetError> {
     use catpaw_net::{HeaderValue, Method};
     let method = Method::from_bytes(method.as_bytes()).unwrap_or(Method::GET);
@@ -98,6 +144,8 @@ async fn fetch_document_opts(
     }
     options.follow_redirects = follow_redirects;
     options.download = download;
+    options.place = hop.place;
+    options.replay_only = hop.replay_only;
     let response = client.request(method, url, options).await?;
     let charset = response.charset();
     let decoded = decode_document(&response.body, charset.as_deref());

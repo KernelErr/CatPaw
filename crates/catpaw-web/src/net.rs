@@ -319,7 +319,27 @@ pub fn start_request(
     };
     let mut request = request;
     request.polling = crate::settle::polling_now(page);
-    let info = crate::settle::RequestInfo {
+    let info = request_info(page, &request);
+    let token = net.start(request);
+    track(page, token, info, callback);
+    Some(token)
+}
+
+/// Waits for a request the host started on its own for the page (a
+/// frame's document, which the embedder fetches hop by hop), `token`
+/// being the host's token for it: the event loop waits for its result as
+/// for a request started here and passes it to `callback`.
+pub fn track_request(
+    page: &PageState,
+    token: u64,
+    request: &NetRequest,
+    callback: impl FnOnce(&mut Cx<'_>, NetResult) + 'static,
+) {
+    track(page, token, request_info(page, request), callback);
+}
+
+fn request_info(page: &PageState, request: &NetRequest) -> crate::settle::RequestInfo {
+    crate::settle::RequestInfo {
         method: request.method.clone(),
         url: request.url.clone(),
         kind: request.kind,
@@ -327,13 +347,19 @@ pub fn start_request(
         site: request.site.clone(),
         virtual_start: page.clock.peek(),
         real_start: Instant::now(),
-    };
-    let token = net.start(request);
+    }
+}
+
+fn track(
+    page: &PageState,
+    token: u64,
+    info: crate::settle::RequestInfo,
+    callback: impl FnOnce(&mut Cx<'_>, NetResult) + 'static,
+) {
     page.net_started.borrow_mut().insert(token, info);
     page.net_callbacks
         .borrow_mut()
         .insert(token, Box::new(callback));
-    Some(token)
 }
 
 /// Starts a request and gives a future of its result, for a load that

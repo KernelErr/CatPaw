@@ -358,6 +358,10 @@ pub enum StopReason {
     StepBudget,
     /// Script asked to navigate away.
     Navigation,
+    /// The page asked the embedder for something (a frame to open, a
+    /// worker to start) that is done between runs; the loop goes on once
+    /// it is.
+    Commands,
 }
 
 #[derive(Clone, Debug)]
@@ -458,8 +462,15 @@ pub fn run(cx: &mut Cx<'_>, limits: &LoopLimits) -> LoopReport {
             continue;
         }
 
-        // Nothing is runnable right now: wait for whatever comes next. A
-        // policy leaves out what it does not wait for.
+        // Nothing is runnable right now. What the page asked of the
+        // embedder goes before any wait: a frame to open may be what the
+        // page waits for next, and its document is on its way only once
+        // the frame is opened.
+        if cx.page.frames.has_commands() || cx.page.workers.has_commands() {
+            break StopReason::Commands;
+        }
+        // Wait for whatever comes next. A policy leaves out what it does
+        // not wait for.
         let (next_timer, frame) = match policy {
             Some(policy) => (
                 settle::next_blocking_timer(cx.page, policy, now),

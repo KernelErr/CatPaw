@@ -36,9 +36,10 @@ too, for pages that do not need their scripts.
 `--profile` tells, on stderr, where the time went once the page has
 settled: the event loop's steps by kind (tasks, timers, frames, network
 responses), the scripts by source with compiling apart from running,
-parsing, rendering, and the waits for the network (the document, the frames'
-documents, blocking scripts and style sheets). The rows within a step are
-parts of it, so the categories do not add up to the whole.
+parsing, rendering, and the waits for the network (the document, blocking
+scripts and style sheets, responses with nothing else to do). The rows
+within a step are parts of it, so the categories do not add up to the
+whole.
 
 ### Act first, then read
 

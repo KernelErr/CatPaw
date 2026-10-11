@@ -7,7 +7,7 @@
 //! in turns, and carries messages between them.
 
 use std::cell::{Ref, RefCell};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::rc::Rc;
 use std::time::Instant;
 
@@ -20,6 +20,7 @@ use catpaw_net::{NetConfig, NetError};
 use catpaw_web::event_loop::{self, LoopLimits, LoopReport, StopReason};
 use catpaw_web::frames::{self, FrameCommand, FrameId, FrameTree};
 use catpaw_web::generated::DocumentReadyState;
+use catpaw_web::net::{NetRequest, RequestKind};
 use catpaw_web::page::NavigationRequest;
 use catpaw_web::settle::PendingReport;
 use catpaw_web::workers::{self, WorkerCommand, WorkerId};
@@ -42,10 +43,10 @@ const FRAME_SLICE_MS: f64 = 1000.0;
 /// in native code; the memory is only committed as it is used.
 pub const PAGE_STACK_SIZE: usize = 256 * 1024 * 1024;
 
-/// How long each hop of a frame's document may take. The page's thread
-/// waits for it (see `EngineNet::fetch_document_within`), so a frame that
-/// does not answer (an ad or tracker, often) must not hold the page for
-/// the whole network timeout.
+/// How long each hop of a frame's document may take. The document's
+/// `load` waits for the frame, so one that does not answer (an ad or a
+/// tracker, often) must not hold it up for the whole network timeout; a
+/// popup's document may take its time.
 const FRAME_DOCUMENT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(8);
 
 #[derive(Clone, Debug)]
@@ -368,9 +369,8 @@ pub struct Page {
     boa: BoaPage,
     /// The frames below the top one, in opening order.
     frames: Vec<Frame>,
-    /// Frames opened since the last pump, their first documents still to
-    /// fetch (see `load_pending_frames`).
-    pending_frames: Vec<PendingFrame>,
+    /// The documents on their way for frames (see `pump_documents`).
+    loading: Vec<DocumentLoad>,
     /// The tree the frames' pages share.
     tree: Rc<RefCell<FrameTree>>,
     /// The dedicated workers of the page and its frames.
@@ -417,19 +417,68 @@ pub enum ActionError {
     NoFrame(String),
 }
 
-/// Where a document goes in the frame tree.
-/// A frame (or popup) opened, whose first document is fetched together
-/// with those of the others opened in the same pump (see
-/// `Page::load_pending_frames`).
+/// A frame (or popup) opened, whose first document is on its way (see
+/// `Page::open_frame`).
+#[derive(Clone, Copy)]
 struct PendingFrame {
     parent: FrameId,
     id: FrameId,
     element: Option<NodeId>,
     depth: u32,
-    url: Url,
-    referrer: Url,
 }
 
+impl PendingFrame {
+    /// The frame does not open: `load` fires on its element as for a
+    /// document that failed to load; a popup is forgotten.
+    fn fail(&self, page: &PageState) {
+        if let Some(element) = self.element {
+            frames::frame_failed(page, element);
+        } else {
+            page.frames.tree().borrow_mut().remove(self.id);
+        }
+    }
+}
+
+/// A document on its way for a frame, fetched hop by hop off the page's
+/// thread (`EngineNet::start_document_hop`), each redirect judged here
+/// before the next hop goes (see `Page::pump_documents`).
+struct DocumentLoad {
+    /// The frame whose page waits for the hop as for a request of its
+    /// own, the hop started on its network: the parent for a frame's
+    /// first document, the frame itself for another in its place.
+    tracker: FrameId,
+    /// The hop under way, as the tracker's network numbers it.
+    token: u64,
+    /// The frame the document is for.
+    frame: FrameId,
+    purpose: LoadPurpose,
+    method: String,
+    /// The URL of the hop under way.
+    url: Url,
+    body: Option<(String, Vec<u8>)>,
+    referrer: Url,
+    /// The URLs of the hops before it.
+    chain: Vec<Url>,
+    hop_timeout: Option<std::time::Duration>,
+    /// The navigation was approved: hops the gate would hold go on.
+    approved: bool,
+}
+
+impl DocumentLoad {
+    /// The URL the document was asked for at.
+    fn first_url(&self) -> &Url {
+        self.chain.first().unwrap_or(&self.url)
+    }
+}
+
+enum LoadPurpose {
+    /// The frame's first document.
+    Open(PendingFrame),
+    /// Another document in place of the frame's.
+    Navigate(NavigationRequest),
+}
+
+/// Where a document goes in the frame tree.
 struct Placement {
     frame: FrameId,
     tree: Rc<RefCell<FrameTree>>,
@@ -555,7 +604,7 @@ impl Page {
         Self {
             boa,
             frames: Vec::new(),
-            pending_frames: Vec::new(),
+            loading: Vec::new(),
             tree,
             workers: Vec::new(),
             next_worker: 1,
@@ -998,6 +1047,7 @@ impl Page {
         for id in old_frames {
             self.close_frame(id);
         }
+        self.drop_loads(|load| load.tracker == FrameId(0));
         self.drop_workers_of(ScopeId::Frame(FrameId(0)));
         if self.frame(self.current).is_none_or(|f| f.element.is_some()) {
             self.current = FrameId(0);
@@ -1290,7 +1340,7 @@ impl Page {
         } else {
             0
         };
-        if depth > MAX_FRAME_DEPTH || self.frames.len() + self.pending_frames.len() >= MAX_FRAMES {
+        if depth > MAX_FRAME_DEPTH || self.frames.len() + self.opening() >= MAX_FRAMES {
             parent_page.log(
                 ConsoleLevel::Warn,
                 format!(
@@ -1314,19 +1364,29 @@ impl Page {
             (None, Some(url)) => {
                 // A popup's or a frame's first document (and each redirect
                 // hop of it) can be refused (a domain the tab may not
-                // show), not held. It is fetched after this pump, with
-                // the documents of the other frames opened in it.
+                // show), not held. It comes off this thread, the parent's
+                // page waiting for it as for a request of its own.
                 if let Gate::Deny(_) = self.judge_hop(id, true, "GET", &url, None) {
                     fail(&parent_page);
                     return;
                 }
-                self.pending_frames.push(PendingFrame {
-                    parent,
-                    id,
-                    element,
-                    depth,
+                self.start_load(DocumentLoad {
+                    tracker: parent,
+                    token: 0,
+                    frame: id,
+                    purpose: LoadPurpose::Open(PendingFrame {
+                        parent,
+                        id,
+                        element,
+                        depth,
+                    }),
+                    method: "GET".to_string(),
                     url,
+                    body: None,
                     referrer,
+                    chain: Vec::new(),
+                    hop_timeout: element.map(|_| FRAME_DOCUMENT_TIMEOUT),
+                    approved: true,
                 });
                 return;
             }
@@ -1341,77 +1401,223 @@ impl Page {
                 id,
                 element,
                 depth,
-                url: info.url.clone(),
-                referrer,
             },
+            &referrer,
             info,
             html,
             origin,
         );
     }
 
-    /// Fetches the first documents of the frames opened since the last
-    /// pump, side by side, and opens the frames on them. Returns whether
-    /// there were any.
-    fn load_pending_frames(&mut self) -> bool {
-        let pending = std::mem::take(&mut self.pending_frames);
-        if pending.is_empty() {
-            return false;
+    /// The network host of a frame's page, the top one for `FrameId(0)`.
+    fn host_of(&self, id: FrameId) -> Option<Rc<EngineNet>> {
+        if id == FrameId(0) {
+            Some(self.net.clone())
+        } else {
+            self.frame(id).map(|f| f.net.clone())
         }
-        let requests = pending
+    }
+
+    /// How many frames are opening, their first documents on their way.
+    fn opening(&self) -> usize {
+        self.loading
             .iter()
-            .map(|frame| crate::net::DocumentRequest {
-                url: frame.url.clone(),
-                referrer: Some(frame.referrer.clone()),
-                // A frame's document holds the page up; a popup's may take
-                // its time.
-                hop_timeout: frame.element.map(|_| FRAME_DOCUMENT_TIMEOUT),
-            })
-            .collect();
-        let net = self.net.clone();
-        let outcomes = {
-            let _span = catpaw_web::profile::span("wait", || "frame documents".to_string());
-            net.fetch_documents_together(requests, &mut |i, method, hop, body| {
-                self.judge_hop(pending[i].id, true, method, hop, body)
-            })
+            .filter(|load| matches!(load.purpose, LoadPurpose::Open(_)))
+            .count()
+    }
+
+    /// Starts the hop a load is at on its tracker's network; the
+    /// tracker's page waits for the answer as for a request of its own.
+    fn start_load(&mut self, mut load: DocumentLoad) {
+        let (Some(page), Some(host)) = (
+            self.page_of(load.tracker).cloned(),
+            self.host_of(load.tracker),
+        ) else {
+            return;
         };
-        for (frame, outcome) in pending.into_iter().zip(outcomes) {
-            let fetched = outcome.and_then(|outcome| match outcome {
-                crate::net::DocumentFetch::Loaded(fetched) => Ok(fetched),
-                crate::net::DocumentFetch::Stopped { url, .. } => Err(
-                    catpaw_net::NetError::InvalidUrl(format!("{url} was refused")),
-                ),
-            });
-            match fetched {
-                Ok(fetched) => {
-                    let info = DocumentInfo::from_fetch(&fetched);
-                    let origin = frames::origin_of(&info.url);
-                    let html = fetched.html().to_string();
-                    self.finish_open_frame(frame, info, html, origin);
-                }
-                Err(e) => {
-                    let Some(parent_page) = self.page_of(frame.parent).cloned() else {
-                        continue;
-                    };
+        load.token = host.start_document_hop(
+            &load.method,
+            &load.url,
+            load.body.clone(),
+            Some(&load.referrer),
+            load.hop_timeout,
+        );
+        let mut request = NetRequest::get(load.url.clone(), RequestKind::Document);
+        request.method = load.method.clone();
+        // The notice only says the hop was answered: the document is taken
+        // at the next pump (see `pump_documents`), which the page asks for.
+        catpaw_web::net::track_request(&page, load.token, &request, |cx, _| {
+            cx.page.frames.ask_embedder();
+        });
+        self.loading.push(load);
+    }
+
+    /// Abandons the loads `which` picks: their hops are aborted, and
+    /// their trackers no longer wait for them.
+    fn drop_loads(&mut self, which: impl Fn(&DocumentLoad) -> bool) {
+        let (gone, kept): (Vec<_>, Vec<_>) = std::mem::take(&mut self.loading)
+            .into_iter()
+            .partition(|load| which(load));
+        self.loading = kept;
+        for load in gone {
+            if let Some(page) = self.page_of(load.tracker) {
+                catpaw_web::net::abort_request(page, load.token);
+            }
+            if let Some(host) = self.host_of(load.tracker) {
+                host.drop_document(load.token);
+            }
+        }
+    }
+
+    /// Carries the documents on their way for frames on: a hop answered
+    /// with a redirect is judged and the next one started, a document
+    /// that arrived opens in its frame. Returns whether anything was done.
+    fn pump_documents(&mut self) -> bool {
+        let mut did = false;
+        let mut i = 0;
+        while i < self.loading.len() {
+            let (tracker, token) = (self.loading[i].tracker, self.loading[i].token);
+            let answer = self
+                .host_of(tracker)
+                .and_then(|host| host.take_document(token));
+            let Some(answer) = answer else {
+                i += 1;
+                continue;
+            };
+            let load = self.loading.remove(i);
+            did = true;
+            self.hop_answered(load, answer);
+        }
+        did
+    }
+
+    /// Follows a hop's answer: the next hop, judged as a navigation's
+    /// would be, or the document.
+    fn hop_answered(&mut self, mut load: DocumentLoad, answer: Result<FetchedDocument, NetError>) {
+        let mut fetched = match answer {
+            Ok(fetched) => fetched,
+            Err(e) => {
+                self.load_failed(load, e);
+                return;
+            }
+        };
+        let next = crate::net::next_hop(&fetched, &load.method, &load.url, &load.body);
+        let Some(crate::net::Hop {
+            method,
+            url: to,
+            body,
+        }) = next
+        else {
+            fetched.response.redirect_chain = load.chain.clone();
+            self.load_done(load, fetched);
+            return;
+        };
+        if load.chain.len() >= crate::net::MAX_REDIRECTS {
+            self.load_failed(load, NetError::TooManyRedirects(crate::net::MAX_REDIRECTS));
+            return;
+        }
+        match self.judge_hop(load.frame, load.approved, &method, &to, body.as_ref()) {
+            Gate::Allow => {
+                let from = std::mem::replace(&mut load.url, to);
+                load.chain.push(from);
+                load.method = method;
+                load.body = body;
+                self.start_load(load);
+            }
+            gate => self.load_stopped(load, method, to, body, gate),
+        }
+    }
+
+    /// Opens the document a load brought in its frame.
+    fn load_done(&mut self, load: DocumentLoad, fetched: FetchedDocument) {
+        let info = DocumentInfo::from_fetch(&fetched);
+        let html = fetched.html().to_string();
+        match load.purpose {
+            LoadPurpose::Open(frame) => {
+                let origin = frames::origin_of(&info.url);
+                self.finish_open_frame(frame, &load.referrer, info, html, origin);
+            }
+            LoadPurpose::Navigate(request) => {
+                self.unhold(load.frame);
+                self.finish_navigate_frame(load.frame, request.method, info, html, load.referrer);
+            }
+        }
+    }
+
+    /// The page of the parent of the frame a load is for.
+    fn load_parent(&self, load: &DocumentLoad) -> Option<Rc<PageState>> {
+        let parent = match &load.purpose {
+            LoadPurpose::Open(frame) => frame.parent,
+            LoadPurpose::Navigate(_) => self.frame(load.frame)?.parent,
+        };
+        self.page_of(parent).cloned()
+    }
+
+    /// A load ended without a document: a frame opening does not open
+    /// (as one whose document failed to load), a frame navigating keeps
+    /// its document and the failure is reported.
+    fn load_failed(&mut self, load: DocumentLoad, e: NetError) {
+        let Some(parent_page) = self.load_parent(&load) else {
+            return;
+        };
+        parent_page.log(
+            ConsoleLevel::Error,
+            format!("Failed to load frame {}: {e}", load.first_url()),
+        );
+        match load.purpose {
+            LoadPurpose::Open(frame) => frame.fail(&parent_page),
+            LoadPurpose::Navigate(request) => self.events.push(PageEvent::NavigationFailed {
+                frame: load.frame,
+                url: request.url,
+                error: e.to_string(),
+            }),
+        }
+    }
+
+    /// The gate did not let a hop through: a frame opening does not open
+    /// (its hops are never held, see `open_frame`); a frame navigating
+    /// keeps its document, the hop held for the user when the gate would
+    /// hold it.
+    fn load_stopped(
+        &mut self,
+        load: DocumentLoad,
+        method: String,
+        url: Url,
+        body: Option<(String, Vec<u8>)>,
+        gate: Gate,
+    ) {
+        let first = load.first_url().clone();
+        match load.purpose {
+            LoadPurpose::Open(frame) => {
+                if let Some(parent_page) = self.page_of(frame.parent).cloned() {
                     parent_page.log(
                         ConsoleLevel::Error,
-                        format!("Failed to load frame {}: {e}", frame.url),
+                        format!("Failed to load frame {first}: {url} was refused"),
                     );
-                    if let Some(element) = frame.element {
-                        frames::frame_failed(&parent_page, element);
-                    } else {
-                        parent_page.frames.tree().borrow_mut().remove(frame.id);
-                    }
+                    frame.fail(&parent_page);
+                }
+            }
+            LoadPurpose::Navigate(request) => {
+                if gate == Gate::Hold {
+                    let hop = NavigationRequest {
+                        url,
+                        method,
+                        body,
+                        traverse: 0,
+                        reload: false,
+                        ..request
+                    };
+                    self.hold(load.frame, hop, Some(load.referrer));
                 }
             }
         }
-        true
     }
 
     /// Opens a frame on the document fetched (or made) for it.
     fn finish_open_frame(
         &mut self,
         frame: PendingFrame,
+        referrer: &Url,
         info: DocumentInfo,
         html: String,
         origin: String,
@@ -1421,19 +1627,17 @@ impl Page {
             id,
             element,
             depth,
-            referrer,
-            ..
         } = frame;
         let Some(parent_page) = self.page_of(parent).cloned() else {
             return;
         };
-        let fail = |page: &PageState| {
-            if let Some(element) = element {
-                frames::frame_failed(page, element);
-            } else {
-                page.frames.tree().borrow_mut().remove(id);
-            }
-        };
+        // Pointed elsewhere, removed or closed while the document was on
+        // its way: a later command covered it.
+        match element {
+            Some(element) if parent_page.frames.child_of(element) != Some(id) => return,
+            None if !self.tree.borrow().contains(id) => return,
+            _ => {}
+        }
         let placement = Placement {
             frame: id,
             tree: self.tree.clone(),
@@ -1445,7 +1649,7 @@ impl Page {
             &net,
             &info,
             &html,
-            Some(&referrer),
+            Some(referrer),
             &self.options,
             &self.storage,
             placement,
@@ -1453,7 +1657,7 @@ impl Page {
             Ok(boa) => boa,
             Err(e) => {
                 parent_page.log(ConsoleLevel::Error, format!("Failed to open frame: {e}"));
-                fail(&parent_page);
+                frame.fail(&parent_page);
                 return;
             }
         };
@@ -1496,6 +1700,8 @@ impl Page {
         for child in inner {
             self.close_frame(child);
         }
+        // The documents on their way for it, or for frames inside it, go.
+        self.drop_loads(|load| load.frame == id || load.tracker == id);
         self.tree.borrow_mut().remove(id);
         self.drop_workers_of(ScopeId::Frame(id));
         self.unhold(id);
@@ -1783,7 +1989,6 @@ impl Page {
         let Some(parent_page) = self.page_of(parent).cloned() else {
             return;
         };
-        let referrer_page = parent_page.clone();
         if self.frames[index].navigations >= self.options.max_navigations {
             parent_page.log(
                 ConsoleLevel::Warn,
@@ -1812,67 +2017,50 @@ impl Page {
                 return;
             }
         }
-        let method = request.method.clone();
-        let net = self.net.clone();
+        // A navigation under way gives way to this one.
+        self.drop_loads(|load| load.frame == id);
         // `about:blank` is an empty document, from no network.
-        let fetched = (request.url.scheme() != "about").then(|| {
-            let _span = catpaw_web::profile::span("wait", || "frame document".to_string());
-            net.fetch_document_within(
-                &request.method,
-                &request.url,
-                request.body.clone(),
-                Some(&referrer),
-                &mut |method, url, body| self.judge_hop(id, approved, method, url, body),
-                &crate::net::FetchOptions {
-                    hop_timeout: element.map(|_| FRAME_DOCUMENT_TIMEOUT),
-                    download: None,
-                },
-            )
+        if request.url.scheme() == "about" {
+            let info = DocumentInfo::local(&request.url, "");
+            self.finish_navigate_frame(id, request.method, info, String::new(), referrer);
+            return;
+        }
+        // The document comes off this thread, the frame's page waiting for
+        // it as for a request of its own; its document stays meanwhile, as
+        // a browser keeps one until the next arrives.
+        self.start_load(DocumentLoad {
+            tracker: id,
+            token: 0,
+            frame: id,
+            method: request.method.clone(),
+            url: request.url.clone(),
+            body: request.body.clone(),
+            purpose: LoadPurpose::Navigate(request),
+            referrer,
+            chain: Vec::new(),
+            hop_timeout: element.map(|_| FRAME_DOCUMENT_TIMEOUT),
+            approved,
         });
-        let (info, html) = match fetched {
-            None => {
-                self.unhold(id);
-                (DocumentInfo::local(&request.url, ""), String::new())
-            }
-            Some(Ok(crate::net::DocumentFetch::Loaded(fetched))) => {
-                self.unhold(id);
-                (
-                    DocumentInfo::from_fetch(&fetched),
-                    fetched.html().to_string(),
-                )
-            }
-            Some(Ok(crate::net::DocumentFetch::Stopped {
-                method,
-                url,
-                body,
-                gate,
-            })) => {
-                if gate == Gate::Hold {
-                    let hop = NavigationRequest {
-                        url,
-                        method,
-                        body,
-                        traverse: 0,
-                        reload: false,
-                        ..request
-                    };
-                    self.hold(id, hop, Some(referrer));
-                }
-                return;
-            }
-            Some(Err(e)) => {
-                parent_page.log(
-                    ConsoleLevel::Error,
-                    format!("Failed to load frame {}: {e}", request.url),
-                );
-                self.events.push(PageEvent::NavigationFailed {
-                    frame: id,
-                    url: request.url.clone(),
-                    error: e.to_string(),
-                });
-                return;
-            }
+    }
+
+    /// Loads the document fetched (or made) for a frame's navigation in
+    /// place of its current one.
+    fn finish_navigate_frame(
+        &mut self,
+        id: FrameId,
+        method: String,
+        info: DocumentInfo,
+        html: String,
+        referrer: Url,
+    ) {
+        let Some(index) = self.frames.iter().position(|f| f.id == id) else {
+            return;
         };
+        let (parent, element) = (self.frames[index].parent, self.frames[index].element);
+        let Some(parent_page) = self.page_of(parent).cloned() else {
+            return;
+        };
+        // The frames inside go, with the documents on their way for them.
         let inner: Vec<FrameId> = self
             .frames
             .iter()
@@ -1882,6 +2070,7 @@ impl Page {
         for child in inner {
             self.close_frame(child);
         }
+        self.drop_loads(|load| load.tracker == id);
         let index = self
             .frames
             .iter()
@@ -1898,7 +2087,7 @@ impl Page {
         let placement = Placement {
             frame: id,
             tree: self.tree.clone(),
-            viewport: element.map(|element| frames::frame_viewport(&referrer_page, element)),
+            viewport: element.map(|element| frames::frame_viewport(&parent_page, element)),
             history: (0, 0),
         };
         let blank = match stand_in() {
@@ -2000,7 +2189,7 @@ impl Page {
                 }
             }
         }
-        if self.load_pending_frames() {
+        if self.pump_documents() {
             did = true;
         }
         // Frames whose documents finished loading are reported to their
@@ -2083,11 +2272,30 @@ impl Page {
         loop {
             let remaining = limits.wall.saturating_sub(started.elapsed());
             if remaining.is_zero() || steps_left == 0 {
+                // A scope that handed over just before the budget ran out
+                // stopped at the budget, as far as the embedder is told.
+                let stop = if remaining.is_zero() {
+                    StopReason::WallBudget
+                } else {
+                    StopReason::StepBudget
+                };
+                let reports = std::iter::once(&mut self.report)
+                    .chain(self.frames.iter_mut().map(|f| &mut f.report))
+                    .chain(self.workers.iter_mut().map(|w| &mut w.report));
+                for report in reports.filter(|r| r.stop == StopReason::Commands) {
+                    report.stop = stop;
+                }
                 break;
             }
             let mut progress = false;
             let mut starved = Vec::new();
-            for scope in self.scopes() {
+            // The scopes take turns. One that opens meanwhile (a frame, a
+            // worker) goes before the rest: a frame's document is parsed,
+            // and its `load` reported, before its parent's clock moves on
+            // without it.
+            let mut queue: VecDeque<ScopeId> = self.scopes().into();
+            let mut seen: HashSet<ScopeId> = queue.iter().copied().collect();
+            while let Some(scope) = queue.pop_front() {
                 if self.scope_page(scope).is_none() {
                     continue;
                 }
@@ -2112,6 +2320,14 @@ impl Page {
                 }
                 if self.pump_all() {
                     progress = true;
+                }
+                let opened: Vec<ScopeId> = self
+                    .scopes()
+                    .into_iter()
+                    .filter(|scope| seen.insert(*scope))
+                    .collect();
+                for scope in opened.into_iter().rev() {
+                    queue.push_front(scope);
                 }
             }
             if progress {
