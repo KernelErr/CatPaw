@@ -10,7 +10,7 @@ that the page has settled, and what changed after each action instead of
 the whole page again. It asks the user before anything is sent on their
 behalf, and hands the tab to them when a site needs a person.
 
-**Status: v0.1, a preview.** The agent tools work today over MCP
+**Status: a preview.** The agent tools work today over MCP
 (milestones M0 to M3 of the [roadmap](#roadmap)); the tools and their
 results may still change before 1.0. What does not yet work as a
 browser's would is listed under
@@ -145,7 +145,7 @@ check in CI), see [Using CatPaw from scripts](docs/scripting.md).
   microtask, and a timeout names what the page is still doing.
 - **Layout on demand.** Style (Stylo) and layout (Taffy and Parley) run only
   when a script or the agent asks for geometry or a screenshot.
-- **Honest identity.** CatPaw says what it is (`CatPaw/0.1.0
+- **Honest identity.** CatPaw says what it is (`CatPaw/<version>
   (+https://catpaw.sh/bot)`) and ships no fingerprint impersonation and no
   CAPTCHA solving. Deployers who want a verified identity sign requests
   with [Web Bot Auth](https://datatracker.ietf.org/wg/webbotauth/about/)

@@ -7,7 +7,7 @@ CatPaw 是一个把 LLM agent 当作第一用户的浏览器。它像浏览器�
 紧凑页面快照、精确的"页面已稳定"信号，以及每次操作后页面变了什么，而不是把整页再给一遍。
 凡是要代用户发出去的内容，它都先问用户；网站需要真人操作时，它把标签页交给用户。
 
-**状态：v0.1，预览版。** agent 工具现在已经可以通过 MCP 使用（[路线图](#路线图)中的
+**状态：预览版。** agent 工具现在已经可以通过 MCP 使用（[路线图](#路线图)中的
 M0 到 M3）；1.0 之前，工具和返回格式仍可能变化。还不能像浏览器那样工作的地方，列在
 [已知欠缺](docs/architecture.md#known-gaps)（英文）里。
 
@@ -123,7 +123,7 @@ catpaw fetch https://site.example/login --js --cookie-jar ./jar.json \
   那行代码）、每个动画帧和 microtask；超时时会说出页面还在做什么。
 - **按需布局。** 样式（Stylo）和布局（Taffy、Parley）只在脚本或 agent 需要几何信息或
   截图时才运行。
-- **诚实的身份。** CatPaw 表明自己是谁（`CatPaw/0.1.0 (+https://catpaw.sh/bot)`），
+- **诚实的身份。** CatPaw 表明自己是谁（`CatPaw/<version> (+https://catpaw.sh/bot)`），
   不提供指纹伪装，不做验证码破解。需要经过验证的身份的部署方，可以用自己的密钥按
   [Web Bot Auth](https://datatracker.ietf.org/wg/webbotauth/about/) 给请求签名；网站
   需要真人时，由用户来操作（[ADR 0003](docs/adr/0003-identity-bot-auth-and-challenges.md)）。
