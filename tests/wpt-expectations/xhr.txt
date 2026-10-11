@@ -167,7 +167,6 @@ xhr/open-url-redirected-sharedworker-origin.htm	-
 xhr/open-url-redirected-worker-origin.htm	-
 xhr/open-url-worker-origin.htm	-
 xhr/open-url-worker-simple.htm	-
-xhr/open-url-worker-simple.htm	XMLHttpRequest: relative URLs in worker scripts resolved by script URL
 xhr/overridemimetype-blob.html	Loading data…
 xhr/overridemimetype-blob.html	Use text/xml as fallback MIME type
 xhr/overridemimetype-blob.html	Use text/xml as fallback MIME type, 2
